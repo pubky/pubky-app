@@ -1,13 +1,34 @@
+import { type CollectionContent as StoredCollectionContent, decodeContent, encodeContent } from 'pubky-social-specs';
+import { fakeOwner } from 'pubky-social-specs/testing';
 import { describe, expect, it, vi } from 'vitest';
 import { COLLECTION_LAYOUT } from '@/config/collections';
+import { COLLECTION_COVER_IMAGE_URL_MAX_LENGTH } from '@/config/posts';
 import {
   COLLECTION_CONTENT_MAX_LENGTH,
   COLLECTION_ITEM_URI_MAX_LENGTH,
   COLLECTION_ITEMS_MAX_COUNT,
 } from '@/config/posts';
+import { asInvalid } from '@/test-utils/type-assertions';
 import { CollectionPostContent } from './post.collection';
 
-const VALID_ITEM_URI = 'pubky://1111111111111111111111111111111111111111111111111111/pub/pubky.app/posts/0034A0X7NJ52A';
+const ITEM_AUTHOR = fakeOwner(3);
+const VALID_ITEM_URI = `pubky://${ITEM_AUTHOR}/pub/social/v1/posts/0034A0X7NJ52A`;
+/** The same post as an account that has not migrated references it. */
+const LEGACY_ITEM_URI = `pubky://${ITEM_AUTHOR}/pub/pubky.app/posts/0034A0X7NJ52A`;
+
+/** The stored envelope of a collection with `items`, as `encodeContent` spells it. */
+const stored = (items: StoredCollectionContent['items'], overrides: Partial<StoredCollectionContent> = {}) =>
+  encodeContent({ name: 'Stored', description: null, cover_image: null, layout: null, items, ...overrides });
+
+/** The stored envelope of a collection with `items`, decoded as `toEdit` reads the head. */
+const storedCollection = (
+  items: StoredCollectionContent['items'],
+  overrides: Partial<StoredCollectionContent> = {},
+): StoredCollectionContent => {
+  const envelope = decodeContent({ kind: 'collection', content: stored(items, overrides) });
+  if (envelope?.kind !== 'collection') throw new Error('not a collection');
+  return envelope.content;
+};
 
 describe('CollectionPostContent', () => {
   describe('normalize', () => {
@@ -30,6 +51,19 @@ describe('CollectionPostContent', () => {
       ).toMatchObject({
         cover_image: 'https://cdn.example.com/cover.png',
       });
+    });
+
+    it("accepts a cover URL up to the data model's cap and refuses one over it", () => {
+      const prefix = 'https://cdn.example.com/';
+      const atCap = `${prefix}${'a'.repeat(COLLECTION_COVER_IMAGE_URL_MAX_LENGTH - prefix.length)}`;
+
+      expect(atCap).toHaveLength(300);
+      expect(CollectionPostContent.normalize({ name: 'Cover', coverImage: atCap })).toMatchObject({
+        cover_image: atCap,
+      });
+      expect(() => CollectionPostContent.normalize({ name: 'Cover', coverImage: `${atCap}b` })).toThrow(
+        'Collection cover image URL is too long',
+      );
     });
 
     it('rejects cover images with unsupported protocols', () => {
@@ -127,12 +161,11 @@ describe('CollectionPostContent', () => {
     });
   });
 
-  describe('toJson and parse', () => {
-    it('serializes and parses a valid envelope', () => {
-      const json = CollectionPostContent.toJson({
+  describe('parse', () => {
+    it('parses a v1 envelope, its items by uri with the notes dropped', () => {
+      const json = stored([{ uri: VALID_ITEM_URI, note: 'start here' }], {
         name: 'Proof of Work',
         description: 'Bitcoin writing',
-        items: [VALID_ITEM_URI],
       });
 
       expect(CollectionPostContent.parse(json)).toEqual({
@@ -144,29 +177,24 @@ describe('CollectionPostContent', () => {
       });
     });
 
-    it('round-trips a cover_image envelope from pubky-app-specs', () => {
-      // Mirrors the read shape from `pubky-app-specs` (`PubkyAppCollectionContent`),
-      // including `cover_image`. New fields are additive in the envelope; older
-      // payloads without `cover_image` are still accepted.
-      const json = CollectionPostContent.toJson({
-        name: 'Cover',
+    it('parses a 0.x envelope, whose items are plain URIs', () => {
+      const json = JSON.stringify({
+        name: 'Legacy',
         description: '',
-        items: [],
-        coverImage: 'https://cdn.example.com/cover.png',
+        items: [LEGACY_ITEM_URI],
+        cover_image: 'https://cdn.example.com/cover.png',
       });
 
       expect(CollectionPostContent.parse(json)).toEqual({
-        name: 'Cover',
+        name: 'Legacy',
         description: '',
-        items: [],
+        items: [LEGACY_ITEM_URI],
         cover_image: 'https://cdn.example.com/cover.png',
         layout: COLLECTION_LAYOUT.CARDS,
       });
     });
 
     it('parses minimal envelopes with only a name (per spec, other fields are optional)', () => {
-      // `description`/`items`/`cover_image` are all optional in the spec
-      // envelope, so a payload with just `name` is a valid (older) collection.
       expect(CollectionPostContent.parse(JSON.stringify({ name: 'Minimal' }))).toEqual({
         name: 'Minimal',
         description: '',
@@ -176,18 +204,9 @@ describe('CollectionPostContent', () => {
       });
     });
 
-    it('parses pubky-app-specs envelopes with null cover_image', () => {
-      expect(
-        CollectionPostContent.parse(
-          JSON.stringify({
-            name: 'Saved posts',
-            description: '',
-            items: [VALID_ITEM_URI],
-            cover_image: null,
-          }),
-        ),
-      ).toEqual({
-        name: 'Saved posts',
+    it('parses envelopes with null description and cover_image, as the data model spells none', () => {
+      expect(CollectionPostContent.parse(stored([{ uri: VALID_ITEM_URI, note: null }]))).toEqual({
+        name: 'Stored',
         description: '',
         items: [VALID_ITEM_URI],
         cover_image: undefined,
@@ -195,33 +214,13 @@ describe('CollectionPostContent', () => {
       });
     });
 
-    it('round-trips List and falls back to Grid for missing or unknown layouts', () => {
-      const listJson = CollectionPostContent.toJson({
-        name: 'Reading',
-        layout: COLLECTION_LAYOUT.LIST,
-      });
-
-      expect(CollectionPostContent.parse(listJson)?.layout).toBe(COLLECTION_LAYOUT.LIST);
+    it('reads List and Visual and falls back to Grid for missing or unknown layouts', () => {
+      expect(CollectionPostContent.parse(stored([], { layout: 'list' }))?.layout).toBe(COLLECTION_LAYOUT.LIST);
+      expect(CollectionPostContent.parse(stored([], { layout: 'visual' }))?.layout).toBe(COLLECTION_LAYOUT.VISUAL);
       expect(CollectionPostContent.parse(JSON.stringify({ name: 'Legacy' }))?.layout).toBe(COLLECTION_LAYOUT.CARDS);
       expect(CollectionPostContent.parse(JSON.stringify({ name: 'Future', layout: 'spiral' }))?.layout).toBe(
         COLLECTION_LAYOUT.CARDS,
       );
-    });
-
-    it('round-trips Visual through normalize, toJson, and parse', () => {
-      expect(
-        CollectionPostContent.normalize({
-          name: 'Gallery',
-          layout: COLLECTION_LAYOUT.VISUAL,
-        }).layout,
-      ).toBe(COLLECTION_LAYOUT.VISUAL);
-
-      const visualJson = CollectionPostContent.toJson({
-        name: 'Gallery',
-        layout: COLLECTION_LAYOUT.VISUAL,
-      });
-
-      expect(CollectionPostContent.parse(visualJson)?.layout).toBe(COLLECTION_LAYOUT.VISUAL);
     });
 
     it('returns null for malformed envelopes', () => {
@@ -238,33 +237,293 @@ describe('CollectionPostContent', () => {
     });
   });
 
-  describe('item helpers', () => {
-    it('adds an item idempotently', () => {
-      const collection = CollectionPostContent.normalize({ name: 'Saved', items: [VALID_ITEM_URI] });
+  describe('apply', () => {
+    const spellings = [VALID_ITEM_URI, LEGACY_ITEM_URI];
+    const other = 'https://example.com/post';
+    const cover = 'https://cdn.example.com/cover.png';
+    const collection = () =>
+      CollectionPostContent.normalize({
+        name: 'Saved',
+        description: 'Mine',
+        items: [other, LEGACY_ITEM_URI],
+        coverImage: cover,
+        layout: COLLECTION_LAYOUT.LIST,
+      });
 
-      expect(CollectionPostContent.addItem(collection, VALID_ITEM_URI).items).toEqual([VALID_ITEM_URI]);
+    it('dispatches an add, a remove and a reorder to the item helpers, with the envelope kept', () => {
+      const current = collection();
+      const added = `pubky://${fakeOwner(4)}/pub/social/v1/posts/0034A0X7NJ52B`;
+
+      expect(CollectionPostContent.apply(current, { op: 'add', spellings: [added] })).toEqual({
+        ...current,
+        items: [added, other, LEGACY_ITEM_URI],
+      });
+      expect(CollectionPostContent.apply(current, { op: 'remove', spellings })).toEqual({
+        ...current,
+        items: [other],
+      });
+      expect(CollectionPostContent.apply(current, { op: 'reorder', order: [VALID_ITEM_URI, other] })).toEqual({
+        ...current,
+        items: [LEGACY_ITEM_URI, other],
+      });
     });
 
-    it('prepends a new item', () => {
+    it('a details change rewrites the name, description, cover and layout and keeps the current items', () => {
+      const current = collection();
+
+      expect(
+        CollectionPostContent.apply(current, {
+          op: 'details',
+          name: ' Renamed ',
+          description: null,
+          coverImage: null,
+          layout: COLLECTION_LAYOUT.VISUAL,
+        }),
+      ).toEqual({
+        name: 'Renamed',
+        description: '',
+        items: [other, LEGACY_ITEM_URI],
+        cover_image: undefined,
+        layout: COLLECTION_LAYOUT.VISUAL,
+      });
+    });
+
+    it('a details change without a layout keeps the current one', () => {
+      const current = collection();
+
+      expect(CollectionPostContent.apply(current, { op: 'details', name: 'Renamed', coverImage: cover })).toEqual({
+        ...current,
+        name: 'Renamed',
+        description: '',
+      });
+    });
+
+    it('returns the same reference when the change is already there', () => {
+      const current = collection();
+
+      expect(CollectionPostContent.apply(current, { op: 'add', spellings })).toBe(current);
+      expect(CollectionPostContent.apply(current, { op: 'remove', spellings: ['https://example.com/missing'] })).toBe(
+        current,
+      );
+      expect(CollectionPostContent.apply(current, { op: 'reorder', order: [other, VALID_ITEM_URI] })).toBe(current);
+      expect(
+        CollectionPostContent.apply(current, {
+          op: 'details',
+          name: 'Saved ',
+          description: ' Mine',
+          coverImage: cover,
+        }),
+      ).toBe(current);
+    });
+
+    it('refuses a change whose op this build does not know instead of applying nothing', () => {
+      expect(() => CollectionPostContent.apply(collection(), asInvalid({ op: 'replace', items: [] }))).toThrow(
+        'Collection change is unknown',
+      );
+    });
+
+    it('a details change a collection rule refuses throws the validation error', () => {
+      expect(() => CollectionPostContent.apply(collection(), { op: 'details', name: '   ', coverImage: null })).toThrow(
+        'Collection name is required',
+      );
+      expect(() =>
+        CollectionPostContent.apply(collection(), { op: 'details', name: 'Saved', coverImage: 'ftp://x/y' }),
+      ).toThrow('Collection cover image URL is invalid');
+    });
+  });
+
+  describe('toNewInput', () => {
+    it('spells the buildPost input of a new collection, items without notes', () => {
+      const normalized = CollectionPostContent.normalize({
+        name: 'Reading',
+        description: '',
+        items: [VALID_ITEM_URI],
+        layout: COLLECTION_LAYOUT.LIST,
+      });
+
+      expect(CollectionPostContent.toNewInput(normalized)).toEqual({
+        kind: 'collection',
+        name: 'Reading',
+        description: null,
+        items: [{ uri: VALID_ITEM_URI }],
+        cover_image: null,
+        layout: 'list',
+      });
+    });
+  });
+
+  describe('toStored', () => {
+    it('merges the shown envelope onto the stored one, keeping item notes and unknown members', () => {
+      const withUnknown = {
+        ...storedCollection([{ uri: VALID_ITEM_URI, note: 'start here' }], { description: 'Old' }),
+        $unknown: '{"mood":"calm"}',
+      };
+
+      const next = CollectionPostContent.toStored(withUnknown, {
+        name: 'Renamed',
+        description: 'New',
+        items: ['https://example.com/post', VALID_ITEM_URI],
+        layout: COLLECTION_LAYOUT.VISUAL,
+      });
+
+      expect(next).toEqual({
+        name: 'Renamed',
+        description: 'New',
+        cover_image: null,
+        layout: 'visual',
+        items: [
+          { uri: 'https://example.com/post', note: null },
+          { uri: VALID_ITEM_URI, note: 'start here' },
+        ],
+        $unknown: '{"mood":"calm"}',
+      });
+      // What `encodeContent` spells of it decodes back, notes included
+      expect(decodeContent({ kind: 'collection', content: encodeContent(next) })).toEqual({
+        kind: 'collection',
+        content: next,
+      });
+    });
+
+    it('matches a post item by identity: a 0.x-spelled item in `next` keeps the stored v1 URI and note, in `next` order', () => {
+      // The migrator wrote the v1 head with the respelled items and their notes; Nexus still
+      // serves the collection's `content` in the 0.x shape, so the row `next` is parsed from
+      // spells the same post the 0.x way (SF-4).
+      const head = storedCollection([
+        { uri: VALID_ITEM_URI, note: 'start here' },
+        { uri: 'https://example.com/post', note: 'read later' },
+      ]);
+      const addedUri = `pubky://${fakeOwner(4)}/pub/social/v1/posts/0034A0X7NJ52B`;
+
+      const next = CollectionPostContent.toStored(head, {
+        name: 'Stored',
+        description: '',
+        items: [addedUri, 'https://example.com/post', LEGACY_ITEM_URI],
+        layout: COLLECTION_LAYOUT.CARDS,
+      });
+
+      expect(next.items).toEqual([
+        { uri: addedUri, note: null },
+        { uri: 'https://example.com/post', note: 'read later' },
+        { uri: VALID_ITEM_URI, note: 'start here' },
+      ]);
+    });
+
+    it('collapses the two spellings of one post in `next` to the stored item, once', () => {
+      const head = storedCollection([{ uri: VALID_ITEM_URI, note: 'start here' }]);
+
+      const next = CollectionPostContent.toStored(head, {
+        name: 'Stored',
+        description: '',
+        items: [LEGACY_ITEM_URI, VALID_ITEM_URI],
+        layout: COLLECTION_LAYOUT.CARDS,
+      });
+
+      expect(next.items).toEqual([{ uri: VALID_ITEM_URI, note: 'start here' }]);
+    });
+
+    it('keeps the first stored item, note included, when the head spells one post both ways', () => {
+      // Another client curated the post twice, once per spelling: an edit that leaves the items
+      // alone must not lose the note the first one carries.
+      const head = storedCollection([
+        { uri: LEGACY_ITEM_URI, note: 'read first' },
+        { uri: VALID_ITEM_URI, note: null },
+      ]);
+
+      const next = CollectionPostContent.toStored(head, {
+        name: 'Renamed',
+        description: '',
+        items: [LEGACY_ITEM_URI, VALID_ITEM_URI],
+        layout: COLLECTION_LAYOUT.CARDS,
+      });
+
+      expect(next.items).toEqual([{ uri: LEGACY_ITEM_URI, note: 'read first' }]);
+    });
+
+    it('matches anything that is not a post reference by its exact URI', () => {
+      const fileUri = `pubky://${ITEM_AUTHOR}/pub/social/v1/files/AKSZ57W2RFKHV1EHK007FQQ8TW.png`;
+      const legacyFileUri = `pubky://${ITEM_AUTHOR}/pub/pubky.app/files/AKSZ57W2RFKHV1EHK007FQQ8TW`;
+      const head = storedCollection([
+        { uri: fileUri, note: 'the slides' },
+        { uri: 'https://example.com/post', note: 'read later' },
+      ]);
+
+      const next = CollectionPostContent.toStored(head, {
+        name: 'Stored',
+        description: '',
+        items: [fileUri, legacyFileUri, 'https://example.com/post/'],
+        layout: COLLECTION_LAYOUT.CARDS,
+      });
+
+      expect(next.items).toEqual([
+        { uri: fileUri, note: 'the slides' },
+        { uri: legacyFileUri, note: null },
+        { uri: 'https://example.com/post/', note: null },
+      ]);
+    });
+
+    it('spells an empty description as null and a cover as given', () => {
+      const base: StoredCollectionContent = {
+        name: 'B',
+        description: null,
+        items: [],
+        cover_image: null,
+        layout: null,
+      };
+
+      expect(
+        CollectionPostContent.toStored(base, {
+          name: 'B',
+          description: '',
+          items: [],
+          cover_image: 'https://cdn.example.com/cover.png',
+          layout: COLLECTION_LAYOUT.CARDS,
+        }),
+      ).toEqual({
+        name: 'B',
+        description: null,
+        items: [],
+        cover_image: 'https://cdn.example.com/cover.png',
+        layout: 'grid',
+      });
+    });
+  });
+
+  describe('item helpers', () => {
+    const spellings = [VALID_ITEM_URI, LEGACY_ITEM_URI];
+
+    it('adds an item idempotently, whichever way the collection spells it', () => {
+      const v1 = CollectionPostContent.normalize({ name: 'Saved', items: [VALID_ITEM_URI] });
+      const legacy = CollectionPostContent.normalize({ name: 'Saved', items: [LEGACY_ITEM_URI] });
+
+      expect(CollectionPostContent.addItem(v1, spellings)).toBe(v1);
+      expect(CollectionPostContent.addItem(legacy, spellings)).toBe(legacy);
+    });
+
+    it('prepends a new item under its first spelling, the v1 reference', () => {
       const existingUri = 'https://example.com/post';
       const collection = CollectionPostContent.normalize({ name: 'Saved', items: [existingUri] });
 
-      expect(CollectionPostContent.addItem(collection, VALID_ITEM_URI).items).toEqual([VALID_ITEM_URI, existingUri]);
+      expect(CollectionPostContent.addItem(collection, spellings).items).toEqual([VALID_ITEM_URI, existingUri]);
     });
 
-    it('removes an item', () => {
-      const collection = CollectionPostContent.normalize({
+    it('removes an item whichever way the collection spells it', () => {
+      const v1 = CollectionPostContent.normalize({
         name: 'Saved',
         items: [VALID_ITEM_URI, 'https://example.com/post'],
       });
+      const legacy = CollectionPostContent.normalize({
+        name: 'Saved',
+        items: [LEGACY_ITEM_URI, 'https://example.com/post'],
+      });
 
-      expect(CollectionPostContent.removeItem(collection, VALID_ITEM_URI).items).toEqual(['https://example.com/post']);
+      expect(CollectionPostContent.removeItem(v1, spellings).items).toEqual(['https://example.com/post']);
+      expect(CollectionPostContent.removeItem(legacy, spellings).items).toEqual(['https://example.com/post']);
     });
 
     it('returns the same collection when removing an absent item', () => {
       const collection = CollectionPostContent.normalize({ name: 'Saved', items: [VALID_ITEM_URI] });
 
-      expect(CollectionPostContent.removeItem(collection, 'https://example.com/missing')).toBe(collection);
+      expect(CollectionPostContent.removeItem(collection, ['https://example.com/missing'])).toBe(collection);
     });
   });
 
@@ -303,6 +562,50 @@ describe('CollectionPostContent', () => {
       const collection = CollectionPostContent.normalize({ name: 'Saved', items: [uriA, uriB] });
 
       expect(CollectionPostContent.reorderItems(collection, [`  ${uriB}  `, uriA]).items).toEqual([uriB, uriA]);
+    });
+
+    it('matches a drafted post whichever way the collection spells it, and keeps that spelling', () => {
+      // The draft was taken from the Nexus-served row (0.x spelling); the row has since converged
+      // to the stored v1 spelling.
+      const collection = CollectionPostContent.normalize({ name: 'Saved', items: [uriA, VALID_ITEM_URI, uriB] });
+
+      expect(CollectionPostContent.reorderItems(collection, [uriB, LEGACY_ITEM_URI, uriA]).items).toEqual([
+        uriB,
+        VALID_ITEM_URI,
+        uriA,
+      ]);
+      expect(CollectionPostContent.reorderItems(collection, [uriA, LEGACY_ITEM_URI, uriB])).toBe(collection);
+    });
+
+    it('returns the same collection when a post it spells both ways is drafted unchanged', () => {
+      // Another client curated the post twice, once per spelling; the draft names both entries.
+      const collection = CollectionPostContent.normalize({
+        name: 'Saved',
+        items: [LEGACY_ITEM_URI, VALID_ITEM_URI, uriA],
+      });
+
+      expect(CollectionPostContent.reorderItems(collection, [LEGACY_ITEM_URI, VALID_ITEM_URI, uriA])).toBe(collection);
+      expect(CollectionPostContent.reorderItems(collection, [VALID_ITEM_URI, LEGACY_ITEM_URI, uriA])).toBe(collection);
+      expect(CollectionPostContent.reorderItems(collection, [uriA, LEGACY_ITEM_URI, VALID_ITEM_URI]).items).toEqual([
+        uriA,
+        LEGACY_ITEM_URI,
+        VALID_ITEM_URI,
+      ]);
+    });
+
+    it('matches a drafted post at most as many times as the collection holds it', () => {
+      // A lookup by key alone (no queue) would hand every mention the same entry.
+      const collection = CollectionPostContent.normalize({
+        name: 'Saved',
+        items: [LEGACY_ITEM_URI, VALID_ITEM_URI, uriA],
+      });
+
+      expect(
+        CollectionPostContent.reorderItems(collection, [VALID_ITEM_URI, LEGACY_ITEM_URI, VALID_ITEM_URI, uriA]),
+      ).toBe(collection);
+      expect(
+        CollectionPostContent.reorderItems(collection, [uriA, VALID_ITEM_URI, VALID_ITEM_URI, VALID_ITEM_URI]).items,
+      ).toEqual([uriA, LEGACY_ITEM_URI, VALID_ITEM_URI]);
     });
   });
 });

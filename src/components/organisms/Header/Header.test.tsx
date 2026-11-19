@@ -1,8 +1,10 @@
 import { renderToString } from 'react-dom/server';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { AUTH_ROUTES, HOME_ROUTES, LEGAL_ROUTES, ONBOARDING_ROUTES, ROOT_ROUTES } from '@/app/routes';
+import { AuthStatus } from '@/hooks/useAuthStatus/useAuthStatus.types';
 import type { SessionReference } from '@/libs/auth/session.types';
+import { writeSocialMigrationSignedOutNotice } from '@/libs/social-migration/signed-out-notice';
 import { mockGrantReference } from '@/test-utils/pubky';
 import { Header } from './Header';
 
@@ -18,6 +20,11 @@ vi.mock('next/navigation', () => ({
 let mockCurrentUserPubky: string | null = null;
 let mockSessionReference: SessionReference | null = null;
 let mockRestoreStatus = 'ready';
+// The header reads the auth status only for the gate page's logo (a held account keeps its sign-out notice)
+let mockAuthStatus: AuthStatus = AuthStatus.UNAUTHENTICATED;
+vi.mock('@/hooks/useAuthStatus/useAuthStatus', () => ({
+  useAuthStatus: () => ({ status: mockAuthStatus, isLoading: false }),
+}));
 // Mock dexie-react-hooks
 vi.mock('dexie-react-hooks', () => ({
   useLiveQuery: vi.fn((_queryFn, deps) => ({ query: deps[0], data: { name: 'Test User', image: 'test-image.jpg' } })),
@@ -80,7 +87,7 @@ vi.mock('@/app/routes', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/app/routes')>();
   return {
     ...actual,
-    AUTH_ROUTES: { SIGN_IN: '/sign-in', LOGOUT: '/logout' },
+    AUTH_ROUTES: { SIGN_IN: '/sign-in', LOGOUT: '/logout', MIGRATION: '/migration' },
     HOME_ROUTES: { HOME: '/home' },
     ROOT_ROUTES: '/',
     ONBOARDING_ROUTES: {
@@ -179,8 +186,8 @@ vi.mock('@/molecules/HeaderSignIn/HeaderSignIn', () => {
 
 vi.mock('@/molecules/Logo/Logo', () => {
   return {
-    Logo: ({ noLink }: { noLink?: boolean }) => (
-      <div data-testid="logo" data-no-link={noLink}>
+    Logo: ({ noLink, onClick }: { noLink?: boolean; onClick?: React.MouseEventHandler<HTMLElement> }) => (
+      <div data-testid="logo" data-no-link={noLink} onClick={onClick}>
         Logo
       </div>
     ),
@@ -219,6 +226,8 @@ describe('Header', () => {
     mockCurrentUserPubky = null; // Not authenticated by default
     mockSessionReference = null;
     mockRestoreStatus = 'ready';
+    mockAuthStatus = AuthStatus.UNAUTHENTICATED;
+    sessionStorage.clear();
     mockUsePathname.mockReturnValue(ROOT_ROUTES);
     mockUseRouter.mockReturnValue({ push: vi.fn() });
     mockIsPublicRoute.mockReturnValue(false);
@@ -496,6 +505,60 @@ describe('Header', () => {
       // Since logout is not an onboarding path, it should show HomeHeader
       expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
       expect(screen.queryByTestId('onboarding-header')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('Migration gate path (ADR-0026)', () => {
+    it('shows only the logo while the account is held behind the gate, mounting no account chrome', () => {
+      mockCurrentUserPubky = 'held-account';
+      mockSessionReference = mockGrantReference();
+      mockRestoreStatus = 'social-migration';
+      mockUsePathname.mockReturnValue(AUTH_ROUTES.MIGRATION);
+
+      render(<Header />);
+
+      expect(screen.getByTestId('logo')).toBeInTheDocument();
+      expect(screen.queryByTestId('header-sign-in')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('header-home')).not.toBeInTheDocument();
+      expect(screen.getByTestId('header-container')).not.toHaveAttribute(
+        'data-class-name',
+        expect.stringContaining('hidden'),
+      );
+    });
+
+    it('shows only the logo on the gate page after the forced sign-out too', () => {
+      mockUsePathname.mockReturnValue(AUTH_ROUTES.MIGRATION);
+
+      render(<Header />);
+
+      expect(screen.getByTestId('logo')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /sign in/i })).not.toBeInTheDocument();
+    });
+
+    // FIX-FINAL-7: the route guard brings a signed-out tab back to the explanation while its notice is pending, so the
+    // logo, which links to the landing page from there, has to settle the notice like the Homepage button does
+    it('settles the sign-out notice when a signed-out tab leaves the explanation through the logo', () => {
+      mockUsePathname.mockReturnValue(AUTH_ROUTES.MIGRATION);
+      writeSocialMigrationSignedOutNotice({ reason: 'missing-scopes' });
+
+      render(<Header />);
+      fireEvent.click(screen.getByTestId('logo'));
+
+      expect(sessionStorage.getItem('social-migration:signed-out')).toBeNull();
+    });
+
+    it('keeps the sign-out notice when a held account clicks the logo, as the gate sends it back anyway', () => {
+      mockCurrentUserPubky = 'held-account';
+      mockSessionReference = mockGrantReference();
+      mockRestoreStatus = 'social-migration';
+      mockAuthStatus = AuthStatus.NEEDS_SOCIAL_MIGRATION;
+      mockUsePathname.mockReturnValue(AUTH_ROUTES.MIGRATION);
+      writeSocialMigrationSignedOutNotice({ reason: 'missing-scopes' });
+
+      render(<Header />);
+      fireEvent.click(screen.getByTestId('logo'));
+
+      expect(sessionStorage.getItem('social-migration:signed-out')).toBe(JSON.stringify({ reason: 'missing-scopes' }));
     });
   });
 

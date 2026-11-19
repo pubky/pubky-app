@@ -57,6 +57,18 @@ describe('getViewerTagUri', () => {
     ).toBe(LOCAL_URI);
   });
 
+  it('resolves labels that differ outside ASCII to their own addresses', () => {
+    const row: TagCollectionModelSchema<string> = {
+      ...record(),
+      tags: [
+        { label: 'xÄpfel', taggers: ['viewer'], taggers_count: 1, relationship: true, tag_uri: `${NEXUS_URI}-upper` },
+        { label: 'xäpfel', taggers: ['viewer'], taggers_count: 1, relationship: true, tag_uri: `${NEXUS_URI}-lower` },
+      ],
+    };
+    expect(getViewerTagUri(row, 'xÄpfel', 'viewer', NOW)).toBe(`${NEXUS_URI}-upper`);
+    expect(getViewerTagUri(row, 'xäpfel', 'viewer', NOW)).toBe(`${NEXUS_URI}-lower`);
+  });
+
   it.each([
     ['another viewer', record({ viewerId: 'other' })],
     ['a guest response', record({ viewerId: null })],

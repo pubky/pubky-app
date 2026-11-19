@@ -19,6 +19,23 @@ describe('AuthStore', () => {
     vi.clearAllMocks();
   });
 
+  describe('Sign-in dialog and the migration gate (ADR-0026)', () => {
+    it('closes the sign-in dialog when the gate takes the screen over, like a ready session', () => {
+      useAuthStore.getState().setShowSignInDialog(true);
+      useAuthStore.getState().setRestoreStatus('restoring');
+      expect(useAuthStore.getState().showSignInDialog).toBe(true);
+      useAuthStore.getState().setRestoreStatus('social-migration');
+      expect(useAuthStore.getState().showSignInDialog).toBe(false);
+      expect(useAuthStore.getState().isRestoringSession).toBe(false);
+
+      useAuthStore.getState().setShowSignInDialog(true);
+      useAuthStore
+        .getState()
+        .init({ session: null, currentUserPubky: null, hasProfile: null, restoreStatus: 'social-migration' });
+      expect(useAuthStore.getState().showSignInDialog).toBe(false);
+    });
+  });
+
   describe('Persistence Hydration', () => {
     it('marks the store as hydrated when persisted storage cannot be read', async () => {
       const originalStorage = useAuthStore.persist.getOptions().storage;

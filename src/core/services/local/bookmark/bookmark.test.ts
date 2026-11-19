@@ -1,18 +1,16 @@
 import { liveQuery } from 'dexie';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { BookmarkController } from '@/controllers/bookmark/bookmark';
-import type { TBookmarkEventParams } from '@/controllers/bookmark/bookmark.types';
 import { db } from '@/database/franky/franky';
 import { HttpMethod } from '@/libs/http/http.types';
 import { BookmarkModel } from '@/models/bookmark/bookmark';
 import type { Pubky } from '@/models/models.types';
 import { buildCompositeId } from '@/models/models.utils';
 import { PostDetailsModel } from '@/models/post/details/postDetails';
-import { PostStreamTypes } from '@/models/stream/post/postStream.types';
+import { type PostStreamId, PostStreamTypes } from '@/models/stream/post/postStream.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
 import { LocalBookmarkService } from '@/services/local/bookmark/bookmark';
-import { recentUnbookmarks } from '@/services/local/bookmark/recentUnbookmarks';
 import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import { asInvalid } from '@/test-utils/type-assertions';
 
@@ -25,23 +23,18 @@ const testData = {
     return buildCompositeId({ pubky: this.authorPubky, id: this.postId });
   },
 };
+const STREAM = PostStreamTypes.TIMELINE_BOOKMARKS_ALL as PostStreamId;
 
 // Helper functions
-const createBookmarkParams = (): TBookmarkEventParams => ({
-  userId: testData.userPubky,
-  postId: testData.compositePostId,
-});
+const createBookmarkParams = () => ({ postId: testData.compositePostId });
+const otherPost = (id: string) => buildCompositeId({ pubky: testData.authorPubky, id });
 
 const getSavedBookmark = async () => {
   return await BookmarkModel.table.get(testData.compositePostId);
 };
 
-const getUserCounts = async (userId: Pubky) => {
-  return await UserCountsModel.table.get(userId);
-};
-
-const getStream = async (streamId: PostStreamTypes) => {
-  return await PostStreamModel.table.get(streamId);
+const getStream = async () => {
+  return await PostStreamModel.table.get(STREAM);
 };
 
 const setupExistingBookmark = async () => {
@@ -51,40 +44,22 @@ const setupExistingBookmark = async () => {
   });
 };
 
-const setupUserCounts = async (userId: Pubky, bookmarks: number = 0) => {
-  await UserCountsModel.upsert({
-    id: userId,
-    bookmarks,
-    tagged: 0,
-    tags: 0,
-    unique_tags: 0,
-    posts: 0,
-    replies: 0,
-    collections: 0,
-    following: 0,
-    followers: 0,
-    friends: 0,
-  });
-};
-
 const setupPostDetails = async (
   kind: 'short' | 'long' | 'image' | 'video' | 'file' | 'link' | 'collection',
-  attachments?: string[] | null,
-  content?: string,
+  postId: string = testData.compositePostId,
 ) => {
   await PostDetailsModel.upsert({
-    id: testData.compositePostId,
-    content: content || 'Test post content',
+    id: postId,
+    content: 'Test post content',
     kind,
     indexed_at: Date.now(),
-    attachments: attachments ?? null,
-    uri: `pubky://${testData.authorPubky}/pub/pubky.app/posts/${testData.postId}`,
+    attachments: null,
+    uri: `pubky://${testData.authorPubky}/pub/social/v1/posts/${testData.postId}`,
   });
 };
 
 describe('LocalBookmarkService', () => {
   beforeEach(async () => {
-    recentUnbookmarks.reset();
     await db.initialize();
     await db.transaction(
       'rw',
@@ -100,7 +75,6 @@ describe('LocalBookmarkService', () => {
 
   describe('persist with PUT action (create)', () => {
     it('should create a new bookmark', async () => {
-      await setupUserCounts(testData.userPubky, 0);
       await LocalBookmarkService.persist(HttpMethod.PUT, createBookmarkParams());
 
       const savedBookmark = await getSavedBookmark();
@@ -119,78 +93,28 @@ describe('LocalBookmarkService', () => {
       expect(secondBookmark!.created_at).toBe(firstBookmark!.created_at); // Should remain unchanged
     });
 
-    it('should increment user bookmarks count when creating bookmark', async () => {
-      await setupUserCounts(testData.userPubky, 0);
+    it('never touches the Nexus user counts: bookmarks are counted locally', async () => {
       await LocalBookmarkService.persist(HttpMethod.PUT, createBookmarkParams());
 
-      const userCounts = await getUserCounts(testData.userPubky);
-      expect(userCounts!.bookmarks).toBe(1);
+      expect(await UserCountsModel.table.count()).toBe(0);
     });
 
-    it('should increment user bookmarks count from existing value', async () => {
-      await setupUserCounts(testData.userPubky, 5);
+    it.each(['short', 'image', 'collection'] as const)(
+      'prepends a bookmarked %s post to the one bookmarks stream',
+      async (kind) => {
+        await setupPostDetails(kind);
+        await LocalStreamPostsService.prependToStream({ streamId: STREAM, compositePostId: otherPost('older') });
+
+        await LocalBookmarkService.persist(HttpMethod.PUT, createBookmarkParams());
+
+        expect((await getStream())!.stream).toEqual([testData.compositePostId, otherPost('older')]);
+      },
+    );
+
+    it('bookmarks a post whose details are not cached yet', async () => {
       await LocalBookmarkService.persist(HttpMethod.PUT, createBookmarkParams());
 
-      const userCounts = await getUserCounts(testData.userPubky);
-      expect(userCounts!.bookmarks).toBe(6);
-    });
-
-    it('should NOT increment bookmarks count when bookmarking a collection', async () => {
-      // The `bookmarks` count is posts-only — bookmarked collections are excluded.
-      await setupUserCounts(testData.userPubky, 5);
-      await setupPostDetails('collection');
-      await LocalBookmarkService.persist(HttpMethod.PUT, createBookmarkParams());
-
-      // The bookmark itself is still recorded, but the count must not move.
-      expect(await getSavedBookmark()).toBeTruthy();
-      const userCounts = await getUserCounts(testData.userPubky);
-      expect(userCounts!.bookmarks).toBe(5);
-    });
-
-    it('should add post to TIMELINE_BOOKMARKS_ALL stream', async () => {
-      await setupPostDetails('short');
-      await LocalBookmarkService.persist(HttpMethod.PUT, createBookmarkParams());
-
-      const stream = await getStream(PostStreamTypes.TIMELINE_BOOKMARKS_ALL);
-      expect(stream).toBeTruthy();
-      expect(stream!.stream).toContain(testData.compositePostId);
-    });
-
-    it('should add a non-collection post to ONLY the ALL stream', async () => {
-      // Kind-specific bookmark streams were removed with the legacy filter UI;
-      // every non-collection bookmark now lives only in the ALL feed stream.
-      await setupPostDetails('image');
-      await LocalBookmarkService.persist(HttpMethod.PUT, createBookmarkParams());
-
-      const allStream = await getStream(PostStreamTypes.TIMELINE_BOOKMARKS_ALL);
-      const collectionStream = await getStream(PostStreamTypes.TIMELINE_BOOKMARKS_COLLECTION);
-
-      expect(allStream!.stream).toContain(testData.compositePostId);
-      expect(collectionStream).toBeUndefined(); // non-collection posts never touch the collection stream
-    });
-
-    it('should add a bookmarked collection to the COLLECTION stream and NOT the ALL stream', async () => {
-      // Collections are "followed", not feed posts: they belong in the collection
-      // bookmark stream, not the posts feed (ALL) stream that filters them out anyway.
-      await setupPostDetails('collection');
-      await LocalBookmarkService.persist(HttpMethod.PUT, createBookmarkParams());
-
-      const collectionStream = await getStream(PostStreamTypes.TIMELINE_BOOKMARKS_COLLECTION);
-      const allStream = await getStream(PostStreamTypes.TIMELINE_BOOKMARKS_ALL);
-
-      expect(collectionStream!.stream).toContain(testData.compositePostId);
-      expect(allStream).toBeUndefined(); // must not pollute the posts feed stream
-    });
-
-    it('should not update counts when post is already bookmarked', async () => {
-      await setupExistingBookmark();
-      await setupUserCounts(testData.userPubky, 5);
-      await setupPostDetails('short');
-
-      await LocalBookmarkService.persist(HttpMethod.PUT, createBookmarkParams());
-
-      const userCounts = await getUserCounts(testData.userPubky);
-      expect(userCounts!.bookmarks).toBe(5); // Should remain unchanged
+      expect((await getStream())!.stream).toEqual([testData.compositePostId]);
     });
   });
 
@@ -199,7 +123,7 @@ describe('LocalBookmarkService', () => {
       await setupExistingBookmark();
       await setupPostDetails('short');
       await LocalStreamPostsService.prependToStream({
-        streamId: PostStreamTypes.TIMELINE_BOOKMARKS_ALL,
+        streamId: STREAM,
         compositePostId: testData.compositePostId,
       });
     });
@@ -211,66 +135,12 @@ describe('LocalBookmarkService', () => {
       expect(savedBookmark).toBeUndefined();
     });
 
-    it('should keep a stale Nexus copy of the removed bookmark from restoring it', async () => {
-      await LocalBookmarkService.persist(HttpMethod.DELETE, createBookmarkParams());
-
-      expect(recentUnbookmarks.isProtected(testData.userPubky, testData.compositePostId)).toBe(true);
-    });
-
-    it('should let a re-bookmark lift the protection of an earlier removal', async () => {
-      await LocalBookmarkService.persist(HttpMethod.DELETE, createBookmarkParams());
-      await LocalBookmarkService.persist(HttpMethod.PUT, createBookmarkParams());
-
-      expect(recentUnbookmarks.isProtected(testData.userPubky, testData.compositePostId)).toBe(false);
-      expect(await getSavedBookmark()).toBeTruthy();
-    });
-
-    it('should decrement user bookmarks count when deleting bookmark', async () => {
-      await setupUserCounts(testData.userPubky, 1);
-      await LocalBookmarkService.persist(HttpMethod.DELETE, createBookmarkParams());
-
-      const userCounts = await getUserCounts(testData.userPubky);
-      expect(userCounts!.bookmarks).toBe(0);
-    });
-
-    it('should decrement user bookmarks count from existing value', async () => {
-      await setupUserCounts(testData.userPubky, 10);
-      await LocalBookmarkService.persist(HttpMethod.DELETE, createBookmarkParams());
-
-      const userCounts = await getUserCounts(testData.userPubky);
-      expect(userCounts!.bookmarks).toBe(9);
-    });
-
-    it('should NOT decrement bookmarks count when un-bookmarking a collection', async () => {
-      // Collections never moved the posts-only `bookmarks` count, so removing
-      // a collection bookmark must not move it either.
-      await setupUserCounts(testData.userPubky, 10);
-      await setupPostDetails('collection'); // overwrite the 'short' details from beforeEach
-      await LocalBookmarkService.persist(HttpMethod.DELETE, createBookmarkParams());
-
-      expect(await getSavedBookmark()).toBeUndefined();
-      const userCounts = await getUserCounts(testData.userPubky);
-      expect(userCounts!.bookmarks).toBe(10);
-    });
-
-    it('should remove a non-collection post from the ALL bookmark stream', async () => {
-      await LocalBookmarkService.persist(HttpMethod.DELETE, createBookmarkParams());
-
-      const allStream = await getStream(PostStreamTypes.TIMELINE_BOOKMARKS_ALL);
-      expect(allStream!.stream).not.toContain(testData.compositePostId);
-    });
-
-    it('should remove an un-bookmarked collection from the COLLECTION stream', async () => {
-      await setupPostDetails('collection'); // overwrite the 'short' details from beforeEach
-      await LocalStreamPostsService.prependToStream({
-        streamId: PostStreamTypes.TIMELINE_BOOKMARKS_COLLECTION,
-        compositePostId: testData.compositePostId,
-      });
+    it.each(['short', 'collection'] as const)('removes an un-bookmarked %s post from the stream', async (kind) => {
+      await setupPostDetails(kind);
 
       await LocalBookmarkService.persist(HttpMethod.DELETE, createBookmarkParams());
 
-      const collectionStream = await getStream(PostStreamTypes.TIMELINE_BOOKMARKS_COLLECTION);
-      expect(collectionStream?.stream ?? []).not.toContain(testData.compositePostId);
+      expect((await getStream())!.stream).not.toContain(testData.compositePostId);
     });
 
     it('should ignore if post is not bookmarked', async () => {
@@ -282,15 +152,54 @@ describe('LocalBookmarkService', () => {
       const savedBookmark = await getSavedBookmark();
       expect(savedBookmark).toBeUndefined();
     });
+  });
 
-    it('should not update counts when post is not bookmarked', async () => {
-      await BookmarkModel.table.clear();
-      await setupUserCounts(testData.userPubky, 5);
+  describe('reconcile', () => {
+    it('replaces the rows with the listed ones and rewrites the stream newest first, without a cursor', async () => {
+      await BookmarkModel.upsert({ id: otherPost('stale'), created_at: 5 });
+      await PostStreamModel.upsert(STREAM, [otherPost('stale')], { tailCursor: 42 });
 
-      await LocalBookmarkService.persist(HttpMethod.DELETE, createBookmarkParams());
+      const ids = await LocalBookmarkService.reconcile({
+        bookmarks: [
+          { id: otherPost('a'), created_at: 10 },
+          { id: otherPost('b'), created_at: 30 },
+          { id: otherPost('c'), created_at: 20 },
+        ],
+      });
 
-      const userCounts = await getUserCounts(testData.userPubky);
-      expect(userCounts!.bookmarks).toBe(5); // Should remain unchanged
+      expect(ids).toEqual([otherPost('b'), otherPost('c'), otherPost('a')]);
+      expect(await BookmarkModel.findAll()).not.toContain(otherPost('stale'));
+      expect(await getStream()).toEqual({ id: STREAM, stream: ids });
+    });
+
+    it('writes nothing when the account is no longer current', async () => {
+      await setupExistingBookmark();
+
+      const ids = await LocalBookmarkService.reconcile({
+        bookmarks: [{ id: otherPost('a'), created_at: 1 }],
+        isCurrent: () => false,
+      });
+
+      expect(ids).toBeNull();
+      expect(await BookmarkModel.findAll()).toEqual([testData.compositePostId]);
+      expect(await getStream()).toBeUndefined();
+    });
+  });
+
+  describe('countPosts', () => {
+    it('counts every bookmark but the collections, posts without cached details included', async () => {
+      await Promise.all(
+        ['a', 'b', 'c', 'd'].map((id) => LocalBookmarkService.persist(HttpMethod.PUT, { postId: otherPost(id) })),
+      );
+      await setupPostDetails('short', otherPost('a'));
+      await setupPostDetails('collection', otherPost('b'));
+      await setupPostDetails('long', otherPost('c'));
+
+      await expect(LocalBookmarkService.countPosts()).resolves.toBe(3);
+    });
+
+    it('is zero without bookmarks', async () => {
+      await expect(LocalBookmarkService.countPosts()).resolves.toBe(0);
     });
   });
 
@@ -375,18 +284,18 @@ describe('LocalBookmarkService', () => {
     });
   });
 
-  describe('BookmarkController.getAll — liveQuery reactivity', () => {
+  describe('BookmarkController.getAllWithPostDetails — liveQuery reactivity', () => {
     // Regression guard for the FollowedCollections / DiscoverCollections live
-    // queries: those sections wrap `BookmarkController.getAll()` in
+    // queries: those sections wrap `BookmarkController.getAllWithPostDetails()` in
     // `useLiveQuery(...)`, which only re-runs when Dexie's table-observation
     // proxy is hit on the same Dexie instance the query subscribes to.
     //
-    // The call path goes Controller → Application → Service → Model.table.toArray().
-    // If any future refactor adds an `await` that breaks out of the Dexie
-    // async-context (e.g. a `fetch` round-trip in the middle), the live query
-    // would silently stop reacting to bookmark writes — cards would stop
-    // appearing in Followed / disappearing from Discover until a manual
-    // reload. These tests fail loudly in that scenario.
+    // The call path goes Controller → Application → Service → Model, one read
+    // transaction over `bookmarks` and `post_details`. If any future refactor
+    // adds an `await` that breaks out of the Dexie async-context (e.g. a `fetch`
+    // round-trip in the middle), the live query would silently stop reacting to
+    // bookmark writes — cards would stop appearing in Followed / disappearing
+    // from Discover until a manual reload. These tests fail loudly in that scenario.
 
     const waitForEmission = <T>(promise: Promise<T>, timeoutMs = 1000): Promise<T> =>
       Promise.race<T>([
@@ -397,7 +306,9 @@ describe('LocalBookmarkService', () => {
       ]);
 
     it('emits initial value on subscription', async () => {
-      const observable = liveQuery(() => BookmarkController.getAll());
+      const observable = liveQuery(() =>
+        BookmarkController.getAllWithPostDetails().then((rows) => rows.map(({ id }) => id)),
+      );
 
       const first = await waitForEmission(
         new Promise<string[]>((resolve, reject) => {
@@ -415,7 +326,9 @@ describe('LocalBookmarkService', () => {
     });
 
     it('re-emits when a bookmark is added', async () => {
-      const observable = liveQuery(() => BookmarkController.getAll());
+      const observable = liveQuery(() =>
+        BookmarkController.getAllWithPostDetails().then((rows) => rows.map(({ id }) => id)),
+      );
       const emissions: string[][] = [];
 
       // Capture the first emission, then write, then capture the second.
@@ -452,7 +365,9 @@ describe('LocalBookmarkService', () => {
       const seedId = 'authorB:p-live-2';
       await BookmarkModel.upsert({ id: seedId, created_at: 2000 });
 
-      const observable = liveQuery(() => BookmarkController.getAll());
+      const observable = liveQuery(() =>
+        BookmarkController.getAllWithPostDetails().then((rows) => rows.map(({ id }) => id)),
+      );
       const emissions: string[][] = [];
 
       const secondEmission = new Promise<string[]>((resolve, reject) => {

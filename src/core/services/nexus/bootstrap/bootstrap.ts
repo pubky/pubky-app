@@ -1,9 +1,11 @@
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
+import { PostNormalizer } from '@/pipes/post/post.normalizer';
+import { UserNormalizer } from '@/pipes/user/user.normalizer';
 import { bootstrapApi } from '@/services/nexus/bootstrap/bootstrap.api';
-import type { NexusBootstrapResponse } from '@/services/nexus/bootstrap/bootstrap.types';
-import { fetchNexusNoContent, queryNexus } from '@/services/nexus/nexus.utils';
+import type { NexusBootstrapResponse, NexusBootstrapWire } from '@/services/nexus/bootstrap/bootstrap.types';
+import { carryNexusResponseStartedAt, fetchNexusNoContent, queryNexus } from '@/services/nexus/nexus.utils';
 
 /**
  * Nexus Bootstrap Service
@@ -15,13 +17,17 @@ export class NexusBootstrapService {
    * Retrieves bootstrap data from Nexus API
    *
    * @param pubky - User's public key
-   * @returns Bootstrap data (users, posts, streams)
+   * @returns Bootstrap data (users, posts, streams), past the read boundary
    */
   static async fetch(pubky: Pubky): Promise<NexusBootstrapResponse> {
     const url = bootstrapApi.get(pubky);
-    const data = await queryNexus<NexusBootstrapResponse>({ url });
+    const data = await queryNexus<NexusBootstrapWire>({ url });
     Logger.debug('Bootstrap data fetched successfully', { data });
-    return data;
+    return carryNexusResponseStartedAt(data, {
+      ...data,
+      users: data.users.map((user) => UserNormalizer.fromNexus(user)),
+      posts: data.posts.map((post) => PostNormalizer.fromNexus(post)),
+    });
   }
 
   /**

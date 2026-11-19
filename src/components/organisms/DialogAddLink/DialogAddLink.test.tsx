@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { USER_LINK_URL_MAX_LENGTH } from '@/config/user';
 import { DialogAddLink } from './DialogAddLink';
 
 // Mock molecules
@@ -136,7 +137,37 @@ describe('DialogAddLink', () => {
     fireEvent.change(labelInput, { target: { value: 'Website' } });
     fireEvent.change(urlInput, { target: { value: 'javascript:alert(1)' } });
 
-    expect(screen.getByText('Invalid URL')).toBeInTheDocument();
+    expect(screen.getByText('Links must start with http:// or https://')).toBeInTheDocument();
+    expect(screen.getByText('Save link')).toBeDisabled();
+    expect(mockOnSave).not.toHaveBeenCalled();
+  });
+
+  // `safeExternalUrlSchema` opens these on a legacy profile; the v1 data model refuses them at the write (SF-5)
+  it.each([['mailto:satoshi@example.com'], ['tel:+1234567890'], ['HTTPS://Example.com/x']])(
+    'does not save the link "%s", which the data model refuses',
+    (url) => {
+      render(<DialogAddLink onSave={mockOnSave} />);
+      fireEvent.click(screen.getByText('Add link'));
+      const [labelInput, urlInput] = screen.getAllByTestId('input');
+
+      fireEvent.change(labelInput, { target: { value: 'Contact' } });
+      fireEvent.change(urlInput, { target: { value: url } });
+
+      expect(screen.getByText('Links must start with http:// or https://')).toBeInTheDocument();
+      expect(screen.getByText('Save link')).toBeDisabled();
+      expect(mockOnSave).not.toHaveBeenCalled();
+    },
+  );
+
+  it('does not save a URL over the data model cap', () => {
+    render(<DialogAddLink onSave={mockOnSave} />);
+    fireEvent.click(screen.getByText('Add link'));
+    const [labelInput, urlInput] = screen.getAllByTestId('input');
+
+    fireEvent.change(labelInput, { target: { value: 'Website' } });
+    fireEvent.change(urlInput, { target: { value: `https://example.com/${'a'.repeat(USER_LINK_URL_MAX_LENGTH)}` } });
+
+    expect(screen.getByText(`Links must be no more than ${USER_LINK_URL_MAX_LENGTH} characters`)).toBeInTheDocument();
     expect(screen.getByText('Save link')).toBeDisabled();
     expect(mockOnSave).not.toHaveBeenCalled();
   });

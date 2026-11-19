@@ -1,4 +1,5 @@
-import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
+import type { KnownFeedReach } from 'pubky-social-specs';
+import { feedLayouts, feedReaches, feedSorts, postKinds } from 'pubky-social-specs';
 import { z } from 'zod';
 import { DEFAULT_CUSTOM_FEED_ICON } from '@/config/feed';
 import { TAGGED_AS_FILTER_KEY } from '@/config/feed';
@@ -20,9 +21,9 @@ export const CUSTOM_FEED_FORM_FIELDS = {
 
 /**
  * Form-level reach includes the Tagged-as UI sentinel. On submit that sentinel
- * is rewritten to `PubkyAppFeedReach.Wot` with the form's `domain_tags`.
+ * is rewritten to `'wot'` with the form's `domain_tags`.
  */
-export type CustomFeedFormReach = PubkyAppFeedReach | typeof TAGGED_AS_FILTER_KEY;
+export type CustomFeedFormReach = KnownFeedReach | typeof TAGGED_AS_FILTER_KEY;
 
 /**
  * Schema for the create/edit custom feed form.
@@ -36,10 +37,10 @@ export const customFeedFormSchema = z
   .object({
     [CUSTOM_FEED_FORM_FIELDS.NAME]: z.string().refine((value) => value.trim().length > 0),
     [CUSTOM_FEED_FORM_FIELDS.ICON]: z.string().min(1),
-    [CUSTOM_FEED_FORM_FIELDS.REACH]: z.union([z.enum(PubkyAppFeedReach), z.literal(TAGGED_AS_FILTER_KEY)]),
-    [CUSTOM_FEED_FORM_FIELDS.SORT]: z.enum(PubkyAppFeedSort),
-    [CUSTOM_FEED_FORM_FIELDS.LAYOUT]: z.enum(PubkyAppFeedLayout),
-    [CUSTOM_FEED_FORM_FIELDS.CONTENT]: z.union([z.literal(CUSTOM_FEED_CONTENT_ALL), z.enum(PubkyAppPostKind)]),
+    [CUSTOM_FEED_FORM_FIELDS.REACH]: z.union([z.enum(feedReaches), z.literal(TAGGED_AS_FILTER_KEY)]),
+    [CUSTOM_FEED_FORM_FIELDS.SORT]: z.enum(feedSorts),
+    [CUSTOM_FEED_FORM_FIELDS.LAYOUT]: z.enum(feedLayouts),
+    [CUSTOM_FEED_FORM_FIELDS.CONTENT]: z.union([z.literal(CUSTOM_FEED_CONTENT_ALL), z.enum(postKinds)]),
     [CUSTOM_FEED_FORM_FIELDS.TAGS]: z.array(z.string()),
     [CUSTOM_FEED_FORM_FIELDS.DOMAIN_TAGS]: z.array(z.string()),
   })
@@ -53,9 +54,9 @@ export type CustomFeedFormContent = CustomFeedFormData['content'];
 export const customFeedFormDefaults: CustomFeedFormData = {
   [CUSTOM_FEED_FORM_FIELDS.NAME]: '',
   [CUSTOM_FEED_FORM_FIELDS.ICON]: DEFAULT_CUSTOM_FEED_ICON,
-  [CUSTOM_FEED_FORM_FIELDS.REACH]: PubkyAppFeedReach.All,
-  [CUSTOM_FEED_FORM_FIELDS.SORT]: PubkyAppFeedSort.Recent,
-  [CUSTOM_FEED_FORM_FIELDS.LAYOUT]: PubkyAppFeedLayout.Columns,
+  [CUSTOM_FEED_FORM_FIELDS.REACH]: 'all',
+  [CUSTOM_FEED_FORM_FIELDS.SORT]: 'recent',
+  [CUSTOM_FEED_FORM_FIELDS.LAYOUT]: 'columns',
   [CUSTOM_FEED_FORM_FIELDS.CONTENT]: CUSTOM_FEED_CONTENT_ALL,
   [CUSTOM_FEED_FORM_FIELDS.TAGS]: [],
   [CUSTOM_FEED_FORM_FIELDS.DOMAIN_TAGS]: [],
@@ -76,7 +77,7 @@ export const customFeedFormDefaults: CustomFeedFormData = {
  */
 export function customFeedFormValuesFromFeed(feed: FeedModelSchema): CustomFeedFormData {
   const domainTags = feed.domain_tags ?? [];
-  const isTaggedAsFeed = feed.reach === PubkyAppFeedReach.Wot && domainTags.length > 0;
+  const isTaggedAsFeed = feed.reach === 'wot' && domainTags.length > 0;
 
   return {
     [CUSTOM_FEED_FORM_FIELDS.NAME]: feed.name,

@@ -3,6 +3,7 @@
 import { useSearchParams } from 'next/navigation';
 import { getMaxStreamTags } from '@/libs/runtime-config/runtime-config';
 import { validateContentSearchQuery } from '@/libs/search/contentSearch';
+import { canonicalizeTagLabel } from '@/libs/utils/utils';
 
 /**
  * Parses tags from a comma-separated string parameter.
@@ -18,11 +19,14 @@ function parseTags(tagsParam: string | null): string[] {
     return [];
   }
 
-  return tagsParam
-    .split(',')
-    .map((tag) => tag.trim().toLowerCase())
-    .filter((tag) => tag.length > 0)
-    .slice(0, getMaxStreamTags());
+  return (
+    tagsParam
+      .split(',')
+      // The stored label fold (trim + ASCII lowercase): a search for a tag must name the tag file as written
+      .map((tag) => canonicalizeTagLabel(tag))
+      .filter((tag) => tag.length > 0)
+      .slice(0, getMaxStreamTags())
+  );
 }
 
 /**

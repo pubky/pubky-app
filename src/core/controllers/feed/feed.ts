@@ -1,6 +1,7 @@
 import { FeedApplication } from '@/application/feed/feed';
 import type { TFeedPersistCreateParams } from '@/application/feed/feed.types';
 import type { TFeedCreateParams, TFeedIdParam, TFeedUpdateParams } from '@/controllers/feed/feed.types';
+import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import { FeedNormalizer } from '@/pipes/feed/feed.normalizer';
 import { FeedValidators } from '@/pipes/feed/feed.validators';
@@ -27,21 +28,23 @@ export class FeedController {
   }
 
   /**
-   * Fetch all feeds from the homeserver and persist them locally.
+   * Fetch all feeds from the homeserver and persist them locally. The listing is reconciled under
+   * the viewer guard, so a fetch that outlives a sign-out writes nothing for the next account.
    * @returns The list of persisted feeds
    */
   static async fetchFeeds(): Promise<FeedModelSchema[]> {
     const userId = useAuthStore.getState().selectCurrentUserPubky();
-    return FeedApplication.fetchFeeds(userId);
+    return FeedApplication.fetchFeeds(userId, { isCurrent: captureViewerSession() });
   }
 
   /**
    * Commit the create feed operation, this will persist the feed to the local database and sync to the homeserver.
    * @param params - The parameters object
    * @param params.tags - The tags for the feed
-   * @returns The created feed
+   * @returns The created feed, or null when the account changed while the write waited for the sync lock
+   *   (nothing was created)
    */
-  static async commitCreate(params: TFeedCreateParams): Promise<FeedModelSchema> {
+  static async commitCreate(params: TFeedCreateParams): Promise<FeedModelSchema | null> {
     const userId = useAuthStore.getState().selectCurrentUserPubky();
 
     // Validate tag scope early to fail fast before normalization and persistence.
@@ -51,9 +54,7 @@ export class FeedController {
 
     FeedValidators.validatePutParams({ feed: normalizedFeed });
 
-    const feed = await FeedApplication.persist({ userId, params: { feed: normalizedFeed } });
-
-    return feed!;
+    return FeedApplication.persist({ userId, params: { feed: normalizedFeed }, isCurrent: captureViewerSession() });
   }
 
   /**
@@ -61,10 +62,13 @@ export class FeedController {
    * @param params - The parameters object
    * @param params.feedId - The ID of the feed
    * @param params.changes - The changes to the feed
-   * @returns The updated feed
+   * @returns The updated feed, or null when the account changed while the write waited for the sync lock
+   *   (nothing was updated)
    */
-  static async commitUpdate(params: TFeedUpdateParams): Promise<FeedModelSchema> {
+  static async commitUpdate(params: TFeedUpdateParams): Promise<FeedModelSchema | null> {
     const userId = useAuthStore.getState().selectCurrentUserPubky();
+    // Captured with the user, before the local read below: a logout during that read must turn the guard false.
+    const isCurrent = captureViewerSession();
 
     const mergedParams = await FeedApplication.prepareUpdateParams({
       feedId: params.feedId,
@@ -73,9 +77,8 @@ export class FeedController {
 
     FeedValidators.validateTagScope(mergedParams.tags, mergedParams.domain_tags, mergedParams.reach);
 
-    // Normalizing produces a new FeedResult whose ID is derived from the feed config
-    // (tags, domain_tags, reach, layout, sort, content) via HashId — a blake3 hash of the serialized
-    // PubkyAppFeedConfig. Changing any of those fields yields a different ID, which means
+    // Normalizing produces a new built feed whose ID is derived from the feed config
+    // (tags, domain_tags, reach, layout, sort, content). Changing any of those fields yields a different ID, which means
     // the homeserver path changes. The `name`, `icon`, and `created_at` fields are NOT
     // part of the hash, so presentation-only changes keep the same ID.
     const normalizedFeed = FeedNormalizer.to({ params: mergedParams, userId });
@@ -89,23 +92,23 @@ export class FeedController {
 
     // When the config-derived ID differs from existingId, persist handles the
     // create-new + delete-old cycle on the homeserver automatically.
-    const feed = await FeedApplication.persist({
-      userId,
-      params: persistParams,
-    });
-
-    return feed!;
+    return FeedApplication.persist({ userId, params: persistParams, isCurrent });
   }
 
   /**
    * Commit the delete feed operation, this will delete the feed from the local database and sync to the homeserver.
    * @param params - The parameters object
    * @param params.feedId - The ID of the feed
-   * @returns void
+   * @returns Whether the delete ran: false when it was skipped because the account changed while it waited
+   *   for the sync lock (`FeedApplication.commitDelete`), so there is nothing to announce
    */
-  static async commitDelete(params: TFeedIdParam): Promise<void> {
+  static async commitDelete(params: TFeedIdParam): Promise<boolean> {
     const userId = useAuthStore.getState().selectCurrentUserPubky();
     FeedValidators.validateDeleteParams({ feedId: params.feedId });
-    await FeedApplication.commitDelete({ userId, params: { feedId: params.feedId } });
+    return FeedApplication.commitDelete({
+      userId,
+      params: { feedId: params.feedId },
+      isCurrent: captureViewerSession(),
+    });
   }
 }

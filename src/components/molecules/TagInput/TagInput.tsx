@@ -12,7 +12,7 @@ import { useTagInput } from '@/hooks/useTagInput/useTagInput';
 import { TAG_INPUT_BLUR_DELAY_MS } from '@/hooks/useTagInput/useTagInput.constants';
 import { mergeTagSuggestions } from '@/hooks/useTagInput/useTagInput.utils';
 import { useTagSuggestions } from '@/hooks/useTagSuggestions/useTagSuggestions';
-import { cn } from '@/libs/utils/utils';
+import { canonicalizeTagLabel, cn } from '@/libs/utils/utils';
 import { EmojiPickerDialog } from '../EmojiPickerDialog/EmojiPickerDialog';
 import type { TagInputHandle, TagInputProps } from './TagInput.types';
 import { TagSuggestionsDropdown } from './TagSuggestionsDropdown/TagSuggestionsDropdown';
@@ -134,14 +134,17 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
     e.preventDefault();
   };
   const selectSuggestion = (label: string) => {
-    const normalizedLabel = label.toLowerCase();
     if (addOnSuggestionClick) {
-      const isDuplicate = tagsForDuplicateCheck.some((tag) => tag.label.toLowerCase() === normalizedLabel);
+      // A suggestion is a stored label: fold it as the data model does (ASCII letters only), so clicking
+      // `Äpfel` joins that tag instead of creating `äpfel` beside it.
+      const normalizedLabel = canonicalizeTagLabel(label);
+      const isDuplicate = tagsForDuplicateCheck.some((tag) => canonicalizeTagLabel(tag.label) === normalizedLabel);
       // Like a typed submit, the input clears only once the add went through (issue #2890).
       if (isDuplicate) setInputValue('');
       else void addTag(normalizedLabel);
     } else {
-      setInputValue(normalizedLabel);
+      // Into the draft, which applies the input's own fold like any typed text.
+      setInputValue(label);
     }
     setShowSuggestions(false);
     resetSelection();
