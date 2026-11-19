@@ -801,4 +801,59 @@ describe('usePaykitSetupFlow', () => {
       });
     });
   });
+
+  // #2984: a Paykit Server that restarted after its grant was revoked answers `unavailable` on every check.
+  describe('checkHeld', () => {
+    it('asks only Paykit and stops at reconnect-required when Paykit holds the creator', async () => {
+      mocks.fetchPaykitCreatorHeld.mockResolvedValue(true);
+      const { result } = renderHook(() => usePaykitSetupFlow('BTC'));
+
+      await act(async () => {
+        await result.current.checkHeld();
+      });
+
+      expect(mocks.fetchPaykitSetupStatus).not.toHaveBeenCalled();
+      expect(result.current.status).toBe(PaykitSetupFlowStatus.RECONNECT_REQUIRED);
+      expect(mocks.getPaykitReconnectUrl).not.toHaveBeenCalled();
+    });
+
+    it('starts the setup when Paykit does not hold the creator', async () => {
+      mocks.fetchPaykitCreatorHeld.mockResolvedValue(false);
+      const { result } = renderHook(() => usePaykitSetupFlow('BTC'));
+
+      await act(async () => {
+        await result.current.checkHeld();
+      });
+
+      expect(result.current.status).toBe(PaykitSetupFlowStatus.AWAITING_APPROVAL);
+      expect(result.current.mode).toBe('setup');
+      expect(mocks.getPaykitSetupUrl).toHaveBeenCalledTimes(1);
+    });
+
+    it('stays unavailable, with the error, when Paykit cannot say', async () => {
+      mocks.fetchPaykitCreatorHeld.mockRejectedValue(new Error('probe failed'));
+      const { result } = renderHook(() => usePaykitSetupFlow('BTC'));
+
+      await act(async () => {
+        await result.current.checkHeld();
+      });
+
+      expect(result.current.status).toBe(PaykitSetupFlowStatus.UNAVAILABLE);
+      expect(result.current.error).not.toBeNull();
+      expect(mocks.getPaykitSetupUrl).not.toHaveBeenCalled();
+      expect(mocks.getPaykitReconnectUrl).not.toHaveBeenCalled();
+    });
+
+    it('leaves no error when the Lock Server itself answered unavailable', async () => {
+      mocks.fetchPaykitSetupStatus.mockResolvedValue('unavailable');
+      const { result } = renderHook(() => usePaykitSetupFlow('BTC'));
+
+      await act(async () => {
+        await result.current.check();
+      });
+
+      expect(result.current.status).toBe(PaykitSetupFlowStatus.UNAVAILABLE);
+      expect(result.current.error).toBeNull();
+    });
+  });
 });

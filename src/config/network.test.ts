@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   getHomeserverCapabilities,
   HOMESERVER_CAPABILITIES,
+  isLocksConfigured,
   isPassportAppleEnabled,
   isStagingHomeserverDeploy,
 } from '@/config/network';
@@ -114,6 +115,26 @@ describe('embedded Shop initial permissions', () => {
       ]);
       expect(new Set(scopes).size).toBe(scopes.length);
       expect(scopes.some((scope) => scope.split(':')[1].includes('e'))).toBe(false);
+    });
+  });
+});
+
+describe('isLocksConfigured', () => {
+  const LOCK_SERVER = 'lock-server-pubky';
+  const PAYKIT = 'https://paykit.example.com';
+
+  it('is true with both the Lock Server and the Paykit Server', () => {
+    withRuntimeEnv({ PUBKY_RUNTIME_LOCK_SERVER: LOCK_SERVER, PUBKY_RUNTIME_PAYKIT_SERVER_URL: PAYKIT }, () => {
+      expect(isLocksConfigured()).toBe(true);
+    });
+  });
+
+  it.each([
+    ['the Lock Server', { PUBKY_RUNTIME_LOCK_SERVER: undefined, PUBKY_RUNTIME_PAYKIT_SERVER_URL: PAYKIT }],
+    ['the Paykit Server', { PUBKY_RUNTIME_LOCK_SERVER: LOCK_SERVER, PUBKY_RUNTIME_PAYKIT_SERVER_URL: undefined }],
+  ])('is false without %s', (_, env) => {
+    withRuntimeEnv(env, () => {
+      expect(isLocksConfigured()).toBe(false);
     });
   });
 });

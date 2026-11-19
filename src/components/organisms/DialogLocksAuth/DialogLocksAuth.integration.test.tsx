@@ -344,6 +344,49 @@ describe('DialogLocksAuth - Paykit setup status (#2627)', () => {
     expect(screen.queryByRole('button', { name: 'Reconnect Bitkit' })).not.toBeInTheDocument();
   });
 
+  // A Paykit Server that restarted after its grant was revoked answers `unavailable` on every check (#2984).
+  it('Reconnect Bitkit while payments are unavailable asks Paykit and confirms before any reconnect', async () => {
+    signIn();
+    mocks.paykitSetupStatus.mockResolvedValue({ status: 'unavailable' });
+    answerProbe('held');
+    renderDialog();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Reconnect Bitkit' }));
+
+    expect(await screen.findByText(/Paykit already has a Bitkit setup for your account/)).toBeInTheDocument();
+    expect(screen.getByText(/new Bitcoin account/)).toBeInTheDocument();
+    expect(reconnectIframe()).not.toBeInTheDocument();
+    expect(mocks.probe).toHaveBeenCalledTimes(1);
+  });
+
+  it('Reconnect Bitkit while payments are unavailable starts the setup for a creator Paykit does not hold', async () => {
+    signIn();
+    mocks.paykitSetupStatus.mockResolvedValue({ status: 'unavailable' });
+    answerProbe('not-held');
+    renderDialog();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Reconnect Bitkit' }));
+
+    expect(await screen.findByTitle('Bitkit payout account setup')).toBeInTheDocument();
+    expect(reconnectIframe()).not.toBeInTheDocument();
+  });
+
+  it('Reconnect Bitkit while payments are unavailable stays unavailable when Paykit cannot say', async () => {
+    signIn();
+    mocks.paykitSetupStatus.mockResolvedValue({ status: 'unavailable' });
+    answerProbe('unavailable');
+    renderDialog();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Reconnect Bitkit' }));
+
+    await waitFor(() => expect(mocks.probe).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText('Payments are unavailable right now. Please try again later.')).toBeInTheDocument();
+    // Paykit could not say either, so nothing points at a revoked grant any more.
+    expect(screen.queryByRole('button', { name: 'Reconnect Bitkit' })).not.toBeInTheDocument();
+    expect(setupIframe()).not.toBeInTheDocument();
+    expect(reconnectIframe()).not.toBeInTheDocument();
+  });
+
   it('a failed reconnect checks readiness and presence before asking for another reconnect approval', async () => {
     signIn();
     mocks.paykitSetupStatus.mockResolvedValue({ status: 'setup_required' });

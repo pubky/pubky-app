@@ -14,11 +14,11 @@
  *  3. Enable Payments — iframe loads Paykit's `/setup` page, where the creator connects the account
  *                      that receives payments. The Lock Server is asked first whether this creator's
  *                      Paykit setup is already done (#2627): `ready` skips the step, and `unavailable`
- *                      offers a retry instead of the page. Paykit refuses `/setup` for a creator it
- *                      already holds, so it is asked too (before the page opens, and again when the
- *                      setup fails): a held creator gets "Reconnect Bitkit", which loads
- *                      `/setup/reconnect`, and a failed setup for one Paykit does not hold says
- *                      nothing was set up and offers "Connect Bitkit" again.
+ *                      offers a retry, or asks Paykit directly whether it holds the creator (#2984).
+ *                      Paykit refuses `/setup` for a creator it already holds, so it is asked too
+ *                      (before the page opens, and again when the setup fails): a held creator gets
+ *                      "Reconnect Bitkit", which loads `/setup/reconnect`, and a failed setup for one
+ *                      Paykit does not hold says nothing was set up and offers "Connect Bitkit" again.
  *  4. Enabled        — success; "Continue" notifies the caller via `onSuccess` and closes.
  *
  * Which step shows is derived from the stores, so a creator who is already signed in, but whose
@@ -28,7 +28,7 @@
  * fresh Locks session resets `paykitConnected`, and a caller that only needs the Lock Server (such
  * as deleting a lock announcement) must not be held up by Paykit.
  */
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { LoaderCircle } from 'lucide-react';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -73,6 +73,8 @@ type DialogLocksAuthProps = {
   onSuccess: () => void;
   /** 'signin' asks for the Lock Server sign-in only; 'setup' (default) also runs the session and Paykit steps. */
   mode?: 'setup' | 'signin';
+  /** For a caller that just got `unavailable` from the Lock Server: the first Bitkit check asks Paykit instead (#2984). */
+  startAtHeldCheck?: boolean;
 };
 
 // Frames the 192px step illustration.
@@ -90,6 +92,7 @@ export function DialogLocksAuth({
   onSuccess,
   asset = 'BTC',
   mode = 'setup',
+  startAtHeldCheck = false,
 }: DialogLocksAuthProps) {
   const {
     status: locksStatus,
@@ -103,6 +106,7 @@ export function DialogLocksAuth({
   } = useLocksAuthFlow();
   const {
     status: paykitStatus,
+    error: paykitError,
     setupUrl,
     mode: paykitMode,
     iframeRef: paykitIframeRef,
@@ -110,6 +114,7 @@ export function DialogLocksAuth({
     isSetupPageFailed,
     onSetupLoad,
     check: checkPaykit,
+    checkHeld: checkPaykitHeld,
     reconnect: reconnectPaykit,
     reset: resetPaykit,
   } = usePaykitSetupFlow(asset);
@@ -149,13 +154,22 @@ export function DialogLocksAuth({
     }
   }, [open, isLocksAuthenticated, prepare, resetLocks, resetPaykit]);
 
+  // Used once, by the session the caller's `unavailable` came from: a later or replaced session never got it.
+  const heldCheckSecret = useRef<string | null>(null);
+  useEffect(() => {
+    heldCheckSecret.current = open && startAtHeldCheck ? useLocksAuthStore.getState().selectLocksSessionSecret() : null;
+  }, [open, startAtHeldCheck]);
+
   // The Paykit page is the whole step, so it opens on arrival rather than behind another "Continue",
   // once the setup-status check says it is required.
   useEffect(() => {
-    if (open && step === 'bitkit' && paykitStatus === PaykitSetupFlowStatus.IDLE) {
-      void checkPaykit();
-    }
-  }, [open, step, paykitStatus, checkPaykit]);
+    if (!open || step !== 'bitkit' || paykitStatus !== PaykitSetupFlowStatus.IDLE) return;
+    const secret = useLocksAuthStore.getState().selectLocksSessionSecret();
+    const isHeldCheck = heldCheckSecret.current !== null && heldCheckSecret.current === secret;
+    heldCheckSecret.current = null;
+    if (isHeldCheck) void checkPaykitHeld();
+    else void checkPaykit();
+  }, [open, step, paykitStatus, checkPaykit, checkPaykitHeld]);
 
   const close = () => onOpenChange(false);
   const isSuccess = step === 'done';
@@ -164,6 +178,8 @@ export function DialogLocksAuth({
   const isLocksError = step === 'locks' && locksStatus === LocksAuthFlowStatus.ERROR;
   const isPaykitError = step === 'bitkit' && paykitStatus === PaykitSetupFlowStatus.ERROR;
   const isPaykitUnavailable = step === 'bitkit' && paykitStatus === PaykitSetupFlowStatus.UNAVAILABLE;
+  // #2984: only the Lock Server's own `unavailable` (no error) hints at a revoked Paykit grant; docs/locks.md.
+  const canReconnectUnavailable = isPaykitUnavailable && paykitError === null;
   const isReconnectRequired = step === 'bitkit' && paykitStatus === PaykitSetupFlowStatus.RECONNECT_REQUIRED;
   const isSetupIncomplete = step === 'bitkit' && paykitStatus === PaykitSetupFlowStatus.SETUP_INCOMPLETE;
   // A reconnect page that never rendered showed no QR, so it gets the generic error copy, not the
@@ -436,6 +452,11 @@ export function DialogLocksAuth({
             <Button variant={ButtonVariant.OUTLINE} size="lg" className="flex-1" onClick={close}>
               {'Cancel'}
             </Button>
+            {canReconnectUnavailable && (
+              <Button variant={ButtonVariant.OUTLINE} size="lg" className="flex-1" onClick={checkPaykitHeld}>
+                {'Reconnect Bitkit'}
+              </Button>
+            )}
             {/* Recheck readiness even after a reconnect error: Paykit may have committed before its callback
                 failed. A held creator still needing setup must confirm another reconnect before it opens. */}
             <Button

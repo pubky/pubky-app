@@ -4,4 +4,6 @@ export interface SettingsMenuItem {
   id: string;
   label: string;
   path: string;
+  /** Shown only when Locks is available on this deployment. */
+  requiresLocks?: boolean;
 }

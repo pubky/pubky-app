@@ -1,5 +1,6 @@
-import { Bell, CircleHelp, MegaphoneOff, Shield, SunMoon, UserRound } from 'lucide-react';
+import { Bell, CircleHelp, Lock, MegaphoneOff, Shield, SunMoon, UserRound } from 'lucide-react';
 import { SETTINGS_ROUTES } from '@/app/routes';
+import { isLocksConfigured } from '@/config/network';
 import type { SettingsMenuItem } from './SettingsMenu.types';
 
 export const SETTINGS_MENU_ITEMS: SettingsMenuItem[] = [
@@ -14,6 +15,13 @@ export const SETTINGS_MENU_ITEMS: SettingsMenuItem[] = [
     id: 'notifications',
     label: 'Notifications',
     path: SETTINGS_ROUTES.NOTIFICATIONS,
+  },
+  {
+    icon: Lock,
+    id: 'locks',
+    label: 'Locks',
+    path: SETTINGS_ROUTES.LOCKS,
+    requiresLocks: true,
   },
   {
     icon: SunMoon,
@@ -40,3 +48,6 @@ export const SETTINGS_MENU_ITEMS: SettingsMenuItem[] = [
     path: SETTINGS_ROUTES.HELP,
   },
 ];
+
+/** The Locks item shows only where the deployment configures Locks. */
+export const isSettingsMenuItemShown = (item: SettingsMenuItem): boolean => !item.requiresLocks || isLocksConfigured();

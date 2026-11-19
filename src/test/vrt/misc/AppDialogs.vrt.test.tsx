@@ -246,6 +246,7 @@ vi.mock('@/hooks/usePaykitSetupFlow/usePaykitSetupFlow', () => ({
     error: null,
     iframeRef: { current: null },
     check: async () => {},
+    checkHeld: async () => {},
     start: () => {},
     reset: () => {},
   }),

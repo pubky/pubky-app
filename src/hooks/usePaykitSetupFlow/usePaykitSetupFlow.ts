@@ -125,6 +125,24 @@ export function usePaykitSetupFlow(asset: TLockPriceAsset): UsePaykitSetupFlowRe
     return false;
   }, []);
 
+  // Paykit refuses `/setup` for a creator it holds, so a held creator goes to the reconnect; if Paykit cannot
+  // say, nothing opens.
+  const followHeld = useCallback(
+    async (run: number, sessionSecret: string | null, operation: string, onNotHeld: () => void) => {
+      const { held, failure } = await readPaykitHeld(operation);
+      if (isOutdated(run, sessionSecret)) return;
+      if (held === null) {
+        setError(failure);
+        setStatus(PaykitSetupFlowStatus.UNAVAILABLE);
+      } else if (held) {
+        setStatus(PaykitSetupFlowStatus.RECONNECT_REQUIRED);
+      } else {
+        onNotHeld();
+      }
+    },
+    [isOutdated],
+  );
+
   // The failure callback only says `setup-failed`. Paykit can commit setup or reconnect and still send it when
   // its relay acknowledgement fails, so the Lock Server is asked first: a ready creator is done, and a
   // reconnect would rotate its receiving account for nothing. Otherwise ask Paykit why it can matter: a
@@ -154,28 +172,26 @@ export function usePaykitSetupFlow(asset: TLockPriceAsset): UsePaykitSetupFlowRe
       setStatus(PaykitSetupFlowStatus.UNAVAILABLE);
       return;
     }
+    await followHeld(run, sessionSecret, 'usePaykitSetupFlow.diagnoseFailedSetup', () =>
+      setStatus(PaykitSetupFlowStatus.SETUP_INCOMPLETE),
+    );
+  }, [asset, isOutdated, followHeld]);
 
-    const { held, failure } = await readPaykitHeld('usePaykitSetupFlow.diagnoseFailedSetup');
-    if (isOutdated(run, sessionSecret)) return;
-
-    if (held === null) {
-      setError(failure);
-      setStatus(PaykitSetupFlowStatus.UNAVAILABLE);
-    } else {
-      setStatus(held ? PaykitSetupFlowStatus.RECONNECT_REQUIRED : PaykitSetupFlowStatus.SETUP_INCOMPLETE);
-    }
-  }, [asset, isOutdated]);
+  /** Starts a fresh check for the signed-in session: clears the last error and any setup iframe. */
+  const beginCheck = useCallback(() => {
+    const run = (checkRef.current += 1);
+    setError(null);
+    // A retry after a failed setup still holds that setup's URL, which would keep its iframe on screen.
+    setSetupUrl(null);
+    setStatus(PaykitSetupFlowStatus.CHECKING);
+    return { run, sessionSecret: useLocksAuthStore.getState().selectLocksSessionSecret() };
+  }, []);
 
   // Only `setup_required` opens the setup: `unavailable` or a failed check never does, because Paykit
   // may already hold this creator's account. A creator Paykit is known to hold goes to the reconnect
   // instead; if Paykit cannot say, the existing unavailable state offers a retry without guessing.
   const check = useCallback(async () => {
-    const run = (checkRef.current += 1);
-    const sessionSecret = useLocksAuthStore.getState().selectLocksSessionSecret();
-    setError(null);
-    // A retry after a failed setup still holds that setup's URL, which would keep its iframe on screen.
-    setSetupUrl(null);
-    setStatus(PaykitSetupFlowStatus.CHECKING);
+    const { run, sessionSecret } = beginCheck();
 
     let setupStatus: TPaykitSetupStatus | null = null;
     let failure: AppError | null = null;
@@ -192,21 +208,18 @@ export function usePaykitSetupFlow(asset: TLockPriceAsset): UsePaykitSetupFlowRe
       LocksController.markPaykitConnected();
       setStatus(PaykitSetupFlowStatus.SUCCESS);
     } else if (setupStatus === 'setup_required') {
-      const { held, failure } = await readPaykitHeld('usePaykitSetupFlow.check');
-      if (isOutdated(run, sessionSecret)) return;
-      if (held === null) {
-        setError(failure);
-        setStatus(PaykitSetupFlowStatus.UNAVAILABLE);
-      } else if (held) {
-        setStatus(PaykitSetupFlowStatus.RECONNECT_REQUIRED);
-      } else {
-        start();
-      }
+      await followHeld(run, sessionSecret, 'usePaykitSetupFlow.check', start);
     } else {
       setError(failure);
       setStatus(PaykitSetupFlowStatus.UNAVAILABLE);
     }
-  }, [start, asset, isOutdated]);
+  }, [beginCheck, followHeld, start, asset, isOutdated]);
+
+  // #2984: skips the Lock Server, whose `unavailable` would repeat; docs/locks.md.
+  const checkHeld = useCallback(async () => {
+    const { run, sessionSecret } = beginCheck();
+    await followHeld(run, sessionSecret, 'usePaykitSetupFlow.checkHeld', start);
+  }, [beginCheck, followHeld, start]);
 
   useEffect(() => {
     if (status !== PaykitSetupFlowStatus.AWAITING_APPROVAL) return;
@@ -281,6 +294,7 @@ export function usePaykitSetupFlow(asset: TLockPriceAsset): UsePaykitSetupFlowRe
     isSetupPageFailed,
     onSetupLoad,
     check,
+    checkHeld,
     start,
     reconnect,
     reset,
