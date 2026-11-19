@@ -12,9 +12,9 @@ body {
   overscroll-behavior-y: contain;
 }
 
-/* Shop supports 320px phones. Its iframe takes its width from the host body. */
+/* The embedded Shop takes its viewport width from the App body. */
 body:has([data-slot='shop-route']) {
-  min-width: 320px;
+  min-width: 0;
 }
 
 @theme {

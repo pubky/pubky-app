@@ -5,7 +5,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { cdp, page, server } from 'vitest/browser';
 import { matchVrtFrameScreenshot, preloadImages, renderForVRT, VRT_ROOT_TESTID } from '@/test-utils/vrt';
-import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE, VRT_VIEWPORT_NARROW } from '@/test-utils/vrt.viewports';
+import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook, mockSettingsStore } from '@/test-utils/stores';
 import { Header } from '@/organisms/Header/Header';
 import ShopLayout from '@/app/shop/layout';
@@ -26,6 +26,8 @@ const shopColumnDocument = vi.hoisted(
       @media (min-width:1280px){main{padding:24px 0}}
     </style></head><body style="margin:0;background:transparent;color:white;font:16px sans-serif"><main>${content}</main></body></html>`,
 );
+
+const PHONE_VIEWPORT_360 = { width: 360, height: 800 };
 
 const SHOP_CHROME_IMAGE_URLS = [
   '/pubky-logo.svg',
@@ -373,8 +375,8 @@ describe('embedded Shop shell — visual regression', () => {
     await matchVrtFrameScreenshot('shop-mobile');
   });
   it.each([
-    { name: '320px phone', viewport: VRT_VIEWPORT_NARROW, signedIn: true },
-    { name: 'guest 360px phone', viewport: { width: 360, height: 800 }, signedIn: false },
+    { name: 'signed-in 360px phone', viewport: PHONE_VIEWPORT_360, signedIn: true },
+    { name: 'guest 360px phone', viewport: PHONE_VIEWPORT_360, signedIn: false },
     { name: '375px phone', viewport: { width: 375, height: 812 }, signedIn: true },
     { name: 'portrait', viewport: VRT_VIEWPORT_MOBILE, signedIn: true },
     { name: 'landscape', viewport: { width: 844, height: 390 }, signedIn: true },
@@ -391,7 +393,7 @@ describe('embedded Shop shell — visual regression', () => {
     const root = screen.getByTestId(VRT_ROOT_TESTID).element();
     const frame = screen.getByTitle('Pubky Shop').element() as HTMLIFrameElement;
     await withUnclippedDocument(root, async () => {
-      frame.srcdoc = `<!doctype html><html><body style="margin:0;min-width:320px">
+      frame.srcdoc = `<!doctype html><html><body style="margin:0">
         <main style="box-sizing:border-box;padding:24px">
           <h1>Long marketplace listing</h1>
           <div style="height:2400px">Listing details</div>
@@ -481,9 +483,11 @@ describe('embedded Shop shell — visual regression', () => {
     await expect.element(screen.getByRole('heading', { name: 'Shop unavailable' })).toBeVisible();
     await matchVrtFrameScreenshot('shop-unavailable-mobile');
   });
-  it('fits the unavailable Shop on a narrow phone and restores the App width after leaving', async () => {
-    const screen = await renderShop(VRT_VIEWPORT_NARROW, { unavailable: true });
+  it('fits the unavailable Shop at 360px and restores the App minimum after leaving', async () => {
+    const screen = await renderShop(PHONE_VIEWPORT_360, { unavailable: true });
     await expect.element(screen.getByRole('heading', { name: 'Shop unavailable' })).toBeVisible();
+    expect(getComputedStyle(document.body).minWidth).toBe('0px');
+    expect(document.body.getBoundingClientRect().width).toBe(window.innerWidth);
     expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
     await screen.unmount();
     expect(document.body.getBoundingClientRect().width).toBe(375);
