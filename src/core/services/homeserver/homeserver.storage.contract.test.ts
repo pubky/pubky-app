@@ -28,6 +28,7 @@ import { SOCIAL_MIGRATION_FLAG_PATH } from '@/config/social-migration';
 import type { SessionReference } from '@/libs/auth/session.types';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory } from '@/libs/error/error.types';
+import { hasHttpStatus } from '@/libs/error/error.utils';
 import { HttpMethod } from '@/libs/http/http.types';
 import { GuardedContentParser } from '@/pipes/locks/locks.parser';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -83,9 +84,13 @@ let answer: Answer;
 /** What the homeserver answers a bearer refresh; a status refuses it. */
 let refresh: 'issue' | number;
 
+let storeCreated = false;
 const openSessionDatabase = async () => {
-  // The SDK creates its own database and stores.
-  expect(await new Pubky().browserSessionStore.isAvailable()).toBe(true);
+  // The SDK creates its own database and stores, once.
+  if (!storeCreated) {
+    expect(await new Pubky().browserSessionStore.isAvailable()).toBe(true);
+    storeCreated = true;
+  }
   return new Promise<IDBDatabase>((resolve, reject) => {
     const request = indexedDB.open('pubky-auth', 1);
     request.onsuccess = () => resolve(request.result);
@@ -234,6 +239,37 @@ describe('pinned SDK 0.18.0 storage path contract', () => {
     ]);
   });
 
+  // The reads that carry no session take another way through the SDK (`publicStorage`, and `resolvePubky` with
+  // `client.fetch` for a read past the browser cache); the same names go out as written there too.
+  it.each(appPaths.filter((path) => path.startsWith('/pub/')))(
+    'reads %s as written without a session',
+    async (path) => {
+      useAuthStore.setState({ session: null });
+
+      await HomeserverService.get(url(path));
+      await HomeserverService.exists(url(path));
+      await HomeserverService.getFreshBytes(url(path));
+
+      expect(storage.map(({ method, path: wire, bearer }) => `${method} ${wire} ${bearer}`)).toEqual([
+        `GET ${path} null`,
+        `HEAD ${path} null`,
+        `GET ${path} null`,
+      ]);
+    },
+  );
+
+  it("lists another reader's view of a public directory as plain names", async () => {
+    useAuthStore.setState({ session: null });
+    const directory = '/pub/social/v1/posts/';
+    const entries = [url(`${directory}0034A0X7NJ52G/0034A0X7NJ52G.json`), url(`${directory}my file.json`)];
+    answer = () => new Response(`${entries.join('\n')}\n`);
+
+    await expect(HomeserverService.list({ baseDirectory: url(directory) })).resolves.toEqual(entries);
+    expect(storage.map(({ method, path: wire, bearer }) => `${method} ${wire} ${bearer}`)).toEqual([
+      `GET ${directory} null`,
+    ]);
+  });
+
   // Upstream #797: a path is a plain name, escaped exactly once for the URL. SDK 0.17.1 escaped twice (a space
   // went out as `%2520`), so a file it wrote under such a name is stored under the escaped name and is read
   // through 0.18.0 at that stored name. The app builds no such name; this pins what happens if one appears.
@@ -252,15 +288,18 @@ describe('pinned SDK 0.18.0 storage path contract', () => {
 
   it('lists plain names and pages with the entry it was given', async () => {
     const directory = '/pub/social/v1/tags/';
+    // The page `listAll` asks for (`LIST_DEFAULT_LIMIT`); a full page is what makes it ask for the next.
+    const PAGE_SIZE = 500;
     const page = (from: number, count: number) =>
       Array.from({ length: count }, (_, index) => url(`${directory}${String(from + index).padStart(4, '0')}.json`));
     // The homeserver sends one `pubky://<owner><path>` line per entry, names unescaped.
-    const first = [...page(0, 498), url(`${directory}my file.json`), url(`${directory}my%20file.json`)];
+    const first = [...page(0, PAGE_SIZE - 2), url(`${directory}my file.json`), url(`${directory}my%20file.json`)];
     const second = page(600, 3);
     answer = ({ search }) => new Response(`${(search.includes('cursor=') ? second : first).join('\n')}\n`);
 
     const listed = await HomeserverService.listAll({ baseDirectory: url(directory) });
 
+    expect(new URLSearchParams(storage[0].search).get('limit')).toBe(String(PAGE_SIZE));
     // Entries come back exactly as the homeserver named them: nothing to decode, and an escaped stored name
     // stays distinct from the plain one.
     expect(listed).toEqual([...first, ...second]);
@@ -395,7 +434,7 @@ describe('pinned SDK 0.18.0 rejected bearer contract', () => {
 
     await expect(
       HomeserverService.request({ method: HttpMethod.PUT, url: profile, bodyJson: {}, singleAttempt: true }),
-    ).rejects.toBeDefined();
+    ).rejects.toSatisfy((error) => hasHttpStatus(error, status));
 
     expect(sent('PUT')).toHaveLength(1);
     expect(refreshes).toBe(0);
@@ -411,7 +450,9 @@ describe('pinned SDK 0.18.0 publish conflict contract', () => {
   it('retries the 409 whose body the SDK carries in its error message', async () => {
     answer = () => refused(409, PUBLISH_CONFLICT_BODY);
 
-    await expect(HomeserverService.request({ method: HttpMethod.PUT, url: tag, bodyJson: {} })).rejects.toBeDefined();
+    await expect(HomeserverService.request({ method: HttpMethod.PUT, url: tag, bodyJson: {} })).rejects.toSatisfy(
+      (error) => hasHttpStatus(error, 409),
+    );
 
     expect(sent('PUT')).toHaveLength(HOMESERVER_WRITE_MAX_ATTEMPTS);
   });
@@ -419,7 +460,9 @@ describe('pinned SDK 0.18.0 publish conflict contract', () => {
   it('does not retry a 409 with any other body', async () => {
     answer = () => refused(409, 'A file exists where a directory is needed');
 
-    await expect(HomeserverService.request({ method: HttpMethod.PUT, url: tag, bodyJson: {} })).rejects.toBeDefined();
+    await expect(HomeserverService.request({ method: HttpMethod.PUT, url: tag, bodyJson: {} })).rejects.toSatisfy(
+      (error) => hasHttpStatus(error, 409),
+    );
 
     expect(sent('PUT')).toHaveLength(1);
   });

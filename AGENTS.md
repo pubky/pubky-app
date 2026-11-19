@@ -71,7 +71,8 @@ Controller naming encodes IO: `fetch*` network only, `get*` local only, `getMany
 - Composite post ids `author:postId` via `buildCompositeId` / `parseCompositeId`; `buildCompositeIdFromPubkyUri` reads
   one from either spelling of a post reference or a version path. `docs/data-patterns.md`
 - Data model: `pubky-social-specs` builds, decodes and encodes every homeserver object; the app PUTs `built.body`
-  through `putBlob`, never a hand-spelled path or `JSON.stringify` body, and never imports `pubky-social-specs/client`
+  through `putBlob`, never a hand-spelled path or `JSON.stringify` body, never user text or a file name in a path
+  segment (names are `A-Za-z0-9-_.~` only; the SDK escapes anything else), and never imports `pubky-social-specs/client`
   outside `src/test-utils`. Posts are versioned (an edit writes the next version from the decoded head, spread so
   `$unknown` survives); media is content addressed and shared (`files/{hash}.{ext}`, never deleted on an edit);
   bookmarks, mutes and feeds are private and locally owned (no Nexus bookmark field is read); kinds cross to

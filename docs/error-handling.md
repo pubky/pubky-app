@@ -284,8 +284,9 @@ and which would report each failure twice; `locks.e2eStub.test.ts` asserts the s
 ### Grant failures during use and sign-in
 
 The SDK recovers a rejected bearer itself: after a 401 it refreshes the bearer once and sends the same request once
-more, and it does neither after any other status, after a refresh the homeserver refuses, or after a second 401
-(`homeserver.storage.contract.test.ts` pins this on the installed SDK, for the store-backed sessions the app uses).
+more. It sends nothing more when the homeserver refuses that refresh or answers the replay with another 401, and it
+neither refreshes nor replays after any other status (`homeserver.storage.contract.test.ts` pins this on the
+installed SDK, for the store-backed sessions the app uses).
 After SDK refresh/retry has finished, terminal failures from active, owned homeserver storage requests notify
 AuthCoordinator through the controller/application subscription. AuthController requires sign-in again only if the
 captured session and generation still match the active account. The original request error still reaches its caller
