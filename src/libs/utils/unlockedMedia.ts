@@ -5,7 +5,8 @@ import type { ReplicatedPost, TUnlockedAttachment } from '@/services/locks/locks
 /**
  * Replaces each SVG with a PNG drawing of it, and drops an SVG that cannot be drawn. An unlocked
  * file's object URL is on the app origin, so an SVG opened from it in a new tab would run its
- * scripts there (#2683). One file at a time, since each drawing holds a full-size canvas.
+ * scripts there (#2683). The upload clean-up does not cover this: a lock made by another client
+ * may skip it. One file at a time, since each drawing holds a full-size canvas.
  */
 export async function toDisplayableAttachments(attachments: TUnlockedAttachment[]): Promise<TUnlockedAttachment[]> {
   const displayable: TUnlockedAttachment[] = [];

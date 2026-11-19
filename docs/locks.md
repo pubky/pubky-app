@@ -91,7 +91,8 @@ and checks the first bytes before the path: a file that starts with an XML decla
 `text/xml`, and one that starts with a comment as `text/html`. The SVG clean-up keeps only the
 `<svg>` element, so no check matches and the extension makes the stored type `image/svg+xml` (#2683). After
 an unlock the app shows a PNG drawing of the SVG, never the SVG itself: an unlocked file's object URL
-is on the app origin, so an SVG opened from it in a new tab would run its scripts there. An SVG that
+is on the app origin, so an SVG opened from it in a new tab would run its scripts there. The upload
+clean-up is not enough on its own, because a lock made by another client may skip it. An SVG that
 the browser cannot draw is not shown.
 
 _Lock limits._ The Lock Server takes 10 resources per lock, the locked post being one of them, and
