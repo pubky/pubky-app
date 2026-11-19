@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { ensureFramedSessionStorage } from '@/libs/auth/framed-storage';
 import { type MobileAuthSigner, toAndroidAuthIntentUrl, toBitkitIosAuthUrl } from '@/libs/deeplink/deeplink';
 import { isAndroidIntentDevice, isIosDevice } from '@/libs/pwa/platform';
 import { useAuthUrl } from '../useAuthUrl/useAuthUrl';
@@ -85,8 +86,14 @@ export function useMobileAuth(options: UseAuthUrlOptions = {}): UseMobileAuthRet
     fetchUrl,
     copyAuthUrl,
     isOpeningRing: openingSigner === 'ring',
-    onAuthorizeClick: () => authorize('ring'),
+    onAuthorizeClick: () => {
+      void ensureFramedSessionStorage();
+      authorize('ring');
+    },
     isOpeningBitkit: openingSigner === 'bitkit',
-    onAuthorizeBitkitClick: () => authorize('bitkit'),
+    onAuthorizeBitkitClick: () => {
+      void ensureFramedSessionStorage();
+      authorize('bitkit');
+    },
   };
 }
