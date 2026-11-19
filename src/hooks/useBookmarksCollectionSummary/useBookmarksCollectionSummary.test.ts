@@ -211,6 +211,7 @@ describe('useBookmarksCollectionSummary', () => {
       await bookmarkAll();
       const answer: ByIdsAnswer = Promise.withResolvers();
       byIds.mockReturnValue(answer.promise);
+      const count = vi.spyOn(BookmarkController, 'getCount');
 
       const { result, shownCounts } = renderSummary();
 
@@ -221,6 +222,8 @@ describe('useBookmarksCollectionSummary', () => {
       expect(byIds.mock.calls[0][0]).toMatchObject({ post_ids: BOOKMARKED, viewer_id: CURRENT_USER_PUBKY });
       await settle();
       expect(result.current.bookmarkCount).toBeUndefined();
+      // The count is not read and held back: it is read only after the pass, so it cannot predate the stored posts.
+      expect(count).not.toHaveBeenCalled();
 
       await act(async () => answer.resolve(servedBookmarks()));
 
