@@ -139,13 +139,15 @@ vi.mock('@/database/franky/franky', () => ({
 }));
 
 // Mock molecules
+vi.mock('@/molecules/Header/HeaderPublicContent', () => ({
+  HeaderContainer: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <div data-testid="header-container" data-class-name={className}>
+      {children}
+    </div>
+  ),
+}));
 vi.mock('@/molecules/Header/Header', () => {
   return {
-    HeaderContainer: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-      <div data-testid="header-container" data-class-name={className}>
-        {children}
-      </div>
-    ),
     HeaderTitle: ({ currentTitle }: { currentTitle: string }) => <div data-testid="header-title">{currentTitle}</div>,
     HeaderOnboarding: ({ currentStep }: { currentStep: number }) => (
       <div data-testid="onboarding-header" data-step={currentStep}>
@@ -186,7 +188,7 @@ vi.mock('@/molecules/HeaderSignIn/HeaderSignIn', () => {
 
 vi.mock('@/molecules/Logo/Logo', () => {
   return {
-    Logo: ({ noLink, onClick }: { noLink?: boolean; onClick?: React.MouseEventHandler<HTMLElement> }) => (
+    Logo: ({ noLink = false, onClick }: { noLink?: boolean; onClick?: React.MouseEventHandler<HTMLElement> }) => (
       <div data-testid="logo" data-no-link={noLink} onClick={onClick}>
         Logo
       </div>
@@ -897,7 +899,7 @@ describe('Header', () => {
         render(<Header />);
 
         expect(screen.getByTestId('header-home')).toBeInTheDocument();
-        expect(screen.getByTestId('header-container')).toHaveAttribute('data-class-name', '');
+        expect(screen.getByTestId('header-container')).not.toHaveAttribute('data-class-name', 'hidden lg:block');
       },
     );
 

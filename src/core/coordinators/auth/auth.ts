@@ -25,14 +25,18 @@ export class AuthCoordinator {
     void AuthController.restorePersistedSession().catch((error) => this.onRestoreError?.(error));
   };
 
+  private retryCleanup = () => {
+    void AuthController.retireLegacyCookieSessions();
+    void AuthController.retrySessionRetirement();
+    void AuthController.retryShopCleanup();
+  };
+
   private onAuthChange = () => {
     const state = useAuthStore.getState();
     if (!state.hasHydrated) return;
     if (!this.retiredLegacy) {
       this.retiredLegacy = true;
-      void AuthController.retireLegacyCookieSessions();
-      void AuthController.retrySessionRetirement();
-      void AuthController.retryShopCleanup();
+      this.retryCleanup();
     }
     if (!state.session && state.sessionReference && state.restoreStatus === 'idle' && !state.isLoggingOut)
       this.restore();
@@ -57,21 +61,34 @@ export class AuthCoordinator {
     AuthController.retrySocialMigration();
   };
 
-  private online = () => {
+  private canRetryOnline(): boolean {
     const state = useAuthStore.getState();
-    if (!state.hasHydrated || state.isLoggingOut) return;
-    if (Date.now() < this.nextOnlineCleanupAt) return;
+    if (!state.hasHydrated || state.isLoggingOut || Date.now() < this.nextOnlineCleanupAt) return false;
     this.nextOnlineCleanupAt = Date.now() + AUTO_RECOVERY_COOLDOWN_MS;
-    if (state.restoreStatus === 'temporary-error' || state.restoreStatus === 'social-migration') {
+    return true;
+  }
+
+  /** A hydrated guest with outstanding cleanup only needs the startup and network-return retries. */
+  watchGuestCleanup(): () => void {
+    this.retryCleanup();
+    const onOnline = () => {
+      if (this.canRetryOnline()) this.retryCleanup();
+    };
+    window.addEventListener('online', onOnline);
+    return () => window.removeEventListener('online', onOnline);
+  }
+
+  private online = () => {
+    if (!this.canRetryOnline()) return;
+    const { restoreStatus } = useAuthStore.getState();
+    if (restoreStatus === 'temporary-error' || restoreStatus === 'social-migration') {
       // A real network return gets an immediate retry, even during the focus cooldown.
       // Recovery owns metadata validation and cleanup; don't read corrupt metadata three times.
       this.nextRecoveryAt = 0;
       this.recover();
       return;
     }
-    void AuthController.retireLegacyCookieSessions();
-    void AuthController.retrySessionRetirement();
-    void AuthController.retryShopCleanup();
+    this.retryCleanup();
   };
 
   private sessionRemoved = (event: Event) => {
