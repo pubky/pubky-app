@@ -565,8 +565,10 @@ After dev-sync 3 (2026-11-09):
   account migrated under rc.1. And an rc.2 copy of a 0.x article with an image at slot 0 whose references are all
   reference-style definitions (`[x]: attachment:1`) or entity-escaped slots (`attachment:&#49;`), which the migrator's
   textual scan does not see: pubky.app never wrote those spellings, so that is a 0.x article another client wrote. The
-  pinned migrator (1.0.0-rc.2, transform revision 4) rewrites nothing an earlier run wrote, so such an account must be
-  wiped, its v1 trees with the flag file `/priv/social/v1/_migrated.json`, and migrated again.
+  remedies differ. The pinned migrator (1.0.0-rc.2, transform revision 4) rewrites nothing an earlier run wrote, so an
+  account with rc.1 copies must be wiped, its v1 trees with the flag file `/priv/social/v1/_migrated.json`, and
+  migrated again. A wipe does not repair the rc.2 copy, which rc.2 writes the same way again: it stays until a
+  migrator whose scan sees those spellings copies the article (_Follow-ups_).
 - Mute changes and the notification read boundary (`last_read`) changed on another device appear within the poll
   interval (≤30 s) or on focus, not live: a session-bound stream's lease is unbounded while its response headers are
   outstanding (pubky/pubky-homeserver#798; ADR-0014, and the `last_read` poll is ADR-0029).
@@ -621,7 +623,7 @@ After dev-sync 3 (2026-11-09):
 - The migrator's article scan (`pubky-social-migrator`, 1.0.0-rc.2) reads plain inline destinations only, so it
   promotes a 0.x cover without renumbering a reference written as a reference-style definition or with an
   entity-escaped slot. Since rule A′ was removed the reader no longer shifts such a copy (_Reductions_); the repair is
-  in the migrator's scan, not in the reader.
+  in the migrator's scan, not in the reader, and a wipe followed by a second rc.2 migration writes the same copy.
 - Migrated articles are served by Nexus in the 0.x content shape on `/v1` (QA-3 F-1, Nexus contract point 24); the app
   renders both shapes through the reader rules, so no change here.
 - Cleanup pass of the `/pub/pubky.app/` copies: not at release (meeting 2026-11-04: no app-side deletion; Nexus clears
