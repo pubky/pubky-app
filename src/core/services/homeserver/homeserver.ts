@@ -1089,7 +1089,7 @@ export class HomeserverService {
    * preflights wait in, so callers share one subscription per tab instead of opening one per path.
    *
    * Sends the anonymous request of the SDK's `eventStreamForUser().live().subscribe()` through `client.fetch`,
-   * because SDK 0.17.1's `subscribe()` takes no `AbortSignal` and its WASM transport has no timeout: a request
+   * because SDK 0.18.0's `subscribe()` takes no `AbortSignal` and its WASM transport has no timeout: a request
    * waiting for response headers could not be ended. Aborting `signal` ends the request in every phase. An
    * aborted subscribe resolves to a closed stream, so the caller never has to win a race.
    *
