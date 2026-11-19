@@ -582,7 +582,7 @@ describe('LocksApplication (content)', () => {
     it('uploads an SVG under a path that ends in .svg', async () => {
       await LocksApplication.createLockContent({
         attachments: [picked('image/svg+xml', '<svg />'), picked('image/png')],
-        buildPost,
+        post: lockedPost,
         lockConfig: paymentConfig,
       });
 
@@ -609,7 +609,7 @@ describe('LocksApplication (content)', () => {
 
       await LocksApplication.createLockContent({
         attachments: [picked('image/svg+xml', svg)],
-        buildPost,
+        post: lockedPost,
         lockConfig: paymentConfig,
       });
 
