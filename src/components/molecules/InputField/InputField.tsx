@@ -37,6 +37,9 @@ interface InputFieldProps {
   dataCy?: string;
   inputClassName?: React.HTMLAttributes<HTMLInputElement>['className'];
 }
+// Pure destructive red meets text contrast on the dark page, but not on the profile forms’ card surface.
+const errorTextClasses = 'text-destructive in-[.dark_.bg-card]:text-red-400 light:text-error-foreground';
+
 export function InputField({
   id,
   name,
@@ -72,7 +75,7 @@ export function InputField({
   const statusClasses = {
     default: 'focus-within:border-ring',
     success: 'border-brand text-brand focus-within:ring-1 focus-within:ring-ring',
-    error: 'border-destructive text-destructive focus-within:ring-1 focus-within:ring-ring light:text-error-foreground',
+    error: cn('border-destructive focus-within:ring-1 focus-within:ring-ring', errorTextClasses),
   };
   const sizeClasses = {
     sm: 'min-h-10 text-sm',
@@ -83,7 +86,7 @@ export function InputField({
     default: 'text-muted-foreground',
     info: 'text-blue-500',
     alert: 'text-yellow-500',
-    error: 'text-destructive light:text-error-foreground',
+    error: errorTextClasses,
     success: 'text-brand',
   } as const;
   const messageId = id && message ? `${id}-message` : undefined;
