@@ -102,7 +102,7 @@ export class BookmarkController {
    * the pass runs again under that session before it resolves, so its callers still get the posts.
    */
   static fetchMissingPosts(): Promise<void> {
-    return this.startMissingPostsPass(BookmarkController.MISSING_POSTS_SESSION_RERUNS);
+    return this.startMissingPostsPass(this.MISSING_POSTS_SESSION_RERUNS);
   }
 
   private static startMissingPostsPass(rerunsLeft: number): Promise<void> {
@@ -132,7 +132,9 @@ export class BookmarkController {
   }
 
   private static async fetchMissingPostsInBatches(viewerId: Pubky, isCurrent: () => boolean): Promise<void> {
-    const unserved = this.unservedPosts?.isCurrent() ? this.unservedPosts.ids : new Set<string>();
+    // What another session learned ends with it, and so does the hold on that session.
+    if (this.unservedPosts && !this.unservedPosts.isCurrent()) this.unservedPosts = null;
+    const unserved = this.unservedPosts?.ids ?? new Set<string>();
     const missingPostIds = (await this.getMissingPostIds()).filter((id) => !unserved.has(id));
     const answered: string[] = [];
     for (let index = 0; index < missingPostIds.length; index += NEXUS_STREAM_MAX_LIMIT) {

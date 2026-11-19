@@ -369,6 +369,25 @@ describe('useBookmarksCollectionSummary', () => {
       expect(await PostDetailsModel.table.count()).toBe(5);
     });
 
+    it('asks once when the answer lands before the session is restored', async () => {
+      await bookmarkAll();
+      // A hard page load again, in the other order: the posts are stored before the restore lands.
+      useAuthStore.setState({ session: null });
+      byIds.mockResolvedValue(servedBookmarks());
+
+      const { result, shownCounts } = renderSummary();
+      await waitFor(() => expect(result.current.bookmarkCount).toBe(3));
+      expect(await PostDetailsModel.table.count()).toBe(5);
+
+      await act(async () => useAuthStore.setState({ session: mockSession() }));
+      await settle();
+      await settle();
+
+      // Nothing was dropped, so nothing runs again.
+      expect(byIds).toHaveBeenCalledTimes(1);
+      expect(shownCounts()).toEqual([3]);
+    });
+
     it('writes nothing and shows no count for a viewer who left while the request was out', async () => {
       await bookmarkAll();
       const first: ByIdsAnswer = Promise.withResolvers();

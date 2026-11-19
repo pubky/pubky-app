@@ -217,6 +217,10 @@ describe('BookmarkController', () => {
         expect(byIds).toHaveBeenCalledTimes(2);
         expect(requestedIds(1)).toEqual([postAt(3)]);
 
+        // Nexus served neither: both are known now, the one learned first included.
+        await BookmarkController.fetchMissingPosts();
+        expect(byIds).toHaveBeenCalledTimes(2);
+
         // What a session learned ends with it: the next one asks for everything still missing.
         signIn();
         await BookmarkController.fetchMissingPosts();
@@ -289,13 +293,39 @@ describe('BookmarkController', () => {
         stale.resolve([served(postAt(1))]);
         await tick();
         expect(await PostDetailsModel.table.count()).toBe(0);
-        // The previous pass ending does not release the current one.
+        // The previous pass joined the current one instead of asking a third time: a new caller gets the same pass.
         expect(BookmarkController.fetchMissingPosts()).toBe(current);
 
         fresh.resolve([served(postAt(1))]);
         await Promise.all([previous, current]);
         expect(await PostDetailsModel.table.count()).toBe(1);
         expect(byIds).toHaveBeenCalledTimes(2);
+      });
+
+      it("keeps the pass of the account that took over when the previous account's pass ends", async () => {
+        await bookmarkAll([postAt(1)]);
+        const stale = answer();
+        const fresh = answer();
+        byIds.mockReturnValueOnce(stale.promise).mockReturnValueOnce(fresh.promise);
+
+        const previous = BookmarkController.fetchMissingPosts();
+        await vi.waitFor(() => expect(byIds).toHaveBeenCalledTimes(1));
+        // Another account signs in: the previous pass has nothing to run again under.
+        signIn(fakeOwner(3) as Pubky);
+        const current = BookmarkController.fetchMissingPosts();
+        await vi.waitFor(() => expect(byIds).toHaveBeenCalledTimes(2));
+
+        stale.resolve([served(postAt(1))]);
+        await previous;
+
+        // The previous pass ended and released only itself: the current pass is still the one in flight.
+        expect(BookmarkController.fetchMissingPosts()).toBe(current);
+        expect(byIds).toHaveBeenCalledTimes(2);
+        expect(await PostDetailsModel.table.count()).toBe(0);
+
+        fresh.resolve([served(postAt(1))]);
+        await current;
+        expect(await PostDetailsModel.table.count()).toBe(1);
       });
 
       it('runs again under the session that replaced its own while the account stays the same', async () => {
@@ -329,7 +359,7 @@ describe('BookmarkController', () => {
 
         const pass = BookmarkController.fetchMissingPosts();
         await vi.waitFor(() => expect(byIds).toHaveBeenCalledTimes(1));
-        // A failed restore keeps the stored pubky and leaves no session to ask under.
+        // `AuthController.requireSessionReauthentication` nulls the session and keeps the stored pubky.
         useAuthStore.setState({ session: null });
         pending.resolve([served(postAt(1))]);
         await pass;
