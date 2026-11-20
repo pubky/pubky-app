@@ -101,7 +101,8 @@ const openSessionDatabase = async () => {
     storeCreated = true;
   }
   return new Promise<IDBDatabase>((resolve, reject) => {
-    const request = indexedDB.open('pubky-auth', 1);
+    // No version: the database is the one the SDK created, whatever version a later SDK gives it.
+    const request = indexedDB.open('pubky-auth');
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
   });
@@ -195,12 +196,16 @@ beforeEach(async () => {
 });
 
 afterEach(() => {
-  expect(unexpected).toEqual([]);
-  unsubscribe();
-  useAuthStore.setState({ session: null, currentUserPubky: null, sessionReference: null, restoreStatus: 'idle' });
-  installHomeserverWriteRetryDependenciesForTests(null);
-  vi.useRealTimers();
-  vi.unstubAllGlobals();
+  try {
+    expect(unexpected).toEqual([]);
+  } finally {
+    // The cleanup runs whether or not a case left an unserved request, so one failure stays one failure.
+    unsubscribe();
+    useAuthStore.setState({ session: null, currentUserPubky: null, sessionReference: null, restoreStatus: 'idle' });
+    installHomeserverWriteRetryDependenciesForTests(null);
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  }
 });
 
 const url = (path: string) => `pubky://${USER}${path}`;
