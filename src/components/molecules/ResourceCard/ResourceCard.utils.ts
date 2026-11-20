@@ -3,6 +3,7 @@ import { isExternalParentUri } from '@/libs/post/externalParent';
 import { getPubkyAppTarget } from '@/libs/pubkyApp/pubkyAppTarget';
 import { getSafeExternalUrl } from '@/libs/utils/safeExternalUrl';
 import { getUrlHostLabel } from '@/libs/utils/urlToIcon';
+import { getEventLifecycleLabel } from '@/pipes/resource/resource.events';
 import {
   PinakesStatus,
   type TPinakesAlsoOn,
@@ -273,9 +274,6 @@ export function getResourceTarget(
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** The `event_status` of an event going ahead as planned, as Pinakes sends it. */
-const SCHEDULED_EVENT_STATUS = 'scheduled';
-
 function parseDate(value: string | null | undefined): Date | null {
   if (!value) return null;
   const date = new Date(value);
@@ -286,17 +284,16 @@ function createDateFormat(locale: string | undefined, options: Intl.DateTimeForm
   try {
     return new Intl.DateTimeFormat(locale, options);
   } catch {
-    // An unknown IANA zone is a RangeError: show the time in the viewer's own zone instead.
-    const inViewerZone = { ...options };
-    delete inViewerZone.timeZone;
-    delete inViewerZone.timeZoneName;
-    return new Intl.DateTimeFormat(locale, inViewerZone);
+    // An unknown IANA zone is a RangeError: show the time in UTC instead, named as any zone is.
+    return new Intl.DateTimeFormat(locale, { ...options, timeZone: 'UTC' });
   }
 }
 
 /**
- * When an event happens, in the viewer's locale: in the event's time zone with its name when the
- * card has `tz`, else in the viewer's zone. All-day events show dates only, read in UTC with `end`
+ * When an event happens, in the viewer's locale: in the event's time zone when the card has `tz`,
+ * else in UTC (a search row and a calendar occurrence say no zone), always with the zone's name.
+ * Never in the viewer's own zone, which would show another time without saying whose. Events the
+ * card says are `all_day` (never inferred from their times) show dates only, read in UTC with `end`
  * exclusive, as Pinakes encodes calendar occurrences (`00:00Z` → next day's `00:00Z`), so a
  * one-day event shows its date alone. `null` without a valid `start`.
  *
@@ -323,20 +320,50 @@ export function formatResourceDates(
     day: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
-    ...(card.tz ? { timeZone: card.tz, timeZoneName: 'short' } : {}),
+    timeZone: card.tz || 'UTC',
+    timeZoneName: 'short',
   });
   if (!end || end.getTime() <= start.getTime()) return format.format(start);
   return format.formatRange(start, end);
 }
 
+/** The id of a date page's Other dates section: an event card's "Other dates · N" opens the page there. */
+export const OTHER_DATES_ANCHOR = 'other-dates';
+
 /**
- * The note for an event that is not going ahead as planned: its `event_status` as written. `null`
- * for `scheduled` or no status.
+ * What an event card says of its series' other coming dates (`useEventDates`, by start): how many,
+ * `N+` when the feed has more than one read (`hasMore`), and the day of the next one after the card's
+ * own date (`after`, its start), in that date's time zone (`Other dates · 9 · next Wed, Dec 23`); the
+ * count alone when none comes after it. `null` with no other date.
+ */
+export function formatOtherDates(
+  dates: readonly Pick<TPinakesResourceDetail, 'start' | 'tz' | 'all_day'>[],
+  hasMore: boolean,
+  after?: string | null,
+  locale?: string,
+): string | null {
+  if (dates.length === 0) return null;
+  const count = `Other dates\u00a0·\u00a0${dates.length}${hasMore ? '+' : ''}`;
+  const own = parseDate(after)?.getTime() ?? -Infinity;
+  const next = dates.find((date) => (parseDate(date.start)?.getTime() ?? -Infinity) > own);
+  const start = parseDate(next?.start);
+  if (!next || !start) return count;
+  const day = createDateFormat(locale, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    timeZone: next.all_day ? 'UTC' : next.tz || 'UTC',
+  }).format(start);
+  return `${count} · next ${day}`;
+}
+
+/**
+ * The note for an event that is not going ahead as planned: a lifecycle Pinakes names in words
+ * (`Cancelled`, `Moved online`: `getEventLifecycleLabel`, as a calendar's list of dates says it),
+ * any other `event_status` as written. `null` for `scheduled` or no status.
  */
 export function getEventStatusNote(eventStatus: string | null | undefined): string | null {
-  const value = eventStatus?.trim();
-  if (!value || value.toLowerCase() === SCHEDULED_EVENT_STATUS) return null;
-  return `Event status: ${value}`;
+  return getEventLifecycleLabel(eventStatus, (value) => `Event status: ${value}`);
 }
 
 /** A point as `lat, lon` in degrees, four decimals (about 10 m). */

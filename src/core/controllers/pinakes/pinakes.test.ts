@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PinakesApplication } from '@/application/pinakes/pinakes';
 import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
 import groupFixture from '@/services/pinakes/fixtures/group.video.json';
@@ -12,6 +12,8 @@ vi.mock('@/application/pinakes/pinakes', () => ({
     fetchGroup: vi.fn(),
     getCachedGroup: vi.fn(),
     resolveCard: vi.fn(),
+    fetchOccurrences: vi.fn(),
+    fetchEventInstances: vi.fn(),
   },
 }));
 
@@ -74,5 +76,54 @@ describe('PinakesController', () => {
 
     await expect(PinakesController.resolveCard({ uri: videoFixture.uri })).resolves.toBe(videoFixture);
     expect(PinakesApplication.resolveCard).toHaveBeenCalledWith(videoFixture.uri);
+  });
+
+  describe('fetchOccurrences', () => {
+    afterEach(() => vi.useRealTimers());
+
+    it('lists a calendar’s dates from now on, as an RFC 3339 time and never the search’s relative now', async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-11-13T17:05:42Z'));
+      vi.mocked(PinakesApplication.fetchOccurrences).mockResolvedValue({ cards: [], cursor: null });
+
+      await PinakesController.fetchOccurrences({ id: 'feed', limit: 5 });
+
+      expect(PinakesApplication.fetchOccurrences).toHaveBeenCalledWith('feed', {
+        from: '2026-11-13T17:05:00Z',
+        limit: 5,
+        cursor: undefined,
+      });
+    });
+
+    it('asks a later page in the first page’s window, so its cursor still fits', async () => {
+      vi.mocked(PinakesApplication.fetchOccurrences).mockResolvedValue({ cards: [], cursor: null });
+
+      await PinakesController.fetchOccurrences({ id: 'feed', limit: 5, cursor: 'c2', from: '2026-11-13T17:05:00Z' });
+
+      expect(PinakesApplication.fetchOccurrences).toHaveBeenCalledWith('feed', {
+        from: '2026-11-13T17:05:00Z',
+        limit: 5,
+        cursor: 'c2',
+      });
+    });
+
+    it('asks past the cache for a list started over, and not otherwise', async () => {
+      vi.mocked(PinakesApplication.fetchOccurrences).mockResolvedValue({ cards: [], cursor: null });
+      const from = '2026-11-13T17:05:00Z';
+
+      await PinakesController.fetchOccurrences({ id: 'feed', limit: 5, from, fresh: true });
+      await PinakesController.fetchOccurrences({ id: 'feed', limit: 5, from });
+
+      const [started, plain] = vi.mocked(PinakesApplication.fetchOccurrences).mock.calls;
+      expect(started[1].fresh).toBe(true);
+      expect(plain[1].fresh).toBeFalsy();
+    });
+  });
+
+  it('fetchEventInstances passes the search rows through', async () => {
+    vi.mocked(PinakesApplication.fetchEventInstances).mockResolvedValue([]);
+
+    await expect(PinakesController.fetchEventInstances({ cards: relatedFixture.items })).resolves.toEqual([]);
+    expect(PinakesApplication.fetchEventInstances).toHaveBeenCalledWith(relatedFixture.items);
   });
 });

@@ -2,6 +2,8 @@ import { Container } from '@/atoms/Container/Container';
 import { FeedbackCard } from '@/organisms/FeedbackCard/FeedbackCard';
 import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { ResourceAlsoOnList } from './ResourceAlsoOnList';
+import { ResourceOccurrencesList } from './ResourceOccurrencesList';
+import { ResourceOtherDatesList } from './ResourceOtherDatesList';
 import { ResourceParticipants } from './ResourceParticipants';
 import { ResourceSimilarList } from './ResourceSimilarList';
 
@@ -16,18 +18,31 @@ interface ResourceSidebarProps {
   replyIds?: string[];
   /** The post page's Feedback card at the bottom (its right column, not its drawer). */
   showFeedback?: boolean;
+  /** This copy of the sidebar holds the `#other-dates` anchor (the page has it once: its right column). */
+  hasDatesAnchor?: boolean;
 }
 
 /**
  * The resource page's sidebar cards: Also on (the card's other links and its group's other members,
- * in one list), then Similar, each shown only when it has entries (Similar also while read, or when
- * it failed); then, as on a post's page, Participants and the Feedback card.
+ * in one list), then a calendar's Upcoming dates, or a series date's Other dates and More from its
+ * feed (`ResourceOtherDatesList`), then Similar, each shown only when it has entries
+ * (Similar also while read, or when it failed); then, as on a post's page, Participants and the
+ * Feedback card.
  */
-export function ResourceSidebar({ card, uri, spellings, replyIds = [], showFeedback = false }: ResourceSidebarProps) {
+export function ResourceSidebar({
+  card,
+  uri,
+  spellings,
+  replyIds = [],
+  showFeedback = false,
+  hasDatesAnchor = false,
+}: ResourceSidebarProps) {
   if (!card && !uri) return null;
   return (
     <Container overrideDefaults data-testid="resource-sidebar" className="flex w-full min-w-0 flex-col gap-6">
       {card && <ResourceAlsoOnList card={card} />}
+      {card && <ResourceOccurrencesList card={card} />}
+      {card && <ResourceOtherDatesList card={card} isAnchor={hasDatesAnchor} />}
       {card && <ResourceSimilarList id={card.id} />}
       {uri && <ResourceParticipants uri={uri} spellings={spellings} replyIds={replyIds} />}
       {uri && showFeedback && <FeedbackCard />}

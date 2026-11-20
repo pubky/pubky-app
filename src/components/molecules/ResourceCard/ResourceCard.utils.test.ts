@@ -238,8 +238,16 @@ describe('formatResourceDates', () => {
     expect(plain(formatResourceDates(holiday, 'en-US'))).toBe('Dec 24, 2026');
   });
 
-  it('falls back to the viewer’s zone for a time zone it does not know', () => {
-    expect(formatResourceDates({ ...eventFixture, end: null, tz: 'Not/AZone' }, 'en-US')).toMatch(/2026/);
+  it('shows an event without a time zone in UTC and says so, never silently in the viewer’s own zone', () => {
+    const concert = { start: '2026-11-16T19:00:00Z', end: '2026-11-16T23:00:00Z' };
+    expect(plain(formatResourceDates(concert, 'en-US'))).toBe('Nov 16, 2026, 7:00 – 11:00 PM UTC');
+    expect(plain(formatResourceDates({ ...concert, end: null, tz: null }, 'en-US'))).toBe('Nov 16, 2026, 7:00 PM UTC');
+  });
+
+  it('shows a time zone it does not know in UTC too, named', () => {
+    expect(plain(formatResourceDates({ ...eventFixture, end: null, tz: 'Not/AZone' }, 'en-US'))).toBe(
+      'Oct 28, 2026, 7:00 PM UTC',
+    );
   });
 
   it('shows nothing without a valid start', () => {
@@ -255,9 +263,15 @@ describe('getEventStatusNote', () => {
     expect(getEventStatusNote(' ')).toBeNull();
   });
 
+  it('says a lifecycle Pinakes names in words, as a calendar’s list of dates does', () => {
+    expect(getEventStatusNote('cancelled')).toBe('Cancelled');
+    expect(getEventStatusNote('moved_online')).toBe('Moved online');
+    expect(getEventStatusNote('Rescheduled')).toBe('Rescheduled');
+  });
+
   it('shows any other status as written', () => {
-    expect(getEventStatusNote('cancelled')).toBe('Event status: cancelled');
     expect(getEventStatusNote('EventPostponed')).toBe('Event status: EventPostponed');
+    expect(getEventStatusNote('sold out')).toBe('Event status: sold out');
   });
 });
 

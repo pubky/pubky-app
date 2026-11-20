@@ -1,9 +1,12 @@
+import type { Query } from '@tanstack/react-query';
 import {
   getPinakesUrl,
   PINAKES_REQUEST_TIMEOUT_MS,
   PINAKES_SEARCH_STALE_MS,
   PINAKES_URI_MAX_BYTES,
 } from '@/config/pinakes';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
 import { httpResponseToError, safeFetch } from '@/libs/error/error.http';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
@@ -14,6 +17,7 @@ import type {
   TPinakesCard,
   TPinakesEpisodePage,
   TPinakesGroupDetail,
+  TPinakesOccurrencePage,
   TPinakesResourceDetail,
   TPinakesSearchResponse,
 } from './pinakes.types';
@@ -23,6 +27,11 @@ const SEARCH_PATH = '/v1/search';
 const GROUPS_PATH = '/v1/groups';
 const RESOLVE_PATH = '/v1/resolve';
 const RESOURCES_PATH = '/v1/resources';
+/**
+ * A time as RFC 3339 (`2026-11-13T00:00:00Z`): the only spelling the occurrences route reads for
+ * its window. Search's relative `now` and Unix milliseconds are a 400 there.
+ */
+const RFC_3339 = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
 /** `POST /v1/resolve` answers 202 with a `pending` card while the link is still read. */
 const ACCEPTED = 202;
 /**
@@ -47,6 +56,9 @@ export class PinakesService {
    * One link's card by its URI (`GET /v1/resources/by-uri`).
    *
    * @param uri - The link as referenced; Pinakes normalises it and answers an alias with its root
+   * @param options.fresh - Ask Pinakes again whatever the cache holds
+   * @param options.maxAge - Answer from the cache only a card read within this many milliseconds,
+   * when that is less than the cache's own time (five minutes; 30 s for a link not known yet)
    * @returns The card, or `null` when Pinakes does not know the link (404, nothing is fetched there),
    * the link is too long to be known, or Pinakes is not configured. A link that carries credentials
    * (`user:password@`) or does not parse is never sent, as in `resolveCard`.
@@ -54,7 +66,7 @@ export class PinakesService {
    */
   static async fetchCardByUri(
     uri: string,
-    { fresh = false }: { fresh?: boolean } = {},
+    { fresh = false, maxAge }: { fresh?: boolean; maxAge?: number } = {},
   ): Promise<TPinakesResourceDetail | null> {
     const base = getPinakesBaseUrl();
     if (!base || new TextEncoder().encode(uri).length > PINAKES_URI_MAX_BYTES || !isResolvableLink(uri)) {
@@ -64,7 +76,13 @@ export class PinakesService {
     return pinakesQueryClient.fetchQuery({
       queryKey: byUriKey(uri),
       // `fresh`: a re-read of a link Pinakes did not know yet asks again, whatever the cache holds.
-      staleTime: fresh ? 0 : pinakesCardStaleTime,
+      // `maxAge`: a card read longer ago than that (milliseconds) is asked again; it only ever
+      // shortens the time the cache keeps a card.
+      staleTime: fresh
+        ? 0
+        : maxAge === undefined
+          ? pinakesCardStaleTime
+          : (query) => Math.min(maxAge, pinakesCardStaleTime(query)),
       queryFn: () =>
         fetchPinakesOrNull<TPinakesResourceDetail>({
           url: `${base}${BY_URI_PATH}?${new URLSearchParams({ uri })}`,
@@ -250,6 +268,57 @@ export class PinakesService {
   }
 
   /**
+   * One page of a calendar's dates (`GET /v1/resources/{id}/occurrences`): one card per instance
+   * from `from` on, by start, each with its `occurrence` key and lifecycle status. A resource that
+   * is no calendar has none (`items: []`).
+   *
+   * @param id - Pinakes resource ID of the feed (`card.id`, an occurrence's `feed_id`)
+   * @param options.from - Inclusive start of the window, RFC 3339 (never `now`: this route refuses it)
+   * @param options.limit - Instances to ask for (1-500)
+   * @param options.cursor - The next page's cursor, from the page before
+   * @param cache.fresh - Ask Pinakes again whatever the cache holds (a list started over). The
+   * app's own: never a parameter of the request
+   * @param cache.keepUntil - Keep the page until this time (epoch milliseconds) instead of the cache's
+   * own five minutes: a list whose window ends then (a series' dates, read per hour). The app's own too
+   * @returns The page, or `null` when Pinakes does not know the resource (404) or is not configured
+   * @throws AppError when `from` is not RFC 3339 (nothing is sent), when Pinakes fails, or when it
+   * refuses the page (an expired cursor is a 400)
+   */
+  static async fetchOccurrences(
+    id: string,
+    { from, limit, cursor }: { from: string; limit: number; cursor?: string | null },
+    { fresh = false, keepUntil }: { fresh?: boolean; keepUntil?: number } = {},
+  ): Promise<TPinakesOccurrencePage | null> {
+    if (!RFC_3339.test(from)) {
+      throw Err.validation(ValidationErrorCode.FORMAT_ERROR, 'The start of the dates to list is not an RFC 3339 time', {
+        service: ErrorService.Pinakes,
+        operation: 'fetchOccurrences',
+      });
+    }
+    const base = getPinakesBaseUrl();
+    if (!base) return null;
+
+    const endpoint = `${base}${RESOURCES_PATH}/${encodeURIComponent(id)}/occurrences`;
+    const query = new URLSearchParams({ from, limit: String(limit), ...(cursor ? { cursor } : {}) }).toString();
+    return pinakesQueryClient.fetchQuery({
+      queryKey: ['pinakes', 'occurrences', id, query],
+      // `fresh`: a list started over (its cursor was refused) asks again within the same window,
+      // where the cache holds the first page with the cursor that was refused
+      ...(fresh ? { staleTime: 0 } : {}),
+      // `keepUntil`: kept, and not collected, until the list's window ends
+      ...(!fresh && keepUntil !== undefined ? keptUntil<TPinakesOccurrencePage | null>(keepUntil) : {}),
+      // A refused cursor is answered the same way again: the caller starts over
+      retry: false,
+      queryFn: () =>
+        fetchPinakesOrNull<TPinakesOccurrencePage>({
+          url: `${endpoint}?${query}`,
+          endpoint: `${base}${RESOURCES_PATH}/{id}/occurrences`,
+          operation: 'fetchOccurrences',
+        }),
+    });
+  }
+
+  /**
    * A group's members, every member's own card (`GET /v1/groups/{id}`).
    *
    * @param id - Group ID, from a card's `group.id`
@@ -280,6 +349,18 @@ export class PinakesService {
 function getPinakesBaseUrl(): string | null {
   const base = getPinakesUrl();
   return base ? base.replace(/\/+$/, '') : null;
+}
+
+/**
+ * The cache times of a read kept until `until` (epoch milliseconds): fresh until then, measured from
+ * when the read was made (as the by-uri read's `staleTime`), collected then (a later window has a key
+ * of its own).
+ */
+function keptUntil<T>(until: number): { staleTime: (query: Query<T>) => number; gcTime: number } {
+  return {
+    staleTime: (query) => Math.max(0, until - query.state.dataUpdatedAt),
+    gcTime: Math.max(0, until - Date.now()),
+  };
 }
 
 /** The cache key of a group's read. */

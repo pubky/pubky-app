@@ -86,6 +86,54 @@ describe('useResourceSearch', () => {
     expect(result.current.hasMore).toBe(false);
   });
 
+  it('keeps every row’s own card when asked: a calendar’s occurrences share one link and stay separate rows, page after page', async () => {
+    const occurrence = (uid: string) => ({
+      id: 'feed',
+      uri: 'https://example.com/feed.ics',
+      start: `2026-11-${uid}T00:00:00Z`,
+      occurrence: { feed_id: 'feed', feed_uri: 'https://example.com/feed.ics', uid, status: 'scheduled' },
+    });
+    const concert = { id: 'concert', uri: 'https://example.com/concert', start: '2026-11-16T19:00:00Z' };
+    mocks.fetchSearchPage
+      .mockResolvedValueOnce(
+        page(['https://example.com/feed.ics', 'https://example.com/concert', 'https://example.com/feed.ics'], 'c2', {
+          cards: [occurrence('15'), concert, occurrence('18')],
+        }),
+      )
+      // The next page repeats the last row and brings another date of the same calendar
+      .mockResolvedValueOnce(
+        page(['https://example.com/feed.ics'], null, { cards: [occurrence('18'), occurrence('22')] }),
+      );
+    const q = query(['music']);
+
+    const { result } = renderHook(() => useResourceSearch(q, { limit: 3, cards: true }));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(mocks.fetchSearchPage).toHaveBeenLastCalledWith({ query: q, limit: 3, facets: false, withCards: true });
+    expect(result.current.cards.map((card) => card.occurrence?.uid ?? card.id)).toEqual(['15', 'concert', '18']);
+    // The links, each once, as before: the list of links is not what tells occurrences apart
+    expect(result.current.uris).toEqual(['https://example.com/feed.ics', 'https://example.com/concert']);
+
+    await act(() => result.current.loadMore());
+
+    expect(mocks.fetchSearchPage).toHaveBeenLastCalledWith({
+      query: q,
+      cursor: { source: 'pinakes', cursor: 'c2' },
+      limit: 3,
+      withCards: true,
+    });
+    expect(result.current.cards.map((card) => card.occurrence?.uid ?? card.id)).toEqual(['15', 'concert', '18', '22']);
+  });
+
+  it('has no cards unless asked, and none from the stream standing in', async () => {
+    mocks.fetchSearchPage.mockResolvedValueOnce(page(['a'], null));
+
+    const { result } = renderHook(() => useResourceSearch(query(['music'])));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.cards).toEqual([]);
+  });
+
   it('reads one query once, however often an equal query is passed', async () => {
     mocks.fetchSearchPage.mockResolvedValue(page(['a'], null));
     const { result, rerender } = renderHook(({ tags }) => useResourceSearch(query(tags)), {

@@ -1,4 +1,5 @@
 import { PinakesApplication } from '@/application/pinakes/pinakes';
+import { getOccurrencesWindowStart, type TEventInstance } from '@/pipes/resource/resource.events';
 import type {
   TPinakesCard,
   TPinakesEpisodePage,
@@ -91,5 +92,54 @@ export class PinakesController {
    */
   static getCachedGroup({ id }: { id: string }): TPinakesGroupDetail | null | undefined {
     return PinakesApplication.getCachedGroup(id);
+  }
+
+  /**
+   * One page of a calendar's coming dates: its instances from now on, by start, and the cursor of
+   * the next page (`null` at the end). A resource that is no calendar has none.
+   *
+   * @param params.id - Pinakes resource ID of the calendar (`card.id`)
+   * @param params.limit - Dates to ask for
+   * @param params.cursor - The next page's cursor, from the page before
+   * @param params.from - The start of the list, RFC 3339: a later page passes the first page's, so
+   * the cursor stays in its window. Now, without one.
+   * @param params.fresh - Ask Pinakes again whatever the cache holds: the first page of a list
+   * started over, which the cache may still hold with the cursor that was refused
+   * @param params.keepUntil - Keep the page until then (epoch milliseconds), when its window ends,
+   * instead of the cache's own five minutes
+   * @throws AppError when Pinakes fails or refuses the page
+   */
+  static fetchOccurrences({
+    id,
+    limit,
+    cursor,
+    from = getOccurrencesWindowStart(new Date()),
+    fresh,
+    keepUntil,
+  }: {
+    id: string;
+    limit: number;
+    cursor?: string | null;
+    from?: string;
+    fresh?: boolean;
+    keepUntil?: number;
+  }): Promise<{ cards: TPinakesCard[]; cursor: string | null }> {
+    return PinakesApplication.fetchOccurrences(id, {
+      from,
+      limit,
+      cursor,
+      fresh,
+      ...(keepUntil !== undefined ? { keepUntil } : {}),
+    });
+  }
+
+  /**
+   * The rows of an event search as a list of events shows them: each event with its own details
+   * (time zone, venue, status), each calendar occurrence as its own row. One per row, in order.
+   *
+   * @param params.cards - The search page's rows (`fetchSearchPage` with `withCards`)
+   */
+  static fetchEventInstances({ cards }: { cards: readonly TPinakesCard[] }): Promise<TEventInstance[]> {
+    return PinakesApplication.fetchEventInstances(cards);
   }
 }

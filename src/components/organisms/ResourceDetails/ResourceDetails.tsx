@@ -8,6 +8,7 @@ import { Link } from '@/atoms/Link/Link';
 import { PageHeader } from '@/atoms/PageHeader/PageHeader';
 import { Typography } from '@/atoms/Typography/Typography';
 import { isPinakesConfigured } from '@/config/pinakes';
+import { useEventFeed } from '@/hooks/useEventFeed/useEventFeed';
 import { useOtherLinkTags } from '@/hooks/useOtherLinkTags/useOtherLinkTags';
 import { usePinakesGroup } from '@/hooks/usePinakesGroup/usePinakesGroup';
 import type { UsePinakesQueryResult } from '@/hooks/usePinakesQuery/usePinakesQuery.types';
@@ -22,8 +23,10 @@ import {
   getShowPostLabel,
 } from '@/molecules/PostLinkEmbeds/Providers/Native/nativeEmbed.utils';
 import { ResourceCard } from '@/molecules/ResourceCard/ResourceCard';
+import { ResourceFamily } from '@/molecules/ResourceCard/ResourceCard.types';
 import {
   getHttpUrl,
+  getResourceFamily,
   getResourceLinks,
   getResourceTagsLabel,
   getResourceTarget,
@@ -41,6 +44,7 @@ import { DialogReply } from '@/organisms/DialogReply/DialogReply';
 import { ResourceActions } from '@/organisms/ResourceActions/ResourceActions';
 import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { useSettingsStore } from '@/stores/settings/settings.store';
+import { ResourceNearby } from './ResourceNearby';
 import { getOtherLinks, getOwnLinkUris, mergeOtherLinkTags } from './ResourceOtherTags.utils';
 import { ResourceReplies } from './ResourceReplies';
 
@@ -62,7 +66,7 @@ interface ResourceDetailsProps {
 
 /**
  * The resource page's body, where a post's page has the post: the heading, then the link's large
- * card with a post's footer. Without a card (Pinakes does not know the link or is not configured),
+ * card with a post's footer, and under a place's card the places around it (`ResourceNearby`). Without a card (Pinakes does not know the link or is not configured),
  * the link's own preview takes its place, with the same footer; when Pinakes cannot be read, it
  * says so and offers the plain link. While Pinakes reads a link it did not know (`resolve`: until it
  * answers, up to about two minutes while a pending card settles), the loading card holds its place, as on the first read; the link's preview shows only
@@ -148,7 +152,13 @@ function ResourceBody({ uri, read, onRetry, replies }: ResourceDetailsProps) {
     // The card's canonical link; the page's link, its refs and aliases are its spellings, read along.
     const target = getResourceTarget(card, uri);
     threadUri = target.uri;
-    body = <ResourceKnown card={card} uri={uri} target={target} replies={replies} dialogs={dialogs} />;
+    body = (
+      <>
+        <ResourceKnown card={card} uri={uri} target={target} replies={replies} dialogs={dialogs} />
+        {/* A place's page: the places around it (nothing for any other card) */}
+        <ResourceNearby card={card} />
+      </>
+    );
   }
   // The thread and the composers are rendered once, past the body, so a card that replaces the
   // loading card or the link's own preview (a resolve answering) keeps the thread and a half-typed
@@ -215,6 +225,8 @@ function ResourceKnown({
   const otherLinks =
     card.group && isGroupLoading ? [] : getOtherLinks(card, group?.members, getOwnLinkUris(card, uri, actionUri));
   const otherTags = mergeOtherLinkTags(useOtherLinkTags(otherLinks).reads);
+  // A series date's feed (its group, read above): the footer's tags switch between this date and all dates
+  const { feed } = useEventFeed(getResourceFamily(card) === ResourceFamily.EVENT ? card : null);
   // An X post shows X's own embed as the card's body, as in a post (`usePostEmbed`).
   const postEmbed = usePostEmbed(card, uri);
   // Embed or card, as in a post (`useCardPlayer`): the page's own link's player up front in place of
@@ -238,6 +250,7 @@ function ResourceKnown({
       linkUrl={getResourceLinks(card, writtenUri).linkUrl}
       title={card.name || null}
       otherTagList={otherTags}
+      eventFeed={feed}
       playOn={postEmbed?.showPost}
       size="large"
       replyCount={replies.replyCount}

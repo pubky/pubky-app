@@ -20,6 +20,11 @@ export function isIosDevice(): boolean {
   return /iPad|iPhone|iPod/.test(userAgent) || (platform === 'MacIntel' && maxTouchPoints > 1);
 }
 
+/** Any Android browser (Firefox too): a phone or tablet where a `geo:` link opens the default maps app. */
+export function isAndroidDevice(): boolean {
+  return typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent);
+}
+
 /**
  * Android browser where an `intent://` deep link can name a specific app package.
  * Firefox for Android (`Firefox/` in the user agent) is excluded because its `intent://`

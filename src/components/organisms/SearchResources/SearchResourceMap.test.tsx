@@ -1,0 +1,410 @@
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { UseResourceSearchResult } from '@/hooks/useResourceSearch/useResourceSearch';
+import { useResourceLocationVariant } from '@/molecules/ResourceMap/ResourceLocationContext';
+import type { ResourceMapProps } from '@/molecules/ResourceMap/ResourceMap';
+import type { TEventInstance } from '@/pipes/resource/resource.events';
+import eventsFixture from '@/services/pinakes/fixtures/search.events.json';
+import nearbyFixture from '@/services/pinakes/fixtures/search.places-nearby.json';
+import type { TPinakesCard } from '@/services/pinakes/pinakes.types';
+import { SearchResourceMap } from './SearchResourceMap';
+
+const mocks = vi.hoisted(() => ({ map: null as unknown, detailsLoading: false, instancesAsked: [] as unknown[] }));
+
+// The map itself is tested in ResourceMap.test: here its pins are plain buttons
+vi.mock('@/molecules/ResourceMap/ResourceMap', () => ({
+  ResourceMap: (props: ResourceMapProps) => {
+    mocks.map = props;
+    return (
+      <div data-testid="resource-map" data-mode={props.mode} data-size={props.size} aria-label={props.label}>
+        {props.markers.map((marker) => (
+          <button
+            key={marker.id}
+            type="button"
+            aria-pressed={marker.id === props.selectedId}
+            data-count={marker.count ?? 1}
+            data-zooms={marker.bounds ? 'yes' : 'no'}
+            onClick={(event) => props.onSelect?.(marker.id, event.currentTarget)}
+          >
+            {marker.label}
+          </button>
+        ))}
+      </div>
+    );
+  },
+}));
+vi.mock('@/hooks/useEventInstances/useEventInstances', () => ({
+  useEventInstances: (cards: TPinakesCard[]) => {
+    mocks.instancesAsked.push(cards);
+    return { instances: mocks.detailsLoading ? [] : cards, isLoading: mocks.detailsLoading };
+  },
+}));
+vi.mock('@/molecules/ResourceCard/ResourceItem', () => ({
+  ResourceItem: function ResourceItemStub({ uri }: { uri: string }) {
+    return <div data-testid="place-card" data-uri={uri} data-location={useResourceLocationVariant()} />;
+  },
+}));
+vi.mock('@/organisms/ResourceInstanceCard/ResourceInstanceCard', () => ({
+  ResourceInstanceCard: function ResourceInstanceCardStub({ card }: { card: TEventInstance }) {
+    return (
+      <div data-testid="event-card" data-uid={card.occurrence?.uid ?? ''} data-location={useResourceLocationVariant()}>
+        {card.name}
+      </div>
+    );
+  },
+}));
+
+const PLACES: TPinakesCard[] = nearbyFixture.items;
+const EVENTS: TPinakesCard[] = eventsFixture.items;
+const map = () => mocks.map as ResourceMapProps;
+/** Tells the page how close the map is, as the map does once drawn and after a zoom. */
+const zoomTo = (zoom: number) => act(() => map().onZoom?.(zoom));
+
+const search = (overrides: Partial<UseResourceSearchResult> = {}): UseResourceSearchResult => ({
+  uris: [],
+  cards: PLACES,
+  typeFacets: null,
+  relatedTags: [],
+  hostFacets: null,
+  categoryFacets: null,
+  source: 'pinakes',
+  unavailable: false,
+  reachTruncated: false,
+  loading: false,
+  loadingMore: false,
+  error: null,
+  hasMore: false,
+  loadMore: vi.fn(async () => {}),
+  retry: vi.fn(),
+  ...overrides,
+});
+
+describe('SearchResourceMap', () => {
+  beforeEach(() => {
+    mocks.map = null;
+    mocks.detailsLoading = false;
+    mocks.instancesAsked.length = 0;
+  });
+
+  it('shows the places read so far on one map to explore, fitted to all of them', () => {
+    render(<SearchResourceMap kind="place" search={search()} />);
+
+    expect(screen.getByTestId('resource-map')).toHaveAttribute('data-mode', 'explore');
+    expect(screen.getByTestId('resource-map')).toHaveAttribute('data-size', 'wide');
+    expect(map().fit).toEqual(PLACES.map((card) => card.point));
+    expect(map().label).toBe('Map of 7 places');
+  });
+
+  it('groups pins too close to tell apart, counting them, and tells them apart once the map is close', () => {
+    render(<SearchResourceMap kind="place" search={search()} />);
+
+    // Seven places in Zurich's old town, seen from far away: one pin
+    zoomTo(4);
+    const [group] = within(screen.getByTestId('resource-map')).getAllByRole('button');
+    expect(group).toHaveTextContent('7 places here');
+    expect(group).toHaveAttribute('data-count', '7');
+    expect(group).toHaveAttribute('data-zooms', 'yes');
+
+    zoomTo(18);
+    const pins = within(screen.getByTestId('resource-map')).getAllByRole('button');
+    expect(pins.map((pin) => pin.textContent)).toEqual(PLACES.map((card) => card.name));
+  });
+
+  it('opens the real card of a selected pin under the map, with its tag bar, saying where it is on a line with Open in Maps', () => {
+    render(<SearchResourceMap kind="place" search={search()} />);
+    zoomTo(18);
+    expect(screen.getByTestId('search-map-selection')).toHaveTextContent('Select a pin to see its card');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Henrici' }));
+
+    const cards = screen.getAllByTestId('place-card');
+    expect(cards).toHaveLength(1);
+    expect(cards[0]).toHaveAttribute('data-uri', 'https://www.openstreetmap.org/node/633601362');
+    expect(cards[0]).toHaveAttribute('data-location', 'row');
+    expect(screen.getByRole('button', { name: 'Henrici' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  describe('bringing a pressed pin’s cards into view', () => {
+    /** Where the pressed pin and the first card are on the page (jsdom lays nothing out). */
+    const layout = { pin: 556, card: [892, 1400] };
+    const scrollBy = vi.fn();
+    let reducedMotion = false;
+
+    beforeEach(() => {
+      layout.pin = 556;
+      layout.card = [892, 1400];
+      reducedMotion = false;
+      scrollBy.mockClear();
+      vi.stubGlobal('innerHeight', 900);
+      vi.stubGlobal('scrollBy', scrollBy);
+      vi.stubGlobal('matchMedia', (query: string) => ({ matches: reducedMotion && query.includes('reduce') }));
+      vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+        if (this.dataset.testid === 'event-card') return { top: layout.card[0], bottom: layout.card[1] } as DOMRect;
+        if (this.tagName === 'BUTTON') return { top: layout.pin, bottom: layout.pin + 32 } as DOMRect;
+        return { top: 0, bottom: 0 } as DOMRect;
+      });
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+    });
+
+    const pressThreeHere = () => {
+      const spot = { lat: 47.37688, lon: 8.53844 };
+      render(
+        <SearchResourceMap
+          kind="event"
+          search={search({ cards: [EVENTS[1], EVENTS[4], EVENTS[5]].map((card) => ({ ...card, point: spot })) })}
+        />,
+      );
+      zoomTo(18);
+      fireEvent.click(screen.getByRole('button', { name: '3 events here' }));
+    };
+
+    it('scrolls as far as the first card needs to be seen whole, smoothly', () => {
+      layout.card = [892, 1100];
+      pressThreeHere();
+
+      expect(screen.getAllByTestId('event-card')).toHaveLength(3);
+      expect(scrollBy).toHaveBeenCalledTimes(1);
+      expect(scrollBy).toHaveBeenCalledWith({ top: 200, behavior: 'smooth' });
+    });
+
+    it('stops before the pressed pin goes under the page’s header', () => {
+      pressThreeHere();
+
+      // The card would need 500; the pin at 556 may go up to 16 below the 144 of the header
+      expect(scrollBy).toHaveBeenCalledWith({ top: 396, behavior: 'smooth' });
+    });
+
+    it('moves nothing when the first card is already in view, or the pin is already at the header', () => {
+      layout.card = [500, 800];
+      pressThreeHere();
+      expect(scrollBy).not.toHaveBeenCalled();
+
+      cleanup();
+      layout.card = [892, 1400];
+      layout.pin = 150;
+      pressThreeHere();
+      expect(scrollBy).not.toHaveBeenCalled();
+    });
+
+    it('brings them into view again on a second press of the same pin', () => {
+      pressThreeHere();
+      fireEvent.click(screen.getByRole('button', { name: '3 events here' }));
+
+      expect(scrollBy).toHaveBeenCalledTimes(2);
+    });
+
+    it('jumps instead of scrolling smoothly for a viewer who asked for reduced motion', () => {
+      reducedMotion = true;
+      pressThreeHere();
+
+      expect(scrollBy).toHaveBeenCalledWith({ top: 396, behavior: 'instant' });
+    });
+  });
+
+  it('keeps the selected card when the map is zoomed and its pin joins a group', () => {
+    render(<SearchResourceMap kind="place" search={search()} />);
+    zoomTo(18);
+    fireEvent.click(screen.getByRole('button', { name: 'Henrici' }));
+
+    zoomTo(4);
+
+    expect(screen.getByTestId('place-card')).toHaveAttribute(
+      'data-uri',
+      'https://www.openstreetmap.org/node/633601362',
+    );
+    expect(screen.getByRole('button', { name: '7 places here' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('opens every card of a pin that stands for results at one spot: they cannot be zoomed apart', () => {
+    const spot = { lat: 47.37546, lon: 8.52722 };
+    const sameVenue = [
+      { ...EVENTS[1], point: spot },
+      { ...EVENTS[5], point: spot },
+    ];
+    render(<SearchResourceMap kind="event" search={search({ cards: sameVenue })} />);
+    zoomTo(18);
+
+    const pin = screen.getByRole('button', { name: '2 events here' });
+    expect(pin).toHaveAttribute('data-zooms', 'no');
+    fireEvent.click(pin);
+
+    expect(screen.getAllByTestId('event-card').map((card) => card.textContent)).toEqual([
+      'Annett Louisan @ Volkshaus',
+      'Noah Kahan @ Hallenstadion',
+    ]);
+  });
+
+  it('says how much the map shows: the results loaded so far, and how many have no location', () => {
+    render(<SearchResourceMap kind="event" search={search({ cards: EVENTS, hasMore: true })} />);
+
+    expect(mocks.instancesAsked.at(-1)).toBe(EVENTS);
+    const scope = screen.getByTestId('search-map-scope');
+    expect(scope).toHaveTextContent('Showing the 6 events loaded so far');
+    expect(scope).toHaveTextContent('3 have no location and are not on the map');
+    expect(map().markers.reduce((sum, marker) => sum + (marker.count ?? 1), 0)).toBe(3);
+  });
+
+  it('says so when it shows every result, and counts one event right', () => {
+    render(<SearchResourceMap kind="event" search={search({ cards: [EVENTS[1], EVENTS[0]] })} />);
+
+    const scope = screen.getByTestId('search-map-scope');
+    expect(scope).toHaveTextContent('Showing all 2 events');
+    expect(scope).toHaveTextContent('1 has no location and is not on the map');
+  });
+
+  it('keeps a calendar’s occurrences apart on the map too: each with a place is its own result', () => {
+    const [first, , second] = EVENTS;
+    const placed = [
+      { ...first, point: { lat: 52.52, lon: 13.4 } },
+      { ...second, point: { lat: 48.14, lon: 11.58 } },
+    ];
+    render(<SearchResourceMap kind="event" search={search({ cards: placed })} />);
+    zoomTo(18);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Repentance Day (Saxony)' }));
+
+    expect(screen.getByTestId('event-card')).toHaveAttribute('data-uid', second.occurrence!.uid);
+  });
+
+  it('loads the next page only when asked, and adds its results to the map', () => {
+    const loadMore = vi.fn(async () => {});
+    const { rerender } = render(
+      <SearchResourceMap kind="place" search={search({ cards: PLACES.slice(0, 3), hasMore: true, loadMore })} />,
+    );
+    expect(loadMore).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Load more results' }));
+    expect(loadMore).toHaveBeenCalledTimes(1);
+
+    rerender(<SearchResourceMap kind="place" search={search({ cards: PLACES, hasMore: false, loadMore })} />);
+    expect(map().fit).toHaveLength(7);
+    expect(screen.queryByRole('button', { name: 'Load more results' })).toBeNull();
+  });
+
+  it('shows that more results are being read', () => {
+    render(<SearchResourceMap kind="place" search={search({ hasMore: true, loadingMore: true })} />);
+
+    expect(screen.getByRole('button', { name: 'Loading more results' })).toBeDisabled();
+  });
+
+  it('draws no map when none of the results has a location, and says so', () => {
+    const unplaced = EVENTS.filter((card) => !card.point);
+    render(<SearchResourceMap kind="event" search={search({ cards: unplaced, hasMore: true })} />);
+
+    expect(screen.queryByTestId('resource-map')).toBeNull();
+    expect(screen.getByTestId('search-map-empty')).toHaveTextContent(
+      'None of the 3 events loaded so far has a location',
+    );
+    expect(screen.getByRole('button', { name: 'Load more results' })).toBeInTheDocument();
+  });
+
+  it('leaves a result whose point is not on the map off it', () => {
+    const broken = [{ ...PLACES[0], point: { lat: 947, lon: 8 } }, PLACES[1]];
+    render(<SearchResourceMap kind="place" search={search({ cards: broken })} />);
+
+    expect(map().fit).toEqual([PLACES[1].point]);
+    expect(screen.getByTestId('search-map-scope')).toHaveTextContent('1 has no location and is not on the map');
+  });
+
+  it('shows a loading map while the search is read, and for events while their details are', () => {
+    const { rerender } = render(<SearchResourceMap kind="place" search={search({ cards: [], loading: true })} />);
+    expect(screen.getByTestId('search-map-loading')).toBeInTheDocument();
+
+    mocks.detailsLoading = true;
+    rerender(<SearchResourceMap kind="event" search={search({ cards: EVENTS })} />);
+    expect(screen.getByTestId('search-map-loading')).toBeInTheDocument();
+    expect(screen.queryByTestId('resource-map')).toBeNull();
+  });
+
+  it('says so when nothing matches, and when the search failed, with a way to try again', () => {
+    const { rerender } = render(<SearchResourceMap kind="place" search={search({ cards: [] })} />);
+    expect(screen.getByTestId('search-map-empty')).toHaveTextContent('No places found');
+
+    const retry = vi.fn();
+    rerender(<SearchResourceMap kind="place" search={search({ cards: [], error: 'Pinakes is down', retry })} />);
+    expect(screen.getByTestId('search-map-error')).toHaveTextContent('Pinakes is down');
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(retry).toHaveBeenCalledTimes(1);
+  });
+
+  it('says so when more results could not be read: it keeps the map, claims no "all", and offers to try again', () => {
+    const retry = vi.fn();
+    // As the search hook leaves it after a failed next page: the rows read, no more to ask for, the error
+    render(
+      <SearchResourceMap
+        kind="place"
+        search={search({ cards: PLACES.slice(0, 3), hasMore: false, error: 'Pinakes is down', retry })}
+      />,
+    );
+
+    expect(screen.getByTestId('resource-map')).toBeInTheDocument();
+    expect(screen.getByTestId('search-map-scope')).toHaveTextContent('Showing the 3 places loaded so far');
+    expect(screen.getByTestId('search-map-scope')).not.toHaveTextContent('all');
+    expect(screen.getByTestId('search-map-more-error')).toHaveTextContent('Pinakes is down');
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(retry).toHaveBeenCalledTimes(1);
+  });
+
+  it('says so too when more results could not be read and none read so far has a location', () => {
+    const retry = vi.fn();
+    const unplaced = EVENTS.filter((card) => !card.point);
+    render(
+      <SearchResourceMap
+        kind="event"
+        search={search({ cards: unplaced, hasMore: false, error: 'Pinakes is down', retry })}
+      />,
+    );
+
+    expect(screen.getByTestId('search-map-empty')).toHaveTextContent(
+      'None of the 3 events loaded so far has a location',
+    );
+    expect(screen.getByTestId('search-map-more-error')).toHaveTextContent('Pinakes is down');
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(retry).toHaveBeenCalledTimes(1);
+  });
+
+  it('maps at most 200 results: past that it loads no more and says so', () => {
+    const many = Array.from({ length: 205 }, (_, index) => ({
+      ...PLACES[0],
+      id: `place-${index}`,
+      name: `Place ${index}`,
+      point: { lat: 47 + index / 1000, lon: 8 + index / 1000 },
+    }));
+    const loadMore = vi.fn(async () => {});
+    render(<SearchResourceMap kind="place" search={search({ cards: many, hasMore: true, loadMore })} />);
+
+    expect(map().fit).toHaveLength(200);
+    expect(screen.getByTestId('search-map-scope')).toHaveTextContent(
+      'Showing the first 200 places. Narrow the search to see others on the map.',
+    );
+    expect(screen.queryByRole('button', { name: 'Load more results' })).toBeNull();
+    expect(loadMore).not.toHaveBeenCalled();
+  });
+
+  it('says quietly what is coming for the kind it shows, with nothing to press', () => {
+    const { rerender } = render(<SearchResourceMap kind="place" search={search()} />);
+    expect(screen.getByTestId('search-map-hint')).toHaveTextContent('Pubky Maps is coming');
+
+    rerender(<SearchResourceMap kind="event" search={search({ cards: EVENTS })} />);
+    const hint = screen.getByTestId('search-map-hint');
+    expect(hint).toHaveTextContent('Events on Pubky are coming');
+    expect(within(hint).queryByRole('button')).toBeNull();
+  });
+
+  it('asks Pinakes for nothing as the map moves: no search of the area in view', () => {
+    const loadMore = vi.fn(async () => {});
+    const retry = vi.fn();
+    render(<SearchResourceMap kind="place" search={search({ hasMore: true, loadMore, retry })} />);
+
+    zoomTo(4);
+    zoomTo(12);
+    zoomTo(18);
+
+    expect(loadMore).not.toHaveBeenCalled();
+    expect(retry).not.toHaveBeenCalled();
+  });
+});

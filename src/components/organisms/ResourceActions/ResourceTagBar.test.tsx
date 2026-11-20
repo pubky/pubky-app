@@ -154,7 +154,7 @@ function TagBar({
   ...other
 }: { isExpanded?: boolean; isAdding?: boolean } & Pick<
   React.ComponentProps<typeof ResourceTagBar>,
-  'otherTags' | 'uri' | 'inline'
+  'otherTags' | 'uri' | 'scope' | 'control' | 'inline'
 >) {
   return (
     <ResourceTagBar
@@ -756,5 +756,62 @@ describe('ResourceTagBar', () => {
     render(<TagBar otherTags={OTHER_TAGS} uri={LINK} />);
 
     expect(chipLabels()).toEqual(['Travel2(4)', 'capital0(2)', 'europe0(1)']);
+  });
+
+  describe('a series date’s tag scope', () => {
+    const FEED = 'https://www.meetup.com/bitcoin-meetup-switzerland/events/ical/';
+    const allDates = (label: string, taggers: string[]): TMergedTag => ({
+      label,
+      taggers,
+      count: taggers.length,
+      isComplete: true,
+      sources: [{ uri: FEED, name: 'All dates', count: taggers.length, taggers }],
+    });
+
+    it('starts with the scope’s switch, before the chips and before the expanded input', async () => {
+      const control = <button type="button">This date</button>;
+      const { unmount } = render(<TagBar control={control} />);
+      expect(within(screen.getByTestId('resource-tag-bar')).getAllByRole('button')[0]).toHaveTextContent('This date');
+      unmount();
+
+      render(<TagBar isExpanded control={control} />);
+      await screen.findByTestId('tag-input');
+      const bar = screen.getByTestId('resource-tag-bar');
+      expect(bar.firstElementChild?.firstElementChild).toHaveTextContent('This date');
+    });
+
+    it('says a tag on all dates is there, in the chip’s name and hover text', () => {
+      mocks.tags = TWO_TAGS;
+      render(
+        <TagBar
+          otherTags={[allDates('travel', ['b', 'x']), allDates('meetup', ['e', 'f'])]}
+          uri={LINK}
+          scope={{ name: 'all dates', uris: [FEED] }}
+        />,
+      );
+
+      const [meetup] = secondaryChips();
+      expect(meetup).toHaveAccessibleName('meetup, 0 here, 2 on all dates, add it here');
+      expect(meetup).toHaveAttribute('title', 'On all dates');
+      const travel = screen.getByText('travel').closest('button');
+      expect(travel).toHaveAccessibleName('travel, 2 here, 3 with those on all dates');
+      expect(travel).toHaveAttribute('title', 'On all dates');
+      // A label only here says nothing of the other dates
+      expect(screen.getByText('berlin').closest('button')).not.toHaveAttribute('title');
+    });
+
+    it('says a tag on this date is there when the bar is all dates’, with other services named apart', () => {
+      mocks.tags = TWO_TAGS;
+      const DATE = 'https://www.meetup.com/bitcoin-meetup-switzerland/events/frxnbvyjcqbmb/';
+      const both: TMergedTag = {
+        ...OTHER_TAGS[1],
+        sources: [...OTHER_TAGS[1].sources, { uri: DATE, name: 'This date', count: 1, taggers: ['e'] }],
+      };
+      render(<TagBar otherTags={[both]} uri={FEED} scope={{ name: 'this date', uris: [DATE] }} />);
+
+      const [capital] = secondaryChips();
+      expect(capital).toHaveAccessibleName('capital, 0 here, 2 on this date and other services, add it here');
+      expect(capital).toHaveAttribute('title', 'On this date');
+    });
   });
 });
