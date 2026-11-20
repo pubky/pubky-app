@@ -71,13 +71,19 @@ export const lockPostIndexed = (post: Pick<SeededPost, 'id' | 'authorId'>): Nexu
   expect: { kind: 'lock' },
 });
 
-export const followIndexed = (follower: SeededUser, followee: SeededUser): NexusCheck => ({
+export const followIndexed = (
+  follower: Pick<SeededUser, 'id' | 'name'>,
+  followee: Pick<SeededUser, 'id' | 'name'>,
+): NexusCheck => ({
   description: `'${follower.name}' following '${followee.name}'`,
   path: `/v1/user/${followee.id}/followers`,
   expect: { kind: 'includes', value: follower.id },
 });
 
-export const followGone = (follower: SeededUser, followee: SeededUser): NexusCheck => ({
+export const followGone = (
+  follower: Pick<SeededUser, 'id' | 'name'>,
+  followee: Pick<SeededUser, 'id' | 'name'>,
+): NexusCheck => ({
   description: `'${follower.name}' no longer following '${followee.name}'`,
   path: `/v1/user/${followee.id}/followers`,
   expect: { kind: 'excludes', value: follower.id },

@@ -36,6 +36,10 @@ runs:
       if: steps.node-modules.outputs.cache-hit != 'true'
       shell: bash
       run: npm ci
+      # No caller runs Cypress, and the binary lands in ~/.cache/Cypress, outside the
+      # cached node_modules. e2e-test.yml installs and caches it on its own.
+      env:
+        CYPRESS_INSTALL_BINARY: 0
 
     # Save right after installing so a later failing step does not cost the next run a reinstall.
     - name: Save node_modules cache
