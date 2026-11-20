@@ -240,6 +240,24 @@ describe('ResourceActions', () => {
     expect(mocks.tagsEnabled.at(-1)).toBe(true);
   });
 
+  it('puts Play on on its own line above the footer, leaving the post’s tags and buttons as they are', () => {
+    render(
+      <ResourceActions
+        uri={URI}
+        tagsLabel="Tags on this song"
+        linkUrl={LINK}
+        playOn={<button type="button">Play on Spotify</button>}
+      />,
+    );
+
+    const playerRow = screen.getByTestId('resource-player-row');
+    expect(playerRow).toHaveTextContent('Play on Spotify');
+    expect(playerRow.nextElementSibling).toBe(screen.getByTestId('resource-footer'));
+    expect(screen.getByTestId('resource-action-row').firstElementChild).toBe(
+      screen.getByTestId('resource-tags-button'),
+    );
+  });
+
   it('keeps the buttons on one row at their width beside the tags from md, like the post’s', () => {
     renderActions(8);
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useState } from 'react';
+import { type ReactNode, useId, useState } from 'react';
 import { MessageCircle, Tag } from 'lucide-react';
 import { Container } from '@/atoms/Container/Container';
 import type { TMergedTag } from '@/hooks/useOtherLinkTags/useOtherLinkTags.types';
@@ -40,6 +40,11 @@ interface ResourceActionsProps {
   isOnScreen?: boolean;
   /** The resource page's tags on the same thing's other links (`mergeOtherLinkTags`), in the tag list. */
   otherTagList?: readonly TMergedTag[];
+  /**
+   * "Play on <service>" for a card with a service's player (`useCardPlayer`): on its own line above
+   * the footer, so the footer's tags and buttons are the post's, never squeezed by it.
+   */
+  playOn?: ReactNode;
   /** `large`: under the resource page's large card, with its padding and the post's pills. */
   size?: 'default' | 'large';
 }
@@ -49,9 +54,10 @@ interface ResourceActionsProps {
  * tags and "+" on the left; on the right, in the post's order and in its buttons: Tags (how many
  * tags, showing all of them and the tag input, a second click shows a few again), Reply (the post's
  * reply dialog: a post whose `parent` is the resource's URI), Post about this (the repost button),
- * Save (bookmark and collections, with the public collections count) and ⋯. Like the post's, the
- * tags show only a few until expanded, and from md the buttons keep their one row beside them while
- * the tags wrap. On a phone the buttons go under the tags.
+ * Save (bookmark and collections, with the public collections count) and ⋯; a card with a player
+ * has "Play on <service>" (`playOn`) on a line above. Like the post's, the tags show only a few until
+ * expanded, and from md the buttons keep their one row beside them while the tags wrap. On a phone
+ * the buttons go under the tags.
  * The pills use `surface="muted"` (`bg-card` pills) on a card inside a post, and the post's own
  * pills on the page's large card.
  *
@@ -73,6 +79,7 @@ export function ResourceActions({
   extraMenuContent,
   isOnScreen = true,
   otherTagList,
+  playOn,
   size = 'default',
 }: ResourceActionsProps) {
   const { requireAuth } = useRequireAuth();
@@ -101,6 +108,11 @@ export function ResourceActions({
       data-size={size}
       className={cn('@container/resource-actions flex min-w-0 flex-col gap-3', isLarge ? 'px-6 py-4' : 'px-4 py-3')}
     >
+      {playOn && (
+        <Container overrideDefaults data-testid="resource-player-row" className="flex">
+          {playOn}
+        </Container>
+      )}
       {/*
         The post footer's layout (`PostInlineTagsActions`), also staying stacked in a narrow grid cell.
         Beside the expanded tags the buttons sit at the bottom, as beside the post's tags panel.

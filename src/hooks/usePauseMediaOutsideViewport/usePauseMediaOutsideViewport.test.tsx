@@ -120,4 +120,31 @@ describe('usePauseMediaOutsideViewport', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(pause.mock.instances).not.toContain(video);
   });
+
+  it('leaves media in a box marked to keep playing (a docked player) alone', () => {
+    vi.stubGlobal('IntersectionObserver', MockIntersectionObserver);
+    const pause = vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => undefined);
+    const KeptEmbed = () => {
+      const ref = usePauseMediaOutsideViewport();
+      return (
+        <div ref={ref}>
+          <div data-keep-playing="true">
+            <audio data-testid="kept" />
+            <iframe src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ" title="Docked" />
+          </div>
+          <audio data-testid="other" />
+        </div>
+      );
+    };
+    const { container } = render(<KeptEmbed />);
+    const docked = container.querySelector<HTMLIFrameElement>('iframe[title="Docked"]')!;
+    const postMessage = vi.fn();
+    Object.defineProperty(docked, 'contentWindow', { configurable: true, value: { postMessage } });
+
+    intersectionCallback?.([{ isIntersecting: false } as IntersectionObserverEntry]);
+
+    expect(pause).toHaveBeenCalledTimes(1);
+    expect(pause.mock.contexts[0]).toBe(container.querySelector('[data-testid="other"]'));
+    expect(postMessage).not.toHaveBeenCalled();
+  });
 });

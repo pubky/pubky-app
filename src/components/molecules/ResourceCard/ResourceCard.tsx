@@ -83,8 +83,9 @@ const CARD_MUTED_TEXT =
  * group (`useResourceFallback`), then a missing title or image from the link's OpenGraph data.
  *
  * The title opens the resource's page (the link where links may not navigate). The card is a
- * click-through to the link unless its ⋯ menu lists Also on or its link is gone (`missing`); the
- * `large` card heads the resource page, lists every fact under "Details" and is no click-through.
+ * click-through to the link unless its ⋯ menu lists Also on, its link is gone (`missing`) or its
+ * body may turn into a service's player (`renderBody`); the `large` card heads the resource page,
+ * lists every fact under "Details" and is no click-through.
  * Only `http(s)` values become links, images or audio.
  */
 export function ResourceCard({
@@ -94,6 +95,7 @@ export function ResourceCard({
   hasAlsoOn = false,
   size = 'default',
   isOnScreen = true,
+  renderBody,
 }: ResourceCardProps) {
   const navigable = useIsPostPreviewNavigable();
   const [expanded, setExpanded] = useState(false);
@@ -111,8 +113,9 @@ export function ResourceCard({
   // A `missing` card's own link is gone upstream: neither the card, its heading nor its source
   // send the viewer there.
   const titleUrl = isMissing ? null : linkUrl;
-  // With other services, the viewer picks one in the ⋯ menu; the large card links out by its header only.
-  const clickThroughUrl = hasAlsoOn || isLarge ? null : titleUrl;
+  // With other services, the viewer picks one in the ⋯ menu; the large card links out by its header only,
+  // and a card whose body may turn into a player (`renderBody`) is no click-through either.
+  const clickThroughUrl = hasAlsoOn || isLarge || renderBody ? null : titleUrl;
   const smallTitleUrl = navigable ? getResourceRoute(card.uri) : titleUrl;
   const descriptionId = useId();
   // A feed card reads what it lacks (its group, the link's preview) once it has been on screen.
@@ -212,118 +215,120 @@ export function ResourceCard({
       >
         <ResourceCardHeader typeLabel={typeLabel} sourceUri={sourceUri} href={titleUrl} siteName={siteName} />
 
-        <Container overrideDefaults className="flex min-w-0 gap-4">
-          <ResourceCardMedia
-            imageUrl={shownImage}
-            typeIcon={getResourceTypeIcon(card)}
-            wideByType={hasWideImage(card)}
-            isLarge={isLarge}
-            dimmed={isMissing}
-            onImageError={(url) => setFailedImages((urls) => [...urls, url])}
-          />
+        {(renderBody ?? keepBody)(
+          <Container overrideDefaults className="flex min-w-0 gap-4">
+            <ResourceCardMedia
+              imageUrl={shownImage}
+              typeIcon={getResourceTypeIcon(card)}
+              wideByType={hasWideImage(card)}
+              isLarge={isLarge}
+              dimmed={isMissing}
+              onImageError={(url) => setFailedImages((urls) => [...urls, url])}
+            />
 
-          <Container className="min-w-0 flex-1 gap-1.5">
-            {statusNote && (
-              <Badge variant="secondary" data-testid="resource-card-status" className="max-w-full whitespace-normal">
-                <statusNote.icon aria-hidden="true" />
-                {statusNote.text}
-              </Badge>
-            )}
-            {isLarge ? (
-              <Typography
-                as="h2"
-                overrideDefaults
-                dir="auto"
-                className={cn(
-                  'text-xl font-bold wrap-anywhere text-foreground sm:text-2xl',
-                  isMissing && 'text-foreground/70',
-                )}
-              >
-                {/* Not a link: the header's "Open in <site>" is the one way to the same place. */}
-                <span data-testid="resource-card-title">{title}</span>
-              </Typography>
-            ) : smallTitleUrl ? (
-              <Link
-                href={smallTitleUrl}
-                overrideDefaults
-                dir="auto"
-                title={title}
-                data-testid="resource-card-title"
-                className="line-clamp-3 text-base font-bold wrap-anywhere text-foreground hover:text-brand"
-              >
-                {title}
-              </Link>
-            ) : (
-              <Typography
-                dir="auto"
-                title={title}
-                data-testid="resource-card-title"
-                className="line-clamp-3 font-bold wrap-anywhere"
-              >
-                {title}
-              </Typography>
-            )}
+            <Container className="min-w-0 flex-1 gap-1.5">
+              {statusNote && (
+                <Badge variant="secondary" data-testid="resource-card-status" className="max-w-full whitespace-normal">
+                  <statusNote.icon aria-hidden="true" />
+                  {statusNote.text}
+                </Badge>
+              )}
+              {isLarge ? (
+                <Typography
+                  as="h2"
+                  overrideDefaults
+                  dir="auto"
+                  className={cn(
+                    'text-xl font-bold wrap-anywhere text-foreground sm:text-2xl',
+                    isMissing && 'text-foreground/70',
+                  )}
+                >
+                  {/* Not a link: the header's "Open in <site>" is the one way to the same place. */}
+                  <span data-testid="resource-card-title">{title}</span>
+                </Typography>
+              ) : smallTitleUrl ? (
+                <Link
+                  href={smallTitleUrl}
+                  overrideDefaults
+                  dir="auto"
+                  title={title}
+                  data-testid="resource-card-title"
+                  className="line-clamp-3 text-base font-bold wrap-anywhere text-foreground hover:text-brand"
+                >
+                  {title}
+                </Link>
+              ) : (
+                <Typography
+                  dir="auto"
+                  title={title}
+                  data-testid="resource-card-title"
+                  className="line-clamp-3 font-bold wrap-anywhere"
+                >
+                  {title}
+                </Typography>
+              )}
 
-            {summary && (
-              <Typography
-                size="sm"
-                dir="auto"
-                data-testid="resource-card-summary"
-                title={summary}
-                className="line-clamp-2 font-medium wrap-anywhere text-foreground/90"
-              >
-                <ResourceArrowText text={summary} />
-              </Typography>
-            )}
+              {summary && (
+                <Typography
+                  size="sm"
+                  dir="auto"
+                  data-testid="resource-card-summary"
+                  title={summary}
+                  className="line-clamp-2 font-medium wrap-anywhere text-foreground/90"
+                >
+                  <ResourceArrowText text={summary} />
+                </Typography>
+              )}
 
-            {/* An event leads with when and where. */}
-            {eventDetails}
+              {/* An event leads with when and where. */}
+              {eventDetails}
 
-            {shownDescription && (
-              <Typography
-                size="sm"
-                dir="auto"
-                id={descriptionId}
-                data-testid="resource-card-description"
-                data-borrowed={description ? undefined : 'true'}
-                className={cn(
-                  'font-normal wrap-anywhere text-muted-foreground',
-                  !isLarge && 'line-clamp-2',
-                  clampOnPhone && 'max-sm:line-clamp-6',
-                )}
-              >
-                {shownDescription}
-              </Typography>
-            )}
-            {isLongDescription && (
-              <Button
-                type="button"
-                variant={ButtonVariant.GHOST}
-                data-testid="resource-card-more"
-                aria-expanded={expanded}
-                aria-controls={descriptionId}
-                onClick={() => setExpanded((value) => !value)}
-                className="h-auto w-fit p-0 text-sm font-medium text-foreground hover:bg-transparent hover:text-brand sm:hidden"
-              >
-                {expanded ? 'Less' : 'More'}
-              </Button>
-            )}
+              {shownDescription && (
+                <Typography
+                  size="sm"
+                  dir="auto"
+                  id={descriptionId}
+                  data-testid="resource-card-description"
+                  data-borrowed={description ? undefined : 'true'}
+                  className={cn(
+                    'font-normal wrap-anywhere text-muted-foreground',
+                    !isLarge && 'line-clamp-2',
+                    clampOnPhone && 'max-sm:line-clamp-6',
+                  )}
+                >
+                  {shownDescription}
+                </Typography>
+              )}
+              {isLongDescription && (
+                <Button
+                  type="button"
+                  variant={ButtonVariant.GHOST}
+                  data-testid="resource-card-more"
+                  aria-expanded={expanded}
+                  aria-controls={descriptionId}
+                  onClick={() => setExpanded((value) => !value)}
+                  className="h-auto w-fit p-0 text-sm font-medium text-foreground hover:bg-transparent hover:text-brand sm:hidden"
+                >
+                  {expanded ? 'Less' : 'More'}
+                </Button>
+              )}
 
-            {point && <ResourceDetail icon={MapPin} text={point} testId="resource-card-point" />}
-            {eventStatusNote && (
-              <ResourceDetail icon={CircleAlert} text={eventStatusNote} testId="resource-card-event-status" />
-            )}
-            {cardAttribution && (
-              <Typography
-                size="xs"
-                data-testid="resource-card-attribution"
-                className="font-normal wrap-anywhere text-muted-foreground"
-              >
-                {cardAttribution}
-              </Typography>
-            )}
-          </Container>
-        </Container>
+              {point && <ResourceDetail icon={MapPin} text={point} testId="resource-card-point" />}
+              {eventStatusNote && (
+                <ResourceDetail icon={CircleAlert} text={eventStatusNote} testId="resource-card-event-status" />
+              )}
+              {cardAttribution && (
+                <Typography
+                  size="xs"
+                  data-testid="resource-card-attribution"
+                  className="font-normal wrap-anywhere text-muted-foreground"
+                >
+                  {cardAttribution}
+                </Typography>
+              )}
+            </Container>
+          </Container>,
+        )}
 
         {streamUrl && (
           <Container overrideDefaults data-resource-controls className="flex flex-col gap-1">
@@ -383,4 +388,8 @@ function ResourceDetail({
       </Typography>
     </Container>
   );
+}
+
+function keepBody(body: React.ReactNode): React.ReactNode {
+  return body;
 }
