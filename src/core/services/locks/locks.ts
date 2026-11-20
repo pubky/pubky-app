@@ -362,7 +362,8 @@ export class LocksService {
     try {
       const response = await safeFetch(
         endpoint.href,
-        { method: HttpMethod.GET, credentials: 'omit', cache: 'no-store' },
+        // Staging's Basic auth and the previews' IAP cookie also guard this route, and `omit` would not send them.
+        { method: HttpMethod.GET, credentials: 'same-origin', cache: 'no-store' },
         ErrorService.Locks,
         operation,
       );
