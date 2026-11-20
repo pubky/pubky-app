@@ -59,9 +59,10 @@ export const parseUrlForLinkEmbed = (
     const parsedUrl = new URL(url);
     const hostname = parsedUrl.hostname.toLowerCase();
 
-    // O(1) lookup using the provider map
+    // O(1) lookup using the provider map; a host names a platform only in a web link (not `ws:`, `intent:`)
     const providerMap = getProviderMap();
-    const provider = providerMap.get(hostname);
+    const isWeb = parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:';
+    const provider = isWeb ? providerMap.get(hostname) : undefined;
 
     if (!provider || (provider.player && hiddenPlayers.includes(provider.player))) {
       const embed = Generic.parseEmbed(url);

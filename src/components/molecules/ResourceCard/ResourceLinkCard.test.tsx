@@ -158,4 +158,20 @@ describe('ResourceLinkCard', () => {
     expect(screen.getByTestId('resource-link-card-title')).toHaveTextContent('isbn:9780000000002');
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
   });
+
+  it('opens the resource page of a link that is not web from its title and card, never the link itself', () => {
+    mockUseOgMetadata.mockReturnValue({ metadata: null, isLoading: false, error: null });
+    const uri = 'btc:tx/3d365ba65953e39c2ff64186022fe9ccf4ac0694888d9bf0c57a45de23e46fd5';
+    render(<ResourceLinkCard url={uri} actions={<div />} />);
+
+    expect(mockUseOgMetadata).toHaveBeenLastCalledWith(null);
+    const title = screen.getByTestId('resource-link-card-title');
+    expect(title).toHaveTextContent(uri);
+    expect(title).toHaveAttribute('href', getResourceRoute(uri));
+    expect(screen.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([getResourceRoute(uri)]);
+    expect(screen.getByTestId('resource-card-source')).not.toHaveAttribute('href');
+
+    fireEvent.click(screen.getByTestId('resource-link-card'));
+    expect(mockPush).toHaveBeenCalledWith(getResourceRoute(uri));
+  });
 });

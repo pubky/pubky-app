@@ -705,6 +705,34 @@ describe('Post Application', () => {
 
         expect(editSpy).toHaveBeenLastCalledWith(expect.objectContaining({ compositePostId: linkedId, embed: LINK }));
       });
+
+      it('switches a stored URI of another scheme, and puts it back when the PUT fails', async () => {
+        const ISBN = 'isbn:9780141036144';
+        const booked = buildPost(OWNER, { content: `${LINK} ${ISBN}`, embed: ISBN });
+        const bookedId = `${OWNER}:${booked.id}`;
+        storeVersions(booked);
+        const { readDetailsSpy, editSpy, putBlobSpy } = setupEditSpies();
+        readDetailsSpy.mockResolvedValue({ ...originalRow, id: bookedId, lock: null });
+        vi.spyOn(LocalPostService, 'readRelationships').mockResolvedValue({
+          ...relationships,
+          id: bookedId,
+          embedded: ISBN,
+        });
+
+        await PostApplication.commitEdit({
+          compositePostId: bookedId,
+          edit: { content: `${LINK} ${ISBN}`, embed: LINK },
+        });
+
+        expect(lastPut(putBlobSpy).post.embed).toBe(LINK);
+        expect(editSpy).toHaveBeenLastCalledWith(expect.objectContaining({ compositePostId: bookedId, embed: LINK }));
+
+        putBlobSpy.mockRejectedValue(new Error('Homeserver sync failed'));
+        await expect(
+          PostApplication.commitEdit({ compositePostId: bookedId, edit: { content: 'x', embed: null } }),
+        ).rejects.toThrow('Homeserver sync failed');
+        expect(editSpy).toHaveBeenLastCalledWith(expect.objectContaining({ compositePostId: bookedId, embed: ISBN }));
+      });
     });
 
     it('edits the newest version when the post was edited before, not its first one', async () => {

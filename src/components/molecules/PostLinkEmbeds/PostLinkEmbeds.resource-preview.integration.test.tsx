@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactElement, ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { getResourceRoute } from '@/app/routes';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import { COLLECTION_LAYOUT } from '@/config/collections';
@@ -13,6 +14,7 @@ import { PostInput } from '@/organisms/PostInput/PostInput';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import type { NexusTag } from '@/services/nexus/nexus.types';
 import articleFixture from '@/services/pinakes/fixtures/by-uri.article.json';
+import bookFixture from '@/services/pinakes/fixtures/by-uri.book.json';
 import musicFixture from '@/services/pinakes/fixtures/by-uri.music-recording.json';
 import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
 import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
@@ -689,6 +691,62 @@ describe('PostLinkEmbeds - an external resource inside a post preview (integrati
         expect(textarea).toHaveValue(draft);
       },
     );
+  });
+
+  describe('a URI of another scheme as the embed (isbn:, urn:, …)', () => {
+    const BOOK_CARD = bookFixture as TPinakesResourceDetail;
+    const ISBN = BOOK_CARD.uri;
+    const UNKNOWN = 'urn:x-anyuri:1';
+    /** Every link in `scope`: none may send the viewer to the URI itself. */
+    const hrefs = (scope: HTMLElement) =>
+      Array.from(scope.querySelectorAll('a[href]')).map((link) => link.getAttribute('href') ?? '');
+
+    it.each([
+      { name: 'its Pinakes card', uri: ISBN, card: BOOK_CARD, frame: 'resource-card' },
+      { name: 'the no-card row', uri: UNKNOWN, card: null, frame: 'resource-link-card' },
+    ])('shows $name in the post, opening the resource page and never the URI', ({ uri, card, frame }) => {
+      mocks.posts.set(QUOTED, post(QUOTED, `Reading ${uri}.`));
+      mocks.reposts.set(QUOTED, { originalPostId: null, embedUrl: uri });
+      if (card) mocks.cards.set(uri, card);
+      const { container } = show(<PostContent postId={QUOTED} />);
+
+      const resource = resourceIn(container);
+      const shown = within(resource).getByTestId(frame);
+      expect(within(shown).getByTestId('resource-actions')).toBeInTheDocument();
+      for (const href of hrefs(resource)) expect(href.startsWith(uri.slice(0, uri.indexOf(':') + 1))).toBe(false);
+      expect(hrefs(resource)).toContain(getResourceRoute(uri));
+
+      fireEvent.click(shown);
+      expect(mocks.routerPush).toHaveBeenCalledWith(getResourceRoute(uri));
+    });
+
+    it.each([
+      { composer: 'a new post', ui: <PostInput variant={POST_INPUT_VARIANT.POST} expanded />, type: true },
+      {
+        composer: 'an edit',
+        ui: (
+          <PostInput
+            variant={POST_INPUT_VARIANT.EDIT}
+            expanded
+            editPostId={QUOTED}
+            editContent={`Reading ${ISBN}`}
+            editIsArticle={false}
+            editAttachments={[]}
+            editEmbedUrl={ISBN}
+          />
+        ),
+        type: false,
+      },
+    ])('embeds the URI written in $composer, with its card', ({ ui, type }) => {
+      mocks.cards.set(ISBN, BOOK_CARD);
+      show(ui);
+      if (type) fireEvent.change(screen.getByRole('textbox'), { target: { value: `Reading ${ISBN}` } });
+
+      const embed = screen.getByTestId('post-input-link-embed');
+      expect(within(embed).getByText(`Embedded link · ${ISBN}`)).toBeInTheDocument();
+      expect(within(resourceIn(embed)).getByTestId('resource-card')).toBeInTheDocument();
+      expect(hrefs(embed).some((href) => href.startsWith('isbn:'))).toBe(false);
+    });
   });
 
   describe('the resource’s tags in a quoted post', () => {

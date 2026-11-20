@@ -21,8 +21,9 @@ export interface TCreatePostParams {
   parentUri?: string;
   originalPostId?: string;
   /**
-   * A web link the post embeds (social v1 `embed`, an `http(s)` reference stored as written). A post
-   * has one embed, so it never comes with `originalPostId`.
+   * The external resource the post embeds (social v1 `embed`, an `http(s)` link or another scheme's
+   * URI such as `isbn:…`, stored as written). A post has one embed, so it never comes with
+   * `originalPostId`.
    */
   embedUrl?: string;
   /**
@@ -145,7 +146,7 @@ export interface TEditPostParams {
    */
   coverImage?: string | null;
   /**
-   * The web link the next version embeds, `null` for none, `undefined` to keep the stored `embed`. A
+   * The external resource the next version embeds, `null` for none, `undefined` to keep the stored `embed`. A
    * repost's embedded post is never replaced.
    */
   embedUrl?: string | null;

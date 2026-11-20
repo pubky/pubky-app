@@ -137,6 +137,37 @@ describe('useRepostInfo', () => {
     expect(result.current.originalPostId).toBe(null);
   });
 
+  it.each(['isbn:9780141036144', 'btc:tx/3d365ba65953e39c2ff64186022fe9ccf4ac0694888d9bf0c57a45de23e46fd5'])(
+    'returns the URI %s Nexus serves as embedded, or a local post holds in reposted, as embedUrl',
+    (uri) => {
+      setMockRelationships({ id: mockPostId, reposted: null, embedded: uri, replied: null, mentioned: [] });
+      const { result, rerender } = renderHook(() => useRepostInfo(mockPostId));
+      expect(result.current.embedUrl).toBe(uri);
+      expect(result.current.isRepost).toBe(false);
+
+      setMockRelationships({ id: mockPostId, reposted: uri, replied: null, mentioned: [] });
+      rerender();
+      expect(result.current.embedUrl).toBe(uri);
+      expect(result.current.isRepost).toBe(false);
+      expect(mockBuildCompositeIdFromPubkyUri).not.toHaveBeenCalled();
+    },
+  );
+
+  it('shows no embed for an unsafe scheme', () => {
+    setMockRelationships({
+      id: mockPostId,
+      reposted: null,
+      embedded: 'javascript:alert(1)',
+      replied: null,
+      mentioned: [],
+    });
+
+    const { result } = renderHook(() => useRepostInfo(mockPostId));
+
+    expect(result.current.embedUrl).toBe(null);
+    expect(result.current.isRepost).toBe(false);
+  });
+
   it('keeps a repost a repost when the post also names an embedded link', () => {
     setMockRelationships({
       id: mockPostId,

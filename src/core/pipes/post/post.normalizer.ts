@@ -16,7 +16,7 @@ import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { parseArticleContent } from '@/libs/post/articleContent';
-import { getWebEmbedUrl } from '@/libs/post/postEmbedUrl';
+import { getResourceEmbedUrl } from '@/libs/post/postEmbedUrl';
 import type { Pubky } from '@/models/models.types';
 import type { CollectionContentInput } from '@/models/post/collection/collectionPost.types';
 import type { PostDetailsModelSchema } from '@/models/post/details/postDetails.schema';
@@ -52,7 +52,7 @@ export type TLocalPostEdit = {
   attachments?: string[] | null;
   /** `undefined` leaves the column untouched. */
   kind?: string;
-  /** The web link the post embeds; `null` for none, `undefined` leaves the relationships untouched. */
+  /** The external resource the post embeds; `null` for none, `undefined` leaves the relationships untouched. */
   embed?: string | null;
 };
 
@@ -142,15 +142,15 @@ export class PostNormalizer {
    * edit is a change applied to the head's own items (`CollectionPostContent.apply`), never a list
    * read elsewhere; `null` when the head already holds it and nothing else in the edit changes the
    * head, so nothing is written. A stored collection this client cannot normalize fails with its own
-   * validation message. A new `embed` replaces a web link or none, never a repost's post (or another
-   * reference that is not a web link).
+   * validation message. A new `embed` replaces an external resource or none, never a repost's post
+   * (or another reference that is not a resource).
    */
   static toEdit({ owner, head, edit }: TToEditParams): BuiltPost | null {
     return this.build(
       () => {
         const post: Post = { ...head.post };
         if (edit.kind !== undefined) post.kind = edit.kind;
-        if (edit.embed !== undefined && this.isWebEmbedOrNone(head.post.embed)) post.embed = edit.embed;
+        if (edit.embed !== undefined && this.isResourceEmbedOrNone(head.post.embed)) post.embed = edit.embed;
         if (edit.attachmentUris !== undefined) {
           post.attachments = this.nextAttachments(
             head.post.attachments,
@@ -231,9 +231,12 @@ export class PostNormalizer {
     return local;
   }
 
-  /** Whether a stored `embed` is a web link or none: what an edit may replace. */
-  static isWebEmbedOrNone(embed: string | null | undefined): boolean {
-    return !embed || getWebEmbedUrl(embed) !== null;
+  /**
+   * Whether a stored `embed` is an external resource (a web link or another scheme's URI, such as
+   * `isbn:…`) or none: what an edit may replace.
+   */
+  static isResourceEmbedOrNone(embed: string | null | undefined): boolean {
+    return !embed || getResourceEmbedUrl(embed) !== null;
   }
 
   /** The attachments in `uris` order: a kept one keeps its stored object, a new one gets its name. */

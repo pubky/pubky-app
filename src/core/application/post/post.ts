@@ -21,7 +21,7 @@ import { ErrorService } from '@/libs/error/error.types';
 import { isHomeserverFileUri } from '@/libs/file/homeserverFileUri';
 import { Logger } from '@/libs/logger/logger';
 import { parseArticleContent } from '@/libs/post/articleContent';
-import { getWebEmbedUrl } from '@/libs/post/postEmbedUrl';
+import { getResourceEmbedUrl } from '@/libs/post/postEmbedUrl';
 import { isPostDeleted } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import { parseCompositeId } from '@/models/models.utils';
@@ -464,11 +464,13 @@ export class PostApplication {
       });
     }
 
-    // The web link the post embedded, for the rollback of an edit that changes it
+    // The external resource the post embedded, for the rollback of an edit that changes it
     const originalRelationships =
       edit.embed === undefined ? null : await LocalPostService.readRelationships(compositePostId);
     const originalEmbed =
-      getWebEmbedUrl(originalRelationships?.embedded) ?? getWebEmbedUrl(originalRelationships?.reposted) ?? null;
+      getResourceEmbedUrl(originalRelationships?.embedded) ??
+      getResourceEmbedUrl(originalRelationships?.reposted) ??
+      null;
 
     if (fileAttachments != null && fileAttachments.length > 0) {
       await FileApplication.commitCreate({ fileAttachments });
@@ -523,7 +525,7 @@ export class PostApplication {
         attachments: built.object.attachments.length > 0 ? built.object.attachments.map(({ uri }) => uri) : null,
         kind: nextKind,
         embed:
-          edit.embed !== undefined && PostNormalizer.isWebEmbedOrNone(built.object.embed)
+          edit.embed !== undefined && PostNormalizer.isResourceEmbedOrNone(built.object.embed)
             ? (built.object.embed ?? null)
             : undefined,
       });
