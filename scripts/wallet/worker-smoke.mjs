@@ -127,18 +127,21 @@ try {
   assert.match(address.address, /^bcrt1/);
   await page.evaluate(() => window.walletCall('close'));
 
+  available = false;
   await setup(page, owner);
   assert.deepEqual(await page.evaluate(() => window.walletCall('inspect')), { exists: true });
   assert.equal(
     await page.evaluate(() => window.walletCall('open', 'incorrect password').catch((error) => error.code)),
     'WALLET_PASSWORD',
   );
-  available = false;
   await page.evaluate((password) => window.walletCall('open', password), password);
   const ids = await page.evaluate(async () =>
     (await window.walletCall('request', { method: 'GET', path: '/api/wallets' })).map((wallet) => wallet.id),
   );
   assert.deepEqual(ids, [created.id]);
+  assert.equal(await page.evaluate((id) => window.walletCall('request', {
+    method: 'POST', path: '/api/wallets/' + id + '/start',
+  }).catch((error) => error.code), created.id), 'WALLET_CONFIGURATION');
   const phraseRecovered = await page.evaluate(async (id) => {
     const { mnemonic } = await window.walletCall('request', {
       method: 'GET',

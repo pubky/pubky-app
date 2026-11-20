@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Activity, Network, ReceiveRequest } from '@beignet/wallet-core';
 import { QueryClient, useQuery } from '@tanstack/react-query';
 import {
@@ -17,8 +17,9 @@ import { Button } from '@/atoms/Button/Button';
 import { Card } from '@/atoms/Card/Card';
 import { Spinner } from '@/atoms/Spinner/Spinner';
 import { bitcoinAmount, lightningAmount, walletMessage } from '@/libs/wallet/amount';
-import type { WalletSession } from '@/services/wallet/session';
+import type { LastWalletBalance, WalletSession } from '@/services/wallet/session';
 import { useReceiveTracker } from './useReceiveTracker';
+import { SavedBalance } from './WalletOpening';
 import { RecoveryWords, WalletPanel, type WalletTask } from './WalletPanel';
 import { WalletReceive, WalletSend } from './WalletPayments';
 import { WalletBalance } from './WalletReceipt';
@@ -29,6 +30,7 @@ export function WalletDashboard({
   session,
   walletId,
   ringBacked,
+  lastBalance,
   network,
   recipient,
   lock,
@@ -37,6 +39,7 @@ export function WalletDashboard({
   session: WalletSession;
   walletId: string;
   ringBacked: boolean;
+  lastBalance: LastWalletBalance | null;
   network: Network;
   recipient?: string;
   lock: () => void;
@@ -57,6 +60,12 @@ export function WalletDashboard({
     queries,
   );
   const data = snapshot.data;
+  const verifiedTotal =
+    data?.wallet?.id === walletId && data.wallet.network === network ? data.balance.totalSats : undefined;
+  useEffect(() => {
+    if (verifiedTotal !== undefined)
+      void session.rememberBalance(walletId, network, verifiedTotal).catch(() => undefined);
+  }, [session, walletId, network, verifiedTotal]);
   const unavailable = data
     ? Math.max(0, data.balance.totalSats - data.balance.availableSats - data.balance.pendingSats)
     : 0;
@@ -84,11 +93,13 @@ export function WalletDashboard({
           </Button>
         </div>
         <div>
-          <p className="text-sm text-muted-foreground">Total balance</p>
+          {(data || !lastBalance) && <p className="text-sm text-muted-foreground">Total balance</p>}
           {data ? (
             <p className="mt-1 text-4xl font-bold tracking-tight tabular-nums sm:text-6xl">
               <WalletBalance amount={data.balance.totalSats} />
             </p>
+          ) : lastBalance ? (
+            <SavedBalance balance={lastBalance} />
           ) : snapshot.isPending ? (
             <Spinner size="sm" aria-label="Loading balance" />
           ) : (
@@ -202,7 +213,8 @@ export function WalletDashboard({
         <WalletPanel title="Pubky Ring recovery" icon={KeyRound}>
           <p className="text-sm text-muted-foreground">
             Back up your Pubky identity in Ring. To recover on another device, close this wallet, sign in with the same
-            Pubky and choose Recover with Ring. Lightning recovery also needs current channel data from the recovery peer.
+            Pubky and choose Recover with Ring. Lightning recovery also needs current channel data from the recovery
+            peer.
           </p>
         </WalletPanel>
       )}

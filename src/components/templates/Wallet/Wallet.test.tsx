@@ -2,12 +2,15 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { bech32 } from 'bech32';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { LastWalletBalance } from '@/services/wallet/session';
 import { Wallet } from './Wallet';
 
 const wallet = vi.hoisted(() => ({
   account: 'account-one',
   exists: true,
   inspect: vi.fn(),
+  rememberBalance: vi.fn(),
+  unlocked: undefined as ((preview: LastWalletBalance | null) => void) | undefined,
   ringBinding: vi.fn(),
   ringDeviceId: vi.fn(),
   createRingWallet: vi.fn(),
@@ -53,6 +56,10 @@ vi.mock('@/stores/auth/auth.store', () => ({
 }));
 vi.mock('@/services/wallet/session', () => ({
   WalletSession: class {
+    constructor(_account: string, onUnlocked?: (preview: LastWalletBalance | null) => void) {
+      wallet.unlocked = onUnlocked;
+    }
+    rememberBalance = wallet.rememberBalance;
     client = wallet;
     inspect = wallet.inspect;
     ringBinding = wallet.ringBinding;
@@ -94,6 +101,7 @@ beforeEach(() => {
   });
   wallet.close.mockResolvedValue(undefined);
   wallet.startWallet.mockResolvedValue(undefined);
+  wallet.rememberBalance.mockResolvedValue(undefined);
   wallet.listWallets.mockResolvedValue([record]);
   wallet.createWallet.mockResolvedValue({ ...record, mnemonic: words });
   wallet.snapshot.mockResolvedValue({
@@ -121,6 +129,40 @@ async function unlock() {
 }
 
 describe('Pubky wallet', () => {
+  it('shows the encrypted last balance during sync and replaces it with the verified total once ready', async () => {
+    let finishStart!: () => void;
+    wallet.startWallet.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          finishStart = resolve;
+        }),
+    );
+    wallet.open.mockImplementation(async () => {
+      wallet.unlocked?.({ walletId: record.id, network: 'regtest', totalSats: 4200, updatedAt: Date.UTC(2026, 0, 12) });
+      return { network: 'regtest' };
+    });
+    wallet.snapshot.mockResolvedValue({
+      wallet: record,
+      balance: { totalSats: 4700, availableSats: 4700, pendingSats: 0 },
+      primary: { connected: true },
+      activity: [],
+    });
+    render(<Wallet />);
+    const password = await screen.findByLabelText('Password', { exact: true });
+    expect(screen.queryByText('₿4,200')).toBeNull();
+    fireEvent.change(password, { target: { value: 'example password' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock wallet' }));
+    expect(await screen.findByText('Last verified balance')).toBeVisible();
+    expect(screen.getByText('₿4,200')).toBeVisible();
+    await screen.findByText('Syncing Bitcoin and connecting to Lightning…');
+    expect(screen.queryByRole('button', { name: 'Send' })).toBeNull();
+    expect(wallet.snapshot).not.toHaveBeenCalled();
+    await act(async () => finishStart());
+    expect(await screen.findByRole('group', { name: '₿4,700' })).toBeVisible();
+    expect(wallet.rememberBalance).toHaveBeenCalledWith(record.id, 'regtest', 4700);
+    expect(screen.queryByText('Last verified balance')).toBeNull();
+  });
+
   it('shows a single balance when every unit is available to send', async () => {
     wallet.snapshot.mockResolvedValue({
       balance: { totalSats: 5000, availableSats: 5000, pendingSats: 0 },

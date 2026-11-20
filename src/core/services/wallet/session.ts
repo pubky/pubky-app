@@ -6,8 +6,11 @@ import {
   parsePayment,
   WalletError,
 } from '@beignet/wallet-core';
+import { useAuthStore } from '@/stores/auth/auth.store';
 
 export type WalletDefaults = { network: Network; primaryUri: string; electrum: ElectrumServer };
+export type LastWalletBalance = { walletId: string; network: Network; totalSats: number; updatedAt: number };
+type UnlockedEvent = { id: number; event: 'unlocked'; account: string; balance: LastWalletBalance | null };
 type Reply = { id: number; result?: unknown; error?: { code?: string; status?: number; message: string } };
 
 // A same-tab remount can begin while its previous worker is still flushing.
@@ -22,13 +25,45 @@ export class WalletSession {
   private closing = false;
   private closeAttempt?: Promise<void>;
   private assertRingDevice?: () => void;
-  private pending = new Map<number, { resolve(value: unknown): void; reject(error: Error): void }>();
+  private readonly ownsAccount: () => boolean;
+  private pending = new Map<
+    number,
+    { resolve(value: unknown): void; reject(error: Error): void; notifyUnlocked?: boolean }
+  >();
 
-  constructor(private readonly account: string) {
+  constructor(
+    private readonly account: string,
+    private readonly onUnlocked?: (lastBalance: LastWalletBalance | null) => void,
+  ) {
+    const { session, generation } = useAuthStore.getState();
+    this.ownsAccount = () => {
+      const state = useAuthStore.getState();
+      return (
+        !!session &&
+        state.session === session &&
+        state.currentUserPubky === account &&
+        state.generation === generation &&
+        !state.isLoggingOut &&
+        !state.needsAccountSync
+      );
+    };
     this.worker = new Worker('/wallet-engine/worker.js', { type: 'module', name: 'Pubky wallet' });
-    this.worker.onmessage = ({ data }: MessageEvent<Reply>) => {
+    this.worker.onmessage = ({ data }: MessageEvent<Reply | UnlockedEvent>) => {
       const waiter = this.pending.get(data.id);
       if (!waiter) return;
+      if ('event' in data) {
+        if (
+          waiter.notifyUnlocked &&
+          data.event === 'unlocked' &&
+          data.account === this.account &&
+          !this.closing &&
+          this.ownsAccount()
+        ) {
+          waiter.notifyUnlocked = false;
+          this.onUnlocked?.(data.balance);
+        }
+        return;
+      }
       this.pending.delete(data.id);
       if (data.error)
         waiter.reject(
@@ -63,7 +98,8 @@ export class WalletSession {
     if (!worker || (this.closing && operation !== 'close')) return Promise.reject(locked());
     const id = ++this.counter;
     return new Promise((resolve, reject) => {
-      this.pending.set(id, { resolve: (value) => resolve(value as T), reject });
+      const notifyUnlocked = operation === 'open' && !!this.onUnlocked;
+      this.pending.set(id, { resolve: (value) => resolve(value as T), reject, notifyUnlocked });
       try {
         if (this.assertRingDevice && (operation === 'ring-wallet' || operation === 'request')) {
           const input = payload as { method?: string; path?: string };
@@ -73,7 +109,10 @@ export class WalletSession {
             (input.path === '/api/wallets' || input.path === '/api/config');
           if (!discovery) this.assertRingDevice();
         }
-        worker.postMessage({ id, operation, account: this.account, payload }, transfer);
+        worker.postMessage(
+          { id, operation, account: this.account, payload, ...(notifyUnlocked ? { notifyUnlocked } : {}) },
+          transfer,
+        );
       } catch (error) {
         this.pending.delete(id);
         reject(error);
@@ -108,6 +147,12 @@ export class WalletSession {
       throw new WalletError('The wallet could not verify its receive address.', 'INVALID_ADDRESS');
     }
     return address;
+  }
+
+  async rememberBalance(walletId: string, network: Network, totalSats: number): Promise<void> {
+    if (!this.ownsAccount() || this.client.connection.walletId !== walletId) throw locked();
+    this.assertRingDevice?.();
+    await this.call('remember-balance', { walletId, network, totalSats });
   }
 
   ringDeviceId(): Promise<string> {

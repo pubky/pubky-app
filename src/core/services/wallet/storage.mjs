@@ -40,22 +40,72 @@ function write(file, bytes, at) {
   flushAtLength(file, at + bytes.length);
 }
 
-export async function openFiles(account) {
+async function walletDirectory(account, create) {
   if (typeof account !== 'string' || !/^[ybndrfg8ejkmcpqxot1uwisza345h769]{52}$/.test(account)) {
     throw failure('Sign in to a Pubky account first.');
   }
   if (!globalThis.isSecureContext || !navigator.storage?.getDirectory) {
     throw failure('This wallet needs a secure browser with local file storage.');
   }
+  const root = await navigator.storage.getDirectory();
+  return root.getDirectoryHandle('pubky-wallet-v1-' + account, { create });
+}
+
+function syncHandle(file) {
+  if (!file.createSyncAccessHandle) throw failure('This browser lacks synchronous private file storage.');
+  return file.createSyncAccessHandle();
+}
+
+function storageError(error) {
+  return error?.name === 'NoModificationAllowedError'
+    ? failure('This wallet is open in another tab.', 'WALLET_IN_USE')
+    : error;
+}
+
+async function optionalHandle(get) {
+  try {
+    return await get();
+  } catch (error) {
+    if (error?.name === 'NotFoundError') return null;
+    throw error;
+  }
+}
+
+// Inspect only metadata under the journal lease. Unlock always verifies the full committed slot.
+export async function inspectFiles(account) {
+  const dir = await optionalHandle(() => walletDirectory(account, false));
+  if (!dir) return { exists: false };
+  const handle = (name) => optionalHandle(() => dir.getFileHandle(name));
+  const fileSize = async (name) => {
+    const file = await handle(name);
+    return file ? (await file.getFile()).size : 0;
+  };
+  let journal;
+  try {
+    const file = await handle('journal');
+    journal = file && await syncHandle(file);
+    const size = journal ? journal.getSize() : 0;
+    if (!Number.isSafeInteger(size)) throw failure('This browser cannot read wallet storage synchronously.');
+    const exists = size >= DIGEST_BYTES;
+    if (!exists && (await Promise.all(['first', 'second'].map(fileSize))).some(Boolean)) {
+      throw failure('Wallet initialization was interrupted. The stored data has been preserved.');
+    }
+    return { exists, ...((await fileSize('active')) ? { interrupted: true } : {}) };
+  } catch (error) {
+    throw storageError(error);
+  } finally {
+    journal?.close();
+  }
+}
+
+export async function openFiles(account) {
   const files = [];
   try {
-    const root = await navigator.storage.getDirectory();
-    const directory = await root.getDirectoryHandle('pubky-wallet-v1-' + account, { create: true });
+    const directory = await walletDirectory(account, true);
     // The journal handle is the lifetime cross-tab lease, even during unlock.
     for (const name of ['journal', 'first', 'second', 'active']) {
       const file = await directory.getFileHandle(name, { create: true });
-      if (!file.createSyncAccessHandle) throw failure('This browser lacks synchronous private file storage.');
-      files.push(await file.createSyncAccessHandle());
+      files.push(await syncHandle(file));
     }
     const [journal, first, second, active] = files;
     const slots = [first, second];
@@ -68,7 +118,8 @@ export async function openFiles(account) {
       const slot = slotAt(pos);
       sealed = read(slot, slot.getSize());
       const digest = read(journal, DIGEST_BYTES, pos - DIGEST_BYTES);
-      if (!sha256(sealed).every((v, i) => v === digest[i]) || sealed.length < SALT_BYTES + NONCE_BYTES + 16) {
+      const actual = new Uint8Array(await crypto.subtle.digest('SHA-256', sealed));
+      if (!actual.every((v, i) => v === digest[i]) || sealed.length < SALT_BYTES + NONCE_BYTES + 16) {
         throw failure('The committed wallet data is damaged.');
       }
     } else if (slots.some((file) => file.getSize())) {
@@ -96,9 +147,7 @@ export async function openFiles(account) {
     };
   } catch (error) {
     for (const file of files.reverse()) file.close();
-    if (error?.name === 'NoModificationAllowedError')
-      throw failure('This wallet is open in another tab.', 'WALLET_IN_USE');
-    throw error;
+    throw storageError(error);
   }
 }
 
@@ -153,9 +202,13 @@ export async function unlockVolume(store, account, password) {
   if (sealed) {
     let plain;
     try {
-      plain = gcm(key, sealed.subarray(SALT_BYTES, SALT_BYTES + NONCE_BYTES), context).decrypt(
-        sealed.subarray(SALT_BYTES + NONCE_BYTES),
-      );
+      const decryptKey = await crypto.subtle.importKey('raw', key, 'AES-GCM', false, ['decrypt']);
+      plain = new Uint8Array(await crypto.subtle.decrypt({
+        name: 'AES-GCM',
+        iv: sealed.subarray(SALT_BYTES, SALT_BYTES + NONCE_BYTES),
+        additionalData: context,
+        tagLength: 128,
+      }, decryptKey, sealed.subarray(SALT_BYTES + NONCE_BYTES)));
       files = unpack(plain);
     } catch {
       key.fill(0);
@@ -194,6 +247,12 @@ export async function unlockVolume(store, account, password) {
     },
     write(path, bytes) {
       check();
+      const existing = files.get(path);
+      if (existing && existing.length === bytes.length) {
+        let i = 0;
+        while (i < existing.length && existing[i] === bytes[i]) i++;
+        if (i === existing.length) return;
+      }
       files.set(path, new Uint8Array(bytes));
       save();
     },

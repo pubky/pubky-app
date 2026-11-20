@@ -3,6 +3,15 @@ import { WalletSession } from './session';
 
 type Request = { id: number; operation: string };
 
+const auth = vi.hoisted(() => ({
+  session: {} as object | null,
+  generation: 'original',
+  currentUserPubky: 'y'.repeat(52),
+  isLoggingOut: false,
+  needsAccountSync: false,
+}));
+vi.mock('@/stores/auth/auth.store', () => ({ useAuthStore: { getState: () => auth } }));
+
 afterEach(() => vi.unstubAllGlobals());
 
 it('fences a failed worker and verifies the stored state before reopening the same account', async () => {
@@ -70,3 +79,72 @@ it('checks the live Ring lease before worker dispatch and can still inspect and 
   await session.close();
   expect(sent.mock.calls.map(([call]) => call.operation)).toEqual(['request', 'ring-binding', 'close']);
 });
+
+it.each(['current', 'other account', 'signout', 'sync', 'new generation', 'lock'])(
+  'delivers local unlock only to the pending open for its current signed-in owner (%s)',
+  async (condition) => {
+    const account = 'y'.repeat(52);
+    const walletId = 'a'.repeat(32);
+    Object.assign(auth, {
+      session: {},
+      generation: 'original',
+      currentUserPubky: account,
+      needsAccountSync: false,
+      isLoggingOut: false,
+    });
+    const workers: TestWorker[] = [];
+    class TestWorker {
+      onmessage?: (event: { data: unknown }) => void;
+      requests: Request[] = [];
+      constructor() {
+        workers.push(this);
+      }
+      postMessage(request: Request) {
+        this.requests.push(request);
+        if (request.operation !== 'open')
+          queueMicrotask(() => this.onmessage?.({ data: { id: request.id, result: null } }));
+      }
+      terminate() {}
+    }
+    vi.stubGlobal('Worker', TestWorker);
+    const notify = vi.fn();
+    const session = new WalletSession(account, notify);
+    const [worker] = workers;
+    const opening = session.open('vault password');
+    await vi.waitFor(() => expect(worker.requests.some((request) => request.operation === 'open')).toBe(true));
+    const open = worker.requests.find((request) => request.operation === 'open')!;
+    expect(open).toHaveProperty('notifyUnlocked', true);
+    const payload = {
+      id: open.id,
+      event: 'unlocked',
+      account,
+      balance: { walletId, network: 'regtest', totalSats: 5, updatedAt: 123 },
+    };
+    worker.onmessage?.({ data: { ...payload, id: -1 } });
+    worker.onmessage?.({ data: { ...payload, account: 'another' } });
+    expect(notify).not.toHaveBeenCalled();
+    if (condition === 'other account') auth.currentUserPubky = 'b'.repeat(52);
+    if (condition === 'signout') auth.isLoggingOut = true;
+    if (condition === 'sync') auth.needsAccountSync = true;
+    if (condition === 'new generation') auth.generation = 'replacement';
+    const close = condition === 'lock' ? session.close() : undefined;
+    worker.onmessage?.({ data: payload });
+    worker.onmessage?.({ data: payload });
+    worker.onmessage?.({ data: { id: open.id, result: {} } });
+    await opening;
+    expect(notify).toHaveBeenCalledTimes(condition === 'current' ? 1 : 0);
+    session.client.selectWallet(walletId);
+    if (condition === 'current') {
+      expect(notify).toHaveBeenCalledWith(payload.balance);
+      await expect(session.rememberBalance('f'.repeat(32), 'regtest', 5)).rejects.toThrow();
+      await session.rememberBalance(walletId, 'regtest', 5);
+      expect(worker.requests.at(-1)).toMatchObject({
+        operation: 'remember-balance',
+        payload: { walletId, network: 'regtest', totalSats: 5 },
+      });
+    } else {
+      await expect(session.rememberBalance(walletId, 'regtest', 5)).rejects.toThrow();
+    }
+    await (close ?? session.close());
+  },
+);

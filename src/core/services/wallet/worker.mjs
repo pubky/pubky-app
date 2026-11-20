@@ -1,7 +1,8 @@
 import { createPortableRuntime, createRelaySocketFactory } from '@beignet/portable-engine';
 import { createSqlJsDatabaseFactory } from '@beignet/portable-engine/sqljs';
+import { lastBalance, rememberBalance } from './balance.mjs';
 import { provisionRingWallet, ringBinding, ringDeviceId } from './ring.mjs';
-import { openFiles, unlockVolume } from './storage.mjs';
+import { inspectFiles, openFiles, unlockVolume } from './storage.mjs';
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -20,6 +21,8 @@ let closing = false;
 let renewTimer;
 let background = false;
 let grantAbort;
+let openingGrant;
+let compiledDatabase;
 let connectionIssue;
 let activeGrant;
 let ringOperation;
@@ -49,6 +52,32 @@ async function connection() {
   }
   // The engine additionally enforces WSS, with WS allowed on loopback only.
   return grant;
+}
+
+// Loading the static SQL module neither opens a database nor reads a wallet file.
+function prepareDatabase() {
+  if (!compiledDatabase) {
+    compiledDatabase = createSqlJsDatabaseFactory({
+      load: (path) => volume.read(path),
+      save: (path, data) => volume.write(path, data),
+      locateFile: (name) => new URL(name, self.location.href).href,
+    });
+    void compiledDatabase.catch(() => { compiledDatabase = undefined; });
+  }
+  return compiledDatabase;
+}
+
+// The short-lived ticket only authorizes the fixed relay. Sockets open later during wallet startup.
+function prepareGrant() {
+  if (!openingGrant) {
+    grantAbort ??= new AbortController();
+    const pending = connection();
+    openingGrant = pending;
+    void pending.catch(() => {
+      if (openingGrant === pending) openingGrant = undefined;
+    });
+  }
+  return openingGrant;
 }
 
 function profile(grant) {
@@ -87,20 +116,25 @@ function rejectIfClosing() {
   if (closing) throw Object.assign(new Error('The wallet is locked.'), { code: 'WALLET_CLOSED' });
 }
 
-async function open(account, password) {
+async function open(account, password, onUnlocked) {
+  prepareDatabase();
   const store = await openFiles(account);
   try {
     volume = await unlockVolume(store, account, password);
     rejectIfClosing();
-    grantAbort = new AbortController();
+    if (onUnlocked) onUnlocked(lastBalance(volume));
     const old = volume.read(profilePath);
     const saved = old && JSON.parse(decoder.decode(old));
     const existing = !!volume.read('/wallet/registry.json');
     connectionIssue = undefined;
     let grant;
     try {
-      grant = await connection();
+      grant = await prepareGrant();
+      openingGrant = undefined;
+      rejectIfClosing();
+      if (grant.expiresAt - Date.now() < 15000) grant = await prepareGrant();
     } catch {
+      rejectIfClosing();
       if (!saved || !existing) throw configurationError();
       connectionIssue =
         'The wallet relay is unavailable. You can view your recovery phrase. Lock and reopen to reconnect.';
@@ -120,11 +154,7 @@ async function open(account, password) {
       { fixedUpstream: true },
     );
     const socketFactory = grant ? createRelaySocketFactory(grant) : offline;
-    const databaseFactory = await createSqlJsDatabaseFactory({
-      load: (path) => volume.read(path),
-      save: (path, data) => volume.write(path, data),
-      locateFile: (name) => new URL(name, self.location.href).href,
-    });
+    const databaseFactory = await prepareDatabase();
     rejectIfClosing();
     store.markActive();
     engine = await createPortableRuntime({ databaseFactory, volume, electrum: defaults.electrum, socketFactory });
@@ -146,6 +176,8 @@ async function open(account, password) {
 async function close() {
   clearTimeout(renewTimer);
   grantAbort?.abort();
+  grantAbort = undefined;
+  openingGrant = undefined;
   // The engine releases its realm claim even when stop fails. A second
   // engine.close() could then succeed without a shutdown. Leave the active
   // marker and OPFS lease intact until this worker has been terminated.
@@ -167,7 +199,7 @@ async function close() {
   activeGrant = undefined;
 }
 
-async function handle({ operation, account, payload }) {
+async function handle({ id, operation, account, payload, notifyUnlocked }) {
   if (operation === 'close') {
     closing = true;
     grantAbort?.abort();
@@ -186,14 +218,15 @@ async function handle({ operation, account, payload }) {
     if (engine || transition) throw new Error('The wallet is already opening.');
     transition =
       operation === 'open'
-        ? open(account, payload)
+        ? open(account, payload, notifyUnlocked === true
+          ? (balance) => self.postMessage({ id, event: 'unlocked', account, balance })
+          : undefined)
         : (async () => {
-            const store = await openFiles(account);
-            try {
-              return { exists: store.read() !== null, ...(store.interrupted() ? { interrupted: true } : {}) };
-            } finally {
-              store.close();
-            }
+            prepareDatabase();
+            const state = await inspectFiles(account);
+            rejectIfClosing();
+            prepareGrant();
+            return state;
           })();
     try {
       return await transition;
@@ -203,6 +236,7 @@ async function handle({ operation, account, payload }) {
   }
   if (!engine || account !== owner) throw new Error('Unlock this wallet first.');
   if (ringOperation) throw busy();
+  if (operation === 'remember-balance') return rememberBalance(volume, payload);
   if (operation === 'ring-binding') return ringBinding(volume);
   if (operation === 'ring-device') return ringDeviceId(volume);
   if (operation === 'ring-wallet') {

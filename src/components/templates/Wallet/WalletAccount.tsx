@@ -11,13 +11,15 @@ import { Label } from '@/atoms/Label/Label';
 import { Spinner } from '@/atoms/Spinner/Spinner';
 import { Textarea } from '@/atoms/Textarea/Textarea';
 import { acquireRingDevice } from '@/services/wallet/ring-enrollment';
-import { WalletSession } from '@/services/wallet/session';
+import { type LastWalletBalance, WalletSession } from '@/services/wallet/session';
 import { WalletDashboard } from './WalletDashboard';
+import { WalletOpening } from './WalletOpening';
 import { RecoveryWords, useWalletTask, WalletPanel, type WalletTask } from './WalletPanel';
 import { type RingSetupMode, WalletRingSetup } from './WalletRingSetup';
 
 type Stage =
   | { kind: 'checking' | 'unavailable' | 'framed' }
+  | { kind: 'opening' }
   | { kind: 'password'; exists: boolean }
   | { kind: 'empty'; defaults: CreateWalletInput; network: Network }
   | { kind: 'ring'; defaults: CreateWalletInput; network: Network; session: WalletSession; reserved: boolean }
@@ -42,6 +44,8 @@ export function WalletAccount({
   const lease = useRef<Awaited<ReturnType<typeof acquireRingDevice>> | null>(null);
   const [ringBacked, setRingBacked] = useState(false);
   const [stage, setStage] = useState<Stage>({ kind: 'checking' });
+  const [lastBalance, setLastBalance] = useState<LastWalletBalance | null>(null);
+  const [checkingDevice, setCheckingDevice] = useState(false);
   const [notice, setNotice] = useState('');
   const [interrupted, setInterrupted] = useState(false);
   const task = useWalletTask();
@@ -52,7 +56,11 @@ export function WalletAccount({
     }
     let session: WalletSession;
     try {
-      session = new WalletSession(account);
+      session = new WalletSession(account, (balance) => {
+        if (live.current !== session) return;
+        setLastBalance(balance);
+        setStage({ kind: 'opening' });
+      });
     } catch {
       setNotice('This browser could not start the wallet worker.');
       setStage({ kind: 'unavailable' });
@@ -120,7 +128,12 @@ export function WalletAccount({
     setRingBacked(Boolean(binding));
     if (binding) {
       if (binding.network !== network) throw new Error('The Ring wallet and this Bitcoin network do not match.');
-      await holdDevice(session, network, binding.deviceId, 'open');
+      setCheckingDevice(true);
+      try {
+        await holdDevice(session, network, binding.deviceId, 'open');
+      } finally {
+        if (live.current === session) setCheckingDevice(false);
+      }
       if (live.current !== session) return;
     }
     await session.client.startWallet();
@@ -137,7 +150,16 @@ export function WalletAccount({
   async function unlock(password: string) {
     const session = live.current;
     if (!session) return;
-    const defaults = await session.open(password);
+    let defaults;
+    try {
+      defaults = await session.open(password);
+    } catch (error) {
+      if (live.current === session) {
+        setLastBalance(null);
+        setStage({ kind: 'password', exists: stage.kind === 'password' && stage.exists });
+      }
+      throw error;
+    }
     if (live.current !== session) return;
     let records: WalletRecord[];
     try {
@@ -285,39 +307,52 @@ export function WalletAccount({
           </Button>
         </WalletPanel>
       )}
-      {stage.kind === 'start' && (
+      {(stage.kind === 'opening' || (stage.kind === 'start' && task.busy)) && (
+        <WalletOpening
+          balance={
+            lastBalance &&
+            (stage.kind === 'opening' || (lastBalance.walletId === stage.id && lastBalance.network === stage.network))
+              ? lastBalance
+              : null
+          }
+          message={
+            stage.kind === 'opening'
+              ? 'Preparing your wallet…'
+              : checkingDevice
+                ? 'Checking device access…'
+                : 'Syncing Bitcoin and connecting to Lightning…'
+          }
+        />
+      )}
+      {stage.kind === 'start' && !task.busy && (
         <WalletPanel title="Open wallet" icon={WalletIcon}>
-          {task.busy ? (
-            <Spinner aria-label="Starting wallet" />
-          ) : (
-            <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              onClick={() =>
+                task.run(async () => {
+                  if (live.current) await start(live.current, stage.id, stage.network);
+                })
+              }
+            >
+              Retry connection
+            </Button>
+            {!ringBacked && (
               <Button
+                variant="outline"
                 onClick={() =>
                   task.run(async () => {
-                    if (live.current) await start(live.current, stage.id, stage.network);
+                    const session = live.current;
+                    if (!session) return;
+                    const phrase = await session.client.getRecoveryPhrase();
+                    if (live.current === session)
+                      setStage({ kind: 'backup', id: stage.id, network: stage.network, phrase });
                   })
                 }
               >
-                Retry connection
+                Back up wallet
               </Button>
-              {!ringBacked && (
-                <Button
-                  variant="outline"
-                  onClick={() =>
-                    task.run(async () => {
-                      const session = live.current;
-                      if (!session) return;
-                      const phrase = await session.client.getRecoveryPhrase();
-                      if (live.current === session)
-                        setStage({ kind: 'backup', id: stage.id, network: stage.network, phrase });
-                    })
-                  }
-                >
-                  Back up wallet
-                </Button>
-              )}
-            </div>
-          )}
+            )}
+          </div>
         </WalletPanel>
       )}
       {stage.kind === 'ready' &&
@@ -329,6 +364,9 @@ export function WalletAccount({
             session={stage.session}
             walletId={stage.id}
             ringBacked={ringBacked}
+            lastBalance={
+              lastBalance?.walletId === stage.id && lastBalance.network === stage.network ? lastBalance : null
+            }
             network={stage.network}
             recipient={recipient}
             task={task}
@@ -410,7 +448,7 @@ function PasswordForm({
           className="justify-self-start"
           disabled={busy || !password || (!exists && (password.length < 12 || password !== confirmation))}
         >
-          {busy ? 'Opening wallet…' : exists ? 'Unlock wallet' : 'Continue'} <ArrowRight />
+          {busy ? 'Unlocking this browser…' : exists ? 'Unlock wallet' : 'Continue'} <ArrowRight />
         </Button>
       </form>
     </WalletPanel>
