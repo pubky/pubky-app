@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import type {
+  KeptReason,
   Network,
   ReceiveQuote,
   ReceiveRequest,
@@ -9,6 +10,7 @@ import type {
   SendReview,
   WalletClientInterface,
 } from '@beignet/wallet-core';
+import { buildBip21, parseSats, WalletError } from '@beignet/wallet-core';
 import { type QueryClient, useQuery } from '@tanstack/react-query';
 import { ArrowDownLeft, ArrowUpRight, Copy, Zap } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
@@ -17,12 +19,20 @@ import { Input } from '@/atoms/Input/Input';
 import { Label } from '@/atoms/Label/Label';
 import { Textarea } from '@/atoms/Textarea/Textarea';
 import { copyToClipboard } from '@/libs/utils/utils';
-import { resolveRecipient } from '@/libs/wallet/resolveRecipient';
-import { WalletPanel, type WalletTask } from './WalletPanel';
+import { bitcoinAmount, lightningAmount, walletMessage } from '@/libs/wallet/amount';
+import {
+  quoteWalletMaximum,
+  reviewWalletDrain,
+  reviewWalletPayment,
+  WalletDrainAvailable,
+  type WalletMaximum,
+} from '@/libs/wallet/sendPayment';
+import { Detail, WalletPanel, type WalletTask, Warnings } from './WalletPanel';
+import { WalletScanner } from './WalletScanner';
 
 type PaymentProps = { client: WalletClientInterface; task: WalletTask; refresh: () => void };
 
-function SatsField({
+function AmountField({
   value,
   onChange,
   disabled,
@@ -33,16 +43,27 @@ function SatsField({
 }) {
   return (
     <div className="grid gap-2">
-      <Label htmlFor="payment-amount">Amount in sats (optional)</Label>
-      <Input
-        id="payment-amount"
-        disabled={disabled}
-        inputMode="numeric"
-        pattern="[0-9]+"
-        placeholder="Amount"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      />
+      <Label htmlFor="payment-amount">
+        Amount <span className="sr-only">in bitcoin</span> (optional)
+      </Label>
+      <div className="relative">
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground"
+        >
+          ₿
+        </span>
+        <Input
+          id="payment-amount"
+          className="pl-8"
+          disabled={disabled}
+          inputMode="numeric"
+          pattern="[0-9]+"
+          placeholder="0"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      </div>
     </div>
   );
 }
@@ -55,15 +76,38 @@ export function WalletSend({
   refresh,
 }: PaymentProps & { network: Network; recipient?: string }) {
   const [request, setRequest] = useState(recipient || '');
+  const [maximum, setMaximum] = useState<WalletMaximum | null>(null);
+  const [drainOffer, setDrainOffer] = useState<WalletDrainAvailable | null>(null);
   const [amount, setAmount] = useState('');
   const [review, setReview] = useState<{ payment: SendReview; recipient?: string; destination: string } | null>(null);
   const [result, setResult] = useState<SendResult | null>(null);
   const [uncertain, setUncertain] = useState(false);
   const [expired, setExpired] = useState(false);
   async function prepare() {
-    const target = await resolveRecipient(request.trim(), network);
-    const payment = await client.prepareSend({ request: target.destination, amountSats: amount || undefined });
-    setReview({ payment, destination: target.destination, recipient: target.pubky });
+    try {
+      setReview(await reviewWalletPayment(client, request, network, maximum ? undefined : amount, maximum));
+    } catch (error) {
+      if (error instanceof WalletDrainAvailable) setDrainOffer(error);
+      throw error;
+    }
+  }
+  function changeDestination(input: string) {
+    setRequest(input);
+    setDrainOffer(null);
+    setMaximum(null);
+    setExpired(false);
+    task.clearError();
+  }
+  async function chooseMaximum() {
+    setMaximum(null);
+    setDrainOffer(null);
+    setAmount('');
+    try {
+      setMaximum(await quoteWalletMaximum(client, request, network));
+    } catch (error) {
+      if (error instanceof WalletDrainAvailable) setDrainOffer(error);
+      throw error;
+    }
   }
   async function send() {
     if (!review) return;
@@ -84,7 +128,9 @@ export function WalletSend({
   }
   function reset() {
     setRequest('');
+    setDrainOffer(null);
     setAmount('');
+    setMaximum(null);
     setResult(null);
     setUncertain(false);
     setExpired(false);
@@ -108,25 +154,62 @@ export function WalletSend({
               label="Payment method"
               value={review.payment.route === 'lightning' ? 'Lightning' : 'Bitcoin on-chain'}
             />
-            <Detail label="Amount" value={sats(review.payment.amountSats)} />
-            <Detail label={review.payment.feeLabel || 'Fee'} value={sats(review.payment.feeSats)} />
+            {review.payment.drain && (
+              <>
+                <Detail
+                  label="Estimated channel closing fee"
+                  value={bitcoinAmount(review.payment.drain.closeFeeSats)}
+                />
+                <Detail label="Estimated sweep fee" value={bitcoinAmount(review.payment.drain.sweepFeeSats)} />
+              </>
+            )}
             <Detail
-              label={review.payment.route === 'lightning' ? 'Maximum total' : 'Total'}
-              value={sats(review.payment.totalSats)}
+              label={review.payment.minRecipientSats != null ? 'Recipient gets at least' : 'Recipient amount'}
+              value={bitcoinAmount(review.payment.minRecipientSats ?? review.payment.amountSats)}
             />
+            {review.payment.estimatedFeeSats != null && (
+              <Detail label="Estimated routing fee" value={bitcoinAmount(review.payment.estimatedFeeSats)} />
+            )}
+            <Detail
+              label={review.payment.feeLabel || 'Fee'}
+              value={
+                review.payment.maxFeeMsat
+                  ? lightningAmount(review.payment.maxFeeMsat)
+                  : bitcoinAmount(review.payment.feeSats)
+              }
+            />
+            <Detail
+              label={
+                review.payment.method === 'drain'
+                  ? 'Estimated total'
+                  : review.payment.route === 'lightning'
+                    ? 'Maximum total'
+                    : 'Total'
+              }
+              value={
+                review.payment.debitMsat
+                  ? lightningAmount(review.payment.debitMsat)
+                  : bitcoinAmount(review.payment.totalSats)
+              }
+            />
+            {review.payment.max && review.payment.keptSats != null && (
+              <Detail label="Kept in channels" value={keptAmount(review.payment.keptSats, review.payment.keptReason)} />
+            )}
           </dl>
           <Warnings items={review.payment.warnings} />
           <div className="flex flex-wrap gap-2">
             <Button variant="brand" disabled={task.busy} onClick={() => task.run(send)}>
-              {task.busy ? 'Sending…' : 'Confirm payment'}
+              {task.busy ? 'Sending…' : review.payment.method === 'drain' ? 'Confirm wallet drain' : 'Confirm payment'}
             </Button>
             <Button
               variant="outline"
               disabled={task.busy}
-              onClick={() => {
-                setReview(null);
-                task.clearError();
-              }}
+              onClick={() =>
+                task.run(async () => {
+                  if (review.payment.method === 'drain') await client.cancelDrain(review.payment.id);
+                  setReview(null);
+                })
+              }
             >
               Edit
             </Button>
@@ -144,11 +227,24 @@ export function WalletSend({
           <p className="text-sm text-muted-foreground">
             {uncertain || result?.status === 'uncertain'
               ? 'Check Activity before trying another payment.'
-              : result?.message}
+              : walletMessage(result?.message ?? '')}
           </p>
           {result && (
             <dl className="grid gap-2">
-              <Detail label="Amount" value={sats(result.amountSats)} />
+              <Detail
+                label={result.status === 'completed' ? 'Recipient received' : 'Payment amount'}
+                value={result.payAll ? lightningAmount(result.payAll.deliveredMsat) : bitcoinAmount(result.amountSats)}
+              />
+              <Detail
+                label={result.feeEstimated ? 'Estimated fee' : 'Fee paid'}
+                value={
+                  result.feeKnown || result.payAll
+                    ? result.payAll
+                      ? lightningAmount(result.payAll.feeMsat)
+                      : bitcoinAmount(result.feeSats)
+                    : 'Not yet reported'
+                }
+              />
               {(result.txid || result.paymentHash) && (
                 <Detail
                   label={result.txid ? 'Transaction ID' : 'Payment hash'}
@@ -182,12 +278,74 @@ export function WalletSend({
               placeholder="Lightning request, Bitcoin address, or Pubky ID"
               value={request}
               disabled={task.busy}
-              onChange={(e) => setRequest(e.target.value)}
+              onChange={(e) => changeDestination(e.target.value)}
             />
           </div>
-          <SatsField value={amount} onChange={setAmount} disabled={task.busy} />
-          <p className="text-sm text-muted-foreground">Leave the amount empty when the request specifies one.</p>
-          <Button type="submit" variant="brand" className="justify-self-start" disabled={task.busy || !request.trim()}>
+          {!task.busy && (
+            <WalletScanner
+              onRead={(value) => {
+                changeDestination(value);
+                setAmount('');
+              }}
+            />
+          )}
+          <div className="grid grid-cols-[1fr_auto] items-end gap-2">
+            <AmountField
+              value={maximum ? String(maximum.quote.amountSats) : amount}
+              onChange={(value) => {
+                setMaximum(null);
+                setDrainOffer(null);
+                setAmount(value);
+                task.clearError();
+              }}
+              disabled={task.busy}
+            />
+            <Button
+              type="button"
+              variant={maximum ? 'default' : 'outline'}
+              aria-pressed={!!maximum}
+              disabled={task.busy || !request.trim()}
+              onClick={() => task.run(chooseMaximum)}
+            >
+              Max
+            </Button>
+          </div>
+          {drainOffer && (
+            <div className="grid gap-2 rounded-xl border border-border p-4 text-sm">
+              <p>
+                To send the remaining funds to this address, review the channel closing and sweep fees. The transfers
+                can take several blocks.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                className="justify-self-start"
+                disabled={task.busy}
+                onClick={() =>
+                  task.run(async () => {
+                    setReview(await reviewWalletDrain(client, request, network, drainOffer));
+                  })
+                }
+              >
+                Empty wallet to this address
+              </Button>
+            </div>
+          )}
+          {maximum && (
+            <p className="text-sm text-muted-foreground" role="status">
+              Maximum quoted for this destination. {keptAmount(maximum.quote.keptSats, maximum.quote.keptReason)} kept
+              in channels.
+            </p>
+          )}
+          {!maximum && !drainOffer && (
+            <p className="text-sm text-muted-foreground">Leave the amount empty when the request specifies one.</p>
+          )}
+          <Button
+            type="submit"
+            variant="brand"
+            className="justify-self-start"
+            disabled={task.busy || !request.trim() || !!drainOffer}
+          >
             {task.busy ? 'Working…' : 'Review payment'}
           </Button>
         </form>
@@ -196,7 +354,15 @@ export function WalletSend({
   );
 }
 
-export function WalletReceive({ client, task, refresh, queries }: PaymentProps & { queries: QueryClient }) {
+export function WalletReceive({
+  client,
+  task,
+  refresh,
+  queries,
+  newBitcoinAddress,
+}: PaymentProps & { queries: QueryClient; newBitcoinAddress: () => Promise<string> }) {
+  const [deposit, setDeposit] = useState<{ address: string; uri: string } | null>(null);
+  const [copied, setCopied] = useState(false);
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [quote, setQuote] = useState<ReceiveQuote | null>(null);
@@ -212,7 +378,47 @@ export function WalletReceive({ client, task, refresh, queries }: PaymentProps &
   }
   return (
     <WalletPanel title="Receive bitcoin" icon={ArrowDownLeft}>
-      {request ? (
+      {deposit ? (
+        <div className="flex flex-col items-start gap-4">
+          <p className="text-sm text-muted-foreground">
+            This address receives on-chain bitcoin. Deposits appear in your wallet after network sync.
+          </p>
+          {deposit.uri.length <= 2900 && (
+            <QRCodeSVG
+              title="Bitcoin deposit QR code"
+              value={deposit.uri}
+              size={208}
+              level="L"
+              marginSize={4}
+              className="rounded-xl"
+            />
+          )}
+          <Detail label="Bitcoin address" value={deposit.address} />
+          {amount && <Detail label="Requested amount" value={bitcoinAmount(parseSats(amount))} />}
+          <Button
+            variant="outline"
+            disabled={task.busy}
+            onClick={() =>
+              task.run(async () => {
+                await copyToClipboard({ text: deposit.uri });
+                setCopied(true);
+              })
+            }
+          >
+            <Copy />
+            {copied ? 'Copied' : 'Copy Bitcoin request'}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setDeposit(null);
+              setCopied(false);
+            }}
+          >
+            New request
+          </Button>
+        </div>
+      ) : request ? (
         <RequestCode
           key={request.id}
           request={request}
@@ -229,10 +435,10 @@ export function WalletReceive({ client, task, refresh, queries }: PaymentProps &
           <dl className="grid gap-3">
             <Detail
               label="Requested amount"
-              value={quote.amountSats === null ? 'Any amount' : sats(quote.amountSats)}
+              value={quote.amountSats === null ? 'Any amount' : bitcoinAmount(quote.amountSats)}
             />
-            <Detail label="Receive fee" value={sats(quote.feeSats)} />
-            {quote.netSats !== null && <Detail label="You receive" value={sats(quote.netSats)} />}
+            <Detail label="Receive fee" value={bitcoinAmount(quote.feeSats)} />
+            {quote.netSats !== null && <Detail label="You receive" value={bitcoinAmount(quote.netSats)} />}
             {quote.description && <Detail label="Description" value={quote.description} />}
           </dl>
           <Warnings items={quote.warnings} />
@@ -262,7 +468,7 @@ export function WalletReceive({ client, task, refresh, queries }: PaymentProps &
             });
           }}
         >
-          <SatsField value={amount} onChange={setAmount} disabled={task.busy} />
+          <AmountField value={amount} onChange={setAmount} disabled={task.busy} />
           <div className="grid gap-2">
             <Label htmlFor="payment-description">Description (optional)</Label>
             <Input
@@ -274,6 +480,23 @@ export function WalletReceive({ client, task, refresh, queries }: PaymentProps &
           </div>
           <Button type="submit" className="justify-self-start" variant="brand" disabled={task.busy}>
             {task.busy ? 'Preparing request…' : 'Review request'}
+          </Button>
+          <Button
+            type="button"
+            className="justify-self-start"
+            variant="outline"
+            disabled={task.busy}
+            onClick={() =>
+              task.run(async () => {
+                const amountSats = amount ? parseSats(amount) : undefined;
+                if (amountSats === 0)
+                  throw new WalletError('Enter an amount greater than zero or leave it blank.', 'INVALID_AMOUNT');
+                const address = await newBitcoinAddress();
+                setDeposit({ address, uri: buildBip21({ address, amountSats, message: description }) });
+              })
+            }
+          >
+            Receive on-chain
           </Button>
         </form>
       )}
@@ -312,8 +535,8 @@ function RequestCode({
   const phase = status.data?.phase;
   let message = expired ? 'Request expired' : status.isError ? 'Payment status unavailable' : 'Waiting for payment';
   if (status.data) {
-    if (phase === 'completed') message = `Received ${sats(status.data.receivedSats)}`;
-    if (phase === 'partial') message = `Partially paid: ${sats(status.data.receivedSats)}`;
+    if (phase === 'completed') message = `Received ${bitcoinAmount(status.data.receivedSats)}`;
+    if (phase === 'partial') message = `Partially paid: ${bitcoinAmount(status.data.receivedSats)}`;
     if (phase === 'pending') message = 'Payment pending';
   }
   const payload = unified ? request.uri : request.bolt11;
@@ -325,7 +548,7 @@ function RequestCode({
       </p>
       {status.data?.phase === 'partial' && request.amountSats !== null && (
         <p className="text-sm text-muted-foreground">
-          {sats(Math.max(0, request.amountSats - status.data.receivedSats))} remaining.
+          {bitcoinAmount(Math.max(0, request.amountSats - status.data.receivedSats))} remaining.
         </p>
       )}
       {(!phase || phase === 'waiting') && !expired && (
@@ -395,23 +618,7 @@ function RequestCode({
   );
 }
 
-function sats(amount: number) {
-  return `${amount.toLocaleString()} sats`;
-}
-function Detail({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="grid gap-1 border-b border-border pb-2">
-      <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
-      <dd className="text-sm wrap-anywhere">{value}</dd>
-    </div>
-  );
-}
-function Warnings({ items }: { items: string[] }) {
-  return items.length ? (
-    <ul className="grid gap-2 rounded-xl border border-border p-3 text-sm">
-      {items.map((item, i) => (
-        <li key={i}>{item}</li>
-      ))}
-    </ul>
-  ) : null;
+function keptAmount(amount: number, reason?: KeptReason) {
+  const detail = reason === 'reserve' ? 'channel reserve' : reason === 'commitment-cost' ? 'commitment cost' : '';
+  return detail ? `${bitcoinAmount(amount)} (${detail})` : bitcoinAmount(amount);
 }

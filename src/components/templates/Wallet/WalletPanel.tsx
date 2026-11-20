@@ -4,6 +4,7 @@ import { type ReactNode, useRef, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { Card } from '@/atoms/Card/Card';
 import { Heading } from '@/atoms/Heading/Heading';
+import { walletMessage } from '@/libs/wallet/amount';
 
 export function WalletPanel({ title, icon: Icon, children }: { title: string; icon: LucideIcon; children: ReactNode }) {
   return (
@@ -53,7 +54,7 @@ export function useWalletTask() {
     try {
       await work();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'The wallet could not complete this action.');
+      setError(err instanceof Error ? walletMessage(err.message) : 'The wallet could not complete this action.');
     } finally {
       running.current = false;
       setBusy(false);
@@ -62,3 +63,21 @@ export function useWalletTask() {
   return { busy, error, clearError: () => setError(''), run };
 }
 export type WalletTask = ReturnType<typeof useWalletTask>;
+
+export function Detail({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="grid gap-1 border-b border-border pb-2">
+      <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
+      <dd className="text-sm wrap-anywhere">{value}</dd>
+    </div>
+  );
+}
+export function Warnings({ items }: { items: string[] }) {
+  return items.length ? (
+    <ul className="grid gap-2 rounded-xl border border-border p-3 text-sm">
+      {items.map((item, i) => (
+        <li key={i}>{walletMessage(item)}</li>
+      ))}
+    </ul>
+  ) : null;
+}

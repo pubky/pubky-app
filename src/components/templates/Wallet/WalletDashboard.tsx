@@ -16,6 +16,7 @@ import {
 import { Button } from '@/atoms/Button/Button';
 import { Card } from '@/atoms/Card/Card';
 import { Spinner } from '@/atoms/Spinner/Spinner';
+import { bitcoinAmount, lightningAmount, walletMessage } from '@/libs/wallet/amount';
 import type { WalletSession } from '@/services/wallet/session';
 import { RecoveryWords, WalletPanel, type WalletTask } from './WalletPanel';
 import { WalletReceive, WalletSend } from './WalletPayments';
@@ -50,6 +51,9 @@ export function WalletDashboard({
     queries,
   );
   const data = snapshot.data;
+  const unavailable = data
+    ? Math.max(0, data.balance.totalSats - data.balance.availableSats - data.balance.pendingSats)
+    : 0;
   const notes = new Set(data?.notes ?? []);
   const needsRecovery = data?.balance.pending?.erroredSats ?? 0;
   if (needsRecovery > 0)
@@ -78,19 +82,32 @@ export function WalletDashboard({
           <p className="text-sm text-muted-foreground">Total balance</p>
           {data ? (
             <p className="mt-1 text-4xl font-bold tracking-tight tabular-nums sm:text-6xl">
-              {data.balance.totalSats.toLocaleString()}{' '}
-              <span className="text-xl font-medium text-muted-foreground">sats</span>
+              {bitcoinAmount(data.balance.totalSats)}
             </p>
           ) : snapshot.isPending ? (
             <Spinner size="sm" aria-label="Loading balance" />
           ) : (
             <p>Balance unavailable</p>
           )}
-          {data && (
-            <p className="mt-2 text-sm text-muted-foreground">
-              {data.balance.availableSats.toLocaleString()} sats available · {data.balance.pendingSats.toLocaleString()}{' '}
-              sats pending
-            </p>
+          {data && (data.balance.availableSats !== data.balance.totalSats || data.balance.pendingSats > 0) && (
+            <dl className="mt-4 flex flex-wrap gap-x-6 gap-y-3 text-sm">
+              <div>
+                <dt className="text-muted-foreground">Available to send</dt>
+                <dd className="font-semibold tabular-nums">{bitcoinAmount(data.balance.availableSats)}</dd>
+              </div>
+              {data.balance.pendingSats > 0 && (
+                <div>
+                  <dt className="text-muted-foreground">Pending</dt>
+                  <dd className="font-semibold tabular-nums">{bitcoinAmount(data.balance.pendingSats)}</dd>
+                </div>
+              )}
+              {unavailable > 0 && (
+                <div>
+                  <dt className="text-muted-foreground">Unavailable in channels</dt>
+                  <dd className="font-semibold tabular-nums">{bitcoinAmount(unavailable)}</dd>
+                </div>
+              )}
+            </dl>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -127,7 +144,9 @@ export function WalletDashboard({
           <ul className="grid gap-1 rounded-xl bg-background p-3 text-sm text-muted-foreground">
             {Array.from(notes, (note) => (
               <li key={note}>
-                {note === 'Wallet setup is not finished. Check Settings.' ? 'Lightning setup is incomplete.' : note}
+                {note === 'Wallet setup is not finished. Check Settings.'
+                  ? 'Lightning setup is incomplete.'
+                  : walletMessage(note)}
               </li>
             ))}
           </ul>
@@ -155,14 +174,22 @@ export function WalletDashboard({
                 Reconnect
               </Button>
             )}
-            {data.primary.setupError && <p className="basis-full">{data.primary.setupError}</p>}
+            {data.primary.setupError && <p className="basis-full">{walletMessage(data.primary.setupError)}</p>}
           </div>
         )}
       </Card>
       {view === 'send' && (
         <WalletSend client={session.client} network={network} recipient={recipient} task={task} refresh={refresh} />
       )}
-      {view === 'receive' && <WalletReceive client={session.client} task={task} queries={queries} refresh={refresh} />}
+      {view === 'receive' && (
+        <WalletReceive
+          client={session.client}
+          task={task}
+          queries={queries}
+          refresh={refresh}
+          newBitcoinAddress={() => session.newBitcoinAddress(network)}
+        />
+      )}
       {view === 'backup' && (
         <WalletPanel title="Recovery phrase" icon={KeyRound}>
           {phrase ? (
@@ -213,11 +240,19 @@ function ActivityRow({ row }: { row: Activity }) {
       <div className="min-w-0">
         <p className="truncate font-semibold">{row.title}</p>
         <p className="text-xs text-muted-foreground">{new Date(row.timestamp).toLocaleString()}</p>
+        {row.feeKnown && row.kind === 'sent' && (
+          <p className="text-xs text-muted-foreground">
+            {row.feeEstimated ? 'Estimated fee' : 'Fee'}{' '}
+            {row.payAll ? lightningAmount(row.payAll.feeMsat) : bitcoinAmount(row.feeSats)}
+          </p>
+        )}
       </div>
       <div className="text-right">
         <p className="text-sm font-semibold tabular-nums">
           {row.kind === 'sent' ? '−' : row.kind === 'received' ? '+' : ''}
-          {row.amountSats.toLocaleString()} sats
+          {row.payAll && row.status === 'completed'
+            ? lightningAmount(row.payAll.deliveredMsat)
+            : bitcoinAmount(row.amountSats)}
         </p>
         <p className="text-xs text-muted-foreground capitalize">{row.status}</p>
       </div>

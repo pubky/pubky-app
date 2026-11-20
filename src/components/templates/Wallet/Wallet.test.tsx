@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { bech32 } from 'bech32';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Wallet } from './Wallet';
@@ -15,8 +16,12 @@ const wallet = vi.hoisted(() => ({
   selectWallet: vi.fn(),
   snapshot: vi.fn(),
   prepareSend: vi.fn(),
+  quoteMax: vi.fn(),
+  prepareDrain: vi.fn(),
+  cancelDrain: vi.fn(),
   send: vi.fn(),
   quoteReceive: vi.fn(),
+  newBitcoinAddress: vi.fn(),
   receive: vi.fn(),
   getReceiveStatus: vi.fn(),
   getRecoveryPhrase: vi.fn(),
@@ -35,6 +40,7 @@ vi.mock('@/services/wallet/session', () => ({
   WalletSession: class {
     client = wallet;
     inspect = wallet.inspect;
+    newBitcoinAddress = wallet.newBitcoinAddress;
     open = wallet.open;
     close = wallet.close;
   },
@@ -94,6 +100,33 @@ async function unlock() {
 }
 
 describe('Pubky wallet', () => {
+  it('shows a single balance when every unit is available to send', async () => {
+    wallet.snapshot.mockResolvedValue({
+      balance: { totalSats: 5000, availableSats: 5000, pendingSats: 0 },
+      primary: { connected: true },
+      activity: [],
+    });
+    render(<Wallet />);
+    await unlock();
+    expect(await screen.findByText('₿5,000')).toBeVisible();
+    expect(screen.queryByText('Available to send')).not.toBeInTheDocument();
+    expect(screen.queryByText('Pending')).not.toBeInTheDocument();
+  });
+
+  it('shows the spendable amount and channel hold when only part of the balance can be sent', async () => {
+    wallet.snapshot.mockResolvedValue({
+      balance: { totalSats: 5000, availableSats: 4200, pendingSats: 0 },
+      primary: { connected: true },
+      activity: [],
+    });
+    render(<Wallet />);
+    await unlock();
+    expect(await screen.findByText('Unavailable in channels')).toBeVisible();
+    expect(screen.getByText('₿800')).toBeVisible();
+    expect(screen.getByText('₿4,200')).toBeVisible();
+    expect(screen.queryByText('Pending')).not.toBeInTheDocument();
+  });
+
   it('creates a wallet only after the password step and presents its recovery phrase before start', async () => {
     wallet.exists = false;
     wallet.listWallets.mockResolvedValue([]);
@@ -118,7 +151,7 @@ describe('Pubky wallet', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Review payment' }));
     expect(await screen.findByText('receiver')).toBeVisible();
     expect(screen.getByText('lnbcrt1destination')).toBeVisible();
-    expect(screen.getByText('3,004 sats')).toBeVisible();
+    expect(screen.getByText('₿3,004')).toBeVisible();
     expect(wallet.send).not.toHaveBeenCalled();
     const submit = screen.getByRole('button', { name: 'Confirm payment' });
     fireEvent.click(submit);
@@ -126,6 +159,99 @@ describe('Pubky wallet', () => {
     expect(await screen.findByText('Payment sent')).toBeVisible();
     expect(wallet.send).toHaveBeenCalledWith(sendQuote);
     expect(wallet.send).toHaveBeenCalledTimes(1);
+  });
+
+  it('quotes Max for the recipient, binds the review, and displays the exact paid Lightning fee', async () => {
+    wallet.quoteMax.mockResolvedValue({ amountSats: 4980, keptSats: 0, keptReason: 'none' });
+    wallet.prepareSend.mockResolvedValue({
+      ...sendQuote,
+      max: true,
+      minRecipientSats: 4980,
+      feeSats: 20,
+      feeLabel: 'Maximum routing fee',
+      maxFeeMsat: '20000',
+      debitMsat: '5000000',
+      amountSats: 4980,
+      totalSats: 5000,
+      keptSats: 0,
+    });
+    wallet.send.mockResolvedValue({
+      status: 'completed',
+      amountSats: 4998,
+      feeSats: 2,
+      message: 'Delivered.',
+      feeKnown: true,
+      payAll: {
+        debitMsat: '5000000',
+        deliveredMsat: '4998625',
+        feeMsat: '1375',
+        remainderMsat: '0',
+        maxFeeMsat: '20000',
+      },
+    });
+    render(<Wallet recipient="receiver" />);
+    await unlock();
+    fireEvent.click(screen.getByRole('button', { name: 'Max' }));
+    expect(await screen.findByText(/Maximum quoted for this destination/)).toBeVisible();
+    expect(screen.getByLabelText('Amount in bitcoin (optional)')).toHaveValue('4980');
+    expect(wallet.send).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Review payment' }));
+    expect(await screen.findByText('Recipient gets at least')).toBeVisible();
+    expect(screen.getByText('₿4,980')).toBeVisible();
+    expect(wallet.prepareSend).toHaveBeenCalledWith({ request: 'lnbcrt1destination', max: true });
+    expect(wallet.resolveRecipient).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm payment' }));
+    expect(await screen.findByText('₿4,998 + 625 msat')).toBeVisible();
+    expect(screen.getByText('₿1 + 375 msat')).toBeVisible();
+  });
+
+  it('clears the Max quote when the destination or amount changes', async () => {
+    wallet.quoteMax.mockResolvedValue({ amountSats: 4980, keptSats: 0, keptReason: 'none' });
+    render(<Wallet recipient="first" />);
+    await unlock();
+    const max = screen.getByRole('button', { name: 'Max' });
+    fireEvent.click(max);
+    await screen.findByText(/Maximum quoted/);
+    fireEvent.change(screen.getByLabelText('Pay to'), { target: { value: 'second' } });
+    expect(max).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByLabelText('Amount in bitcoin (optional)')).toHaveValue('');
+    fireEvent.click(max);
+    await screen.findByText(/Maximum quoted/);
+    fireEvent.change(screen.getByLabelText('Amount in bitcoin (optional)'), { target: { value: '1200' } });
+    expect(max).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(screen.getByRole('button', { name: 'Review payment' }));
+    await screen.findByRole('button', { name: 'Confirm payment' });
+    expect(wallet.prepareSend).toHaveBeenCalledWith({ request: 'lnbcrt1destination', amountSats: '1200' });
+  });
+
+  it('requires explicit channel-close review and releases the drain quote when editing', async () => {
+    const address = bech32.encode('bcrt', [0, ...bech32.toWords(new Uint8Array(20))]);
+    wallet.resolveRecipient.mockResolvedValue({ destination: address });
+    wallet.quoteMax.mockResolvedValue({ amountSats: 3800, keptSats: 1000, keptReason: 'reserve' });
+    wallet.prepareDrain.mockResolvedValue({
+      ...sendQuote,
+      method: 'drain',
+      route: 'bitcoin',
+      amountSats: 4500,
+      totalSats: 5000,
+      feeSats: 500,
+      feeLabel: 'Estimated network fees',
+      destination: address,
+      drain: { closeFeeSats: 300, sweepFeeSats: 200 },
+      warnings: ['Your home channel closes.'],
+    });
+    render(<Wallet recipient={address} />);
+    await unlock();
+    fireEvent.click(screen.getByRole('button', { name: 'Max' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('₿1,000');
+    expect(wallet.prepareDrain).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Empty wallet to this address' }));
+    expect(await screen.findByText('Estimated channel closing fee')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Confirm wallet drain' })).toBeVisible();
+    expect(wallet.send).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+    await screen.findByRole('button', { name: 'Empty wallet to this address' });
+    expect(wallet.cancelDrain).toHaveBeenCalledWith('review-1');
   });
 
   it('never retries a send whose outcome is unknown', async () => {
@@ -138,6 +264,21 @@ describe('Pubky wallet', () => {
     expect(screen.getByText('Check Activity before trying another payment.')).toBeVisible();
     expect(wallet.send).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('button', { name: 'Confirm payment' })).toBeNull();
+  });
+
+  it('offers a watched on-chain deposit without asking the primary for inbound liquidity', async () => {
+    const address = 'bcrt1qkgfgyxyqhvkdqh04sklnzxphmcds6vft6y7h0r';
+    wallet.newBitcoinAddress.mockResolvedValue(address);
+    render(<Wallet />);
+    await unlock();
+    fireEvent.click(screen.getByRole('button', { name: 'Receive' }));
+    fireEvent.change(screen.getByLabelText('Amount in bitcoin (optional)'), { target: { value: '1000' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Receive on-chain' }));
+    expect(await screen.findByText(address)).toBeInTheDocument();
+    expect(screen.getByTitle('Bitcoin deposit QR code')).toBeInTheDocument();
+    expect(wallet.newBitcoinAddress).toHaveBeenCalledWith('regtest');
+    expect(wallet.quoteReceive).not.toHaveBeenCalled();
+    expect(wallet.receive).not.toHaveBeenCalled();
   });
 
   it('shows the receive fee before creating the request, then tracks the invoice', async () => {
@@ -163,9 +304,9 @@ describe('Pubky wallet', () => {
     render(<Wallet />);
     await unlock();
     fireEvent.click(screen.getByRole('button', { name: 'Receive' }));
-    fireEvent.change(screen.getByLabelText('Amount in sats (optional)'), { target: { value: '8000' } });
+    fireEvent.change(screen.getByLabelText('Amount in bitcoin (optional)'), { target: { value: '8000' } });
     fireEvent.click(screen.getByRole('button', { name: 'Review request' }));
-    expect(await screen.findByText('110 sats')).toBeVisible();
+    expect(await screen.findByText('₿110')).toBeVisible();
     expect(wallet.receive).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Create request' }));
     expect(await screen.findByLabelText('Lightning invoice')).toHaveValue(request.bolt11);
@@ -178,8 +319,8 @@ describe('Pubky wallet', () => {
   it.each([
     { phase: 'pending', lifespan: 60_000, message: 'Payment pending' },
     { phase: 'pending', lifespan: -1000, message: 'Payment pending' },
-    { phase: 'partial', lifespan: 60_000, message: 'Partially paid: 800 sats' },
-    { phase: 'partial', lifespan: -1000, message: 'Partially paid: 800 sats' },
+    { phase: 'partial', lifespan: 60_000, message: 'Partially paid: ₿800' },
+    { phase: 'partial', lifespan: -1000, message: 'Partially paid: ₿800' },
   ])(
     'keeps a detected $phase receipt visible and hides its code when fully paid or expired',
     async ({ phase, lifespan, message }) => {
@@ -224,7 +365,7 @@ describe('Pubky wallet', () => {
     expect(await screen.findByText(warning)).toBeVisible();
     await unlock();
     expect(screen.getByText(warning)).toBeVisible();
-    expect(await screen.findByText('500 sats need recovery attention before they can be spent.')).toBeVisible();
+    expect(await screen.findByText('₿500 need recovery attention before they can be spent.')).toBeVisible();
     expect(screen.getByText(/Some receive requests are still being checked/)).toBeVisible();
   });
 

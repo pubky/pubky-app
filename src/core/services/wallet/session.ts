@@ -1,4 +1,11 @@
-import { type Activity, type ElectrumServer, EmbeddedWalletClient, type Network } from '@beignet/wallet-core';
+import {
+  type Activity,
+  type ElectrumServer,
+  EmbeddedWalletClient,
+  type Network,
+  parsePayment,
+  WalletError,
+} from '@beignet/wallet-core';
 
 export type WalletDefaults = { network: Network; primaryUri: string; electrum: ElectrumServer };
 type Reply = { id: number; result?: unknown; error?: { code?: string; status?: number; message: string } };
@@ -72,6 +79,21 @@ export class WalletSession {
     await pendingClosures.get(this.account)?.catch(() => {});
     this.onVisibility();
     return this.call<WalletDefaults>('open', password);
+  }
+
+  async newBitcoinAddress(network: Network): Promise<string> {
+    const id = this.client.connection.walletId;
+    if (!id) throw locked();
+    const { address } = await this.call<{ address: string }>('request', {
+      method: 'POST',
+      path: `/wallets/${id}/api/address/new`,
+      body: {},
+    });
+    const parsed = parsePayment(address, { network });
+    if (parsed.kind !== 'onchain' || parsed.address !== address) {
+      throw new WalletError('The wallet could not verify its receive address.', 'INVALID_ADDRESS');
+    }
+    return address;
   }
 
   close(): Promise<void> {
