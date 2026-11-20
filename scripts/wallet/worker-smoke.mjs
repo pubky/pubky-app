@@ -86,6 +86,14 @@ try {
   assert.equal(await other.evaluate(() => window.walletCall('inspect').catch((error) => error.code)), 'WALLET_IN_USE');
   await setup(other, 'b'.repeat(52));
   assert.deepEqual(await other.evaluate(() => window.walletCall('inspect')), { exists: false });
+  const cancelled = await other.evaluate(async (password) => {
+    const opening = window.walletCall('open', password).catch((error) => error.code);
+    await window.walletCall('close');
+    return opening;
+  }, password);
+  assert.equal(cancelled, 'WALLET_CLOSED');
+  await setup(other, 'b'.repeat(52));
+  assert.deepEqual(await other.evaluate(() => window.walletCall('inspect')), { exists: false });
   await other.close();
 
   // Keep the generated phrase inside the browser. Only boolean checks and the public id cross back.

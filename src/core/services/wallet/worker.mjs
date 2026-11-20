@@ -75,7 +75,7 @@ function renew(grant) {
   }, delay);
 }
 
-function ensureOpeningAllowed() {
+function rejectIfClosing() {
   if (closing) throw Object.assign(new Error('The wallet is locked.'), { code: 'WALLET_CLOSED' });
 }
 
@@ -83,7 +83,7 @@ async function open(account, password) {
   const store = await openFiles(account);
   try {
     volume = await unlockVolume(store, account, password);
-    ensureOpeningAllowed();
+    rejectIfClosing();
     grantAbort = new AbortController();
     const old = volume.read(profilePath);
     const saved = old && JSON.parse(decoder.decode(old));
@@ -117,11 +117,11 @@ async function open(account, password) {
       save: (path, data) => volume.write(path, data),
       locateFile: (name) => new URL(name, self.location.href).href,
     });
-    ensureOpeningAllowed();
+    rejectIfClosing();
     store.markActive();
     engine = await createPortableRuntime({ databaseFactory, volume, electrum: defaults.electrum, socketFactory });
     activeStore = store;
-    ensureOpeningAllowed();
+    rejectIfClosing();
     engine.setAppBackgrounded(background);
     if (!saved || (moved && !existing)) volume.write(profilePath, encoder.encode(JSON.stringify(defaults)));
     if (grant) renew(grant);
@@ -169,7 +169,7 @@ async function handle({ operation, account, payload }) {
     await close();
     return;
   }
-  ensureOpeningAllowed();
+  rejectIfClosing();
   if (operation === 'visibility') {
     background = !!payload;
     engine?.setAppBackgrounded(background);
