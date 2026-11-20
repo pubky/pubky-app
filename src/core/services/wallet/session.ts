@@ -122,6 +122,7 @@ export class WalletSession {
 
   async inspect() {
     await pendingClosures.get(this.account)?.catch(() => {});
+    this.onVisibility();
     return this.call<{ exists: boolean; interrupted?: boolean }>('inspect');
   }
 

@@ -46,6 +46,8 @@ The grant endpoint is public and permits transport to the two fixed upstreams. U
 
 The hosted wallet uses Bitcoin mainnet with Chicory mobile’s Iroh primary and TLS Electrum. Pubky identities, posts and Locks use the Pubky staging services. The network badge in Wallet identifies the network that holds the money.
 
+On a return visit, the visible password screen prepares two short-lived Electrum connections for the network check and the wallet scan. They carry their first Bitcoin requests after unlock and, for Ring wallets, the device check. After verifying the network and opening the node, the wallet prepares the Lightning connection while scanning Bitcoin. Payment review uses the live wallet.
+
 Locks delivers a purchase request privately to the reader’s registered Paykit wallet. Bitkit accepts the request and the Lock Server verifies its settlement before issuing access to the post. On a deployment where the wallet and Locks use the same Bitcoin network, the purchase dialog can look up the reader’s own public Bitkit address, quote a top-up and send it after confirmation. The reader then confirms the purchase in Bitkit. Set `WALLET_LOCKS_NETWORK` to the Bitcoin network used by the deployment’s Paykit Server. The hosted staging instance sets it to `regtest`, so readers use regtest Bitkit for locked posts and their mainnet wallet stays out of that checkout.
 
 ## Storage and recovery

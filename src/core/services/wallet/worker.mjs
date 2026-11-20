@@ -1,7 +1,8 @@
-import { createPortableRuntime, createRelaySocketFactory } from '@beignet/portable-engine';
+import { createPortableRuntime } from '@beignet/portable-engine';
 import { createSqlJsDatabaseFactory } from '@beignet/portable-engine/sqljs';
 import { lastBalance, rememberBalance } from './balance.mjs';
 import { provisionRingWallet, ringBinding, ringDeviceId } from './ring.mjs';
+import { createStartupSockets } from './startup-sockets.mjs';
 import { inspectFiles, openFiles, unlockVolume } from './storage.mjs';
 
 const encoder = new TextEncoder();
@@ -22,6 +23,7 @@ let renewTimer;
 let background = false;
 let grantAbort;
 let openingGrant;
+let transport;
 let compiledDatabase;
 let connectionIssue;
 let activeGrant;
@@ -67,7 +69,7 @@ function prepareDatabase() {
   return compiledDatabase;
 }
 
-// The short-lived ticket only authorizes the fixed relay. Sockets open later during wallet startup.
+// The short-lived ticket only authorizes the deployment's fixed relay.
 function prepareGrant() {
   if (!openingGrant) {
     grantAbort ??= new AbortController();
@@ -78,6 +80,19 @@ function prepareGrant() {
     });
   }
   return openingGrant;
+}
+
+function discardIdleSockets() {
+  transport?.close();
+  transport = undefined;
+}
+
+function transportFor(grant) {
+  if (transport?.grant !== grant) {
+    discardIdleSockets();
+    transport = { grant, ...createStartupSockets(grant) };
+  }
+  return transport;
 }
 
 function profile(grant) {
@@ -130,10 +145,14 @@ async function open(account, password, onUnlocked) {
     let grant;
     try {
       grant = await prepareGrant();
-      openingGrant = undefined;
       rejectIfClosing();
-      if (grant.expiresAt - Date.now() < 15000) grant = await prepareGrant();
+      if (grant.expiresAt - Date.now() < 15000) {
+        openingGrant = undefined;
+        grant = await prepareGrant();
+      }
+      openingGrant = undefined;
     } catch {
+      grant = undefined;
       rejectIfClosing();
       if (!saved || !existing) throw configurationError();
       connectionIssue =
@@ -153,11 +172,26 @@ async function open(account, password, onUnlocked) {
       },
       { fixedUpstream: true },
     );
-    const socketFactory = grant ? createRelaySocketFactory(grant) : offline;
+    if (!grant) discardIdleSockets();
+    const relay = grant && transportFor(grant);
+    if (relay && existing && !background) relay.prepareElectrum();
     const databaseFactory = await prepareDatabase();
     rejectIfClosing();
     store.markActive();
-    engine = await createPortableRuntime({ databaseFactory, volume, electrum: defaults.electrum, socketFactory });
+    engine = await createPortableRuntime({
+      databaseFactory,
+      volume,
+      electrum: defaults.electrum,
+      socketFactory: relay?.socketFactory ?? offline,
+      onDiagnostic({ phase, message }) {
+        // Beignet emits this mark after checking genesis and creating the node.
+        // Open the peer transport while its Bitcoin scan runs. Beignet owns BOLT8.
+        const createdNode = phase === 'engine-perf' && message.startsWith('create ');
+        if (createdNode && relay && transport === relay && !closing && !background) {
+          relay.preparePeer();
+        }
+      },
+    });
     activeStore = store;
     rejectIfClosing();
     engine.setAppBackgrounded(background);
@@ -168,7 +202,13 @@ async function open(account, password, onUnlocked) {
     return defaults;
   } catch (error) {
     if (volume) await close();
-    else store.close();
+    else {
+      discardIdleSockets();
+      grantAbort?.abort();
+      grantAbort = undefined;
+      openingGrant = undefined;
+      store.close();
+    }
     throw error;
   }
 }
@@ -178,6 +218,7 @@ async function close() {
   grantAbort?.abort();
   grantAbort = undefined;
   openingGrant = undefined;
+  discardIdleSockets();
   // The engine releases its realm claim even when stop fails. A second
   // engine.close() could then succeed without a shutdown. Leave the active
   // marker and OPFS lease intact until this worker has been terminated.
@@ -202,6 +243,7 @@ async function close() {
 async function handle({ id, operation, account, payload, notifyUnlocked }) {
   if (operation === 'close') {
     closing = true;
+    discardIdleSockets();
     grantAbort?.abort();
     // Opening and provisioning each finish their own cleanup before the lease is released.
     await Promise.allSettled([transition, ringOperation]);
@@ -211,6 +253,7 @@ async function handle({ id, operation, account, payload, notifyUnlocked }) {
   rejectIfClosing();
   if (operation === 'visibility') {
     background = !!payload;
+    if (background) discardIdleSockets();
     engine?.setAppBackgrounded(background);
     return;
   }
@@ -225,7 +268,18 @@ async function handle({ id, operation, account, payload, notifyUnlocked }) {
             prepareDatabase();
             const state = await inspectFiles(account);
             rejectIfClosing();
-            prepareGrant();
+            const pending = prepareGrant();
+            if (state.exists && !background) {
+              // These two idle streams need only the public ticket. The engine writes
+              // its first Bitcoin request after unlock and the Ring device check.
+              void pending
+                .then((grant) => {
+                  if (!closing && !background && openingGrant === pending && grant.expiresAt - Date.now() >= 15000) {
+                    transportFor(grant).prepareElectrum();
+                  }
+                })
+                .catch(() => {});
+            }
             return state;
           })();
     try {

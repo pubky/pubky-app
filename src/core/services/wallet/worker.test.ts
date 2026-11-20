@@ -18,14 +18,17 @@ const fixture = vi.hoisted(() => {
     engine,
     unlock: vi.fn(async () => volume),
     inspect: vi.fn(async () => ({ exists: false })),
+    sockets: { socketFactory: vi.fn(), prepareElectrum: vi.fn(), preparePeer: vi.fn(), close: vi.fn() },
     compile: vi.fn(async () => ({})),
-    createRuntime: vi.fn(async () => engine),
+    createRuntime: vi.fn(
+      async (_options: { onDiagnostic: (event: { phase: string; message: string }) => void }) => engine,
+    ),
   };
 });
 vi.mock('@beignet/portable-engine', () => ({
   createPortableRuntime: fixture.createRuntime,
-  createRelaySocketFactory: () => ({}),
 }));
+vi.mock('./startup-sockets.mjs', () => ({ createStartupSockets: () => fixture.sockets }));
 vi.mock('@beignet/portable-engine/sqljs', () => ({ createSqlJsDatabaseFactory: fixture.compile }));
 vi.mock('./storage.mjs', () => ({
   inspectFiles: fixture.inspect,
@@ -107,6 +110,7 @@ it('prepares SQL and a fixed relay ticket without unlocking, then reuses both du
   expect(fixture.createRuntime).not.toHaveBeenCalled();
   expect(fixture.compile).toHaveBeenCalledOnce();
   expect(fetchGrant).toHaveBeenCalledOnce();
+  expect(fixture.sockets.prepareElectrum).not.toHaveBeenCalled();
   const opening = request('open', 'a local vault password');
   sql.resolve({});
   ticket.resolve(Response.json(grant));
@@ -115,6 +119,54 @@ it('prepares SQL and a fixed relay ticket without unlocking, then reuses both du
   expect(fixture.createRuntime).toHaveBeenCalledOnce();
   expect(fixture.compile).toHaveBeenCalledOnce();
   expect(fetchGrant).toHaveBeenCalledOnce();
+});
+
+it('only warms idle Electrum on the visible returning password screen and cancels it on lock', async () => {
+  await freshWorker();
+  fixture.inspect.mockResolvedValue({ exists: true });
+  try {
+    await request('visibility', true);
+    await request('inspect');
+    expect(fixture.sockets.prepareElectrum).not.toHaveBeenCalled();
+    await request('visibility', false);
+    await request('inspect');
+    await vi.waitFor(() => expect(fixture.sockets.prepareElectrum).toHaveBeenCalledOnce());
+    expect(fixture.sockets.preparePeer).not.toHaveBeenCalled();
+    expect(fixture.engine.request).not.toHaveBeenCalled();
+    await request('visibility', true);
+    expect(fixture.sockets.close).toHaveBeenCalledOnce();
+    await freshWorker();
+    const ticket = Promise.withResolvers<Response>();
+    fetchGrant.mockReturnValueOnce(ticket.promise);
+    await request('inspect');
+    await request('close');
+    ticket.resolve(Response.json(grant));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(fixture.sockets.prepareElectrum).not.toHaveBeenCalled();
+  } finally {
+    fixture.inspect.mockResolvedValue({ exists: false });
+  }
+});
+
+it('drops prepared sockets on password failure and ignores diagnostics from a closed wallet', async () => {
+  await freshWorker();
+  fixture.inspect.mockResolvedValueOnce({ exists: true });
+  await request('inspect');
+  await vi.waitFor(() => expect(fixture.sockets.prepareElectrum).toHaveBeenCalledOnce());
+  fixture.unlock.mockRejectedValueOnce(new Error('Wrong password'));
+  expect((await request('open', 'wrong')).error).toBeDefined();
+  expect(fixture.sockets.close).toHaveBeenCalledOnce();
+  expect(fixture.sockets.preparePeer).not.toHaveBeenCalled();
+  await request('open', 'correct password');
+  const [{ onDiagnostic }] = fixture.createRuntime.mock.lastCall!;
+  onDiagnostic({ phase: 'engine-perf', message: 'restore-graph' });
+  expect(fixture.sockets.preparePeer).not.toHaveBeenCalled();
+  const created = { phase: 'engine-perf', message: 'create 240ms' };
+  onDiagnostic(created);
+  expect(fixture.sockets.preparePeer).toHaveBeenCalledOnce();
+  await request('close');
+  onDiagnostic(created);
+  expect(fixture.sockets.preparePeer).toHaveBeenCalledOnce();
 });
 
 it('replaces a nearly expired prefetch and cancels an outstanding ticket on lock', async () => {
