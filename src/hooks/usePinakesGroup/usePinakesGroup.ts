@@ -12,12 +12,20 @@ import type { TPinakesGroupDetail } from '@/services/pinakes/pinakes.types';
  * `data` is `null` when the group no longer exists (404), Pinakes is not configured, or `id` is
  * empty (the card has no `group`).
  *
+ * With `cachedOnly` (a card in a feed) Pinakes is never asked: `data` is the group another reader
+ * (the resource page) already read, else `null`.
+ *
  * @param id - Group ID (`card.group.id`)
  */
-export function usePinakesGroup(id: string | null | undefined): UsePinakesQueryResult<TPinakesGroupDetail> {
+export function usePinakesGroup(
+  id: string | null | undefined,
+  { cachedOnly = false }: { cachedOnly?: boolean } = {},
+): UsePinakesQueryResult<TPinakesGroupDetail> {
   return usePinakesQuery({
     key: id ?? '',
-    fetchFn: () => PinakesController.fetchGroup({ id: id! }),
+    fetchFn: cachedOnly
+      ? async () => PinakesController.getCachedGroup({ id: id! }) ?? null
+      : () => PinakesController.fetchGroup({ id: id! }),
     enabled: Boolean(id) && isPinakesConfigured(),
   });
 }

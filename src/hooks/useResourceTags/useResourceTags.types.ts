@@ -3,6 +3,10 @@ import type { NexusTag } from '@/services/nexus/nexus.types';
 export interface UseResourceTagsOptions {
   /** `false` defers the read, e.g. until the card is first on screen; defaults to `true`. */
   enabled?: boolean;
+  /** Other spellings of the link read along (`getResourceTarget`). */
+  spellings?: readonly string[];
+  /** Read the spellings on a Nexus without `by_ids` too (the resource page). */
+  spellingsByUri?: boolean;
 }
 
 /** What `TagInput` expects back: `{ success: false }` keeps the typed label in the input. */

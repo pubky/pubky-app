@@ -683,11 +683,23 @@ describe('Nexus resource tags transport expected-error policy', () => {
   const VIEWER = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo';
 
   it.each([
-    { name: 'connection failure', rejection: () => new TypeError('Failed to fetch') },
-    { name: 'transport timeout', rejection: () => new DOMException('signal timed out', 'TimeoutError') },
-  ])('rejects a tag read without capturing a $name, retries included', async ({ rejection }) => {
+    { name: 'connection failure', rejection: () => new TypeError('Failed to fetch'), read: 'by-uri' },
+    {
+      name: 'transport timeout',
+      rejection: () => new DOMException('signal timed out', 'TimeoutError'),
+      read: 'by-uri',
+    },
+    { name: 'connection failure', rejection: () => new TypeError('Failed to fetch'), read: 'by_ids' },
+    {
+      name: 'transport timeout',
+      rejection: () => new DOMException('signal timed out', 'TimeoutError'),
+      read: 'by_ids',
+    },
+  ])('rejects a $read tag read without capturing a $name, retries included', async ({ rejection, read }) => {
     await withEnabledSentryCapture(async ({ captureException }) => {
       const { NexusResourceService } = await import('@/services/nexus/resource/resource');
+      // `by-uri`: a Nexus without `by_ids`; `by_ids`: the batch fails first, then each link's `by-uri`.
+      NexusResourceService.clearBatch({ byIdsMissing: read === 'by-uri' });
       const { AppError: PipelineAppError } = await import('@/libs/error/error');
       const { getSentryInitBase: initBase } = await import('./sentry');
       vi.useFakeTimers();
@@ -704,6 +716,8 @@ describe('Nexus resource tags transport expected-error policy', () => {
         expect(error).toMatchObject({ service: ErrorService.Nexus, operation: 'fetchResourceTagsByUri' });
         // What the rule keeps out of telemetry: the post's link and the viewer in the request.
         expect(String(error.context?.url)).toContain(encodeURIComponent(LINK));
+        const isBatched = fetchSpy.mock.calls.some(([url]) => String(url).includes('/v1/stream/resources/by_ids'));
+        expect(isBatched).toBe(read === 'by_ids');
         expect(fetchSpy.mock.calls.length).toBeGreaterThan(1);
         expect(captureException).not.toHaveBeenCalled();
         expect(shouldDropAppErrorFromSentry(error)).toBe(true);

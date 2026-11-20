@@ -1,4 +1,5 @@
 import { getResourceRoute } from '@/app/routes';
+import { isExternalParentUri } from '@/libs/post/externalParent';
 import { getSafeExternalUrl } from '@/libs/utils/safeExternalUrl';
 import { getUrlHostLabel } from '@/libs/utils/urlToIcon';
 import {
@@ -191,6 +192,28 @@ export function getResourceLinks(
     null;
   const sourceUri = getHttpUrl(card.uri) ?? linkUrl ?? card.uri;
   return { linkUrl, sourceUri, siteName: card.site || getLinkHost(sourceUri) };
+}
+
+/** Other spellings of a link read along with it, at most. */
+export const MAX_LINK_SPELLINGS = 5;
+
+/**
+ * The link a card's tags, replies, saves and counts are on (`uri`), and its other spellings shown
+ * as the same link's (`spellings`: the link as written, the card's `refs` and `aliases`): Nexus
+ * keeps each spelling apart, Pinakes folds them into one card. `uri` is the card's canonical link,
+ * or the link as written when the app cannot write the canonical one (`isExternalParentUri`), or
+ * when there is no card.
+ */
+export function getResourceTarget(
+  card: (Pick<TPinakesCard, 'uri' | 'refs'> & Partial<Pick<TPinakesResourceDetail, 'aliases'>>) | null | undefined,
+  written: string,
+): { uri: string; spellings: string[] } {
+  if (!card) return { uri: written, spellings: [] };
+  const uri = isExternalParentUri(card.uri) || !isExternalParentUri(written) ? card.uri : written;
+  const spellings = [...new Set([written, ...card.refs, ...(card.aliases ?? [])])].filter(
+    (link) => link && link !== uri,
+  );
+  return { uri, spellings: spellings.slice(0, MAX_LINK_SPELLINGS) };
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;

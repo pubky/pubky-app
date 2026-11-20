@@ -15,6 +15,7 @@ import {
   getResourceLinks,
   getResourceStatus,
   getResourceTagsLabel,
+  getResourceTarget,
 } from '@/molecules/ResourceCard/ResourceCard.utils';
 import { ResourceEmbedFrame } from '@/molecules/ResourceCard/ResourceEmbedFrame';
 import { ResourceLinkCard } from '@/molecules/ResourceCard/ResourceLinkCard';
@@ -65,11 +66,12 @@ interface GenericResourcePreviewProps {
  * is only in the post's text keeps `GenericPreview`, see `Generic.renderEmbed`): its Pinakes card when Pinakes
  * has one, else the link's own preview in the same frame (`ResourceLinkCard`), both closed by the
  * post's own footer (`ResourceActions`: tags, actions and a ⋯ menu that copies the link and the
- * title), which reads the link's tags once the card is first on screen. A card on other services too
- * (`also_on`) lists them in the ⋯ menu under "Also on". A card that is pending or failed and has no
- * name says less than the link's own preview, and a failed read, or one slower than
- * `PINAKES_SLOW_READ_MS` until it is read, is treated like an unknown link (no error box and no long
- * skeleton in a feed).
+ * title), which reads the link's tags once the card is first on screen, on the card's canonical link
+ * with the link as written and its other spellings read along (`getResourceTarget`): every
+ * spelling's tags, replies and saves show as one. A card on other services too (`also_on`) lists
+ * them in the ⋯ menu under "Also on". A card that is pending or failed and has no name says less
+ * than the link's own preview, and a failed read, or one slower than `PINAKES_SLOW_READ_MS` until it
+ * is read, is treated like an unknown link (no error box and no long skeleton in a feed).
  *
  * Inside a quoted or reposted post (`PostPreviewCard`) the card has no action row or tag bar, as
  * while composing: that post is itself a link (or sits in the Reply/Repost dialog), so controls
@@ -153,13 +155,18 @@ function ResourcePreview({
     !isNested && shownCard && !cardAlsoOn && getResourceStatus(shownCard.status) === PinakesStatus.OK
       ? getEmbedTarget(url, shownCard)
       : null;
+  // The footer acts on the card's canonical link, its other spellings read along (`getResourceTarget`).
+  const target = getResourceTarget(shownCard, url);
   const actions = !withActions ? null : (
     <ResourceActions
-      uri={url}
+      uri={target.uri}
+      spellings={target.spellings}
+      postUri={url}
       collectionsCount={card?.collections}
       tagsLabel={getResourceTagsLabel(card)}
       linkUrl={linkUrl}
       title={shownCard?.name}
+      card={shownCard}
       isOnScreen={isOnScreen}
       playOn={shownCard && !embedTarget ? playOn : undefined}
       extraMenuContent={

@@ -27,8 +27,9 @@ export function getOwnLinkUris(
 /**
  * The other links of the same thing whose tags are read, by URI: every other member of the card's
  * group (the links people wrote for it first, then its canonical link), then the card's Also on
- * entries. A derived Also on entry is left out: Pinakes found it through a source and nobody has
- * tagged it. Own URIs and repeats are skipped; at most `MAX_OTHER_LINKS`.
+ * entries, the same way (an entry's `refs`, then its link), so a card needs no group read. A derived
+ * Also on entry is left out, refs and all: Pinakes found it through a source and nobody has tagged
+ * it. Own URIs and repeats are skipped; at most `MAX_OTHER_LINKS`.
  *
  * @param members - The group's members (`GET /v1/groups/{id}`), the card itself among them; absent
  *   while read or for a card outside a group
@@ -49,7 +50,9 @@ export function getOtherLinks(
     add(member.uri, member.site);
   }
   for (const entry of card.also_on) {
-    if (!entry.derived) add(entry.uri, entry.site);
+    if (entry.derived) continue;
+    for (const ref of entry.refs ?? []) add(ref, entry.site);
+    add(entry.uri, entry.site);
   }
   return [...links.values()];
 }
@@ -59,23 +62,37 @@ export function getOtherLinks(
  * URIs) into one chip per label, labels compared as Nexus stores them, case-folded: taggers are
  * joined so a person who put the same tag on two links counts once, and each chip keeps the links
  * it came from, once each, with the taggers listed there (two spellings of a label on one link are
- * joined, keeping the larger count), so a detail can say who put it where. Most taggers first, then
- * on most links, then by label.
+ * joined, keeping the larger count), so a detail can say who put it where. A chip is the viewer's
+ * when Nexus marks the label theirs on any of the links (`relationship`, exact even when its sample of
+ * taggers left them out). Most taggers first, then on most links, then by label.
  */
 export function mergeOtherLinkTags(reads: TOtherLinkTags[]): TMergedTag[] {
   const merged = new Map<
     string,
-    { taggers: Set<string>; most: number; isComplete: boolean; sources: Map<string, TMergedTagSource> }
+    {
+      taggers: Set<string>;
+      most: number;
+      isComplete: boolean;
+      relationship: boolean;
+      sources: Map<string, TMergedTagSource>;
+    }
   >();
   for (const { link, tags } of reads) {
     for (const tag of tags) {
       const label = canonicalizeTagLabel(tag.label);
       if (!label) continue;
-      const entry = merged.get(label) ?? { taggers: new Set<string>(), most: 0, isComplete: true, sources: new Map() };
+      const entry = merged.get(label) ?? {
+        taggers: new Set<string>(),
+        most: 0,
+        isComplete: true,
+        relationship: false,
+        sources: new Map(),
+      };
       for (const tagger of tag.taggers) entry.taggers.add(tagger);
       const count = Math.max(tag.taggers_count, tag.taggers.length);
       entry.most = Math.max(entry.most, count);
       entry.isComplete &&= tag.taggers.length >= tag.taggers_count;
+      entry.relationship ||= tag.relationship;
       const source = entry.sources.get(link.uri);
       const taggers = [...new Set([...(source?.taggers ?? []), ...tag.taggers])];
       entry.sources.set(link.uri, { ...link, count: Math.max(source?.count ?? 0, count, taggers.length), taggers });
@@ -83,11 +100,12 @@ export function mergeOtherLinkTags(reads: TOtherLinkTags[]): TMergedTag[] {
     }
   }
   return [...merged.entries()]
-    .map(([label, { taggers, most, isComplete, sources }]) => ({
+    .map(([label, { taggers, most, isComplete, relationship, sources }]) => ({
       label,
       taggers: [...taggers],
       count: Math.max(taggers.size, most),
       isComplete,
+      relationship,
       sources: [...sources.values()].sort((a, b) => b.count - a.count),
     }))
     .sort((a, b) => b.count - a.count || b.sources.length - a.sources.length || a.label.localeCompare(b.label));

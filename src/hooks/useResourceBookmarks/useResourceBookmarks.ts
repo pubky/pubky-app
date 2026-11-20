@@ -33,9 +33,11 @@ function read(userId: Pubky): Promise<string[]> {
  * The external resources (links of any scheme) the signed-in viewer bookmarked, as written, from
  * their homeserver (web bookmarks have no local row). `undefined` while read or signed out; `[]`
  * when the listing failed. Network only, one listing shared by the Bookmarks page and its count.
+ *
+ * @param options.enabled - `false` reads nothing (`undefined`); defaults to `true`
  */
-export function useResourceBookmarks(): string[] | undefined {
-  const userId = useAuthStore((state) => state.currentUserPubky);
+export function useResourceBookmarks({ enabled = true }: { enabled?: boolean } = {}): string[] | undefined {
+  const userId = useAuthStore((state) => (enabled ? state.currentUserPubky : null));
   const [settled, setSettled] = useState<{ userId: string; uris: string[] } | null>(null);
   const [version, setVersion] = useState(0);
 

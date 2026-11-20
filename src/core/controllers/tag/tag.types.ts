@@ -30,9 +30,27 @@ export interface TResourceTagEventParams {
 export interface TDeleteResourceTagParams extends TResourceTagEventParams {
   /** The viewer's tag file as Nexus reports it (`tag_uri`), when known. */
   tagUri?: string | null;
+  /** Other spellings of `uri` whose tags are shown as its own: the viewer's tag goes on each that holds it. */
+  spellings?: readonly string[];
 }
 
 export interface TFetchResourceTagsParams {
   uri: string;
   viewerId?: Pubky | null;
+  /**
+   * Other spellings of the same link (Pinakes' refs and aliases of its card), read along: their tags
+   * are merged into the link's (`mergeResourceTags`).
+   */
+  spellings?: readonly string[];
+  /**
+   * Read the spellings one `by-uri` each on a Nexus without `by_ids` (the resource page); else they
+   * are read only in a `by_ids` batch, so a feed card sends no request per spelling.
+   */
+  spellingsByUri?: boolean;
+  /**
+   * Read the link only in the `by_ids` batch, with the links asked at the same moment (another link of
+   * a card in a feed): where the batch cannot answer it nothing else is asked and it has no tags, so a
+   * feed card sends no request per link.
+   */
+  byIdsOnly?: boolean;
 }

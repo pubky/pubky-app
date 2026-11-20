@@ -1,12 +1,31 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { NexusTag } from '@/services/nexus/nexus.types';
-import { OTHER_LINK_READS_AT_ONCE, useOtherLinkTags } from './useOtherLinkTags';
+import { useOtherLinkTags } from './useOtherLinkTags';
 import type { TOtherLink } from './useOtherLinkTags.types';
 
-const mocks = vi.hoisted(() => ({ viewerId: 'viewer' as string | null, fetchResourceTags: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  viewerId: 'viewer' as string | null,
+  fetchResourceTags: vi.fn(),
+  // The shared answers' listeners, by link and viewer (`TagController.subscribeResourceTags`).
+  listeners: new Map<string, (tags: unknown[]) => void>(),
+}));
 
-vi.mock('@/controllers/tag/tag', () => ({ TagController: { fetchResourceTags: mocks.fetchResourceTags } }));
+vi.mock('@/controllers/tag/tag', () => ({
+  TagController: {
+    fetchResourceTags: mocks.fetchResourceTags,
+    subscribeResourceTags: (
+      { uri, viewerId }: { uri: string; viewerId?: string | null },
+      listener: (tags: unknown[]) => void,
+    ) => {
+      const key = `${uri} ${viewerId ?? ''}`;
+      mocks.listeners.set(key, listener);
+      return () => {
+        if (mocks.listeners.get(key) === listener) mocks.listeners.delete(key);
+      };
+    },
+  },
+}));
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (select: (state: { currentUserPubky: string | null }) => unknown) =>
     select({ currentUserPubky: mocks.viewerId }),
@@ -34,6 +53,7 @@ describe('useOtherLinkTags', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.viewerId = 'viewer';
+    mocks.listeners.clear();
     mocks.fetchResourceTags.mockImplementation(({ uri }: { uri: string }) => Promise.resolve(TAGS[uri] ?? []));
   });
 
@@ -66,27 +86,34 @@ describe('useOtherLinkTags', () => {
     expect(result.current.reads.map((read) => read.link)).toEqual([TMDB]);
   });
 
-  it('reads a few links at a time', async () => {
-    const links = Array.from({ length: OTHER_LINK_READS_AT_ONCE + 2 }, (_, index) => ({
-      uri: `https://e.com/${index}`,
-      name: 'e.com',
-    }));
-    const pending: Array<() => void> = [];
+  it('asks every link at once and shows the answers as they arrive, in link order', async () => {
+    const links = Array.from({ length: 8 }, (_, index) => ({ uri: `https://e.com/${index}`, name: 'e.com' }));
+    const pending = new Map<string, () => void>();
     mocks.fetchResourceTags.mockImplementation(
-      () =>
+      ({ uri }: { uri: string }) =>
         new Promise<NexusTag[]>((resolve) => {
-          pending.push(() => resolve([tag('x', ['a'])]));
+          pending.set(uri, () => resolve([tag(uri.slice(-1), ['a'])]));
         }),
     );
     const { result } = renderHook(() => useOtherLinkTags(links));
 
-    expect(mocks.fetchResourceTags).toHaveBeenCalledTimes(OTHER_LINK_READS_AT_ONCE);
-    await act(async () => pending.splice(0).forEach((resolve) => resolve()));
-    await waitFor(() => expect(mocks.fetchResourceTags).toHaveBeenCalledTimes(links.length));
-    // The first batch shows while the next one is read.
-    expect(result.current.reads).toHaveLength(OTHER_LINK_READS_AT_ONCE);
-    await act(async () => pending.splice(0).forEach((resolve) => resolve()));
+    expect(mocks.fetchResourceTags).toHaveBeenCalledTimes(links.length);
+    expect(result.current.isLoading).toBe(true);
+    // A link read later (`by-uri` after a cut-off batch view) does not hold back the others.
+    await act(async () => links.slice(2).forEach((link) => pending.get(link.uri)?.()));
+    await waitFor(() => expect(result.current.reads).toHaveLength(links.length - 2));
+    expect(result.current.isLoading).toBe(false);
+    await act(async () => links.slice(0, 2).forEach((link) => pending.get(link.uri)?.()));
     await waitFor(() => expect(result.current.reads).toHaveLength(links.length));
+    expect(result.current.reads.map((read) => read.link)).toEqual(links);
+  });
+
+  it('stops loading once every link answered, all without tags', async () => {
+    mocks.fetchResourceTags.mockResolvedValue([]);
+    const { result } = renderHook(() => useOtherLinkTags([IMDB, NETFLIX]));
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.reads).toEqual([]);
   });
 
   it('never shows a late answer for links it no longer reads', async () => {
@@ -123,6 +150,72 @@ describe('useOtherLinkTags', () => {
     rerender({ links: [NETFLIX, TMDB] });
     await waitFor(() => expect(mocks.fetchResourceTags).toHaveBeenCalledTimes(4));
     expect(mocks.fetchResourceTags).toHaveBeenLastCalledWith({ uri: TMDB.uri, viewerId: 'someone-else' });
+  });
+
+  it('reads the links of a card in a feed only in a `by_ids` batch (`byIdsOnly`)', async () => {
+    const { result } = renderHook(() => useOtherLinkTags([NETFLIX, TMDB], { byIdsOnly: true }));
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(mocks.fetchResourceTags.mock.calls.map(([params]) => params)).toEqual([
+      { uri: NETFLIX.uri, viewerId: 'viewer', byIdsOnly: true },
+      { uri: TMDB.uri, viewerId: 'viewer', byIdsOnly: true },
+    ]);
+  });
+
+  it('follows each link’s shared answer: a tag written on another card of that link shows here', async () => {
+    const { result, rerender } = renderHook(({ links }) => useOtherLinkTags(links), {
+      initialProps: { links: [NETFLIX, TMDB] },
+    });
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(mocks.fetchResourceTags).toHaveBeenCalledTimes(2);
+
+    // The viewer tagged Netflix's card in the feed: its shared answer changed, nothing is read again.
+    const written = [tag('film', ['ann']), { ...tag('noir', ['viewer']), relationship: true }];
+    act(() => mocks.listeners.get(`${NETFLIX.uri} viewer`)?.(written));
+    expect(result.current.reads).toEqual([
+      { link: NETFLIX, tags: written },
+      { link: TMDB, tags: TAGS[TMDB.uri] },
+    ]);
+    // A link that no longer has tags is left out.
+    act(() => mocks.listeners.get(`${TMDB.uri} viewer`)?.([]));
+    expect(result.current.reads.map((read) => read.link)).toEqual([NETFLIX]);
+    expect(mocks.fetchResourceTags).toHaveBeenCalledTimes(2);
+
+    // Other links, or another viewer: the old answers are no longer followed.
+    rerender({ links: [IMDB] });
+    expect([...mocks.listeners.keys()]).toEqual([`${IMDB.uri} viewer`]);
+    mocks.viewerId = 'someone-else';
+    rerender({ links: [IMDB] });
+    expect([...mocks.listeners.keys()]).toEqual([`${IMDB.uri} someone-else`]);
+    // A late change of the old viewer's answer never shows for the new one.
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.reads).toEqual([]);
+  });
+
+  it('lists the viewer among the taggers of a tag Nexus marks theirs but left out of its sample', async () => {
+    const sampled = { ...tag('film', ['ann', 'bob']), taggers_count: 9, relationship: true };
+    const listed = { ...tag('scifi', ['viewer']), relationship: true };
+    mocks.fetchResourceTags.mockImplementation(({ uri }: { uri: string }) =>
+      Promise.resolve(uri === NETFLIX.uri ? [sampled, listed, tag('drama', ['ann'])] : []),
+    );
+    const { result } = renderHook(() => useOtherLinkTags([NETFLIX]));
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.reads[0].tags).toEqual([
+      { ...sampled, taggers: ['viewer', 'ann', 'bob'] },
+      listed,
+      tag('drama', ['ann']),
+    ]);
+  });
+
+  it('lists nobody signed out', async () => {
+    mocks.viewerId = null;
+    const marked = { ...tag('film', ['ann']), taggers_count: 4, relationship: true };
+    mocks.fetchResourceTags.mockResolvedValue([marked]);
+    const { result } = renderHook(() => useOtherLinkTags([NETFLIX]));
+
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+    expect(result.current.reads[0].tags).toEqual([marked]);
   });
 
   it('reads nothing without other links', () => {

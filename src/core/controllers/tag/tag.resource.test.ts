@@ -3,6 +3,7 @@ import { fakeOwner } from 'pubky-social-specs/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TagApplication } from '@/application/tag/tag';
 import type { Pubky } from '@/models/models.types';
+import { TagNormalizer } from '@/pipes/tag/tag.normalizer';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { mockSession } from '@/test-utils/pubky';
 import { TagController } from './tag';
@@ -12,6 +13,7 @@ vi.mock('@/application/tag/tag', () => ({
     fetchResourceTags: vi.fn(),
     commitCreateResource: vi.fn(),
     commitDeleteResource: vi.fn(),
+    getViewerResourceTagLinks: vi.fn(),
   },
 }));
 
@@ -30,6 +32,14 @@ describe('TagController, external resources', () => {
     await TagController.fetchResourceTags({ uri: URI, viewerId: VIEWER });
 
     expect(TagApplication.fetchResourceTags).toHaveBeenCalledWith({ uri: URI, viewerId: VIEWER });
+  });
+
+  it('reads another link of a card in a feed only in a `by_ids` batch', async () => {
+    vi.mocked(TagApplication.fetchResourceTags).mockResolvedValue([]);
+
+    await TagController.fetchResourceTags({ uri: URI, viewerId: VIEWER, byIdsOnly: true });
+
+    expect(TagApplication.fetchResourceTags).toHaveBeenCalledWith({ uri: URI, viewerId: VIEWER, byIdsOnly: true });
   });
 
   it('writes a social v1 tag whose uri is the link, with the stored label', async () => {
@@ -84,6 +94,52 @@ describe('TagController, external resources', () => {
     expect(vi.mocked(TagApplication.commitDeleteResource).mock.calls[0][0].tagUri).toBe(
       buildTag(VIEWER, URI, 'berlin').url,
     );
+  });
+
+  it('removes a tag shown across spellings on each spelling it is on, with that spelling’s own file', async () => {
+    const SHARE = `${URI}/u`;
+    const own = (uri: string) => TagNormalizer.to(uri, 'punk', VIEWER).url;
+    vi.mocked(TagApplication.getViewerResourceTagLinks).mockReturnValue([{ uri: SHARE, tagUri: own(SHARE) }]);
+
+    await TagController.commitDeleteResource({ taggerId: VIEWER, uri: URI, label: 'punk', spellings: [SHARE] });
+
+    expect(TagApplication.getViewerResourceTagLinks).toHaveBeenCalledWith({
+      uris: [URI, SHARE],
+      viewerId: VIEWER,
+      label: 'punk',
+    });
+    expect(TagApplication.commitDeleteResource).toHaveBeenCalledTimes(1);
+    const [files, viewerTag] = vi.mocked(TagApplication.commitDeleteResource).mock.calls[0];
+    expect(files.tagUri).toBe(own(SHARE));
+    expect(files.alsoTagUri).toBeUndefined();
+    expect(viewerTag).toEqual({ uri: SHARE, label: 'punk', viewerId: VIEWER });
+  });
+
+  it('removes a tag the viewer holds on two spellings on both, and stops at a failed delete', async () => {
+    const SHARE = `${URI}/u`;
+    vi.mocked(TagApplication.getViewerResourceTagLinks).mockReturnValue([
+      { uri: URI, tagUri: null },
+      { uri: SHARE, tagUri: null },
+    ]);
+
+    await TagController.commitDeleteResource({ taggerId: VIEWER, uri: URI, label: 'punk', spellings: [SHARE] });
+    expect(vi.mocked(TagApplication.commitDeleteResource).mock.calls.map(([, tag]) => tag.uri)).toEqual([URI, SHARE]);
+
+    vi.mocked(TagApplication.commitDeleteResource).mockReset().mockRejectedValueOnce(new Error('down'));
+    await expect(
+      TagController.commitDeleteResource({ taggerId: VIEWER, uri: URI, label: 'punk', spellings: [SHARE] }),
+    ).rejects.toThrow('down');
+    expect(TagApplication.commitDeleteResource).toHaveBeenCalledTimes(1);
+  });
+
+  it('removes a tag no read places on the link itself', async () => {
+    vi.mocked(TagApplication.getViewerResourceTagLinks).mockReturnValue([]);
+
+    await TagController.commitDeleteResource({ taggerId: VIEWER, uri: URI, label: 'punk', spellings: [`${URI}/u`] });
+
+    const [files, viewerTag] = vi.mocked(TagApplication.commitDeleteResource).mock.calls[0];
+    expect(files.tagUri).toBe(TagNormalizer.to(URI, 'punk', VIEWER).url);
+    expect(viewerTag.uri).toBe(URI);
   });
 
   it('refuses a label the data model refuses', async () => {

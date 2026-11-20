@@ -464,15 +464,24 @@ export class PostController {
   }
 
   /**
-   * Adds an external resource (a web link) to the viewer's collection, or removes it. The item is
-   * the link exactly as written; a collection item may reference any scheme.
+   * Adds an external resource to the viewer's collection, or removes it. The item is `uri`, or the
+   * first of its `spellings` a collection can hold when `uri` is no web link (an `isbn:` canonical
+   * link); a removal takes out every spelling.
    */
   static async commitUpdateCollectionResource({
     collectionId,
     uri,
+    spellings = [],
     shouldAdd,
   }: TUpdateCollectionResourceParams): Promise<void> {
-    await this.updateCollectionItem(collectionId, [uri], shouldAdd, 'commitUpdateCollectionResource');
+    const links = [uri, ...spellings];
+    const item = links.find((link) => CollectionPostContent.isItemUri(link)) ?? uri;
+    await this.updateCollectionItem(
+      collectionId,
+      [item, ...links.filter((link) => link !== item)],
+      shouldAdd,
+      'commitUpdateCollectionResource',
+    );
   }
 
   /** Adds the item `spellings[0]` names to the viewer's collection, or removes every spelling of it. */

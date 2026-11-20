@@ -7,6 +7,7 @@ import { dedupeAlsoOn } from '@/molecules/ResourceCard/ResourceAlsoOn.utils';
 import { ResourceSurfaceProvider } from '@/molecules/ResourceCard/ResourceSurfaceContext';
 import type { NexusTag } from '@/services/nexus/nexus.types';
 import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
+import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { ResourceActions } from './ResourceActions';
 
 const URI = 'https://open.spotify.com/track/5Z01UMMf7V1o0MzF86s6WJ';
@@ -41,6 +42,12 @@ const mocks = vi.hoisted(() => ({
   },
   tagsUri: null as string | null,
   tagsEnabled: [] as (boolean | undefined)[],
+  tagsOptions: [] as ({ enabled?: boolean; spellings?: readonly string[] } | undefined)[],
+  // The other links read (`useOtherLinkTags`), what they answered, and the group already read.
+  otherLinkReads: [] as { links: { uri: string; name: string }[]; options?: { byIdsOnly?: boolean } }[],
+  otherReads: [] as { link: { uri: string; name: string }; tags: NexusTag[] }[],
+  groupArgs: [] as unknown[][],
+  group: { data: null as unknown, isLoading: false },
   bookmarkActive: [] as (boolean | undefined)[],
   shareUrl: vi.fn(),
   copyToClipboard: vi.fn(),
@@ -63,10 +70,23 @@ vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
 }));
 vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({ useIsMobile: () => mocks.isMobile }));
 vi.mock('@/hooks/useResourceTags/useResourceTags', () => ({
-  useResourceTags: (uri: string, options?: { enabled?: boolean }) => {
+  useResourceTags: (uri: string, options?: { enabled?: boolean; spellings?: readonly string[] }) => {
     mocks.tagsUri = uri;
     mocks.tagsEnabled.push(options?.enabled);
+    mocks.tagsOptions.push(options);
     return mocks.tags;
+  },
+}));
+vi.mock('@/hooks/useOtherLinkTags/useOtherLinkTags', () => ({
+  useOtherLinkTags: (links: { uri: string; name: string }[], options?: { byIdsOnly?: boolean }) => {
+    mocks.otherLinkReads.push({ links, options });
+    return { reads: links.length > 0 ? mocks.otherReads : [], isLoading: false };
+  },
+}));
+vi.mock('@/hooks/usePinakesGroup/usePinakesGroup', () => ({
+  usePinakesGroup: (...args: unknown[]) => {
+    mocks.groupArgs.push(args);
+    return mocks.group;
   },
 }));
 vi.mock('@/hooks/useResourceCounts/useResourceCounts', () => ({
@@ -207,6 +227,11 @@ describe('ResourceActions', () => {
     mocks.copyToClipboard.mockResolvedValue(true);
     mocks.copyTitles = [];
     mocks.tagsEnabled = [];
+    mocks.tagsOptions = [];
+    mocks.otherLinkReads = [];
+    mocks.otherReads = [];
+    mocks.groupArgs = [];
+    mocks.group = { data: null, isLoading: false };
     mocks.bookmarkActive = [];
     mocks.counts = undefined;
     mocks.countsUri = null;
@@ -320,6 +345,161 @@ describe('ResourceActions', () => {
     const zone = screen.getByTestId('resource-actions');
     expect(zone.children).toHaveLength(1);
     expect(zone.firstElementChild).toBe(screen.getByTestId('resource-footer'));
+  });
+
+  describe('a card in a feed: the tags on its other links, as on the resource page', () => {
+    // OK Computer's MusicBrainz release group (Pinakes, 2026-11-13), as a post writes it: its Also on has
+    // the group's tagged members by canonical link, and derived links nobody tagged.
+    const MB = 'https://musicbrainz.org/release-group/b1392450-e666-3926-a536-22c65f834433';
+    const WRITTEN = `${MB}?tab=overview`;
+    const SPOTIFY = 'https://open.spotify.com/album/6dVIqQ8qmQ5GBnJ9shOYGE';
+    const APPLE = 'https://music.apple.com/album/1097861387';
+    const APPLE_REF = 'https://music.apple.com/us/album/ok-computer/1097861387';
+    const DEEZER = 'https://www.deezer.com/album/14879699';
+    const OK_COMPUTER: TPinakesResourceDetail = {
+      ...videoFixture,
+      id: 'e5cb1c655abb4b858e143a38c30ae2ab',
+      uri: MB,
+      site: 'MusicBrainz',
+      refs: [MB],
+      aliases: [],
+      group: { id: '5a0742e3af4674075c34cafa6bc846c1', size: 4 },
+      also_on: [
+        { id: 'deezer-id', uri: DEEZER, site: 'Deezer' },
+        { id: 'apple-id', uri: APPLE, site: 'Apple Music' },
+        { id: 'spotify-id', uri: SPOTIFY, site: 'Spotify' },
+        // Listed twice (a second entry for the same service), and the card's own link: read once, never as another's.
+        { id: 'spotify-id', uri: SPOTIFY, site: 'Spotify' },
+        { id: 'self', uri: MB, site: 'MusicBrainz' },
+        // Derived links nobody tagged, an exact one and a match by metadata ("maybe"): never read.
+        {
+          uri: 'https://radiohead.bandcamp.com/album/ok-computer',
+          site: 'Bandcamp',
+          derived: true,
+          via: 'musicbrainz',
+        },
+        { uri: 'https://tidal.com/album/58990510', site: 'TIDAL', derived: true, kind: 'maybe', via: 'musicbrainz' },
+      ],
+    };
+    const target = { uri: MB, spellings: [WRITTEN] };
+    const renderCard = (props: Partial<React.ComponentProps<typeof ResourceActions>> = {}) =>
+      render(
+        <ResourceActions
+          uri={target.uri}
+          spellings={target.spellings}
+          tagsLabel="Tags on this album"
+          card={OK_COMPUTER}
+          {...props}
+        />,
+      );
+    // The links the last render read (none when it read none).
+    const lastOtherRead = () => mocks.otherLinkReads.at(-1) ?? { links: [], options: undefined };
+    const userTag = (label: string, taggers: string[], relationship = false): NexusTag => ({
+      label,
+      taggers,
+      taggers_count: taggers.length,
+      relationship,
+      tag_uri: null,
+    });
+
+    it('reads its tagged Also on links with its own tags, only in their `by_ids` batch window, and merges them in', () => {
+      mocks.tags.tags = [userTag('radiohead', ['a'])];
+      mocks.otherReads = [
+        { link: { uri: SPOTIFY, name: 'Spotify' }, tags: [userTag('album', ['b', 'c']), userTag('rock', ['b'])] },
+        { link: { uri: DEEZER, name: 'Deezer' }, tags: [userTag('rock', ['d'])] },
+      ];
+      renderCard();
+
+      expect(lastOtherRead().links).toEqual([
+        { uri: DEEZER, name: 'Deezer' },
+        { uri: APPLE, name: 'Apple Music' },
+        { uri: SPOTIFY, name: 'Spotify' },
+      ]);
+      expect(lastOtherRead().options).toEqual({ byIdsOnly: true });
+      // The resource page's one list (`mergeOtherLinkTags`): rock 2 (b and d) on two links before album 2 on one.
+      expect(screen.getByTestId('resource-tag-bar-stub')).toHaveAttribute('data-other-tags', 'rock,album');
+      // The group is never asked for: only a group another reader already read is used.
+      expect(mocks.groupArgs.at(-1)).toEqual([OK_COMPUTER.group!.id, { cachedOnly: true }]);
+    });
+
+    it('reads the refs Pinakes gives with each Also on member on a cold card: no group read, no request of its own', () => {
+      const DISCOGS = 'https://www.discogs.com/master/21491';
+      const DISCOGS_REF = 'https://www.discogs.com/master/21491-Radiohead-OK-Computer';
+      const cold: TPinakesResourceDetail = {
+        ...OK_COMPUTER,
+        also_on: [
+          ...OK_COMPUTER.also_on.map((entry) => (entry.uri === APPLE ? { ...entry, refs: [APPLE_REF] } : entry)),
+          { id: 'discogs-id', uri: DISCOGS, site: 'Discogs', refs: [DISCOGS_REF] },
+        ],
+      };
+      mocks.group = { data: null, isLoading: false };
+      renderCard({ card: cold });
+
+      // In the first render its own read is enabled in, with the `by_ids`-only read: one batch window.
+      expect(mocks.otherLinkReads[0].links.map((link) => link.uri)).toEqual([
+        DEEZER,
+        APPLE_REF,
+        APPLE,
+        SPOTIFY,
+        DISCOGS_REF,
+        DISCOGS,
+      ]);
+      expect(lastOtherRead().options).toEqual({ byIdsOnly: true });
+      // Its own tags are still read and written on its own link and spellings alone.
+      expect(mocks.tagsUri).toBe(MB);
+      expect(mocks.tagsOptions.at(-1)).toMatchObject({ spellings: [WRITTEN] });
+    });
+
+    it('reads the members’ own refs too when the group was already read (the resource page’s), in the page’s order', () => {
+      mocks.group = {
+        data: {
+          id: OK_COMPUTER.group!.id,
+          curated: false,
+          keys: [],
+          members: [
+            { ...OK_COMPUTER, also_on: [] },
+            { ...videoFixture, id: 'apple-id', uri: APPLE, refs: [APPLE_REF], site: 'Apple Music' },
+            { ...videoFixture, id: 'spotify-id', uri: SPOTIFY, refs: [SPOTIFY], site: 'Spotify' },
+          ],
+        },
+        isLoading: false,
+      };
+      renderCard();
+
+      expect(lastOtherRead().links.map((link) => link.uri)).toEqual([APPLE_REF, APPLE, SPOTIFY, DEEZER]);
+    });
+
+    it('reads nothing before it is first on screen, then its other links in the same render as its own tags', () => {
+      const { rerender } = renderCard({ isOnScreen: false });
+      expect(lastOtherRead().links).toEqual([]);
+      expect(mocks.tagsEnabled.at(-1)).toBe(false);
+
+      // Its own read starts and is under way, the group already read is still looked up: the other
+      // links go in the same batch window, not one more batch after the own answer.
+      mocks.tags.isLoading = true;
+      mocks.group = { data: undefined, isLoading: true };
+      rerender(<ResourceActions {...target} tagsLabel="Tags on this album" card={OK_COMPUTER} isOnScreen />);
+      expect(mocks.tagsEnabled.at(-1)).toBe(true);
+      expect(lastOtherRead().links.map((link) => link.uri)).toEqual([DEEZER, APPLE, SPOTIFY]);
+      expect(lastOtherRead().options).toEqual({ byIdsOnly: true });
+    });
+
+    it('keeps reading and writing the tags on its own link and spellings, never on the other links', () => {
+      renderCard();
+
+      expect(mocks.tagsUri).toBe(MB);
+      expect(mocks.tagsOptions.at(-1)).toMatchObject({ spellings: [WRITTEN] });
+      expect(screen.getByTestId('resource-tag-bar-stub')).toHaveAttribute('data-uri', MB);
+    });
+
+    it('reads no other links without a card, and the page’s own list wins', () => {
+      const otherTagList = [{ label: 'jazz', taggers: ['b'], count: 1, isComplete: true, sources: [] }];
+      render(<ResourceActions uri={URI} tagsLabel="Tags on this song" otherTagList={otherTagList} size="large" />);
+
+      expect(mocks.otherLinkReads.every(({ links }) => links.length === 0)).toBe(true);
+      expect(mocks.groupArgs.at(-1)?.[0]).toBeUndefined();
+      expect(screen.getByTestId('resource-tag-bar-stub')).toHaveAttribute('data-other-tags', 'jazz');
+    });
   });
 
   it('shows the tags label only as the tag list’s name and the Tags button’s tooltip', () => {
@@ -626,6 +806,34 @@ describe('ResourceActions', () => {
         collectionId: 'me:c1',
         uri: URI,
         shouldAdd: true,
+      });
+    });
+
+    it('counts a collection holding another spelling of the link, and takes every spelling out', async () => {
+      const share = `${URI}?si=share`;
+      render(<ResourceActions uri={URI} spellings={[share]} tagsLabel="Tags on this song" linkUrl={LINK} />);
+
+      expect(mocks.collectionParams?.itemUris).toEqual([URI, share]);
+      await mocks.collectionParams?.commitToggle('me:c1', false);
+      expect(PostController.commitUpdateCollectionResource).toHaveBeenCalledWith({
+        collectionId: 'me:c1',
+        uri: URI,
+        shouldAdd: false,
+        spellings: [share],
+      });
+    });
+
+    it('hands a canonical link that is no web link (isbn:) to the collection write with its spellings', async () => {
+      const isbn = 'isbn:9780141439518';
+      render(<ResourceActions uri={isbn} spellings={[LINK]} tagsLabel="Tags on this book" linkUrl={LINK} />);
+
+      await mocks.collectionParams?.commitToggle('me:c1', true);
+      // `commitUpdateCollectionResource` writes the first spelling a collection can hold.
+      expect(PostController.commitUpdateCollectionResource).toHaveBeenCalledWith({
+        collectionId: 'me:c1',
+        uri: isbn,
+        shouldAdd: true,
+        spellings: [LINK],
       });
     });
 

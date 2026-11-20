@@ -18,14 +18,16 @@ const DEFAULT_LIMIT = 10;
  *
  * @param uri - The link the thread is on (the tagged URI); `null` reads nothing
  * @param replyIds - The thread's reply ids (`author:postId`)
+ * @param options.spellings - Other spellings of `uri`, whose taggers take part too
  */
 export function useResourceParticipants(
   uri: string | null,
   replyIds: readonly string[],
-  { limit = DEFAULT_LIMIT }: { limit?: number } = {},
+  { limit = DEFAULT_LIMIT, spellings }: { limit?: number; spellings?: readonly string[] } = {},
 ): Pick<UsePostParticipantsResult, 'participants' | 'isLoading'> {
   const { mutedUserIdSet } = useMutedUsers();
-  const { tags } = useResourceTags(uri);
+  // The resource page's: the spellings' taggers are read on any Nexus, as its tag bar's are.
+  const { tags } = useResourceTags(uri, { spellings, spellingsByUri: true });
 
   const ids = new Set<string>();
   for (const replyId of replyIds) {

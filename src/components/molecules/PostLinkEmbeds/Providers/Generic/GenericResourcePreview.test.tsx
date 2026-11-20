@@ -41,6 +41,8 @@ vi.mock('@/molecules/ResourcePlayer/ResourcePlayerFrame', async (importOriginal)
 vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
   ResourceActions: ({
     uri,
+    spellings,
+    postUri,
     collectionsCount,
     tagsLabel,
     linkUrl,
@@ -48,8 +50,12 @@ vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
     isOnScreen,
     playOn,
     extraMenuContent,
+    card,
   }: {
     uri: string;
+    card?: { id: string } | null;
+    spellings?: readonly string[];
+    postUri?: string | null;
     collectionsCount?: number | null;
     tagsLabel: string;
     linkUrl?: string | null;
@@ -62,12 +68,15 @@ vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
       data-resource-controls
       data-testid="resource-actions"
       data-uri={uri}
+      data-spellings={(spellings ?? []).join(' ')}
+      data-post-uri={postUri ?? 'default'}
       data-collections={collectionsCount ?? 'none'}
       data-tags-label={tagsLabel}
       data-link-url={linkUrl ?? 'none'}
       data-title={title ?? 'none'}
       data-on-screen={String(isOnScreen)}
       data-has-extra-menu={String(Boolean(extraMenuContent))}
+      data-card-id={card?.id ?? 'none'}
     >
       {playOn}
       {extraMenuContent && (
@@ -96,6 +105,25 @@ describe('GenericResourcePreview', () => {
       isLoading: false,
       error: null,
     });
+  });
+
+  it('gives the footer the card it shows, whose other links’ tags join its own as on the resource page', () => {
+    mockUsePinakesCard.mockReturnValue({ data: mbGroupEnrichedFixture, isLoading: false, isError: false });
+    const { unmount } = render(<GenericResourcePreview url={mbGroupEnrichedFixture.uri} />);
+    expect(screen.getByTestId('resource-actions')).toHaveAttribute('data-card-id', mbGroupEnrichedFixture.id);
+    unmount();
+
+    // In the service's own embed up front too (a card with no Also on: its group may still be known).
+    mockUsePinakesCard.mockReturnValue({ data: { ...musicFixture, also_on: [] }, isLoading: false, isError: false });
+    const embedded = render(<GenericResourcePreview url={musicFixture.uri} />);
+    expect(screen.getByTestId('resource-embed-frame')).toBeInTheDocument();
+    expect(screen.getByTestId('resource-actions')).toHaveAttribute('data-card-id', musicFixture.id);
+    embedded.unmount();
+
+    // No card for the link (its own preview): nothing but its own tags.
+    mockUsePinakesCard.mockReturnValue({ data: null, isLoading: false, isError: false });
+    render(<GenericResourcePreview url={URL} />);
+    expect(screen.getByTestId('resource-actions')).toHaveAttribute('data-card-id', 'none');
   });
 
   it('reads the Pinakes card for the link', () => {
@@ -584,6 +612,23 @@ describe('GenericResourcePreview', () => {
       rerender(<GenericResourcePreview url={OTHER} isComposing />);
       expect(screen.getByTestId('resource-player-frame').getAttribute('src')).toContain('4uLU6hMCjMI75M1A2tKUQC');
       expect(screen.getByRole('region', { name: /Spotify player/ })).toHaveAttribute('data-load', 'loading');
+    });
+
+    it('acts on the card’s canonical link, the link as written read along, and posts about the link as written', () => {
+      const tidal = {
+        ...musicFixture,
+        uri: 'https://tidal.com/track/3524506',
+        also_on: [],
+        refs: ['https://tidal.com/track/3524506/u'],
+        aliases: ['https://tidal.com/track/3524506/u'],
+      };
+      mockUsePinakesCard.mockReturnValue({ data: tidal, isLoading: false, isError: false });
+      render(<GenericResourcePreview url="https://tidal.com/track/3524506/u" />);
+
+      const actions = screen.getByTestId('resource-actions');
+      expect(actions).toHaveAttribute('data-uri', 'https://tidal.com/track/3524506');
+      expect(actions).toHaveAttribute('data-spellings', 'https://tidal.com/track/3524506/u');
+      expect(actions).toHaveAttribute('data-post-uri', 'https://tidal.com/track/3524506/u');
     });
 
     it('keeps our card and loads nothing when the card is on other services too', () => {

@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => ({
   getOrFetchPost: vi.fn(),
   getCollectionDetails: vi.fn(),
   commitUpdateCollectionItem: vi.fn(),
+  commitUpdateCollectionResource: vi.fn(),
   prependPosts: vi.fn(),
   prependOptimisticPosts: vi.fn(),
   routerPush: vi.fn(),
@@ -48,7 +49,12 @@ vi.mock('@/controllers/post/post', () => ({
     getOrFetch: (...args: unknown[]) => mocks.getOrFetchPost(...args),
     getDetails: (...args: unknown[]) => mocks.getCollectionDetails(...args),
     commitUpdateCollectionItem: (...args: unknown[]) => mocks.commitUpdateCollectionItem(...args),
+    commitUpdateCollectionResource: (...args: unknown[]) => mocks.commitUpdateCollectionResource(...args),
   },
+}));
+
+vi.mock('@/controllers/pinakes/pinakes', () => ({
+  PinakesController: { fetchCardByUri: async () => null },
 }));
 
 vi.mock('@/stores/auth/auth.store', () => {
@@ -162,6 +168,7 @@ describe('DialogAddContent', () => {
     mocks.getOrFetchPost.mockResolvedValue(livePost());
     mocks.getCollectionDetails.mockResolvedValue(collectionDetails());
     mocks.commitUpdateCollectionItem.mockResolvedValue(undefined);
+    mocks.commitUpdateCollectionResource.mockResolvedValue(undefined);
     mocks.prependPosts.mockResolvedValue(undefined);
     mocks.prependOptimisticPosts.mockReturnValue(undefined);
   });
@@ -250,10 +257,10 @@ describe('DialogAddContent', () => {
     expect(screen.queryByText('Select from posts')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Feed' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'My posts' })).toBeInTheDocument();
-    expect(screen.getByText('Paste post url')).toBeInTheDocument();
+    expect(screen.getByText('Paste a link')).toBeInTheDocument();
     expect(screen.getByText('Create new post')).toBeInTheDocument();
     expect(screen.getByText('Start writing')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('https://')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Post or link URL')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Paste' })).toBeInTheDocument();
 
     const options = document.querySelector('[data-cy="add-content-options"]');
@@ -263,7 +270,7 @@ describe('DialogAddContent', () => {
     const cards = options?.querySelectorAll('[data-slot="card"]');
     expect(Array.from(cards ?? []).map((card) => card.querySelector('[data-slot="card-title"]')?.textContent)).toEqual([
       'Add from feed',
-      'Paste post url',
+      'Paste a link',
       'Create new post',
     ]);
   });
@@ -329,7 +336,7 @@ describe('DialogAddContent', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Add Post' }));
 
-    const footer = screen.getByPlaceholderText('https://').closest('[data-slot="card-footer"]');
+    const footer = screen.getByPlaceholderText('Post or link URL').closest('[data-slot="card-footer"]');
     expect(footer).toHaveClass('flex-col', 'items-stretch');
   });
 
@@ -337,14 +344,14 @@ describe('DialogAddContent', () => {
     render(<DialogAddContent />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Add Post' }));
-    fireEvent.paste(screen.getByPlaceholderText('https://'), {
+    fireEvent.paste(screen.getByPlaceholderText('Post or link URL'), {
       clipboardData: {
         getData: () => 'not a post url',
       },
     });
 
-    const errorMessage = await screen.findByText('Enter a valid post URL.');
-    const inputContainer = screen.getByPlaceholderText('https://').closest('[data-testid="container"]');
+    const errorMessage = await screen.findByText('Enter a valid URL.');
+    const inputContainer = screen.getByPlaceholderText('Post or link URL').closest('[data-testid="container"]');
 
     expect(errorMessage).toBeInTheDocument();
     expect(inputContainer).toHaveClass('has-[input[aria-invalid=true]]:border-red-500');
@@ -355,7 +362,7 @@ describe('DialogAddContent', () => {
     render(<DialogAddContent />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Add Post' }));
-    fireEvent.paste(screen.getByPlaceholderText('https://'), {
+    fireEvent.paste(screen.getByPlaceholderText('Post or link URL'), {
       clipboardData: {
         getData: () => POST_URL,
       },
@@ -373,7 +380,7 @@ describe('DialogAddContent', () => {
     render(<DialogAddContent target={{ type: 'collection', collectionId: COLLECTION_ID }} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Add Post' }));
-    fireEvent.paste(screen.getByPlaceholderText('https://'), {
+    fireEvent.paste(screen.getByPlaceholderText('Post or link URL'), {
       clipboardData: {
         getData: () => POST_URL,
       },
@@ -390,7 +397,7 @@ describe('DialogAddContent', () => {
     render(<DialogAddContent />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Add Post' }));
-    fireEvent.paste(screen.getByPlaceholderText('https://'), {
+    fireEvent.paste(screen.getByPlaceholderText('Post or link URL'), {
       clipboardData: {
         getData: () => POST_URL,
       },
@@ -401,6 +408,30 @@ describe('DialogAddContent', () => {
     );
     expect(mocks.prependOptimisticPosts).toHaveBeenCalledWith(COMPOSITE_ID);
     expect(mocks.prependPosts).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('adds a pasted link that is no post to the collection and closes the dialog', async () => {
+    const link = 'https://www.youtube.com/watch?v=P65ZQL_m9zs';
+    render(<DialogAddContent target={{ type: 'collection', collectionId: COLLECTION_ID }} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Post' }));
+    fireEvent.paste(screen.getByPlaceholderText('Post or link URL'), {
+      clipboardData: {
+        getData: () => link,
+      },
+    });
+
+    await waitFor(() =>
+      expect(mocks.commitUpdateCollectionResource).toHaveBeenCalledWith({
+        collectionId: COLLECTION_ID,
+        uri: link,
+        shouldAdd: true,
+      }),
+    );
+    expect(mocks.getOrFetchPost).not.toHaveBeenCalled();
+    expect(mocks.commitUpdateCollectionItem).not.toHaveBeenCalled();
+    expect(mocks.prependOptimisticPosts).not.toHaveBeenCalled();
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
@@ -450,7 +481,7 @@ describe('DialogAddContent', () => {
     render(<DialogAddContent />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Add Post' }));
-    fireEvent.paste(screen.getByPlaceholderText('https://'), {
+    fireEvent.paste(screen.getByPlaceholderText('Post or link URL'), {
       clipboardData: {
         getData: () => POST_URL,
       },
@@ -471,7 +502,7 @@ describe('DialogAddContent', () => {
     render(<DialogAddContent target={{ type: 'collection', collectionId: COLLECTION_ID }} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Add Post' }));
-    fireEvent.paste(screen.getByPlaceholderText('https://'), {
+    fireEvent.paste(screen.getByPlaceholderText('Post or link URL'), {
       clipboardData: {
         getData: () => POST_URL,
       },

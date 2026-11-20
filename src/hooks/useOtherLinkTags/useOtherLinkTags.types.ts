@@ -33,12 +33,25 @@ export interface TMergedTag {
   count: number;
   /** Nexus listed every tagger on every link: `count` is exact, not a lower bound. */
   isComplete: boolean;
+  /**
+   * The viewer holds the tag on one of the links (Nexus' `relationship`): what the chip shows. Writes
+   * never follow it; they go by the link's own tag.
+   */
+  relationship?: boolean;
   /** The links it is on, most taggers first. */
   sources: TMergedTagSource[];
 }
 
+export interface UseOtherLinkTagsOptions {
+  /**
+   * Read the links only in a `by_ids` batch (a card in a feed, `TagController.fetchResourceTags`): on
+   * a Nexus without it they are not read, so a card sends no request per link.
+   */
+  byIdsOnly?: boolean;
+}
+
 export interface UseOtherLinkTagsResult {
-  /** The tags of every link read so far that has some; `[]` while the first batch is read. */
+  /** The tags of every link read so far that has some, in the links' order; `[]` until one answers with tags. */
   reads: TOtherLinkTags[];
   isLoading: boolean;
 }

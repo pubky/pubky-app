@@ -21,13 +21,17 @@ import {
 } from '@/molecules/PostLinkEmbeds/Providers/Native/nativeEmbed.utils';
 import { getMenuAlsoOn } from '@/molecules/ResourceCard/ResourceAlsoOn.utils';
 import { ResourceCard } from '@/molecules/ResourceCard/ResourceCard';
-import { getHttpUrl, getResourceLinks, getResourceTagsLabel } from '@/molecules/ResourceCard/ResourceCard.utils';
+import {
+  getHttpUrl,
+  getResourceLinks,
+  getResourceTagsLabel,
+  getResourceTarget,
+} from '@/molecules/ResourceCard/ResourceCard.utils';
 import { ResourceCardSkeleton } from '@/molecules/ResourceCardSkeleton/ResourceCardSkeleton';
 import { PlayOnPill } from '@/molecules/ResourcePlayer/ResourcePlayerControls';
 import { useCardPlayer } from '@/molecules/ResourcePlayer/useCardPlayer';
 import { ResourceActions } from '@/organisms/ResourceActions/ResourceActions';
 import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
-import { getActionUri } from './ResourceDetails.utils';
 import { getOtherLinks, getOwnLinkUris, mergeOtherLinkTags } from './ResourceOtherTags.utils';
 import { ResourceReplies } from './ResourceReplies';
 
@@ -134,7 +138,12 @@ function ResourceKnown({
   uri: string;
   replies: UseResourceRepliesResult;
 }) {
-  const actionUri = getActionUri(card, uri);
+  // The card's canonical link; the page's link, its refs and aliases are its spellings, read along.
+  const target = getResourceTarget(card, uri);
+  const actionUri = target.uri;
+  // What "Post about this" and the ⋯ menu's link give, as a post's card does: a link people wrote
+  // (the page's own when it is one), else the canonical link.
+  const writtenUri = card.refs.includes(uri) ? uri : (card.refs[0] ?? actionUri);
   const { data: group, isLoading: isGroupLoading } = usePinakesGroup(card.group?.id);
   const otherLinks =
     card.group && isGroupLoading ? [] : getOtherLinks(card, group?.members, getOwnLinkUris(card, uri, actionUri));
@@ -146,10 +155,12 @@ function ResourceKnown({
   const actions = (
     <ResourceActions
       uri={actionUri}
-      postUri={getPostUri(card, actionUri)}
+      spellings={target.spellings}
+      spellingsByUri
+      postUri={getPostUri(card, writtenUri)}
       collectionsCount={card.collections}
       tagsLabel={getResourceTagsLabel(card)}
-      linkUrl={getResourceLinks(card, actionUri).linkUrl}
+      linkUrl={getResourceLinks(card, writtenUri).linkUrl}
       title={card.name || null}
       otherTagList={otherTags}
       playOn={postEmbed?.showPost ?? playOn}

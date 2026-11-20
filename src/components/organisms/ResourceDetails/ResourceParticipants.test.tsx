@@ -39,7 +39,7 @@ describe('ResourceParticipants', () => {
 
     expect(screen.getByText('Participants')).toBeInTheDocument();
     expect(screen.getAllByTestId('participant-item').map((row) => row.textContent)).toEqual(['replier', 'tagger']);
-    expect(mocks.args).toEqual([URI, ['replier:1']]);
+    expect(mocks.args).toEqual([URI, ['replier:1'], { spellings: undefined }]);
   });
 
   it('shows the skeleton while read and nothing when nobody took part', () => {

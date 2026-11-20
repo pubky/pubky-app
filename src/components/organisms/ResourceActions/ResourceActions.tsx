@@ -3,7 +3,9 @@
 import { type ReactNode, useId, useState } from 'react';
 import { MessageCircle, Tag } from 'lucide-react';
 import { Container } from '@/atoms/Container/Container';
+import { useOtherLinkTags } from '@/hooks/useOtherLinkTags/useOtherLinkTags';
 import type { TMergedTag } from '@/hooks/useOtherLinkTags/useOtherLinkTags.types';
+import { usePinakesGroup } from '@/hooks/usePinakesGroup/usePinakesGroup';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useResourceCounts } from '@/hooks/useResourceCounts/useResourceCounts';
 import { useResourceTags } from '@/hooks/useResourceTags/useResourceTags';
@@ -12,6 +14,8 @@ import { cn } from '@/libs/utils/utils';
 import { useResourceSurface } from '@/molecules/ResourceCard/ResourceSurfaceContext';
 import { DialogReply } from '@/organisms/DialogReply/DialogReply';
 import { PostActionButton } from '@/organisms/PostActionsBar/PostActionButton';
+import { getOtherLinks, getOwnLinkUris, mergeOtherLinkTags } from '@/organisms/ResourceDetails/ResourceOtherTags.utils';
+import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { type ResourceExtraMenuContent, ResourceMoreMenu } from './ResourceMoreMenu';
 import { ResourcePostButton } from './ResourcePostButton';
 import { ResourceSavePicker } from './ResourceSavePicker';
@@ -21,8 +25,22 @@ const REPLY_LABEL = 'Reply to this external resource';
 const CANNOT_REPLY_LABEL = 'Replies to this external resource are not supported';
 
 interface ResourceActionsProps {
-  /** The external resource's link exactly as written: what is bookmarked, collected and tagged. */
+  /**
+   * The external resource's link: what is bookmarked, collected, tagged and replied to. The card's
+   * canonical link once Pinakes knows it (`getResourceTarget`), else the link exactly as written.
+   */
   uri: string;
+  /**
+   * Other spellings of `uri` (the link as written, Pinakes' refs and aliases of the card): Nexus
+   * keeps each apart, so their tags, counts, bookmarks and collections are read along and shown as
+   * the link's own. Writes go to `uri`; a removal goes to the spelling it is on.
+   */
+  spellings?: readonly string[];
+  /**
+   * Read the spellings' tags on a Nexus without `by_ids` too, one `by-uri` each (the resource page);
+   * a card in a feed reads them only in a `by_ids` batch.
+   */
+  spellingsByUri?: boolean;
   /**
    * The web link "Post about this" puts in the composer, when `uri` is not one; `null` when the
    * resource has none (the button is disabled). Defaults to `uri`.
@@ -47,6 +65,13 @@ interface ResourceActionsProps {
   /** The resource page's tags on the same thing's other links (`mergeOtherLinkTags`), in the tag list. */
   otherTagList?: readonly TMergedTag[];
   /**
+   * The Pinakes card a post's (or a collection's) card is closed by: the tags on its other links join
+   * the tag list as on the resource page (`getOtherLinks`: its tagged Also on entries, and the members'
+   * refs when the page already read its group, never asked here), read with its own tags, only in their
+   * `by_ids` batch. Its tags are still read and written on `uri` and `spellings` alone.
+   */
+  card?: TPinakesResourceDetail | null;
+  /**
    * "Play on <service>" for a card with a service's player (`useCardPlayer`): on its own line above
    * the footer, so the footer's tags and buttons are the post's, never squeezed by it.
    */
@@ -68,12 +93,15 @@ interface ResourceActionsProps {
  * the replies and embeds Nexus counts (read with the tags), the public collections, else Pinakes'
  * count. No number while they are read or when the configured Nexus does not serve that count.
  *
- * On the resource page, the tags on the same thing's other links join the tag list (`otherTagList`).
+ * On the resource page, the tags on the same thing's other links join the tag list (`otherTagList`); on
+ * a card in a feed, those of its `card`'s other links, read by the footer itself.
  *
  * The zone is all controls, so a click on it never counts as a click through the card.
  */
 export function ResourceActions({
   uri,
+  spellings,
+  spellingsByUri,
   postUri = uri,
   collectionsCount,
   tagsLabel,
@@ -82,6 +110,7 @@ export function ResourceActions({
   extraMenuContent,
   isOnScreen = true,
   otherTagList,
+  card,
   playOn,
   size = 'default',
   replyCount,
@@ -91,9 +120,18 @@ export function ResourceActions({
   // Once read, the tags stay while the card scrolls out of view.
   const [hasBeenOnScreen, setHasBeenOnScreen] = useState(isOnScreen);
   if (isOnScreen && !hasBeenOnScreen) setHasBeenOnScreen(true);
-  const resourceTags = useResourceTags(uri, { enabled: hasBeenOnScreen });
+  const resourceTags = useResourceTags(uri, { enabled: hasBeenOnScreen, spellings, spellingsByUri });
+  // A card's other links, as on the resource page, read with its own tags in their `by_ids` batch; the
+  // members' refs join once a group another reader already read is found.
+  const { data: group } = usePinakesGroup(card?.group?.id, { cachedOnly: true });
+  const otherLinks =
+    card && hasBeenOnScreen
+      ? getOtherLinks(card, group?.members, new Set([...getOwnLinkUris(card, uri, uri), ...(spellings ?? [])]))
+      : [];
+  const otherLinkTags = useOtherLinkTags(otherLinks, { byIdsOnly: true });
+  const otherTags = otherTagList ?? mergeOtherLinkTags(otherLinkTags.reads);
   // Read with the tags (one answer): no request of its own.
-  const counts = useResourceCounts(uri);
+  const counts = useResourceCounts(uri, { spellings });
   // 0 for a link Nexus has no record of; no number while read or for a count Nexus does not serve.
   const countOf = (key: 'replies' | 'embeds') => (counts === null ? 0 : counts?.[key]);
   const replies = replyCount ?? countOf('replies');
@@ -147,7 +185,7 @@ export function ResourceActions({
           isAdding={isAddingTag}
           onAddingChange={setIsAddingTag}
           uri={uri}
-          otherTags={otherTagList}
+          otherTags={otherTags}
         />
         {/*
           The post's action row (`PostActionsBar`'s classes). Beside the tags (from md) it keeps its
@@ -197,7 +235,7 @@ export function ResourceActions({
             data-testid="resource-reply-button"
           />
           <ResourcePostButton uri={postUri} count={embeds} surface={surface} />
-          <ResourceSavePicker uri={uri} collectionsCount={collections} surface={surface} />
+          <ResourceSavePicker uri={uri} spellings={spellings} collectionsCount={collections} surface={surface} />
           <ResourceMoreMenu
             uri={uri}
             linkUrl={linkUrl}

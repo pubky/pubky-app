@@ -6,6 +6,7 @@ import { MOBILE_FAB_CLEARANCE_CLASS } from '@/config/layoutClasses';
 import { isPinakesConfigured } from '@/config/pinakes';
 import { usePinakesCard } from '@/hooks/usePinakesCard/usePinakesCard';
 import { useResourceReplies } from '@/hooks/useResourceReplies/useResourceReplies';
+import { getResourceTarget } from '@/molecules/ResourceCard/ResourceCard.utils';
 import { PostPageLayout } from '@/organisms/PostPageShell/PostPageLayout';
 import { ResourceDetails } from '@/organisms/ResourceDetails/ResourceDetails';
 import { getThreadUri } from '@/organisms/ResourceDetails/ResourceDetails.utils';
@@ -36,9 +37,17 @@ function ResourcePageRead({ uri, onRetry }: ResourcePageProps & { onRetry: () =>
   useResourceTitle(card?.name);
   // One read of the replies for the thread under the card and the Participants panel.
   const threadUri = getThreadUri(uri, read, isPinakesConfigured());
-  const replies = useResourceReplies(threadUri);
+  // The thread is on the card's canonical link; the replies to its other spellings are its own too.
+  const spellings = card && uri ? getResourceTarget(card, uri).spellings : undefined;
+  const replies = useResourceReplies(threadUri, { spellings });
   const sidebar = (showFeedback: boolean) => (
-    <ResourceSidebar card={card} uri={threadUri} replyIds={replies.replyIds} showFeedback={showFeedback} />
+    <ResourceSidebar
+      card={card}
+      uri={threadUri}
+      spellings={spellings}
+      replyIds={replies.replyIds}
+      showFeedback={showFeedback}
+    />
   );
 
   return (

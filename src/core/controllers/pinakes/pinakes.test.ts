@@ -6,7 +6,13 @@ import relatedFixture from '@/services/pinakes/fixtures/search.related.json';
 import { PinakesController } from './pinakes';
 
 vi.mock('@/application/pinakes/pinakes', () => ({
-  PinakesApplication: { fetchCardByUri: vi.fn(), fetchRelated: vi.fn(), fetchGroup: vi.fn(), resolveCard: vi.fn() },
+  PinakesApplication: {
+    fetchCardByUri: vi.fn(),
+    fetchRelated: vi.fn(),
+    fetchGroup: vi.fn(),
+    getCachedGroup: vi.fn(),
+    resolveCard: vi.fn(),
+  },
 }));
 
 describe('PinakesController', () => {
@@ -39,6 +45,14 @@ describe('PinakesController', () => {
 
     await expect(PinakesController.fetchGroup({ id: groupFixture.id })).resolves.toBe(groupFixture);
     expect(PinakesApplication.fetchGroup).toHaveBeenCalledWith(groupFixture.id);
+  });
+
+  it('getCachedGroup gives the group already read, asking nothing', () => {
+    vi.mocked(PinakesApplication.getCachedGroup).mockReturnValue(groupFixture);
+
+    expect(PinakesController.getCachedGroup({ id: groupFixture.id })).toBe(groupFixture);
+    expect(PinakesApplication.getCachedGroup).toHaveBeenCalledWith(groupFixture.id);
+    expect(PinakesApplication.fetchGroup).not.toHaveBeenCalled();
   });
 
   it('lets a Pinakes failure reach the caller unchanged', async () => {
