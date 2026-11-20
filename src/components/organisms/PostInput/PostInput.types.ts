@@ -95,6 +95,7 @@ export type PostInputProps =
       editIsArticle?: never;
       editAttachments?: never;
       editLock?: never;
+      editEmbedUrl?: never;
     })
   | (PostInputBaseProps & {
       /** Variant: reply to an external resource */
@@ -108,6 +109,7 @@ export type PostInputProps =
       editIsArticle?: never;
       editAttachments?: never;
       editLock?: never;
+      editEmbedUrl?: never;
     })
   | (PostInputBaseProps & {
       /** Variant: repost */
@@ -121,6 +123,7 @@ export type PostInputProps =
       editIsArticle?: never;
       editAttachments?: never;
       editLock?: never;
+      editEmbedUrl?: never;
     })
   | (PostInputBaseProps & {
       /** Variant: new root post */
@@ -133,6 +136,7 @@ export type PostInputProps =
       editIsArticle?: never;
       editAttachments?: never;
       editLock?: never;
+      editEmbedUrl?: never;
     })
   | (PostInputBaseProps & {
       /** Variant: edit post */
@@ -163,4 +167,12 @@ export type PostInputProps =
        * `editContent`: the title seeds the lock title field, the URL names the lock file.
        */
       editLock?: EditLock;
+      /**
+       * The web link the post embeds, as stored, or null for none: the edit shows it like the new-post
+       * composer and may embed another link of the text or none; it writes the embed only once it
+       * differs from the one the edit opened with. Left out, the edit leaves the stored embed as it is
+       * (a repost's post, a reply, an article, a lock announcement, unknown relationships). Read once
+       * at mount.
+       */
+      editEmbedUrl?: string | null;
     });

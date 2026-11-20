@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DialogContent } from '@/atoms/Dialog/Dialog';
 import { useConfirmableDialog } from '@/hooks/useConfirmableDialog/useConfirmableDialog';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutContext';
 import { PostInput } from '../PostInput/PostInput';
@@ -80,6 +81,21 @@ vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
   })),
 }));
 
+const REPOST_INFO = {
+  isRepost: false,
+  isReply: false,
+  repostAuthorId: null,
+  isCurrentUserRepost: false,
+  originalPostId: null,
+  embedUrl: null,
+  isLoading: false,
+  hasError: false,
+};
+
+vi.mock('@/hooks/useRepostInfo/useRepostInfo', () => ({
+  useRepostInfo: vi.fn(() => REPOST_INFO),
+}));
+
 // Mock molecules
 vi.mock('@/molecules/DialogConfirmDiscard/DialogConfirmDiscard', () => {
   return {
@@ -151,6 +167,7 @@ describe('DialogEditPost', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(useRepostInfo).mockReturnValue(REPOST_INFO);
     // Reset to default mock implementation
     vi.mocked(usePostDetails).mockReturnValue({
       postDetails: {
@@ -206,6 +223,70 @@ describe('DialogEditPost', () => {
     expect(secondComposer).not.toBe(firstComposer);
     expect(secondComposer).toHaveAttribute('data-edit-post-id', 'post-2');
     expect(secondComposer).toHaveAttribute('data-edit-content', 'Content of post-2');
+  });
+
+  describe('embedded link', () => {
+    const LINK = 'https://tidal.com/track/3524506';
+    const editEmbedUrlOf = () => vi.mocked(PostInput).mock.calls.at(-1)?.[0].editEmbedUrl;
+
+    it('seeds the composer with the web link the post embeds', () => {
+      vi.mocked(useRepostInfo).mockReturnValue({ ...REPOST_INFO, embedUrl: LINK });
+
+      render(<DialogEditPost postId="test-post-123" open onOpenChangeAction={vi.fn()} />);
+
+      expect(editEmbedUrlOf()).toBe(LINK);
+    });
+
+    it('seeds no embed for a post that embeds none, so the edit can embed a link', () => {
+      render(<DialogEditPost postId="test-post-123" open onOpenChangeAction={vi.fn()} />);
+
+      expect(vi.mocked(PostInput).mock.calls.at(-1)?.[0]).toHaveProperty('editEmbedUrl', null);
+    });
+
+    it('reads the relationships only while open', () => {
+      const { rerender } = render(<DialogEditPost postId="test-post-123" open={false} onOpenChangeAction={vi.fn()} />);
+      expect(useRepostInfo).toHaveBeenLastCalledWith('');
+
+      rerender(<DialogEditPost postId="test-post-123" open onOpenChangeAction={vi.fn()} />);
+      expect(useRepostInfo).toHaveBeenLastCalledWith('test-post-123');
+    });
+
+    it('waits for the relationships before seeding the composer', () => {
+      vi.mocked(useRepostInfo).mockReturnValue({ ...REPOST_INFO, isLoading: true });
+
+      render(<DialogEditPost postId="test-post-123" open onOpenChangeAction={vi.fn()} />);
+
+      expect(screen.queryByTestId('post-input')).not.toBeInTheDocument();
+    });
+
+    it.each([
+      ['a repost', { isRepost: true }],
+      ['a reply', { isReply: true }],
+      ['a post whose relationships could not be read', { hasError: true }],
+    ])('leaves the embed of %s as stored', (_name, info) => {
+      vi.mocked(useRepostInfo).mockReturnValue({ ...REPOST_INFO, embedUrl: null, ...info });
+
+      render(<DialogEditPost postId="test-post-123" open onOpenChangeAction={vi.fn()} />);
+
+      expect(editEmbedUrlOf()).toBeUndefined();
+    });
+
+    it.each([
+      ['an article', { content: JSON.stringify({ title: 'T', body: 'B' }), kind: 'long' }],
+      ['a lock announcement', { content: 'teaser', kind: 'short', lock: 'pubky://author/pub/app.locks/LOCK1.json' }],
+    ])('leaves the embed of %s as stored', (_name, details) => {
+      vi.mocked(useRepostInfo).mockReturnValue({ ...REPOST_INFO, embedUrl: LINK });
+      vi.mocked(usePostDetails).mockReturnValue({
+        postDetails: { id: 'test-post-123', attachments: null, ...details } as ReturnType<
+          typeof usePostDetails
+        >['postDetails'],
+        isLoading: false,
+      });
+
+      render(<DialogEditPost postId="test-post-123" open onOpenChangeAction={vi.fn()} />);
+
+      expect(editEmbedUrlOf()).toBeUndefined();
+    });
   });
 
   it('renders with "Edit Article" title for long posts', () => {

@@ -1,4 +1,4 @@
-import { createRef } from 'react';
+import { createRef, useState } from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { useReducedMotion } from 'motion/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -13,6 +13,7 @@ import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import type { ExistingAttachment } from '@/hooks/usePost/usePost.types';
 import { usePostInput } from '@/hooks/usePostInput/usePostInput';
 import type { UsePostInputOptions, UsePostInputReturn } from '@/hooks/usePostInput/usePostInput.types';
+import { getComposerEmbedUrl } from '@/libs/post/postEmbedUrl';
 import { PostInputAttachments } from '@/molecules/PostInputAttachments/PostInputAttachments';
 import { toast } from '@/molecules/Toaster/toast';
 import { PostHeader } from '@/organisms/PostHeader/PostHeader';
@@ -86,6 +87,9 @@ vi.mock('@/atoms/Container/Container', () => {
       onDragOver,
       onDrop,
       'data-state': dataState,
+      'data-testid': testId,
+      role,
+      'aria-label': ariaLabel,
     }: {
       children: React.ReactNode;
       className?: string;
@@ -97,10 +101,15 @@ vi.mock('@/atoms/Container/Container', () => {
       onDragOver?: (e: React.DragEvent) => void;
       onDrop?: (e: React.DragEvent) => void;
       'data-state'?: 'collapsed' | 'expanded';
+      'data-testid'?: string;
+      role?: string;
+      'aria-label'?: string;
     }) => (
       <div
         ref={ref}
-        data-testid="container"
+        data-testid={testId ?? 'container'}
+        role={role}
+        aria-label={ariaLabel}
         data-state={dataState}
         className={className}
         data-override-defaults={overrideDefaults}
@@ -415,7 +424,13 @@ vi.mock('@/molecules/PostInputAttachments/PostInputAttachments', () => {
 
 vi.mock('@/molecules/PostLinkEmbeds/PostLinkEmbeds', () => {
   return {
-    PostLinkEmbeds: vi.fn(({ content }: { content: string }) => {
+    PostLinkEmbeds: vi.fn(({ content = '', url }: { content?: string; url?: string | null }) => {
+      if (url)
+        return (
+          <div data-testid="post-link-embeds" data-url={url}>
+            Link preview
+          </div>
+        );
       // Only render if content contains a URL-like pattern
       if (content.includes('http') || content.includes('youtube') || content.includes('youtu.be')) {
         return <div data-testid="post-link-embeds">Link preview</div>;
@@ -553,6 +568,12 @@ function createUsePostInputReturn(options: UsePostInputOptions, overrides: Recor
     existingAttachments: [],
     setExistingAttachments: vi.fn(),
     removeExistingAttachment: vi.fn(),
+    embedUrl: null,
+    embedChoices: [],
+    isEmbedRemoved: false,
+    removeEmbed: vi.fn(),
+    restoreEmbed: vi.fn(),
+    pickEmbed: vi.fn(),
     isArticle: mockUsePostReturn.isArticle,
     setIsArticle: mockSetIsArticle,
     handleArticleClick: vi.fn(),
@@ -1077,6 +1098,165 @@ describe('PostInput', () => {
     expect(
       within(screen.getByTestId('post-input-action-bar')).getByTestId('article-composer-avatar'),
     ).toBeInTheDocument();
+  });
+
+  describe('link embed', () => {
+    const LINK = 'https://en.wikipedia.org/wiki/Bitcoin';
+
+    beforeEach(() => {
+      mockUsePostReturn.content = `Read ${LINK}`;
+    });
+
+    afterEach(() => {
+      mockUsePostReturn.content = '';
+    });
+
+    it('shows the embedded link with a remove button instead of the plain link preview', () => {
+      const removeEmbed = vi.fn();
+      mockUsePostInput.mockImplementation((options: UsePostInputOptions) =>
+        createUsePostInputReturn(options, { embedUrl: LINK, removeEmbed }),
+      );
+
+      render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+      const embed = screen.getByTestId('post-input-link-embed');
+      expect(within(embed).getByTestId('post-link-embeds')).toHaveAttribute('data-url', LINK);
+      expect(screen.getAllByTestId('post-link-embeds')).toHaveLength(1);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Remove embedded link' }));
+      expect(removeEmbed).toHaveBeenCalledTimes(1);
+    });
+
+    it('offers a Switch menu while several links can be embedded', () => {
+      const LUMA = 'https://luma.com/376whqyw';
+      mockUsePostInput.mockImplementation((options: UsePostInputOptions) =>
+        createUsePostInputReturn(options, { embedUrl: LINK, embedChoices: [LINK, LUMA] }),
+      );
+
+      render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+      // The menu itself is covered by PostInputLinkEmbed's tests (this file mocks Button without a ref)
+      const embed = screen.getByTestId('post-input-link-embed');
+      expect(
+        within(embed).getByRole('button', { name: 'Switch the embedded link (a post embeds one)' }),
+      ).toHaveTextContent('Switch');
+    });
+
+    describe('in an edit', () => {
+      const renderEdit = (editEmbedUrl?: string | null) =>
+        render(
+          <PostInput
+            variant={POST_INPUT_VARIANT.EDIT}
+            editPostId="test-post-123"
+            editContent={`Read ${LINK}`}
+            editIsArticle={false}
+            editAttachments={[]}
+            editEmbedUrl={editEmbedUrl}
+          />,
+        );
+
+      it('shows the embed of the post like the new-post composer, seeded from the stored link', () => {
+        mockUsePostInput.mockImplementation((options: UsePostInputOptions) =>
+          createUsePostInputReturn(options, { embedUrl: LINK }),
+        );
+
+        renderEdit(LINK);
+
+        expect(mockUsePostInput).toHaveBeenCalledWith(expect.objectContaining({ editEmbedUrl: LINK }));
+        const embed = screen.getByTestId('post-input-link-embed');
+        expect(embed).toHaveTextContent('Embedded link · en.wikipedia.org/wiki/Bitcoin');
+        expect(within(embed).getByTestId('post-link-embeds')).toHaveAttribute('data-url', LINK);
+        expect(screen.getAllByTestId('post-link-embeds')).toHaveLength(1);
+        expect(within(embed).getByRole('button', { name: 'Remove embedded link' })).toBeInTheDocument();
+      });
+
+      it('says the link is not embedded for a post that embeds none', () => {
+        mockUsePostInput.mockImplementation((options: UsePostInputOptions) =>
+          createUsePostInputReturn(options, { embedUrl: null, isEmbedRemoved: true }),
+        );
+
+        renderEdit(null);
+
+        expect(screen.getByTestId('post-input-link-embed-removed')).toHaveTextContent('Link not embedded');
+        expect(screen.getByTestId('post-link-embeds')).toBeInTheDocument();
+      });
+    });
+
+    it('shows the plain link preview readers still get once its embed is removed', () => {
+      mockUsePostInput.mockImplementation((options: UsePostInputOptions) =>
+        createUsePostInputReturn(options, { embedUrl: null, isEmbedRemoved: true }),
+      );
+
+      render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+      expect(screen.queryByTestId('post-input-link-embed')).not.toBeInTheDocument();
+      expect(screen.getByTestId('post-link-embeds')).toBeInTheDocument();
+    });
+
+    it('says the link is not embedded once removed, and embeds it again from its button', () => {
+      const restoreEmbed = vi.fn();
+      mockUsePostInput.mockImplementation((options: UsePostInputOptions) =>
+        createUsePostInputReturn(options, { embedUrl: null, isEmbedRemoved: true, restoreEmbed }),
+      );
+
+      render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+
+      const line = screen.getByTestId('post-input-link-embed-removed');
+      expect(line).toHaveTextContent('Link not embedded');
+      fireEvent.click(within(line).getByRole('button', { name: 'Embed again' }));
+
+      expect(restoreEmbed).toHaveBeenCalledTimes(1);
+      // The button unmounts with the line: focus stays in the composer
+      expect(screen.getByRole('textbox')).toHaveFocus();
+    });
+
+    it('shows no removed line while the link is embedded', () => {
+      mockUsePostInput.mockImplementation((options: UsePostInputOptions) =>
+        createUsePostInputReturn(options, { embedUrl: LINK }),
+      );
+
+      render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+      expect(screen.queryByTestId('post-input-link-embed-removed')).not.toBeInTheDocument();
+    });
+
+    it('embeds the link "Post about this" opens the composer with', () => {
+      const OSM = 'https://www.openstreetmap.org/node/240109189';
+      // The composer state is real here: the mount prefill sets the text, and the embed follows from it
+      const setContentSpy = vi.fn();
+      mockUsePostInput.mockImplementation((options: UsePostInputOptions) => {
+        const [content, setContent] = useState('');
+        setContentSpy.mockImplementation(setContent);
+        return createUsePostInputReturn(options, {
+          content,
+          setContent: setContentSpy,
+          embedUrl: getComposerEmbedUrl(content),
+        });
+      });
+
+      render(<PostInput variant={POST_INPUT_VARIANT.POST} initialContent={OSM} />);
+
+      expect(setContentSpy).toHaveBeenCalledWith(OSM);
+      const embed = screen.getByTestId('post-input-link-embed');
+      expect(within(embed).getByTestId('post-link-embeds')).toHaveAttribute('data-url', OSM);
+    });
+
+    it('moves focus back to the text after removing the embed', () => {
+      mockUsePostInput.mockImplementation((options: UsePostInputOptions) =>
+        createUsePostInputReturn(options, { embedUrl: LINK }),
+      );
+
+      render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Remove embedded link' }));
+
+      expect(screen.getByRole('textbox')).toHaveFocus();
+    });
+
+    it('keeps the plain link preview when the post embeds nothing', () => {
+      render(<PostInput variant={POST_INPUT_VARIANT.REPLY} postId="test-post-123" />);
+
+      expect(screen.queryByTestId('post-input-link-embed')).not.toBeInTheDocument();
+      expect(screen.getByTestId('post-link-embeds')).toBeInTheDocument();
+    });
   });
 
   describe('article tabs', () => {

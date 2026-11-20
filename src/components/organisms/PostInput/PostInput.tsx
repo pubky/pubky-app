@@ -62,6 +62,7 @@ import { useAuthStore } from '@/stores/auth/auth.store';
 import { AvatarWithFallback } from '../AvatarWithFallback/AvatarWithFallback';
 import { PostHeader } from '../PostHeader/PostHeader';
 import { PostInputExpandableSection } from '../PostInputExpandableSection/PostInputExpandableSection';
+import { PostInputLinkEmbed } from '../PostInputLinkEmbed/PostInputLinkEmbed';
 import { POST_INPUT_VARIANT } from './PostInput.constants';
 import type { PostInputProps } from './PostInput.types';
 
@@ -97,6 +98,7 @@ export function PostInput({
   editIsArticle,
   editAttachments,
   editLock,
+  editEmbedUrl,
   autoFocusTextarea = false,
   initialContent,
   initialAttachments,
@@ -115,6 +117,7 @@ export function PostInput({
     isArticle: editIsArticle,
     attachments: editAttachments,
     lock: editLock,
+    embedUrl: editEmbedUrl,
   }));
   const isMobile = useIsMobile();
 
@@ -165,6 +168,12 @@ export function PostInput({
     serializeArticleForLock,
     getLatestArticle,
     discardPendingArticle,
+    embedUrl,
+    embedChoices,
+    isEmbedRemoved,
+    removeEmbed,
+    restoreEmbed,
+    pickEmbed,
     // Mention autocomplete
     mentionUsers,
     mentionIsOpen,
@@ -184,6 +193,7 @@ export function PostInput({
     editAttachmentUris: editSeed.attachments,
     editContent: editSeed.content,
     editIsArticle: editSeed.isArticle,
+    editEmbedUrl: editSeed.embedUrl,
     onSuccess,
     placeholder,
     successToastTitle,
@@ -322,6 +332,11 @@ export function PostInput({
 
   const { price: editLockPrice } = useLockFile(editSeed.lock?.lockUrl);
   const isLockMode = isLockEnabled || editSeed.lock != null;
+  // A post shows the link it embeds like a repost shows its original. Once removed, the composer
+  // shows the plain link preview readers still get from the text, under a line that can embed it
+  // again. A lock announcement publishes no embed and keeps the plain link preview.
+  const showsEmbed = !isLockMode && embedUrl !== null;
+  const showsRemovedEmbed = !isLockMode && isEmbedRemoved;
   const activeLockTitle = editSeed.lock ? editLockTitle : lockTitle;
   const activeLockContentKind = editSeed.lock ? editSeed.lock.contentKind : lockContentKind;
 
@@ -771,6 +786,32 @@ export function PostInput({
                   />
                 )}
 
+                {showsEmbed && embedUrl && (
+                  <PostInputLinkEmbed
+                    url={embedUrl}
+                    choices={embedChoices}
+                    onPick={pickEmbed}
+                    onRemove={() => {
+                      removeEmbed();
+                      // The remove button unmounts with the embed: keep focus in the composer
+                      textareaRef.current?.focus();
+                    }}
+                    disabled={isSubmitting}
+                  />
+                )}
+
+                {showsRemovedEmbed && (
+                  <PostInputLinkEmbed
+                    isRemoved
+                    onRestore={() => {
+                      restoreEmbed();
+                      // The restore button unmounts once the link is embedded again
+                      textareaRef.current?.focus();
+                    }}
+                    disabled={isSubmitting}
+                  />
+                )}
+
                 <AnimatePresence initial={false} mode="popLayout">
                   {isExpanded && (
                     <motion.div
@@ -783,6 +824,7 @@ export function PostInput({
                     >
                       <PostInputExpandableSection
                         content={content}
+                        showLinkPreview={!showsEmbed}
                         tags={tags}
                         isSubmitting={isSubmitting || isPublishingLock}
                         isArticle={isArticle}

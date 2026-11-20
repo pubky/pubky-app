@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { LocksController } from '@/controllers/locks/locks';
 import { useConfirmableDialog } from '@/hooks/useConfirmableDialog/useConfirmableDialog';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
 import { isArticleContent } from '@/libs/post/articleContent';
 import { DialogConfirmDiscard } from '@/molecules/DialogConfirmDiscard/DialogConfirmDiscard';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
@@ -23,8 +24,17 @@ export function DialogEditPost({ open, onOpenChangeAction, postId }: DialogEditP
     });
 
   const { postDetails } = usePostDetails(postId);
+  // The web link the post embeds (or none), read only while open: the composer seeds from it once,
+  // so it waits for it
+  const {
+    isRepost,
+    isReply,
+    embedUrl,
+    isLoading: isEmbedLoading,
+    hasError: isEmbedUnknown,
+  } = useRepostInfo(open ? postId : '');
 
-  if (!postDetails) return null;
+  if (!postDetails || (open && isEmbedLoading)) return null;
 
   const lockUrl = postDetails.lock;
   // Same parse the reader uses. Editing a lock post as plain text would store content the reader
@@ -33,6 +43,10 @@ export function DialogEditPost({ open, onOpenChangeAction, postId }: DialogEditP
   const teaserBody = teaser ? teaser.teaser_description : postDetails.content;
   const isArticle = postDetails.kind === 'long' && isArticleContent(postDetails.content);
   const title = isArticle ? 'Edit Article' : 'Edit Post';
+  // A note's edit shows its embed and may change it, as the new-post composer does. A repost, a reply
+  // (its composer embeds nothing), an article, a lock announcement and a post whose relationships are
+  // unknown keep their stored embed.
+  const editEmbedUrl = isRepost || isReply || isArticle || lockUrl || isEmbedUnknown ? undefined : embedUrl;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -62,6 +76,7 @@ export function DialogEditPost({ open, onOpenChangeAction, postId }: DialogEditP
           editLock={
             lockUrl ? { lockUrl, title: teaser?.lock_title ?? '', contentKind: teaser?.content_kind } : undefined
           }
+          editEmbedUrl={editEmbedUrl}
           layoutOverride="inline"
         />
         {/* Nested inside parent dialog to avoid mobile touch event issues with sibling portals */}

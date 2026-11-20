@@ -57,6 +57,11 @@ export type TPostEdit = {
   attachmentNames?: Record<string, string>;
   /** An article's cover URI; `null` clears it, absent keeps the stored one. */
   coverImage?: string | null;
+  /**
+   * The web link the post embeds; `null` embeds none, absent keeps the stored one. An `embed` that
+   * is not a web link (a repost's post) is never replaced.
+   */
+  embed?: string | null;
   kind?: KnownPostKind;
 };
 

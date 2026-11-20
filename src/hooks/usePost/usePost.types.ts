@@ -33,6 +33,8 @@ export interface LatestArticle {
 export interface UsePostPostOptions {
   /** Article publishes pass the latest editor values; omitted, the debounced state is used. */
   article?: LatestArticle;
+  /** The web link the post embeds (`embed`); an article embeds none. */
+  embedUrl?: string;
   onSuccess?: (createdPostId: string) => void;
 }
 
@@ -78,6 +80,8 @@ export interface UsePostEditOptions {
   preservedAttachmentUris?: string[];
   /** Article edits pass the latest editor values; omitted, the debounced state is used. */
   article?: LatestArticle;
+  /** A note's next web embed, `null` for none; omitted, the stored `embed` stays. Articles keep theirs. */
+  embedUrl?: string | null;
   onSuccess?: (createdPostId: string) => void;
 }
 

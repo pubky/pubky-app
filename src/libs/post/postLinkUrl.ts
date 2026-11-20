@@ -34,15 +34,36 @@ const getLinkify = (): LinkifyIt => {
   return instance;
 };
 
-/**
- * First bare URL in the content, or null when there is none.
- * Markdown links, `ftp:` and `mailto:` are skipped; a protocol-less URL comes back with `http://`.
- */
-export function getFirstLinkUrl(content: string): string | null {
-  // Strip Markdown link syntax before parsing
-  const match = getLinkify().match(stripMarkdownLinks(content));
+/** A link found in the content: its URL and the scheme it was written with (`''` for none). */
+export interface LinkMatch {
+  url: string;
+  schema: string;
+}
 
-  return match?.[0]?.url ?? null;
+/**
+ * First bare link in the content, or null when there is none.
+ * Markdown links, `ftp:` and `mailto:` are skipped; a protocol-less URL comes back with `http://`
+ * and an empty `schema`.
+ */
+export function getFirstLinkMatch(content: string): LinkMatch | null {
+  // Strip Markdown link syntax before parsing
+  const match = getLinkify().match(stripMarkdownLinks(content))?.[0];
+
+  return match ? { url: match.url, schema: match.schema } : null;
+}
+
+/** Every bare link in the content, in order, as `getFirstLinkMatch` finds the first. */
+export function getLinkMatches(content: string): LinkMatch[] {
+  return (
+    getLinkify()
+      .match(stripMarkdownLinks(content))
+      ?.map(({ url, schema }) => ({ url, schema })) ?? []
+  );
+}
+
+/** First bare URL in the content, or null when there is none (see `getFirstLinkMatch`). */
+export function getFirstLinkUrl(content: string): string | null {
+  return getFirstLinkMatch(content)?.url ?? null;
 }
 
 /** Every link in the content, Markdown link targets included, in order. */
