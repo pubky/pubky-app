@@ -7,11 +7,14 @@
 #   none      no unit test can be affected (e.g. a docs- or e2e-only change)
 #
 # Only a pull_request into dev can be anything but full. dev merges through the
-# merge queue, whose merge_group run is always full, so nothing reaches dev
-# without every unit test passing on the exact merged tree; a selection miss on
-# a PR is caught there, never after merge. Branches without a merge queue
-# (master, feature branches) get no such backstop, so their PRs run full, as do
-# merge_group, push and workflow_dispatch.
+# merge queue, whose merge_group run is always full, so nothing that lands via
+# the queue reaches dev without every unit test passing on the exact merged
+# tree; a selection miss on a PR is caught there, never after merge. An admin
+# bypass merge skips the merge_group run, so it lands having passed only the
+# affected subset; that is accepted because test.yml runs the full suite on
+# every push to dev, so a break shows up on dev right after landing. Branches
+# without a merge queue (master, feature branches) get no such backstop, so
+# their PRs run full, as do merge_group, push and workflow_dispatch.
 #
 # The selection itself is Vitest's own `--changed` resolver (Vitest 5): it walks
 # the transformed module graph (tsconfig aliases included), respects vi.mock, and
@@ -101,7 +104,9 @@ fi
 #  - test infrastructure: this script, the workflow, the install action;
 #  - __mocks__ folders (module-level automocks are not import edges);
 #  - deleted or renamed source files: a test still importing a removed module
-#    has no edge to it in the current tree.
+#    has no edge to it in the current tree;
+#  - public/ assets: read at runtime (e.g. the OG fallback image), never
+#    imported, so no import edge can select their tests.
 FORCE_FULL='^(package\.json|package-lock\.json|\.npmrc|\.nvmrc|patches/|tsconfig[^/]*\.json$|vitest\.config\.|vite\.config\.|next\.config\.|postcss\.config\.|\.github/workflows/test\.yml$|\.github/scripts/plan-unit-tests\.sh$|\.github/actions/install-dependencies/)|(^|/)__mocks__/'
 
 # Paths no unit test can depend on: docs and agent files, e2e specs, VRT tests and
@@ -117,6 +122,11 @@ fi
 forced=$(grep -E "$FORCE_FULL" <<< "$changed" || true)
 if [ -n "$forced" ]; then
   plan full "Changed files the module graph does not track:$(printf '\n- `%s`' $forced)"
+fi
+
+public_changed=$(grep -E '^public/' <<< "$changed" || true)
+if [ -n "$public_changed" ]; then
+  plan full "Changed files under \`public/\` (read at runtime, outside the module graph):$(printf '\n- `%s`' $public_changed)"
 fi
 
 removed=$(git diff --name-only --diff-filter=DR "$BASE" HEAD -- 'src/**' | grep -vE '\.test\.tsx?$' || true)

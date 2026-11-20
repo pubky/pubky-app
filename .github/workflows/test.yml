@@ -20,7 +20,10 @@ concurrency:
 jobs:
   # Pull requests into dev run only the unit tests their change can affect; the merge
   # queue (merge_group), push, workflow_dispatch and PRs into any other branch run the
-  # full suite, so dev never receives a commit whose full suite has not passed.
+  # full suite. Anything landing through the merge queue has passed the full suite on
+  # the merged tree. An admin bypass merge skips the merge_group run and lands on the
+  # affected subset alone; that is accepted because the push to dev runs the full
+  # suite right after.
   # See .github/scripts/plan-unit-tests.sh for the rules.
   plan:
     name: Plan unit tests

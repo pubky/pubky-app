@@ -88,7 +88,7 @@ These workflows trigger on `pull_request` (any target branch):
 | Build        | `.github/workflows/build.yml`  | Production Next.js build + smoke start |
 | Code Quality | `.github/workflows/format.yml` | Prettier, ESLint, TypeScript           |
 
-¹ A PR into `dev` runs only the unit tests its change can affect, and the merge queue runs the full suite before it lands. A PR into `master` (the release PR) or any other branch always runs the full suite. The plan and its reasons are in the run summary; `.github/scripts/plan-unit-tests.sh` holds the rules.
+¹ A PR into `dev` runs only the unit tests its change can affect, and the merge queue runs the full suite before it lands. An admin bypass merge skips the merge queue, so it lands having passed only the affected subset; that is accepted because `test.yml` runs the full suite on every push to `dev`, so a break shows up on `dev` right after landing. A PR into `master` (the release PR) or any other branch always runs the full suite. The plan and its reasons are in the run summary; `.github/scripts/plan-unit-tests.sh` holds the rules.
 
 ### VRT and e2e
 
