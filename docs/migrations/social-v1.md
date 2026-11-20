@@ -725,7 +725,7 @@ the repository (`qa1-report.md`, `qa-3-results.md`, `qa-4-results.md`, `qa-5-res
 
 **QA-1 (2026-10-30/31, `feat/social-v1` with B3 merged, Nexus placeholder `feat/v1-social-indexing`): 19 PASS, 1 N/A of 20.** Persisted 0.x sessions signed out (`pre-migration-grant`, a Ring 0.x grant `missing-scopes`, a never-backed-up key
 with the backup prompt first) · phrase sign-in → `/migration` → summary → home, flag revision 3, 0.x tree
-byte-identical · reload after migration: no gate, no migrator chunk · migrated article (rule A′), collection and image
+byte-identical · reload after migration: no gate, no migrator chunk · migrated article (rule A′; removed 2026-11-19, ADR-0023), collection and image
 note render · post create, edit (second version is the head), reply, repost, delete (every version gone, tombstone,
 the 0.x copy removed too) · article with cover and inline media, title edit · collections create, add (also into a
 migrated one), remove, cover removal (BUG-1 and BUG-2 found here) · tags, migrated tag untag via `tag_uri`, hashtag
