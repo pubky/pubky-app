@@ -278,8 +278,8 @@ async function handle({ id, operation, account, payload, notifyUnlocked }) {
             rejectIfClosing();
             const pending = prepareGrant();
             if (state.exists && !background) {
-              // These two idle streams need only the public ticket. The engine writes
-              // its first Bitcoin request after unlock and the Ring device check.
+              // Preparing public Electrum checks needs only the relay ticket.
+              // Wallet queries still start after unlock and the Ring device check.
               void pending
                 .then((grant) => {
                   if (!closing && !background && openingGrant === pending && grant.expiresAt - Date.now() >= 15000) {

@@ -1,8 +1,9 @@
 import { createRelaySocketFactory } from '@beignet/portable-engine';
+import { prepareElectrumHandshake } from './electrum-handshake.mjs';
 
 const maxIdleMs = 15_000;
 
-// A prepared socket carries no protocol bytes until Beignet takes ownership.
+// Only the hosted mainnet transport opts into the pinned public handshake.
 export function createStartupSockets(grant) {
   const WebSocket = grant.WebSocket ?? globalThis.WebSocket;
   if (!WebSocket) throw new Error('WebSocket is required');
@@ -11,16 +12,19 @@ export function createStartupSockets(grant) {
   const dialed = new Set();
   const attempts = new Map();
   let closed = false;
+  let electrumDials = 0;
+  const warmHandshake = grant.network === 'mainnet' && grant.fastElectrumStart === true;
 
   function release(slot) {
     pending.delete(slot);
     clearTimeout(slot.timer);
-    slot.socket.onmessage = slot.socket.onclose = slot.socket.onerror = null;
+    if (!slot.handshake) slot.socket.onmessage = slot.socket.onclose = slot.socket.onerror = null;
   }
 
   function discard(slot) {
     release(slot);
-    if (slot.socket.readyState < 2) slot.socket.close();
+    if (slot.handshake) slot.handshake.cancel();
+    else if (slot.socket.readyState < 2) slot.socket.close();
   }
 
   function usable(slot) {
@@ -31,14 +35,16 @@ export function createStartupSockets(grant) {
 
   function takeSocket(url, protocols) {
     dialed.add(url);
+    const index = url === electrumUrl ? electrumDials++ : 0;
     for (const slot of pending) {
       const socket = slot.socket;
       if (!usable(slot)) {
         discard(slot);
         continue;
       }
-      if (url !== slot.url) continue;
+      if (url !== slot.url || (slot.handshake && slot.index !== index)) continue;
       release(slot);
+      if (slot.handshake) return slot.handshake.claim();
       if (socket.readyState === 1) {
         // Beignet installs its open handler immediately after this constructor returns.
         queueMicrotask(() => {
@@ -63,26 +69,33 @@ export function createStartupSockets(grant) {
   function prepare(url, count, maxAttempts) {
     const previous = attempts.get(url) ?? 0;
     if (closed || dialed.has(url) || previous >= maxAttempts) return;
-    let available = 0;
+    const available = new Set();
     for (const slot of pending) {
       if (!usable(slot)) discard(slot);
-      else if (slot.url === url) available++;
+      else if (slot.url === url) available.add(slot.index);
     }
     const until = Math.min(grant.expiresAt, Date.now() + maxIdleMs);
-    if (available >= count || !(until > Date.now())) return;
+    if (available.size >= count || !(until > Date.now())) return;
     attempts.set(url, previous + 1);
-    for (let i = available; i < count; i++) {
+    for (let index = 0; index < count; index++) {
+      if (available.has(index)) continue;
+      const newSocket = () => new WebSocket(url, ['beignet.v1', 'auth.' + grant.token]);
       let socket;
       try {
-        socket = new WebSocket(url, ['beignet.v1', 'auth.' + grant.token]);
+        socket = newSocket();
       } catch {
         // The engine will make an ordinary connection when it needs one.
         return;
       }
-      const slot = { socket, url, until, token: grant.token };
+      const slot = { socket, url, index, until, token: grant.token };
       pending.add(slot);
-      socket.onmessage = socket.onclose = socket.onerror = () => discard(slot);
       slot.timer = setTimeout(() => discard(slot), until - Date.now());
+      const abandon = () => discard(slot);
+      if (warmHandshake && url === electrumUrl) {
+        slot.handshake = prepareElectrumHandshake(socket, index === 0 ? 'genesis' : 'session', abandon, newSocket);
+      } else {
+        socket.onmessage = socket.onclose = socket.onerror = abandon;
+      }
     }
   }
 

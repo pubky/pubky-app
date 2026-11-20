@@ -46,7 +46,7 @@ The grant endpoint is public and permits transport to the two fixed upstreams. U
 
 The hosted wallet uses Bitcoin mainnet with Chicory mobile’s Iroh primary and TLS Electrum. Pubky identities, posts and Locks use the Pubky staging services. The network badge in Wallet identifies the network that holds the money.
 
-On a return visit, the visible password screen prepares two short-lived Electrum connections for the network check and the wallet scan. They carry their first Bitcoin requests after unlock and, for Ring wallets, the device check. After verifying the network and opening the node, the wallet prepares the Lightning connection while scanning Bitcoin. Payment review uses the live wallet.
+On a return visit, the visible password screen prepares two short-lived Electrum connections for the network check and the wallet scan. On the hosted mainnet relay they can also begin public network checks, including reading the Bitcoin genesis header and negotiating the Electrum protocol. The engine validates the replies from those connections. Wallet addresses and balances are queried after unlock and, for Ring wallets, the device check. After verifying the network and opening the node, the wallet prepares the Lightning connection while scanning Bitcoin. Payment review uses the live wallet.
 
 For a returning wallet with a small history on the hosted mainnet Electrum server, the initial scan sends its usual 20-entry batches closer together. It checks the same addresses, unspent outputs and fees. An unfinished scan retries at the server’s normal pace before the wallet opens for payments.
 

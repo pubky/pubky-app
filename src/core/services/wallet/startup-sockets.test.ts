@@ -189,3 +189,41 @@ it('falls back to an ordinary dial after a speculative constructor error and val
   expect(() => createStartupSockets({ ...grant, electrumUrl: 'ws://untrusted.example/electrum' })).toThrow();
   expect(sockets).toHaveLength(1);
 });
+
+it('prepares only public Bitcoin checks on the hosted mainnet route and keeps the scan socket when the proof socket fails', () => {
+  const pool = createStartupSockets({ ...makeGrant(), network: 'mainnet', fastElectrumStart: true });
+  pool.prepareElectrum();
+  const [proof, scan] = sockets;
+  proof.open();
+  scan.open();
+  const firstRequest = (socket: TestSocket) => JSON.parse(new TextDecoder().decode(socket.send.mock.calls[0][0]));
+  expect(firstRequest(proof)).toMatchObject({ method: 'blockchain.block.header', params: [0] });
+  expect(firstRequest(scan)).toMatchObject({ method: 'server.version', params: ['beignet', '1.4'] });
+  proof.close();
+  const replacement = pool.socketFactory(electrum);
+  const scanConnection = pool.socketFactory(electrum);
+  expect(sockets).toHaveLength(3);
+  expect(sockets[2].readyState).toBe(0);
+  expect(scan.readyState).toBe(1);
+  expect(sockets.every((socket) => socket.url === electrumUrl)).toBe(true);
+  replacement.destroy();
+  scanConnection.destroy();
+  pool.close();
+  expect(sockets.every((socket) => socket.readyState === 3)).toBe(true);
+});
+
+it.each([
+  ['regtest', true],
+  ['mainnet', false],
+] as const)(
+  'keeps idle connections silent when the deployment has not opted into mainnet checks',
+  (network, fastElectrumStart) => {
+    const pool = createStartupSockets({ ...makeGrant(), network, fastElectrumStart });
+    pool.prepareElectrum();
+    for (const socket of sockets) {
+      socket.open();
+      expect(socket.send).not.toHaveBeenCalled();
+    }
+    pool.close();
+  },
+);
