@@ -25,7 +25,9 @@ import {
   getResourceLinks,
   getResourceTagsLabel,
   getResourceTarget,
+  isWritableResourceUri,
 } from '@/molecules/ResourceCard/ResourceCard.utils';
+import { ResourceLinkCard } from '@/molecules/ResourceCard/ResourceLinkCard';
 import { ResourceCardSkeleton } from '@/molecules/ResourceCardSkeleton/ResourceCardSkeleton';
 import { PlayOnPill } from '@/molecules/ResourcePlayer/ResourcePlayerControls';
 import { useCardPlayer } from '@/molecules/ResourcePlayer/useCardPlayer';
@@ -50,8 +52,10 @@ interface ResourceDetailsProps {
 
 /**
  * The resource page's body, where a post's page has the post: the heading, then the link's large
- * card with a post's footer. When Pinakes does not know the link, is not configured, or cannot be
- * read, it says so and offers the plain link.
+ * card with a post's footer. Without a card (Pinakes does not know the link or is not configured),
+ * the link's own preview takes its place, with the same footer; when Pinakes cannot be read, it
+ * says so and offers the plain link. When a card replaces the link's preview (a resolve answering),
+ * the footer is a new one (its tags and actions reset); the thread stays when its link is the same.
  */
 export function ResourceDetails(props: ResourceDetailsProps) {
   return (
@@ -73,25 +77,8 @@ function ResourceBody({ uri, read, onRetry, replies }: ResourceDetailsProps) {
       />
     );
   }
-  if (!isPinakesConfigured()) {
-    return (
-      <>
-        <ResourceEmptyState
-          icon={Link2Off}
-          title="External resource details are not available"
-          subtitle="This app does not read external resources from Pinakes."
-          dataCy="resource-not-configured"
-        >
-          <PlainLink uri={uri} />
-        </ResourceEmptyState>
-        {/* The replies come from Nexus: they show without Pinakes too. */}
-        <ResourceReplies uri={uri} replies={replies} />
-      </>
-    );
-  }
-
   const { data: card, isLoading, isError } = read;
-  if (isLoading) {
+  if (isPinakesConfigured() && isLoading) {
     return (
       // A labelled section, so the name is announced (a plain `div` cannot carry one).
       <Container as="section" data-testid="resource-loading" aria-busy="true" aria-label="Loading external resource">
@@ -99,47 +86,64 @@ function ResourceBody({ uri, read, onRetry, replies }: ResourceDetailsProps) {
       </Container>
     );
   }
-  if (isError) {
-    return (
-      <>
-        <ResourceEmptyState
-          icon={CircleAlert}
-          title="This external resource could not be loaded"
-          subtitle="Pinakes could not be reached. Try again in a moment."
-          dataCy="resource-error"
-        >
-          <Container overrideDefaults className="flex flex-col items-center gap-3">
-            <Button type="button" variant={ButtonVariant.SECONDARY} onClick={onRetry} data-testid="resource-retry">
-              <RotateCw className="size-4 shrink-0" />
-              Try again
-            </Button>
-            <PlainLink uri={uri} />
-          </Container>
-        </ResourceEmptyState>
-        <ResourceReplies uri={uri} replies={replies} />
-      </>
+
+  // The thread is on the acted-on link: the card's canonical one, else the page's.
+  let threadUri = uri;
+  let body: React.ReactNode;
+  // The tags and replies come from Nexus: they show without Pinakes too.
+  if (!isPinakesConfigured()) {
+    body = <ResourceUnknown uri={uri} replies={replies} />;
+  } else if (isError) {
+    body = (
+      <ResourceEmptyState
+        icon={CircleAlert}
+        title="This external resource could not be loaded"
+        subtitle="Pinakes could not be reached. Try again in a moment."
+        dataCy="resource-error"
+      >
+        <Container overrideDefaults className="flex flex-col items-center gap-3">
+          <Button type="button" variant={ButtonVariant.SECONDARY} onClick={onRetry} data-testid="resource-retry">
+            <RotateCw className="size-4 shrink-0" />
+            Try again
+          </Button>
+          <PlainLink uri={uri} />
+        </Container>
+      </ResourceEmptyState>
     );
+  } else if (!card) {
+    body = <ResourceUnknown uri={uri} replies={replies} />;
+  } else {
+    // The card's canonical link; the page's link, its refs and aliases are its spellings, read along.
+    const target = getResourceTarget(card, uri);
+    threadUri = target.uri;
+    body = <ResourceKnown card={card} uri={uri} target={target} replies={replies} />;
   }
-  if (!card) return <ResourceUnknown uri={uri} replies={replies} />;
-  return <ResourceKnown card={card} uri={uri} replies={replies} />;
+  // The thread is rendered once, past the body, so a card that replaces the link's own preview (a
+  // resolve answering) keeps the thread and a half-typed quick reply when its link is the same.
+  return (
+    <>
+      {body}
+      <ResourceReplies key={threadUri} uri={threadUri} replies={replies} />
+    </>
+  );
 }
 
 /**
- * The card, large, closed by a post's footer, then the thread of the posts replying to the acted-on
- * link (`ResourceReplies`). The other links' tags are read once the group is read (so the chips do
- * not reorder when it arrives), for the tag bar's one list.
+ * The card, large, closed by a post's footer; the page puts the thread of the posts replying to the
+ * acted-on link (`target.uri`) under it. The other links' tags are read once the group is read (so
+ * the chips do not reorder when it arrives), for the tag bar's one list.
  */
 function ResourceKnown({
   card,
   uri,
+  target,
   replies,
 }: {
   card: TPinakesResourceDetail;
   uri: string;
+  target: ReturnType<typeof getResourceTarget>;
   replies: UseResourceRepliesResult;
 }) {
-  // The card's canonical link; the page's link, its refs and aliases are its spellings, read along.
-  const target = getResourceTarget(card, uri);
   const actionUri = target.uri;
   // What "Post about this" and the ⋯ menu's link give, as a post's card does: a link people wrote
   // (the page's own when it is one), else the canonical link.
@@ -173,31 +177,28 @@ function ResourceKnown({
     />
   );
   return (
-    <>
-      <Container overrideDefaults data-testid="resource-details" className="min-w-0">
-        <ResourceCard
-          card={card}
-          size="large"
-          actions={actions}
-          renderBody={
-            embed
-              ? () => (
-                  <>
-                    {/* The player shows the title; the page keeps it as its heading for screen readers. */}
-                    <Typography as="h2" overrideDefaults className="sr-only">
-                      {card.name?.trim() || uri}
-                    </Typography>
-                    {embed}
-                  </>
-                )
-              : postEmbed?.renderBody
-          }
-          isBodyReplaced={postEmbed?.isOpen}
-          headerControl={switcher}
-        />
-      </Container>
-      <ResourceReplies uri={actionUri} replies={replies} />
-    </>
+    <Container overrideDefaults data-testid="resource-details" className="min-w-0">
+      <ResourceCard
+        card={card}
+        size="large"
+        actions={actions}
+        renderBody={
+          embed
+            ? () => (
+                <>
+                  {/* The player shows the title; the page keeps it as its heading for screen readers. */}
+                  <Typography as="h2" overrideDefaults className="sr-only">
+                    {card.name?.trim() || uri}
+                  </Typography>
+                  {embed}
+                </>
+              )
+            : postEmbed?.renderBody
+        }
+        isBodyReplaced={postEmbed?.isOpen}
+        headerControl={switcher}
+      />
+    </Container>
   );
 }
 
@@ -254,25 +255,35 @@ function usePostEmbed(card: TPinakesResourceDetail, uri: string) {
 }
 
 /**
- * A link Pinakes has no card for: says so and links out to it, then the posts replying to it, which
- * may exist for a link Pinakes has not read (the empty state then does not say nobody shared it).
+ * A link Pinakes has no card for (it would not read it, has not yet, or is not configured): the
+ * link's own preview, as a post shows such a link (`ResourceLinkCard`), large, closed by the same
+ * footer as a card, on the link as written: tags and replies are Nexus', by link, and need no card.
+ * A URI the app does not write (`javascript:`, junk, a link with credentials) gets no footer. The
+ * page puts the posts replying to it under it.
  */
 function ResourceUnknown({ uri, replies }: { uri: string; replies: UseResourceRepliesResult }) {
-  const hasReplies = (replies.replyCount ?? 0) > 0;
+  // A link that is not web (`isbn:`, `geo:`) has no web address to post about or copy.
+  const linkUrl = getHttpUrl(uri);
   return (
-    <>
-      <ResourceEmptyState
-        icon={Link2Off}
-        title="Pinakes doesn't know this link yet"
-        subtitle={
-          hasReplies ? 'It has not been read yet.' : 'Nobody has shared it on Pubky yet, or it has not been read.'
+    <Container overrideDefaults data-testid="resource-unknown" className="min-w-0">
+      <ResourceLinkCard
+        url={uri}
+        size="large"
+        actions={
+          isWritableResourceUri(uri) ? (
+            <ResourceActions
+              uri={uri}
+              postUri={linkUrl}
+              tagsLabel={getResourceTagsLabel(null)}
+              linkUrl={linkUrl}
+              size="large"
+              replyCount={replies.replyCount}
+              onReplySubmitted={replies.addReply}
+            />
+          ) : undefined
         }
-        dataCy="resource-not-found"
-      >
-        <PlainLink uri={uri} />
-      </ResourceEmptyState>
-      <ResourceReplies uri={uri} replies={replies} />
-    </>
+      />
+    </Container>
   );
 }
 

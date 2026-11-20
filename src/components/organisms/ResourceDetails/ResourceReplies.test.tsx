@@ -41,4 +41,10 @@ describe('ResourceReplies', () => {
 
     expect(mocks.view).toHaveBeenLastCalledWith(expect.objectContaining({ quickReply: null }));
   });
+
+  it('offers no composer for a link with credentials, which a reply would publish', () => {
+    render(<ResourceReplies uri="https://user:secret@example.com/a" replies={replies()} />);
+
+    expect(mocks.view).toHaveBeenLastCalledWith(expect.objectContaining({ quickReply: null }));
+  });
 });

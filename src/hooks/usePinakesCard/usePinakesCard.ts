@@ -20,11 +20,13 @@ export interface UsePinakesCardOptions {
    *
    * Pass it only for a post indexed in the last few minutes: each unknown link costs up to eight
    * reads, and a feed of older posts would spend Pinakes' per-IP budget on links it will not read.
+   * With `resolve`, a 404 is left to the resolve and only a `pending` card is re-read.
    */
   recheck?: boolean;
   /**
    * Asks Pinakes to read a link it does not know (`POST /v1/resolve`), once per link, after it has
-   * stayed as written for `PINAKES_RESOLVE_DEBOUNCE_MS`: for a link being written into a post.
+   * stayed as written for `PINAKES_RESOLVE_DEBOUNCE_MS`: for a link being written into a post, or
+   * opened on its resource page.
    */
   resolve?: boolean;
 }
@@ -125,7 +127,8 @@ export function usePinakesCard(
     enabled,
     recheck: {
       active: recheck,
-      delay: (card, count) => (isUnsettledCard(card) ? getRecheckDelay(count) : null),
+      // With `resolve`, a link Pinakes does not know is read by the resolve, not re-read here too.
+      delay: (card, count) => (isUnsettledCard(card) && !(resolve && card === null) ? getRecheckDelay(count) : null),
       // Shared by every preview of the link (see `rechecks`).
       fetchFn: () => recheckOnce(uri!),
     },
