@@ -159,10 +159,10 @@ jobs:
       fail-fast: false
       matrix:
         # Cross-browser runs (04:00 nightly or a firefox dispatch) are desktop only and run a
-        # smoke subset of whole specs on the browser-sensitive paths: sign-up, backup file download
-        # and restore, clipboard (onboarding), post and article image uploads (posts), and profile
-        # edit forms, tags and a stubbed homeserver failure (profile). Every spec signs up a fresh
-        # user first. Firefox ships on the ubuntu runner image.
+        # smoke subset of whole specs on the browser-sensitive paths: sign-up (onboarding), post
+        # and article image uploads (posts), and profile edit forms, tags and a stubbed homeserver
+        # failure (profile). Every spec signs up a fresh user first. Firefox ships on the ubuntu
+        # runner image.
         # Every other run is Chrome: the 03:00 nightly is mobile only, and push runs have no inputs,
         # so they resolve to desktop only.
         browser: ${{ fromJSON((github.event.schedule == '0 4 * * 1-5' || inputs.browsers == 'firefox') && '["firefox"]' || '["chrome"]') }}
