@@ -1,11 +1,9 @@
 import { BookmarkApplication } from '@/application/bookmark/bookmark';
 import { PostStreamApplication } from '@/application/stream/posts/post';
-import { NEXUS_STREAM_MAX_LIMIT } from '@/config/nexus';
 import type { TBookmarkEventParams } from '@/controllers/bookmark/bookmark.types';
 import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
 import { HttpMethod } from '@/libs/http/http.types';
 import type { BookmarkedPostDetails } from '@/models/bookmark/bookmark.schema';
-import type { Pubky } from '@/models/models.types';
 import { parseCompositeId } from '@/models/models.utils';
 import { BookmarkNormalizer } from '@/pipes/bookmark/bookmark.normalizer';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -77,9 +75,10 @@ export class BookmarkController {
 
   /**
    * Fetches the bookmarked posts that are not cached (`getMissingPostIds`) from Nexus and persists
-   * them, so every bookmark is classified and `getCount` is exact. Sequential `by_ids` batches of
-   * `NEXUS_STREAM_MAX_LIMIT`, each followed by the application's requests for its 0.x file details,
-   * missing authors and repost originals; with nothing missing it is one local read and no request.
+   * them, so every bookmark is classified and `getCount` is exact. The application sends them in
+   * sequential `by_ids` batches (`PostStreamApplication.fetchMissingPostsInBatches`), each followed
+   * by its requests for 0.x file details, missing authors and repost originals; with nothing
+   * missing it is one local read and no request.
    *
    * Resolves whatever Nexus answered, and rejects only when the local read of the missing ids fails.
    * A post Nexus does not serve stays uncached, where it keeps counting as a post, as the Bookmarks
@@ -108,7 +107,11 @@ export class BookmarkController {
     if (!viewerId) return Promise.resolve();
 
     const isCurrent = captureViewerSession();
-    const request = this.fetchMissingPostsInBatches(viewerId, isCurrent)
+    // The controller orchestrates the two domains: `BookmarkApplication` calls no other Application (ADR-0009).
+    const request = this.getMissingPostIds()
+      .then((cacheMissPostIds) =>
+        PostStreamApplication.fetchMissingPostsInBatches({ cacheMissPostIds, viewerId, isCurrent }),
+      )
       .then(() => {
         // The same account under another session: a hard page load starts with the stored pubky and no session,
         // and the restore replaces it while the pass is out, so the answers were dropped. Its callers still wait
@@ -123,20 +126,6 @@ export class BookmarkController {
       });
     this.missingPostsPass = { isCurrent, request };
     return request;
-  }
-
-  private static async fetchMissingPostsInBatches(viewerId: Pubky, isCurrent: () => boolean): Promise<void> {
-    const missingPostIds = await this.getMissingPostIds();
-    for (let index = 0; index < missingPostIds.length; index += NEXUS_STREAM_MAX_LIMIT) {
-      // The controller orchestrates the two domains: `BookmarkApplication` calls no other Application (ADR-0009).
-      const hydrated = await PostStreamApplication.fetchMissingPostsFromNexus({
-        cacheMissPostIds: missingPostIds.slice(index, index + NEXUS_STREAM_MAX_LIMIT),
-        viewerId,
-        isCurrent,
-      });
-      // False when the batch failed or the session changed: the batches left would fail or be dropped as well.
-      if (!hydrated) return;
-    }
   }
 
   /**

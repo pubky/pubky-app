@@ -10,7 +10,7 @@ import type {
   TPostStreamChunkResponse,
 } from '@/application/stream/posts/post.types';
 import { COLLECTIONS_DISCOVER_MAX_FETCHES_PER_LOAD } from '@/config/collections';
-import { getStreamCacheMaxAgeMs } from '@/config/nexus';
+import { getStreamCacheMaxAgeMs, NEXUS_STREAM_MAX_LIMIT } from '@/config/nexus';
 import { CONTENT_SEARCH_MAX_SKIP } from '@/config/search';
 import {
   FORCE_FETCH_NEW_POSTS,
@@ -759,6 +759,30 @@ export class PostStreamApplication {
       Logger.warn('Failed to fetch missing posts from Nexus', { cacheMissPostIds, viewerId, error });
       return false;
     }
+  }
+
+  /**
+   * `fetchMissingPostsFromNexus` for more ids than one `by_ids` request takes: batches of
+   * `NEXUS_STREAM_MAX_LIMIT`, one after another, since the endpoint is rate limited.
+   *
+   * @returns Whether every batch hydrated. The first batch that does not (it failed, which
+   * `fetchMissingPostsFromNexus` logs, or the viewer session changed) ends the run: the batches
+   * left would fail or be dropped as well, and an outage then costs the wait of one batch.
+   */
+  static async fetchMissingPostsInBatches({
+    cacheMissPostIds,
+    viewerId,
+    isCurrent,
+  }: Pick<TMissingPostsParams, 'cacheMissPostIds' | 'viewerId' | 'isCurrent'>): Promise<boolean> {
+    for (let start = 0; start < cacheMissPostIds.length; start += NEXUS_STREAM_MAX_LIMIT) {
+      const hydrated = await this.fetchMissingPostsFromNexus({
+        cacheMissPostIds: cacheMissPostIds.slice(start, start + NEXUS_STREAM_MAX_LIMIT),
+        viewerId,
+        isCurrent,
+      });
+      if (!hydrated) return false;
+    }
+    return true;
   }
 
   /**
