@@ -18,10 +18,11 @@ type Props = {
   network: Network;
   session: WalletSession;
   onCancel: () => void;
+  onPhrase?: () => void;
   onKey: (key: Uint8Array, assertCurrent: () => void, mode: RingSetupMode, deviceId: string) => Promise<void>;
 };
 
-export function WalletRingSetup({ account, network, session, onCancel, onKey }: Props) {
+export function WalletRingSetup({ account, network, session, onCancel, onPhrase, onKey }: Props) {
   const [device, setDevice] = useState<{ id: string; state: Awaited<ReturnType<typeof ringEnrollment>> }>();
   const [error, setError] = useState('');
   const [mode, setMode] = useState<RingSetupMode>();
@@ -59,7 +60,10 @@ export function WalletRingSetup({ account, network, session, onCancel, onKey }: 
     );
   }
   return (
-    <WalletPanel title="Wallet with Pubky Ring" icon={KeyRound}>
+    <WalletPanel
+      title={device?.state === 'other-device' ? 'Recover your Ring wallet' : 'Wallet with Pubky Ring'}
+      icon={KeyRound}
+    >
       <p className="text-sm text-muted-foreground">
         Ring can recover your Bitcoin keys from the same Pubky identity. Keep a backup of that identity. Your wallet
         password protects this browser.
@@ -101,9 +105,16 @@ export function WalletRingSetup({ account, network, session, onCancel, onKey }: 
           </div>
         </>
       )}
-      <Button variant="outline" className="self-start" onClick={onCancel}>
-        Back
-      </Button>
+      {onPhrase && (
+        <Button variant="outline" className="self-start" onClick={onPhrase}>
+          Use a recovery phrase instead
+        </Button>
+      )}
+      {!onPhrase && (
+        <Button variant="outline" className="self-start" onClick={onCancel}>
+          Lock wallet
+        </Button>
+      )}
     </WalletPanel>
   );
 }

@@ -179,6 +179,40 @@ describe('Ring private wallet device', () => {
     expect(f.storage.free).toHaveBeenCalledOnce();
   });
 
+  it('rejects a late initial lock response before reading or writing the marker', async () => {
+    const f = fixture();
+    let deliver!: (lock: typeof f.lock) => void;
+    f.storage.lock.mockImplementationOnce(() => new Promise((resolve) => (deliver = resolve)));
+    const acquiring = acquireRingDevice(account, 'mainnet', a, 'create', vi.fn());
+    await vi.advanceTimersByTimeAsync(7000);
+    deliver(f.lock);
+    await expect(acquiring).rejects.toThrow(/expired/);
+    expect(f.storage.getJson).not.toHaveBeenCalled();
+    expect(f.storage.putTextLocked).not.toHaveBeenCalled();
+    expect(f.storage.unlock).toHaveBeenCalledOnce();
+  });
+
+  it('charges the time in transit against the refreshed lease', async () => {
+    const f = fixture();
+    let deliver!: () => void;
+    f.storage.refreshLock.mockImplementation(() => new Promise((resolve) => (deliver = resolve)));
+    const lost = vi.fn();
+    const lease = await acquireRingDevice(account, 'mainnet', a, 'create', lost);
+    await vi.advanceTimersByTimeAsync(5500);
+    expect(f.storage.refreshLock).toHaveBeenCalledOnce();
+    deliver();
+    await vi.advanceTimersByTimeAsync(500);
+    // The first refresh started at 3000. Its response at 5500 does not reset the clock.
+    expect(f.storage.refreshLock).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(3749);
+    expect(() => lease.assertActive()).not.toThrow();
+    await vi.advanceTimersByTimeAsync(1);
+    expect(() => lease.assertActive()).toThrow(/lost/);
+    expect(lost).toHaveBeenCalledOnce();
+    deliver();
+    await lease.release();
+  });
+
   it('waits for the worker to shut down before releasing an early-lost lock', async () => {
     const f = fixture();
     let stopped!: () => void;

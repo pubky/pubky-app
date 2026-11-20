@@ -1,4 +1,13 @@
-import { Address, Client, Pubky, PublicKey, resolvePubky, Session } from '@synonymdev/pubky';
+import {
+  Address,
+  Client,
+  Pubky,
+  PublicKey,
+  resolvePubky,
+  Session,
+  type SessionStorage,
+  type StorageLock,
+} from '@synonymdev/pubky';
 import type { MigrationLock, MigrationReport, ProgressEvent } from 'pubky-social-migrator';
 import { getAuthClientId } from '@/config/auth';
 import {
@@ -675,6 +684,24 @@ export class HomeserverService {
     await assertOk({ response, url, operation: 'request' });
 
     return method === HttpMethod.GET ? ((await parseResponseOrUndefined<T>({ response })) as T) : (undefined as T);
+  }
+
+  /** A locked read-modify-write must restart at the read if the lock expires or the write is ambiguous. */
+  static async putTextLocked(
+    session: Session,
+    storage: SessionStorage,
+    lock: StorageLock,
+    body: string,
+    assertCurrent: () => void,
+  ) {
+    return retryHomeserverWrite(
+      HttpMethod.PUT,
+      () => this.withActiveSession(session, () => storage.putTextLocked(lock, body)),
+      {
+        maxRetries: 0,
+        beforeAttempt: assertCurrent,
+      },
+    );
   }
 
   /**

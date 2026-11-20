@@ -202,7 +202,7 @@ export function WalletDashboard({
         <WalletPanel title="Pubky Ring recovery" icon={KeyRound}>
           <p className="text-sm text-muted-foreground">
             Back up your Pubky identity in Ring. To recover on another device, close this wallet, sign in with the same
-            Pubky and choose Use Pubky Ring. Lightning recovery also needs current channel data from the recovery peer.
+            Pubky and choose Recover with Ring. Lightning recovery also needs current channel data from the recovery peer.
           </p>
         </WalletPanel>
       )}

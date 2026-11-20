@@ -14,13 +14,13 @@ import { acquireRingDevice } from '@/services/wallet/ring-enrollment';
 import { WalletSession } from '@/services/wallet/session';
 import { WalletDashboard } from './WalletDashboard';
 import { RecoveryWords, useWalletTask, WalletPanel, type WalletTask } from './WalletPanel';
-import { type RingSetupMode,WalletRingSetup } from './WalletRingSetup';
+import { type RingSetupMode, WalletRingSetup } from './WalletRingSetup';
 
 type Stage =
   | { kind: 'checking' | 'unavailable' | 'framed' }
   | { kind: 'password'; exists: boolean }
   | { kind: 'empty'; defaults: CreateWalletInput; network: Network }
-  | { kind: 'ring'; defaults: CreateWalletInput; network: Network; session: WalletSession }
+  | { kind: 'ring'; defaults: CreateWalletInput; network: Network; session: WalletSession; reserved: boolean }
   | { kind: 'backup'; id: string; network: Network; phrase: string }
   | { kind: 'start'; id: string; network: Network }
   | { kind: 'ready'; id: string; network: Network; session: WalletSession };
@@ -151,8 +151,7 @@ export function WalletAccount({
     else {
       const binding = await session.ringBinding();
       if (live.current !== session) return;
-      if (binding) setStage({ kind: 'ring', defaults, network: defaults.network, session });
-      else setStage({ kind: 'empty', defaults, network: defaults.network });
+      setStage({ kind: 'ring', defaults, network: defaults.network, session, reserved: Boolean(binding) });
     }
   }
   async function create(mnemonic?: string) {
@@ -226,7 +225,7 @@ export function WalletAccount({
           busy={task.busy}
           submit={(words) => task.run(() => create(words))}
           useRing={() => {
-            if (live.current) setStage({ ...stage, kind: 'ring', session: live.current });
+            if (live.current) setStage({ ...stage, kind: 'ring', session: live.current, reserved: false });
           }}
         />
       )}
@@ -235,6 +234,21 @@ export function WalletAccount({
           account={account}
           network={stage.network}
           session={stage.session}
+          onPhrase={
+            stage.reserved
+              ? undefined
+              : () => {
+                  void task.run(async () => {
+                    const binding = await stage.session.ringBinding();
+                    if (live.current !== stage.session) return;
+                    if (binding || lease.current)
+                      throw new Error(
+                        'This browser is already setting up its Ring wallet. Lock it and reopen to continue.',
+                      );
+                    setStage({ kind: 'empty', defaults: stage.defaults, network: stage.network });
+                  });
+                }
+          }
           onCancel={() => {
             void stage.session
               .close()
@@ -249,6 +263,7 @@ export function WalletAccount({
             if (live.current !== session) throw new Error('Reopen your wallet to continue.');
             const created = await session.createRingWallet(key, stage.network, held.mode);
             if (live.current !== session) return;
+            assertCurrent();
             setRingBacked(true);
             await task.run(() => start(session, created.id, created.network));
           }}
@@ -348,13 +363,13 @@ function PasswordForm({
   const mismatch = !exists && confirmation.length > 0 && password !== confirmation;
   return (
     <WalletPanel
-      title={exists ? 'Unlock wallet' : 'Set up your Bitcoin wallet'}
+      title={exists ? 'Unlock wallet' : 'Protect your wallet in this browser'}
       icon={exists ? LockKeyhole : WalletIcon}
     >
       <p className="text-muted-foreground">
         {exists
           ? 'Enter your wallet password to unlock it on this device.'
-          : 'Choose a password to encrypt your wallet on this device. Next, choose recovery with Pubky Ring or a separate recovery phrase.'}
+          : 'Choose a password to protect this browser’s wallet data. It can be different on each device. Next, we’ll check for a wallet linked to your Pubky Ring identity.'}
       </p>
       <form
         className="grid gap-4"

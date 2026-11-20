@@ -3,6 +3,7 @@ import type { Path, SessionStorage, StorageLock } from '@synonymdev/pubky';
 import { z } from 'zod';
 import { APP_PRIVATE_PATH } from '@/config/app-files';
 import { hasCapabilities } from '@/libs/auth/capabilities';
+import { HomeserverService } from '@/services/homeserver/homeserver';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
 type Mode = 'create' | 'restore';
@@ -76,7 +77,7 @@ function context(account: string, network: Network, deviceId: string) {
       state.generation === generation
     );
   };
-  return { storage: session.storage, path, current };
+  return { session, storage: session.storage, path, current };
 }
 
 async function readMarker(storage: SessionStorage, path: Path, network: Network) {
@@ -108,16 +109,25 @@ export async function ringEnrollment(
   }
 }
 
+function requestTime() {
+  return { wall: Date.now(), monotonic: performance.now() };
+}
+
+function elapsedSince(start: ReturnType<typeof requestTime>) {
+  const wall = Date.now() - start.wall;
+  return wall < 0 ? Infinity : Math.max(wall, performance.now() - start.monotonic);
+}
+
 function maintainLease(
   storage: SessionStorage,
   lock: StorageLock,
+  requestedAt: ReturnType<typeof requestTime>,
   current: () => boolean,
   onLost: () => void | Promise<void>,
 ) {
   let active = true;
-  let grantedAt = 0;
-  let deadline = 0;
-  let monotonicDeadline = 0;
+  let started = requestedAt;
+  let usableLifetime = 0;
   let timer: ReturnType<typeof setTimeout>;
   let expiry: ReturnType<typeof setTimeout>;
   let queue: Promise<void> = Promise.resolve();
@@ -170,8 +180,7 @@ function maintainLease(
     void finish(true).catch(() => {});
   }
   function expired() {
-    const now = Date.now();
-    return now < grantedAt || now >= deadline || performance.now() >= monotonicDeadline;
+    return elapsedSince(started) >= usableLifetime;
   }
   function assertActive() {
     if (!active || !current() || expired()) {
@@ -195,34 +204,36 @@ function maintainLease(
     );
     return result;
   }
-  function schedule() {
+  function schedule(requested: ReturnType<typeof requestTime>) {
     const seconds = lock.timeoutSeconds;
     if (!Number.isInteger(seconds) || seconds < 1)
       throw new RingEnrollmentError('The homeserver returned an invalid device lock lifetime.');
     const ttl = Math.min(seconds, leaseSeconds) * 1000;
-    // Stop authorizing work before the homeserver could issue the next device a lock.
-    const usable = ttl - Math.min(5000, ttl / 4);
-    grantedAt = Date.now();
-    deadline = grantedAt + usable;
-    monotonicDeadline = performance.now() + usable;
+    // The server starts the clock before its response reaches the browser.
+    started = requested;
+    usableLifetime = ttl - Math.min(5000, ttl / 4);
+    const elapsed = elapsedSince(started);
+    if (elapsed >= usableLifetime)
+      throw new RingEnrollmentError('The Ring wallet device lock expired. Close this wallet and reopen it.');
     clearTimeout(timer);
     clearTimeout(expiry);
-    expiry = setTimeout(lose, deadline - Date.now());
+    expiry = setTimeout(lose, usableLifetime - elapsed);
     timer = setTimeout(
       () => {
         void run(async () => {
+          const sent = requestTime();
           await storage.refreshLock(lock, leaseSeconds);
           assertActive();
-          schedule();
+          schedule(sent);
         }).catch(lose);
       },
-      Math.floor(ttl / 3),
+      Math.max(0, Math.floor(ttl / 3) - elapsed),
     );
   }
   window.addEventListener('pageshow', resumed);
   document.addEventListener('visibilitychange', resumed);
   try {
-    schedule();
+    schedule(requestedAt);
   } catch (error) {
     void release().catch(() => {});
     throw safeError(error);
@@ -237,15 +248,16 @@ export async function acquireRingDevice(
   intent: Intent,
   onLost: () => void | Promise<void>,
 ) {
-  const { storage, path, current } = context(account, network, deviceId);
+  const { session, storage, path, current } = context(account, network, deviceId);
   let lock: StorageLock;
+  const requestedAt = requestTime();
   try {
     lock = await storage.lock(path, leaseSeconds);
   } catch (error) {
     storage.free();
     throw safeError(error);
   }
-  const lease = maintainLease(storage, lock, current, onLost);
+  const lease = maintainLease(storage, lock, requestedAt, current, onLost);
   try {
     const mode = await lease.run(async () => {
       const record = await readMarker(storage, path, network);
@@ -255,7 +267,13 @@ export async function acquireRingDevice(
         throw new RingEnrollmentError('This wallet device must be explicitly restored before it can open.');
       }
       if (intent !== 'create' && intent !== 'restore') throw new RingEnrollmentError('Invalid wallet device action.');
-      await storage.putTextLocked(lock, JSON.stringify({ version: 1, network, deviceId, mode: intent }));
+      await HomeserverService.putTextLocked(
+        session,
+        storage,
+        lock,
+        JSON.stringify({ version: 1, network, deviceId, mode: intent }),
+        lease.assertActive,
+      );
       return intent;
     });
     return { mode, release: lease.release, assertActive: lease.assertActive };

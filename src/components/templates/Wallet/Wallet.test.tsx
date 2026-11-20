@@ -85,6 +85,7 @@ beforeEach(() => {
   wallet.account = 'account-one';
   wallet.exists = true;
   wallet.ringBinding.mockResolvedValue(null);
+  wallet.ringEnrollment.mockResolvedValue('new');
   wallet.inspect.mockImplementation(async () => ({ exists: wallet.exists }));
   wallet.open.mockResolvedValue({
     network: 'regtest',
@@ -155,6 +156,7 @@ describe('Pubky wallet', () => {
     expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled();
     fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'example password' } });
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Use a recovery phrase instead' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Create with recovery phrase' }));
     expect(await screen.findByText('word12')).toBeInTheDocument();
     expect(wallet.createWallet).toHaveBeenCalledTimes(1);
@@ -184,7 +186,7 @@ describe('Pubky wallet', () => {
       fireEvent.change(await screen.findByLabelText('New wallet password'), { target: { value: 'example password' } });
       fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'example password' } });
       fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
-      fireEvent.click(await screen.findByRole('button', { name: 'Use Pubky Ring' }));
+      expect(screen.queryByRole('button', { name: 'Create with recovery phrase' })).toBeNull();
       expect(await screen.findByRole('button', { name: button })).toBeDisabled();
       if (mode === 'restore') expect(screen.queryByRole('button', { name: 'Create with Ring' })).toBeNull();
       fireEvent.click(screen.getByRole('checkbox'));
