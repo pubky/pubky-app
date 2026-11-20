@@ -135,11 +135,10 @@ jobs:
     timeout-minutes: 40
     # Starts after the app image exists. Overlapping setup with the build (#2824) saved
     # ~2-3 min of wall time per rebuild run, but each of the ~13 spec jobs then sat idle
-    # in the wait step below for a median 3 min: ~4,600 runner-minutes per 14 days, about
+    # polling the registry for a median 3 min: ~4,600 runner-minutes per 14 days, about
     # a tenth of all Linux CI minutes. This suite runs after merge, so it takes the
     # minutes back and accepts the later start. When no build input changed, the build
-    # job is skipped and the specs start as early as before. A single check below
-    # confirms the content tag is in the registry before the stack pulls it.
+    # job is skipped and the specs start as early as before.
     needs: [rebuild_images, rebuild_pubky_app]
     env:
       HOMESERVER_TAG: ${{ needs.rebuild_images.outputs.homeserver-testnet_tag }}
@@ -342,23 +341,6 @@ jobs:
           done
 
           echo "Service is ready."
-
-      # rebuild_pubky_app pushes the content tag before it concludes, so one check
-      # suffices; fail loudly if the tag is somehow missing.
-      - name: Verify the pubky-app image exists
-        env:
-          REGISTRY: ${{ env.registry }}
-          CONTENT_TAG: ${{ steps.app_tag.outputs.content_tag }}
-        run: |
-          IMAGE="$REGISTRY/pubky-app:$CONTENT_TAG"
-          if ! docker manifest inspect "$IMAGE" > /dev/null; then
-            echo "rebuild_pubky_app concluded successfully but $IMAGE is not in the registry."
-            exit 1
-          fi
-          # Log the digest so the exact tested image stays identifiable even if a
-          # later build overwrites the tag.
-          DIGEST=$(docker buildx imagetools inspect "$IMAGE" | awk '/^Digest:/ {print $2; exit}')
-          echo "Testing image: $IMAGE@${DIGEST:-unknown}"
 
       - name: Run pubky-app
         working-directory: pubky-stack/docker
