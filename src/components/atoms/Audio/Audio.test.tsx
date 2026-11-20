@@ -28,6 +28,12 @@ describe('Audio', () => {
     expect(audio).toHaveClass('w-full');
   });
 
+  it('draws the browser controls in the app theme, also with a custom className', () => {
+    render(<Audio src="/audio.mp3" className="absolute inset-0 size-full" data-testid="themed-audio" />);
+    const audio = screen.getByTestId('themed-audio');
+    expect(audio).toHaveClass('scheme-dark', 'light:scheme-light', 'size-full');
+  });
+
   it('renders with controls by default', () => {
     render(<Audio src="/audio.mp3" data-testid="audio-controls" />);
     const audio = screen.getByTestId('audio-controls') as HTMLAudioElement;

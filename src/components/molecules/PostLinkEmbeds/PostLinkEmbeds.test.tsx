@@ -121,7 +121,10 @@ vi.mock('./Providers/Generic/GenericPreview', () => ({
 }));
 
 // No Pinakes card unless a test gives one, as with Pinakes not configured
-vi.mock('@/config/pinakes', () => ({ isPinakesConfigured: vi.fn(() => false) }));
+vi.mock('@/config/pinakes', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/config/pinakes')>()),
+  isPinakesConfigured: vi.fn(() => false),
+}));
 vi.mock('@/hooks/usePinakesCard/usePinakesCard', () => ({
   usePinakesCard: vi.fn(() => ({ data: null, isLoading: false, isError: false })),
 }));
