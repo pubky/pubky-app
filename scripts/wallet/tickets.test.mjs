@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { relayToken } from './bridge.mjs';
-import { issueTicket, validTicket } from './tickets.mjs';
+import { issueTicket, ticketCache, validTicket } from './tickets.mjs';
 import { connectionSettings, lifetimeMs } from './transport.mjs';
 
 const env = {
@@ -20,6 +20,24 @@ function cacheHandle(entries) {
     set: async (key, value, options) => entries.set(key, { value, options }),
   };
 }
+
+test('the runtime cache adapter preserves the full digest across function handles', async (t) => {
+  const entries = new Map();
+  const symbol = Symbol.for('@vercel/request-context');
+  const original = Object.getOwnPropertyDescriptor(globalThis, symbol);
+  Object.defineProperty(globalThis, symbol, {
+    configurable: true,
+    value: { get: () => ({ cache: cacheHandle(entries) }) },
+  });
+  t.after(() => {
+    if (original) Object.defineProperty(globalThis, symbol, original);
+    else delete globalThis[symbol];
+  });
+  const settings = connectionSettings(env);
+  const grant = await issueTicket(settings, ticketCache());
+  assert.equal(await validTicket(settings, grant.token, ticketCache()), true);
+  assert.match([...entries.keys()][0], /^wallet-relay-v1\$[a-f0-9]{64}$/);
+});
 
 test('independent hosted functions redeem an origin-scoped opaque ticket from shared storage', async () => {
   const entries = new Map();
