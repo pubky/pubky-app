@@ -1,16 +1,13 @@
-import type { LucideIcon } from 'lucide-react';
+import type { PostMenuActionListItem } from '@/organisms/PostMenuActions/PostMenuActionList/PostMenuActionList';
 import type { POST_MENU_ACTION_IDS, POST_MENU_ACTION_VARIANTS } from './usePostMenuActions.constants';
 
 export type PostMenuActionId = (typeof POST_MENU_ACTION_IDS)[keyof typeof POST_MENU_ACTION_IDS];
 export type PostMenuActionVariant = (typeof POST_MENU_ACTION_VARIANTS)[keyof typeof POST_MENU_ACTION_VARIANTS];
 
-export interface PostMenuActionItem {
+/** A row of `PostMenuActionList`, narrowed to the post's own ids and variants. */
+export interface PostMenuActionItem extends PostMenuActionListItem {
   id: PostMenuActionId;
-  label: string;
-  icon: LucideIcon;
-  onClick: () => void | Promise<void>;
   variant: PostMenuActionVariant;
-  disabled?: boolean;
 }
 
 export interface UsePostMenuActionsOptions {

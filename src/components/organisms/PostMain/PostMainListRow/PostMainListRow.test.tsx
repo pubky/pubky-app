@@ -249,6 +249,7 @@ describe('PostMainListRow', () => {
       isReply: false,
       isCurrentUserRepost: false,
       originalPostId: null,
+      embedUrl: null,
       isLoading: false,
       hasError: false,
     });
@@ -564,6 +565,7 @@ describe('PostMainListRow', () => {
       isReply: false,
       isCurrentUserRepost: true,
       originalPostId: 'original-author:original-post',
+      embedUrl: null,
       isLoading: false,
       hasError: false,
     });
@@ -630,6 +632,7 @@ describe('PostMainListRow', () => {
       repostAuthorId: 'author',
       isCurrentUserRepost: true,
       originalPostId: 'original-author:original-post',
+      embedUrl: null,
       isLoading: false,
       hasError: false,
     });
@@ -680,6 +683,7 @@ describe('PostMainListRow', () => {
       isReply: false,
       isCurrentUserRepost: true,
       originalPostId: 'original-author:original-post',
+      embedUrl: null,
       isLoading: false,
       hasError: false,
     });
@@ -729,6 +733,7 @@ describe('PostMainListRow', () => {
       isReply: false,
       isCurrentUserRepost: true,
       originalPostId: 'original-author:original-post',
+      embedUrl: null,
       isLoading: false,
       hasError: false,
     });
@@ -773,6 +778,7 @@ describe('PostMainListRow', () => {
       isReply: false,
       isCurrentUserRepost: true,
       originalPostId: 'original-author:missing-post',
+      embedUrl: null,
       isLoading: false,
       hasError: false,
     });
@@ -817,6 +823,7 @@ describe('PostMainListRow', () => {
       isReply: false,
       isCurrentUserRepost: false,
       originalPostId: 'original-author:original-post',
+      embedUrl: null,
       isLoading: false,
       hasError: false,
     });

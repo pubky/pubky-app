@@ -1,4 +1,10 @@
-import { TagKind, type TCreateTagListInput, type TDeleteTagInput } from '@/application/tag/tag.types';
+import {
+  TagKind,
+  type TCreateResourceTagInput,
+  type TCreateTagListInput,
+  type TDeleteResourceTagInput,
+  type TDeleteTagInput,
+} from '@/application/tag/tag.types';
 import { createTagMutationId } from '@/application/tag/tag.utils';
 import type { TTagEventParams } from '@/controllers/tag/tag.types';
 import { AppError } from '@/libs/error/error';
@@ -9,12 +15,15 @@ import { isAppError } from '@/libs/error/error.utils';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { TagNormalizer } from '@/pipes/tag/tag.normalizer';
+import type { TResourceViewerTag } from '@/pipes/tag/tag.resource';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { LocalPostTagService } from '@/services/local/tag/post/tag.post';
 import type { TLocalTagParams, TViewerTagMutationsParams } from '@/services/local/tag/tag.types';
 import { LocalTagCacheService } from '@/services/local/tag/tag-cache';
 import { LocalUserTagService } from '@/services/local/tag/user/tag.user';
+import type { NexusTag } from '@/services/nexus/nexus.types';
 import { NexusPostService } from '@/services/nexus/post/post';
+import { NexusResourceService } from '@/services/nexus/resource/resource';
 import { NexusUserService } from '@/services/nexus/user/user';
 
 type TLocalTagService = typeof LocalPostTagService | typeof LocalUserTagService;
@@ -103,6 +112,55 @@ export class TagApplication {
       throw error;
     }
     await LocalTagCacheService.completeMutation(entity, { mutationId: write.mutationId, isCurrent });
+  }
+
+  /** The tags on an external resource (a web link), `[]` when nobody tagged it. Network only. */
+  static fetchResourceTags({ uri, viewerId }: { uri: string; viewerId?: string | null }): Promise<NexusTag[]> {
+    return NexusResourceService.fetchTagsByUri({ uri, viewerId });
+  }
+
+  /** Every later change of the shared answer `fetchResourceTags` reads; returns the unsubscribe. */
+  static subscribeResourceTags(
+    { uri, viewerId }: { uri: string; viewerId?: string | null },
+    listener: (tags: NexusTag[]) => void,
+  ): () => void {
+    return NexusResourceService.subscribeTags({ uri, viewerId }, listener);
+  }
+
+  /**
+   * Tag an external resource. There is no local tag table for web links, so the write goes
+   * straight to the homeserver; once it is accepted the shared Nexus answer for the link takes the
+   * tag, since Nexus indexes it with a delay. A failed write changes nothing.
+   */
+  static async commitCreateResource(
+    { tagUrl, tagBody, isCurrent }: TCreateResourceTagInput,
+    viewerTag: TResourceViewerTag & { uri: string },
+  ) {
+    if (isCurrent && !isCurrent()) return;
+    await HomeserverService.putBlob({ url: tagUrl, blob: tagBody });
+    NexusResourceService.applyViewerTag({ ...viewerTag, tagUri: tagUrl }, true);
+  }
+
+  /**
+   * Remove the viewer's tag from an external resource: one DELETE of the resolved tag file (an
+   * already absent file is the state a delete wants), then the shared Nexus answer drops it.
+   */
+  static async commitDeleteResource(
+    { tagUri, isCurrent, canWrite }: TDeleteResourceTagInput,
+    viewerTag: TResourceViewerTag & { uri: string },
+  ) {
+    if (isCurrent && !isCurrent()) return;
+    if (!canWrite(tagUri)) {
+      throw Err.auth(AuthErrorCode.FORBIDDEN, 'The session cannot write the app folder of this tag', {
+        service: ErrorService.Local,
+        operation: 'commitDeleteResource',
+        context: { taggerId: viewerTag.viewerId },
+      });
+    }
+    await HomeserverService.request({ method: HttpMethod.DELETE, url: tagUri }).catch((error: unknown) => {
+      if (!(error instanceof AppError && error.code === ClientErrorCode.NOT_FOUND)) throw error;
+    });
+    NexusResourceService.applyViewerTag(viewerTag, false);
   }
 
   /**

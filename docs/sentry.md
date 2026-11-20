@@ -97,6 +97,11 @@ drops network and timeout errors from every `Pinakes` operation (all are optiona
 keeps the post link in their `context.url` out of telemetry. Pinakes HTTP errors other than the 404 "no card" answer,
 which never becomes an `AppError`, remain reportable.
 
+The tag bar of an external resource card reads its tags from Nexus by the link (`fetchResourceTagsByUri`). The
+`nexus-resource-tags-transport` rule drops network and timeout errors of that operation only: `safeFetch` puts the full
+request in `context.url`, whose query carries the post's link and the viewer. Its HTTP errors, which name the endpoint
+without the query, and every other Nexus operation remain reportable.
+
 The `/api/og-metadata` fallback paths use `Logger.warn`, which is currently platform/server logging. Sentry Logs are disabled in this app, so
 these warnings are not Sentry aggregate events unless logging infrastructure is enabled separately.
 

@@ -678,6 +678,84 @@ describe('Pinakes card transport expected-error policy', () => {
   });
 });
 
+describe('Nexus resource tags transport expected-error policy', () => {
+  const LINK = 'https://example.com/post-link?token=secret';
+  const VIEWER = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo';
+
+  it.each([
+    { name: 'connection failure', rejection: () => new TypeError('Failed to fetch') },
+    { name: 'transport timeout', rejection: () => new DOMException('signal timed out', 'TimeoutError') },
+  ])('rejects a tag read without capturing a $name, retries included', async ({ rejection }) => {
+    await withEnabledSentryCapture(async ({ captureException }) => {
+      const { NexusResourceService } = await import('@/services/nexus/resource/resource');
+      const { AppError: PipelineAppError } = await import('@/libs/error/error');
+      const { getSentryInitBase: initBase } = await import('./sentry');
+      vi.useFakeTimers();
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(rejection());
+      try {
+        // Real service → safeFetch → Err → captureAppError, with the production capture gate enabled.
+        const result = NexusResourceService.fetchTagsByUri({ uri: LINK, viewerId: VIEWER }).catch(
+          (error: unknown) => error,
+        );
+        await vi.runAllTimersAsync();
+        const error = await result;
+        expect(error).toBeInstanceOf(PipelineAppError);
+        if (!(error instanceof PipelineAppError)) return;
+        expect(error).toMatchObject({ service: ErrorService.Nexus, operation: 'fetchResourceTagsByUri' });
+        // What the rule keeps out of telemetry: the post's link and the viewer in the request.
+        expect(String(error.context?.url)).toContain(encodeURIComponent(LINK));
+        expect(fetchSpy.mock.calls.length).toBeGreaterThan(1);
+        expect(captureException).not.toHaveBeenCalled();
+        expect(shouldDropAppErrorFromSentry(error)).toBe(true);
+        expect(initBase().beforeSend!({ type: undefined }, { originalException: error })).toBeNull();
+      } finally {
+        fetchSpy.mockRestore();
+        vi.useRealTimers();
+      }
+    });
+  });
+
+  it('keeps a Nexus 500 on the tag read reportable', async () => {
+    await withEnabledSentryCapture(async ({ captureException }) => {
+      const { NexusResourceService } = await import('@/services/nexus/resource/resource');
+      vi.useFakeTimers();
+      const fetchSpy = vi
+        .spyOn(globalThis, 'fetch')
+        .mockImplementation(() => Promise.resolve(new Response('{"error":"internal"}', { status: 500 })));
+      try {
+        const result = NexusResourceService.fetchTagsByUri({ uri: LINK }).catch((error: unknown) => error);
+        await vi.runAllTimersAsync();
+        const error = await result;
+        expect(error).toMatchObject({
+          category: ErrorCategory.Server,
+          service: ErrorService.Nexus,
+          operation: 'fetchResourceTagsByUri',
+        });
+        expect(captureException).toHaveBeenCalledWith(error);
+      } finally {
+        fetchSpy.mockRestore();
+        vi.useRealTimers();
+      }
+    });
+  });
+
+  it('keeps a connection failure of another Nexus operation reportable', async () => {
+    await withEnabledSentryCapture(async ({ captureException }) => {
+      const { safeFetch: fetchWithErrors } = await import('@/libs/error/error.http');
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'));
+      try {
+        const error: unknown = await fetchWithErrors(LINK, {}, ErrorService.Nexus, 'fetchPostTags').catch(
+          (error: unknown) => error,
+        );
+        expect(error).toMatchObject({ category: ErrorCategory.Network, service: ErrorService.Nexus });
+        expect(captureException).toHaveBeenCalledTimes(1);
+      } finally {
+        fetchSpy.mockRestore();
+      }
+    });
+  });
+});
+
 describe('once-per-error-chain capture', () => {
   const localParams = { service: ErrorService.Local, operation: 'findById' } as const;
   const wrapperParams = { service: ErrorService.Local, operation: 'unblurModeration' } as const;

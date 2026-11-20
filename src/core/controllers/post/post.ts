@@ -21,6 +21,7 @@ import type {
   TNormalizeTagsParams,
   TReorderCollectionItemsParams,
   TUpdateCollectionItemParams,
+  TUpdateCollectionResourceParams,
 } from '@/controllers/post/post.types';
 import type { TTagEventParams } from '@/controllers/tag/tag.types';
 import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
@@ -182,6 +183,7 @@ export class PostController {
    * @param params.attachments - Attachments to add to the post (optional); an article's inline media in slot order
    * @param params.coverImage - An article's cover (optional), written in the envelope, never as a slot
    * @param params.parentPostId - ID of the post being replied to (optional for root posts)
+   * @param params.parentUri - URI of the external resource being replied to (optional, never with `parentPostId`)
    * @param params.originalPostId - ID of the post being reposted (optional for reposts)
    * @returns The composite post ID of the created post
    */
@@ -193,6 +195,7 @@ export class PostController {
     attachments,
     coverImage,
     parentPostId,
+    parentUri: externalParentUri,
     originalPostId,
     lock,
     onPostSynced,
@@ -202,9 +205,22 @@ export class PostController {
     let repostedUri: string | undefined = undefined;
     let tagList: TCreateTagInput[] = [];
 
+    // The data model has one `parent`: a Pubky post or an external resource, never both.
+    if (parentPostId && externalParentUri !== undefined) {
+      throw Err.validation(
+        ValidationErrorCode.INVALID_INPUT,
+        'A post replies to either a post or an external resource',
+        {
+          service: ErrorService.Local,
+          operation: 'commitCreate',
+        },
+      );
+    }
     // Validate and set parent URI if this is a reply
     if (parentPostId) {
       parentUri = await PostValidators.validatePostId({ postId: parentPostId, message: 'Parent post' });
+    } else if (externalParentUri !== undefined) {
+      parentUri = PostValidators.validateExternalParentUri(externalParentUri);
     }
     if (originalPostId) {
       repostedUri = await PostValidators.validatePostId({ postId: originalPostId, message: 'Original post' });
@@ -427,6 +443,36 @@ export class PostController {
     postId,
     shouldAdd,
   }: TUpdateCollectionItemParams): Promise<void> {
+    const { pubky: postAuthorId, id: rawPostId } = parseCompositeId(postId);
+    // A stored item may spell the post either way (a reference to an author who has not migrated
+    // keeps its 0.x spelling), so the item is matched by any spelling and a new one gets the v1 one.
+    await this.updateCollectionItem(
+      collectionId,
+      postReferenceSpellings(postAuthorId, rawPostId),
+      shouldAdd,
+      'commitUpdateCollectionItem',
+    );
+  }
+
+  /**
+   * Adds an external resource (a web link) to the viewer's collection, or removes it. The item is
+   * the link exactly as written; a collection item may reference any scheme.
+   */
+  static async commitUpdateCollectionResource({
+    collectionId,
+    uri,
+    shouldAdd,
+  }: TUpdateCollectionResourceParams): Promise<void> {
+    await this.updateCollectionItem(collectionId, [uri], shouldAdd, 'commitUpdateCollectionResource');
+  }
+
+  /** Adds the item `spellings[0]` names to the viewer's collection, or removes every spelling of it. */
+  private static async updateCollectionItem(
+    collectionId: string,
+    spellings: readonly string[],
+    shouldAdd: boolean,
+    operation: string,
+  ): Promise<void> {
     const currentUserPubky = useAuthStore.getState().selectCurrentUserPubky();
     const collection = await PostApplication.getDetails({ compositeId: collectionId });
 
@@ -435,7 +481,7 @@ export class PostController {
     if (!collection || isPostDeleted(collection)) {
       throw Err.client(ClientErrorCode.NOT_FOUND, 'Collection not found', {
         service: ErrorService.Local,
-        operation: 'commitUpdateCollectionItem',
+        operation,
         context: { collectionId },
       });
     }
@@ -444,15 +490,11 @@ export class PostController {
     if (!currentContent) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Collection content is invalid', {
         service: ErrorService.Local,
-        operation: 'commitUpdateCollectionItem',
+        operation,
         context: { collectionId },
       });
     }
 
-    const { pubky: postAuthorId, id: rawPostId } = parseCompositeId(postId);
-    // A stored item may spell the post either way (a reference to an author who has not migrated
-    // keeps its 0.x spelling), so the item is matched by any spelling and a new one gets the v1 one.
-    const spellings = postReferenceSpellings(postAuthorId, rawPostId);
     // The change, not the next item list: under the lock it is applied to the stored head and to the
     // row read there, so an add queued behind another edit of this collection keeps that edit. The
     // row read above only says whether there is anything to do.
@@ -460,7 +502,7 @@ export class PostController {
 
     if (CollectionPostContent.apply(currentContent, change) === currentContent) return;
 
-    this.assertAuthor(collectionId, currentUserPubky, 'commitUpdateCollectionItem');
+    this.assertAuthor(collectionId, currentUserPubky, operation);
     await PostApplication.commitEdit({ compositePostId: collectionId, edit: { collection: change } });
   }
 

@@ -24,6 +24,11 @@ export const NEXUS_POST_TAGS_PATH_PATTERN = /^\/v1\/post\/[^/]+\/[^/]+\/tags$/;
 /** `operation` tag set by `HomeserverService.subscribeUserEventStream`; matched by a Sentry drop rule. */
 export const HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION = 'subscribeUserEventStream';
 /**
+ * `operation` tag of `NexusResourceService.fetchTagsByUri` (the tags on an external resource);
+ * matched by the `nexus-resource-tags-transport` drop rule.
+ */
+export const NEXUS_RESOURCE_TAGS_OPERATION = 'fetchResourceTagsByUri';
+/**
  * `callSite` tags the Pay to Unlock polling loops put on their Lock Server reads; matched by the
  * `locks-unlock-poll-repeat-reports` drop rule, so a rename here cannot leave the rule behind.
  */

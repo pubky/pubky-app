@@ -1,6 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
+import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
 import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
 import { PostPreviewCard } from './PostPreviewCard';
 
@@ -26,6 +28,10 @@ vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
   usePostDetails: vi.fn(),
 }));
 
+vi.mock('@/hooks/useRepostInfo/useRepostInfo', () => ({
+  useRepostInfo: vi.fn(() => ({ embedUrl: null })),
+}));
+
 vi.mock('@/molecules/PostUnavailable/PostUnavailable', () => ({
   PostUnavailable: ({ message }: { message: string }) => <div data-testid="post-unavailable" data-message={message} />,
 }));
@@ -34,11 +40,16 @@ vi.mock('@/molecules/PostUnavailable/PostUnavailable', () => ({
 vi.mock('@/organisms/PostContentBase/PostContentBase', async () => {
   const { useIsPostPreviewNavigable } = await import('@/molecules/PostPreviewCard/PostPreviewNestingContext');
   return {
-    PostContentBase: vi.fn(({ postId }: { postId: string }) => {
+    PostContentBase: vi.fn(({ postId, embedUrl }: { postId: string; embedUrl?: string | null }) => {
       // Mentions and hashtags read this context several layers below PostContentBase.
       const navigable = useIsPostPreviewNavigable();
       return (
-        <div data-testid="post-content-base" data-post-id={postId} data-navigable={String(navigable)}>
+        <div
+          data-testid="post-content-base"
+          data-post-id={postId}
+          data-navigable={String(navigable)}
+          data-embed-url={embedUrl ?? ''}
+        >
           PostContentBase {postId}
         </div>
       );
@@ -94,6 +105,72 @@ vi.mock('@/organisms/Collections/CollectionCard/CollectionCard', () => {
     ),
   };
 });
+
+const mockOpenReplyDialog = vi.fn();
+const mockOpenRepostDialog = vi.fn();
+vi.mock('@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs', () => ({
+  usePostReplyRepostDialogs: vi.fn((postId: string) => ({
+    openReplyDialog: mockOpenReplyDialog,
+    openRepostDialog: mockOpenRepostDialog,
+    dialogs: (
+      <div data-testid="post-dialogs" data-post-id={postId}>
+        <p data-testid="dialog-body">Reply</p>
+      </div>
+    ),
+  })),
+}));
+
+vi.mock('@/organisms/PostInlineTagsActions/PostInlineTagsActions', () => ({
+  PostInlineTagsActions: ({
+    postId,
+    surface,
+    className,
+    actionsClassName,
+    onReplyClick,
+    onRepostClick,
+  }: {
+    postId: string;
+    surface?: string;
+    className?: string;
+    actionsClassName?: string;
+    onReplyClick: () => void;
+    onRepostClick: () => void;
+  }) => (
+    <div
+      data-testid="post-inline-tags-actions"
+      data-post-id={postId}
+      data-surface={surface}
+      data-class-name={className}
+      data-actions-class-name={actionsClassName}
+    >
+      <button type="button" data-testid="footer-reply" onClick={onReplyClick}>
+        Reply
+      </button>
+      <button type="button" data-testid="footer-repost" onClick={onRepostClick}>
+        Repost
+      </button>
+    </div>
+  ),
+}));
+
+vi.mock('@/organisms/ClickableTagsList/ClickableTagsList', () => ({
+  ClickableTagsList: ({
+    taggedId,
+    readOnly,
+    showAddButton,
+  }: {
+    taggedId: string;
+    readOnly?: boolean;
+    showAddButton?: boolean;
+  }) => (
+    <div
+      data-testid="clickable-tags-list"
+      data-tagged-id={taggedId}
+      data-read-only={String(readOnly)}
+      data-show-add-button={String(showAddButton)}
+    />
+  ),
+}));
 
 // Mock atoms
 vi.mock('@/atoms/Card/Card', () => {
@@ -160,6 +237,8 @@ const collectionPost = {
 describe('PostPreviewCard', () => {
   beforeEach(() => {
     mockNavigateToPost.mockClear();
+    mockOpenReplyDialog.mockClear();
+    mockOpenRepostDialog.mockClear();
     mockNavigateToCollection.mockClear();
     mockTtlRef.mockClear();
     mockUseTtlSubscription.mockClear();
@@ -173,6 +252,18 @@ describe('PostPreviewCard', () => {
     expect(screen.getByTestId('card-content')).toBeInTheDocument();
     expect(screen.getByTestId('post-header')).toBeInTheDocument();
     expect(screen.getByTestId('post-content-base')).toBeInTheDocument();
+  });
+
+  it('passes the previewed post its own web embed', () => {
+    vi.mocked(useRepostInfo).mockReturnValueOnce({ embedUrl: 'https://en.wikipedia.org/wiki/Bitcoin' } as never);
+
+    render(<PostPreviewCard postId="test-post-123" />);
+
+    expect(useRepostInfo).toHaveBeenCalledWith('test-post-123');
+    expect(screen.getByTestId('post-content-base')).toHaveAttribute(
+      'data-embed-url',
+      'https://en.wikipedia.org/wiki/Bitcoin',
+    );
   });
 
   it('places the timestamp under user info for narrow preview cards', () => {
@@ -249,6 +340,106 @@ describe('PostPreviewCard', () => {
     expect(mockNavigateToPost).not.toHaveBeenCalled();
   });
 
+  describe('its own footer', () => {
+    it('shows the previewed post’s own tags and actions on the muted surface, with its own dialogs', () => {
+      render(<PostPreviewCard postId="test-post-123" />);
+
+      const footer = screen.getByTestId('post-inline-tags-actions');
+      expect(footer).toHaveAttribute('data-post-id', 'test-post-123');
+      expect(footer).toHaveAttribute('data-surface', 'muted');
+      expect(screen.getByTestId('card-content')).toContainElement(footer);
+      expect(usePostReplyRepostDialogs).toHaveBeenCalledWith('test-post-123');
+      expect(screen.getByTestId('post-dialogs')).toHaveAttribute('data-post-id', 'test-post-123');
+      expect(screen.queryByTestId('clickable-tags-list')).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByTestId('footer-reply'));
+      fireEvent.click(screen.getByTestId('footer-repost'));
+      expect(mockOpenReplyDialog).toHaveBeenCalledTimes(1);
+      expect(mockOpenRepostDialog).toHaveBeenCalledTimes(1);
+    });
+
+    it('closes up its buttons in a narrow quote, so ⋯ stays on their row', () => {
+      render(<PostPreviewCard postId="test-post-123" />);
+
+      // Container queries on the footer's own width (a quote in a post on a phone), in a resource card's steps.
+      const footer = screen.getByTestId('post-inline-tags-actions');
+      expect(footer).toHaveAttribute('data-class-name', '@container/post-preview-actions');
+      expect(footer.getAttribute('data-actions-class-name')?.split(' ')).toEqual(
+        expect.arrayContaining([
+          'w-full',
+          '@max-sm/post-preview-actions:gap-1.5',
+          '@max-sm/post-preview-actions:[&>*]:px-2.5!',
+          '@max-[17rem]/post-preview-actions:gap-1',
+          '@max-[17rem]/post-preview-actions:[&>*]:gap-1!',
+          '@max-[17rem]/post-preview-actions:[&>*]:px-2!',
+          '@max-[14.5rem]/post-preview-actions:[&>*]:px-1.5!',
+          '@max-[13.75rem]/post-preview-actions:gap-0.5',
+        ]),
+      );
+    });
+
+    it('keeps Enter and Space on a footer control for that control, not the card link', () => {
+      render(<PostPreviewCard postId="test-post-123" />);
+
+      fireEvent.keyDown(screen.getByTestId('footer-reply'), { key: 'Enter' });
+      fireEvent.keyDown(screen.getByTestId('footer-reply'), { key: ' ' });
+
+      expect(mockNavigateToPost).not.toHaveBeenCalled();
+    });
+
+    it('renders its dialogs outside the card, so a click in them opens no post', () => {
+      const onOuterPostClick = vi.fn();
+      render(
+        <div onClick={onOuterPostClick}>
+          <PostPreviewCard postId="test-post-123" />
+        </div>,
+      );
+
+      expect(screen.getByTestId('card')).not.toContainElement(screen.getByTestId('post-dialogs'));
+      fireEvent.click(screen.getByTestId('dialog-body'));
+
+      expect(mockNavigateToPost).not.toHaveBeenCalled();
+      expect(onOuterPostClick).not.toHaveBeenCalled();
+    });
+
+    it('shows no footer and no dialogs when the post around it already acts on this post', () => {
+      render(<PostPreviewCard postId="test-post-123" showTagsActions={false} />);
+
+      expect(screen.getByTestId('post-content-base')).toBeInTheDocument();
+      expect(screen.queryByTestId('post-inline-tags-actions')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('clickable-tags-list')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('post-dialogs')).not.toBeInTheDocument();
+    });
+
+    it('shows read-only tags and no action row with interactiveActions={false}', () => {
+      render(<PostPreviewCard postId="test-post-123" interactiveActions={false} />);
+
+      expect(screen.getByTestId('clickable-tags-list')).toHaveAttribute('data-read-only', 'true');
+      expect(screen.queryByTestId('post-inline-tags-actions')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('post-dialogs')).not.toBeInTheDocument();
+    });
+
+    it('leaves a collection original’s tags to its CollectionCard', () => {
+      mockUsePostDetails.mockReturnValue(collectionPost);
+
+      render(<PostPreviewCard postId={COLLECTION_COMPOSITE_ID} />);
+
+      expect(screen.getByTestId('collection-card')).toBeInTheDocument();
+      expect(screen.queryByTestId('post-inline-tags-actions')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('clickable-tags-list')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('post-dialogs')).not.toBeInTheDocument();
+    });
+
+    it('shows no footer for a post that is not found', () => {
+      mockUsePostDetails.mockReturnValue({ postDetails: null, isLoading: false });
+
+      render(<PostPreviewCard postId="missing-post" />);
+
+      expect(screen.queryByTestId('post-inline-tags-actions')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('clickable-tags-list')).not.toBeInTheDocument();
+    });
+  });
+
   describe('navigable={false}', () => {
     it('still renders the post header and content', () => {
       render(<PostPreviewCard postId="test-post-123" navigable={false} />);
@@ -306,6 +497,17 @@ describe('PostPreviewCard', () => {
       render(<PostPreviewCard postId="test-post-123" navigable={false} />);
 
       expect(screen.getByTestId('post-content-base')).toHaveAttribute('data-navigable', 'false');
+    });
+
+    it('shows the post’s tags read-only, with no action row and no dialogs (Reply and Repost dialogs)', () => {
+      render(<PostPreviewCard postId="test-post-123" navigable={false} />);
+
+      const tags = screen.getByTestId('clickable-tags-list');
+      expect(tags).toHaveAttribute('data-tagged-id', 'test-post-123');
+      expect(tags).toHaveAttribute('data-read-only', 'true');
+      expect(tags).toHaveAttribute('data-show-add-button', 'false');
+      expect(screen.queryByTestId('post-inline-tags-actions')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('post-dialogs')).not.toBeInTheDocument();
     });
 
     it('renders a collection original without its link wrapper', () => {

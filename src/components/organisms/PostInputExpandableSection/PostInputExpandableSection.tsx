@@ -52,7 +52,7 @@ export function PostInputExpandableSection({
   return (
     <>
       <Container className="gap-4">
-        {hasContent && !isArticle && <PostLinkEmbeds content={content} />}
+        {hasContent && !isArticle && <PostLinkEmbeds content={content} isComposing />}
 
         {/* Stands in for the content the lock switch stashed away. */}
         {lockCard}

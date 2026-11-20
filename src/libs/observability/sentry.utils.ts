@@ -10,6 +10,7 @@ import {
   HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION,
   LOCKS_UNLOCK_POLL_CALL_SITES,
   NEXUS_POST_TAGS_PATH_PATTERN,
+  NEXUS_RESOURCE_TAGS_OPERATION,
   PHONE_PATTERN,
   PHONE_REDACTED,
   PUBKY_COMPACT_URI_PATTERN,
@@ -160,6 +161,20 @@ const APP_ERROR_DROP_RULES: AppErrorDropRule[] = [
       'reportable.',
     matches: (error) =>
       error.service === ErrorService.Pinakes &&
+      (error.category === ErrorCategory.Network || error.category === ErrorCategory.Timeout),
+  },
+  {
+    name: 'nexus-resource-tags-transport',
+    reason:
+      'The tag bar of an external resource card reads its tags from Nexus by the link (GET /v1/resource/by-uri); ' +
+      'on a failure the bar shows no tags and its add button. safeFetch builds connection and timeout errors with the ' +
+      "full request in context.url, whose query carries the link from someone's post and the viewer, one event per " +
+      'distinct link on every feed view, and they come mostly from the viewer (offline, a stalled connection). Nexus ' +
+      'outages stay visible through every other Nexus operation; HTTP errors of this one (4xx other than 404, 5xx, ' +
+      'malformed bodies), whose context names the endpoint without the query, remain reportable.',
+    matches: (error) =>
+      error.service === ErrorService.Nexus &&
+      error.operation === NEXUS_RESOURCE_TAGS_OPERATION &&
       (error.category === ErrorCategory.Network || error.category === ErrorCategory.Timeout),
   },
   {

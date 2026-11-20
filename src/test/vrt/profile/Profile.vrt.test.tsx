@@ -335,9 +335,16 @@ vi.mock('@/hooks/useStreamPagination/useStreamPagination', async () => {
 });
 
 // `CollectionsEmpty` mounts `DialogNewCollection` (closed) on own profile; its
-// first-collection intro gate reads authored collections through this hook.
+// first-collection intro gate reads authored collections through this hook. A link
+// card's save picker (`useCollectionSaveTargets`) imports the paginated driver.
 vi.mock('@/hooks/useAuthoredCollections/useAuthoredCollections', () => ({
   useAuthoredCollections: () => ({ collections: [], isLoading: false }),
+  useAuthoredCollectionsPagination: () => ({
+    hasMore: false,
+    isLoading: false,
+    isLoadingMore: false,
+    loadMore: async () => {},
+  }),
 }));
 
 vi.mock('@/hooks/useMutedUsers/useMutedUsers', () => {

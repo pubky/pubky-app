@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
+import { PostLinkEmbeds } from '@/molecules/PostLinkEmbeds/PostLinkEmbeds';
 import { PostText } from '@/molecules/PostText/PostText';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import type { LocalFilesStore } from '@/stores/localFiles/localFiles.types';
@@ -380,6 +381,42 @@ describe('PostContentBase', () => {
 
     expect(screen.getByTestId('post-content-blurred')).toBeInTheDocument();
     expect(screen.queryByTestId('post-article')).not.toBeInTheDocument();
+  });
+
+  describe('web link embed', () => {
+    const EMBED = 'https://a.example/page';
+    const linkEmbedsUrl = () => vi.mocked(PostLinkEmbeds).mock.lastCall?.[0].url;
+
+    it('previews the embed while the text still holds its link', () => {
+      mockUsePostDetails.mockReturnValue({
+        postDetails: createMockPostDetails({ content: `Read ${EMBED}` }),
+        isLoading: false,
+      });
+
+      render(<PostContentBase postId="post-123" embedUrl={EMBED} />);
+
+      expect(linkEmbedsUrl()).toBe(EMBED);
+    });
+
+    it.each([
+      ['another link', 'Read https://b.example/page'],
+      ['no link', 'Read it later'],
+    ])('drops the embed once an edit leaves %s in the text', (_, content) => {
+      mockUsePostDetails.mockReturnValue({ postDetails: createMockPostDetails({ content }), isLoading: false });
+
+      render(<PostContentBase postId="post-123" embedUrl={EMBED} />);
+
+      expect(linkEmbedsUrl()).toBeNull();
+      expect(vi.mocked(PostLinkEmbeds).mock.lastCall?.[0].content).toBe(content);
+    });
+
+    it('previews the embed of a post without text', () => {
+      mockUsePostDetails.mockReturnValue({ postDetails: createMockPostDetails({ content: '' }), isLoading: false });
+
+      render(<PostContentBase postId="post-123" embedUrl={EMBED} />);
+
+      expect(linkEmbedsUrl()).toBe(EMBED);
+    });
   });
 
   it('renders PostUnavailable when the post is not found (settled null)', () => {

@@ -57,7 +57,7 @@ type SavePickerLayout = 'dropdown' | 'sheet';
  *   loaded so far reads as `collected` until the picker pages it in.
  * - `default`: nothing curates it.
  */
-type SaveTriggerIconState = 'default' | 'saved' | 'collected';
+export type SaveTriggerIconState = 'default' | 'saved' | 'collected';
 
 type SaveTargetIconProps = {
   isSaved: boolean;
@@ -66,8 +66,9 @@ type SaveTargetIconProps = {
 
 type SavePickerContentProps = {
   layout: SavePickerLayout;
-  isBookmarked: boolean;
-  isBookmarkBusy: boolean;
+  /** Bookmark state for the picker's Bookmarks row; without `toggleBookmark` the row is left out. */
+  isBookmarked?: boolean;
+  isBookmarkBusy?: boolean;
   collections: PostSaveCollectionTarget[];
   isCollectionsLoading: boolean;
   isCreatingCollection: boolean;
@@ -76,7 +77,7 @@ type SavePickerContentProps = {
   loadMoreCollections: () => Promise<void>;
   otherCollectionIds: string[];
   isOtherCollectionsLoading: boolean;
-  toggleBookmark: () => Promise<boolean>;
+  toggleBookmark?: () => Promise<boolean>;
   toggleCollection: (collectionId: string) => Promise<boolean>;
   createCollectionWithPost: (name: string) => Promise<boolean>;
 };
@@ -93,7 +94,7 @@ function SaveTargetIcon({ isSaved, isBusy }: SaveTargetIconProps) {
   return null;
 }
 
-function SaveTriggerIcon({ state }: { state: SaveTriggerIconState }) {
+export function SaveTriggerIcon({ state }: { state: SaveTriggerIconState }) {
   const iconClassName = (isVisible: boolean) =>
     cn(
       'absolute inset-0 transition-[opacity,transform] duration-150 ease-out',
@@ -274,7 +275,7 @@ function CollectionRow({
   );
 }
 
-function SavePickerContent({
+export function SavePickerContent({
   layout,
   isBookmarked,
   isBookmarkBusy,
@@ -339,22 +340,24 @@ function SavePickerContent({
         overrideDefaults
         className={cn('flex max-h-[50dvh] flex-col overflow-y-auto', layout === 'sheet' ? 'gap-4' : 'gap-3')}
       >
-        <SavePickerRow
-          layout={layout}
-          disabled={isBookmarkBusy}
-          dataCy="post-save-bookmarks-option"
-          onActivate={() => void toggleBookmark()}
-        >
-          <Bookmark className="size-4" />
-          <Typography
-            as="span"
-            overrideDefaults
-            className={cn('min-w-0 flex-1 truncate', layout === 'sheet' && 'text-left')}
+        {toggleBookmark && (
+          <SavePickerRow
+            layout={layout}
+            disabled={isBookmarkBusy}
+            dataCy="post-save-bookmarks-option"
+            onActivate={() => void toggleBookmark()}
           >
-            {'Bookmarks'}
-          </Typography>
-          <SaveTargetIcon isSaved={isBookmarked} isBusy={isBookmarkBusy} />
-        </SavePickerRow>
+            <Bookmark className="size-4" />
+            <Typography
+              as="span"
+              overrideDefaults
+              className={cn('min-w-0 flex-1 truncate', layout === 'sheet' && 'text-left')}
+            >
+              {'Bookmarks'}
+            </Typography>
+            <SaveTargetIcon isSaved={isBookmarked ?? false} isBusy={isBookmarkBusy ?? false} />
+          </SavePickerRow>
+        )}
 
         {isCollectionsLoading ? (
           <SavePickerLoadingRow />

@@ -17,6 +17,7 @@ export function PostBody({
   attachments,
   localAttachments,
   textClassName,
+  embedUrl,
   mediaVariant,
   collapseMedia,
   pendingAttachments,
@@ -26,7 +27,7 @@ export function PostBody({
   return (
     <>
       {hasContent && <PostText content={content} className={textClassName} />}
-      {hasContent && <PostLinkEmbeds content={content} />}
+      {(hasContent || embedUrl) && <PostLinkEmbeds content={content} url={embedUrl} />}
       <PostAttachments
         attachments={attachments}
         localAttachments={localAttachments}

@@ -405,6 +405,29 @@ describe('usePost', () => {
       expect(result.current.isSubmitting).toBe(false);
     });
 
+    it('replies to an external resource with its URI as the parent', async () => {
+      const { result } = renderHook(() => usePost());
+      const mockOnSuccess = vi.fn();
+
+      act(() => {
+        result.current.setContent('About this page');
+      });
+
+      await act(async () => {
+        await result.current.reply({ parentUri: 'https://example.com/page', onSuccess: mockOnSuccess });
+      });
+
+      expect(mockPostControllerCreate).toHaveBeenCalledWith({
+        parentUri: 'https://example.com/page',
+        content: 'About this page',
+        authorId: 'test-user-id',
+        tags: undefined,
+        attachments: undefined,
+      });
+      expect(mockPostControllerCreate.mock.calls.at(-1)?.[0].parentPostId).toBeUndefined();
+      expect(mockOnSuccess).toHaveBeenCalled();
+    });
+
     it('should handle reply with empty tags array', async () => {
       const { result } = renderHook(() => usePost());
 

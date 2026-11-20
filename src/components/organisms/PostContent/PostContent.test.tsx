@@ -17,20 +17,29 @@ vi.mock('@/hooks/useRepostInfo/useRepostInfo', () => ({
 // Mock molecules - PostPreviewCard, PostText, PostLinkEmbeds
 vi.mock('@/molecules/PostPreviewCard/PostPreviewCard', () => {
   return {
-    PostPreviewCard: vi.fn(({ postId, className }: { postId: string; className?: string }) => (
-      <div data-testid="post-preview-card" data-post-id={postId} className={className}>
-        PostPreviewCard {postId}
-      </div>
-    )),
+    PostPreviewCard: vi.fn(
+      ({ postId, className, showTagsActions }: { postId: string; className?: string; showTagsActions?: boolean }) => (
+        <div
+          data-testid="post-preview-card"
+          data-post-id={postId}
+          data-show-tags-actions={String(showTagsActions ?? true)}
+          className={className}
+        >
+          PostPreviewCard {postId}
+        </div>
+      ),
+    ),
   };
 });
 
 vi.mock('../PostContentBase/PostContentBase', () => ({
-  PostContentBase: vi.fn(({ postId, className }: { postId: string; className?: string }) => (
-    <div data-testid="post-content-base" data-post-id={postId} className={className}>
-      PostContentBase {postId}
-    </div>
-  )),
+  PostContentBase: vi.fn(
+    ({ postId, className, embedUrl }: { postId: string; className?: string; embedUrl?: string | null }) => (
+      <div data-testid="post-content-base" data-post-id={postId} data-embed-url={embedUrl ?? ''} className={className}>
+        PostContentBase {postId}
+      </div>
+    ),
+  ),
 }));
 
 const mockUsePostDetails = vi.mocked(usePostDetails);
@@ -64,6 +73,7 @@ describe('PostContent', () => {
       isReply: false,
       isCurrentUserRepost: false,
       originalPostId: null,
+      embedUrl: null,
       isLoading: false,
       hasError: false,
     });
@@ -93,6 +103,7 @@ describe('PostContent', () => {
       isReply: false,
       isCurrentUserRepost: false,
       originalPostId: null,
+      embedUrl: null,
       isLoading: false,
       hasError: false,
     });
@@ -113,6 +124,7 @@ describe('PostContent', () => {
       isReply: false,
       isCurrentUserRepost: false,
       originalPostId: null,
+      embedUrl: null,
       isLoading: false,
       hasError: false,
     });
@@ -133,6 +145,7 @@ describe('PostContent', () => {
       isReply: false,
       isCurrentUserRepost: false,
       originalPostId: 'orig-post',
+      embedUrl: null,
       isLoading: false,
       hasError: false,
     });
@@ -144,5 +157,87 @@ describe('PostContent', () => {
     expect(screen.getByTestId('post-content-base')).toHaveAttribute('data-post-id', 'plain-repost-123');
     // PostPreviewCard should also be rendered for reposts
     expect(screen.getByTestId('post-preview-card')).toBeInTheDocument();
+  });
+
+  it('gives a quote’s preview its own tags and actions: the quote’s footer acts on the quote', () => {
+    mockUsePostDetails.mockReturnValue({
+      postDetails: createMockPostDetails({ content: 'Quoting this' }),
+      isLoading: false,
+    });
+    mockUseRepostInfo.mockReturnValue({
+      isRepost: true,
+      repostAuthorId: 'author',
+      isReply: false,
+      isCurrentUserRepost: false,
+      originalPostId: 'orig-author:orig-post',
+      embedUrl: null,
+      isLoading: false,
+      hasError: false,
+    });
+
+    render(<PostContent postId="author:quote-1" />);
+
+    expect(screen.getByTestId('post-preview-card')).toHaveAttribute('data-post-id', 'orig-author:orig-post');
+    expect(screen.getByTestId('post-preview-card')).toHaveAttribute('data-show-tags-actions', 'true');
+  });
+
+  it('shows no second footer in a plain repost’s preview: the repost’s own acts on the original', () => {
+    mockUsePostDetails.mockReturnValue({
+      postDetails: createMockPostDetails({ content: '' }),
+      isLoading: false,
+    });
+    mockUseRepostInfo.mockReturnValue({
+      isRepost: true,
+      repostAuthorId: 'author',
+      isReply: false,
+      isCurrentUserRepost: false,
+      originalPostId: 'orig-author:orig-post',
+      embedUrl: null,
+      isLoading: false,
+      hasError: false,
+    });
+
+    render(<PostContent postId="author:repost-1" />);
+
+    expect(screen.getByTestId('post-preview-card')).toHaveAttribute('data-show-tags-actions', 'false');
+  });
+
+  it('shows no footer in the preview until the repost is read (a plain repost’s would flash)', () => {
+    mockUsePostDetails.mockReturnValue({ postDetails: undefined, isLoading: true });
+    mockUseRepostInfo.mockReturnValue({
+      isRepost: true,
+      repostAuthorId: 'author',
+      isReply: false,
+      isCurrentUserRepost: false,
+      originalPostId: 'orig-author:orig-post',
+      embedUrl: null,
+      isLoading: false,
+      hasError: false,
+    });
+
+    render(<PostContent postId="author:repost-1" />);
+
+    expect(screen.getByTestId('post-preview-card')).toHaveAttribute('data-show-tags-actions', 'false');
+  });
+
+  it('passes a web link embed to the post body and shows no repost preview', () => {
+    mockUseRepostInfo.mockReturnValue({
+      isRepost: false,
+      repostAuthorId: null,
+      isReply: false,
+      isCurrentUserRepost: false,
+      originalPostId: null,
+      embedUrl: 'https://en.wikipedia.org/wiki/Bitcoin',
+      isLoading: false,
+      hasError: false,
+    });
+
+    render(<PostContent postId="test-author:test-post" />);
+
+    expect(screen.getByTestId('post-content-base')).toHaveAttribute(
+      'data-embed-url',
+      'https://en.wikipedia.org/wiki/Bitcoin',
+    );
+    expect(screen.queryByTestId('post-preview-card')).not.toBeInTheDocument();
   });
 });

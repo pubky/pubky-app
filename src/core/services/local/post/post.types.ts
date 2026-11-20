@@ -11,6 +11,8 @@ export interface TLocalUpdatePostStreamParams {
   compositePostId: string;
   kind: string;
   parentUri?: string;
+  /** The post replies to an external resource (its `parent` is no post): only the author's replies list it. */
+  isResourceReply?: boolean;
   lock?: string | null;
   ops: Promise<unknown>[];
   action: HttpMethod.PUT | HttpMethod.DELETE;

@@ -1,5 +1,5 @@
 import { BookmarkApplication } from '@/application/bookmark/bookmark';
-import type { TBookmarkEventParams } from '@/controllers/bookmark/bookmark.types';
+import type { TBookmarkEventParams, TResourceBookmarkParams } from '@/controllers/bookmark/bookmark.types';
 import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
 import { HttpMethod } from '@/libs/http/http.types';
 import type { BookmarkedPostDetails } from '@/models/bookmark/bookmark.schema';
@@ -87,6 +87,46 @@ export class BookmarkController {
 
     return BookmarkApplication.persist(HttpMethod.DELETE, {
       postId,
+      userId,
+      bookmarkUrl: url,
+      isCurrent: captureViewerSession(),
+    });
+  }
+
+  /**
+   * Whether the viewer bookmarked an external resource (a web link). Bookmarks are private, so
+   * this is only ever the viewer's own state. Network only: the homeserver holds the only record
+   * of a web bookmark.
+   */
+  static fetchResourceBookmarked({ uri, userId }: TResourceBookmarkParams): Promise<boolean> {
+    const { url } = BookmarkNormalizer.toResource(uri, userId);
+
+    return BookmarkApplication.fetchResourceBookmarked(url);
+  }
+
+  /**
+   * Bookmark an external resource: `/priv/social/v1/bookmarks/`, targeting the link.
+   * @returns Whether the write ran: false when the account changed while it waited (`persistResource`)
+   */
+  static async commitCreateResource({ uri, userId }: TResourceBookmarkParams): Promise<boolean> {
+    const { url, body } = BookmarkNormalizer.toResource(uri, userId);
+
+    return BookmarkApplication.persistResource(HttpMethod.PUT, {
+      userId,
+      bookmarkUrl: url,
+      bookmarkBody: body,
+      isCurrent: captureViewerSession(),
+    });
+  }
+
+  /**
+   * Remove the bookmark of an external resource; its path spells the link, so it is built again.
+   * @returns Whether the delete ran: false when the account changed while it waited (`persistResource`)
+   */
+  static async commitDeleteResource({ uri, userId }: TResourceBookmarkParams): Promise<boolean> {
+    const { url } = BookmarkNormalizer.toResource(uri, userId);
+
+    return BookmarkApplication.persistResource(HttpMethod.DELETE, {
       userId,
       bookmarkUrl: url,
       isCurrent: captureViewerSession(),

@@ -1,5 +1,9 @@
 import { listPrefix } from 'pubky-social-specs';
-import type { TBookmarkFetchOptions, TBookmarkPersistInput } from '@/application/bookmark/bookmark.types';
+import type {
+  TBookmarkFetchOptions,
+  TBookmarkPersistInput,
+  TResourceBookmarkPersistInput,
+} from '@/application/bookmark/bookmark.types';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -32,6 +36,7 @@ const bookmarkSyncLock = (pubky: Pubky) => `pubky-bookmarks-sync:${pubky}`;
  * user lock alone, so the two cannot deadlock.
  */
 const bookmarkWriteLock = (pubky: Pubky, postId: string) => `pubky-bookmark-write:${pubky}:${postId}`;
+// An external resource's bookmark takes the same lock keyed by its file (`persistResource`).
 
 /**
  * Bookmark application service.
@@ -142,6 +147,45 @@ export class BookmarkApplication {
       await HomeserverService.deleteIdempotent(bookmarkUrl);
     }
     return true;
+  }
+
+  /**
+   * Whether the viewer's bookmark of an external resource exists on their homeserver. Web
+   * bookmarks have no local row (the bookmarks table and feed hold posts, ADR-0028), so the
+   * homeserver is the only record. Network only.
+   */
+  static async fetchResourceBookmarked(bookmarkUrl: string): Promise<boolean> {
+    return HomeserverService.exists(bookmarkUrl);
+  }
+
+  /**
+   * Writes or deletes the viewer's bookmark of an external resource on their homeserver, with no
+   * local row (see `fetchResourceBookmarked`), under the locks `persist` holds: `bookmarkSyncLock`
+   * `shared` and the file's `bookmarkWriteLock` `exclusive`, so two writes to one link land in order
+   * (a delete's retry never removes a later save) and none lands inside a listing. Resolves false
+   * when the account changed while it waited (`isCurrent`). A missing file is the state a delete wants.
+   */
+  static async persistResource(
+    action: HttpMethod,
+    { userId, bookmarkUrl, bookmarkBody, isCurrent }: TResourceBookmarkPersistInput,
+  ): Promise<boolean> {
+    if (action === HttpMethod.PUT && !bookmarkBody) {
+      throw Err.validation(ValidationErrorCode.MISSING_FIELD, 'A bookmark PUT needs the bytes to store', {
+        service: ErrorService.Local,
+        operation: 'persistResourceBookmark',
+      });
+    }
+    return withSyncLock(bookmarkSyncLock(userId), 'shared', () =>
+      withSyncLock(bookmarkWriteLock(userId, bookmarkUrl), 'exclusive', async () => {
+        if (isCurrent && !isCurrent()) {
+          Logger.debug('Skipping a resource bookmark write: the account changed while it waited for the sync lock');
+          return false;
+        }
+        if (action === HttpMethod.PUT) await HomeserverService.putBlob({ url: bookmarkUrl, blob: bookmarkBody! });
+        else await HomeserverService.deleteIdempotent(bookmarkUrl);
+        return true;
+      }),
+    );
   }
 
   /**

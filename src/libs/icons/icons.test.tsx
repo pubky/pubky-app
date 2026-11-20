@@ -1,6 +1,7 @@
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import {
+  AppleMusic,
   Bitkit,
   Blocktank,
   BTCIcon,
@@ -609,6 +610,27 @@ describe('Custom Icons', () => {
       expect(path).toHaveAttribute('fill', '#C8FF00');
       expect(path).toHaveAttribute('fill-rule', 'evenodd');
       expect(path).toHaveAttribute('clip-rule', 'evenodd');
+    });
+  });
+
+  describe('AppleMusic', () => {
+    it('renders the red mark at the given size, with its own gradient per instance', () => {
+      const { container } = render(
+        <>
+          <AppleMusic size={16} className="custom-class" data-testid="apple-music" />
+          <AppleMusic />
+        </>,
+      );
+      const [small, regular] = container.querySelectorAll('svg');
+
+      expect(small).toHaveAttribute('width', '16');
+      expect(small).toHaveClass('custom-class');
+      expect(small).toHaveAttribute('data-testid', 'apple-music');
+      expect(regular).toHaveAttribute('width', '24');
+      expect(container.querySelector('stop[stop-color="#FA243C"]')).toBeInTheDocument();
+      const [first, second] = [...container.querySelectorAll('linearGradient')].map((g) => g.id);
+      expect(first).not.toBe(second);
+      expect(small.querySelector('rect')).toHaveAttribute('fill', `url(#${first})`);
     });
   });
 });

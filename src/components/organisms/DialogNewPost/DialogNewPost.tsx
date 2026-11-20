@@ -17,9 +17,11 @@ interface DialogNewPostProps {
    * collection / bookmarks and trigger an optimistic feed insert.
    */
   onPostCreated?: (createdPostId: string) => void | Promise<void>;
+  /** Text the composer opens with, such as the link of an external resource to post about. */
+  initialContent?: string;
 }
 
-export function DialogNewPost({ open, onOpenChangeAction, onPostCreated }: DialogNewPostProps) {
+export function DialogNewPost({ open, onOpenChangeAction, onPostCreated, initialContent }: DialogNewPostProps) {
   const [isArticle, setIsArticle] = useState(false);
   const [isLockEnabled, setIsLockEnabled] = useState(false);
   // A locked post is never an article, so the lock title wins.
@@ -57,6 +59,7 @@ export function DialogNewPost({ open, onOpenChangeAction, onPostCreated }: Dialo
             variant={POST_INPUT_VARIANT.POST}
             onSuccess={handlePostSuccess}
             expanded={true}
+            initialContent={initialContent}
             onContentChange={handleContentChange}
             onArticleModeChange={setIsArticle}
             onLockModeChange={setIsLockEnabled}

@@ -1,7 +1,7 @@
 /**
  * Pinakes API shapes, hand-written from `GET <pinakes>/v1/openapi.json` (components `Card`,
  * `ResourceDetail` = `Card` + `Details`, `AlsoOn`, `OpenIn`, `GroupRef`, `GroupDetail`,
- * `SearchResponse`, `Facets`, `TypeFacet`, `Point`).
+ * `SearchResponse`, `Facets`, `TypeFacet`, `Point`, `VenueRef`).
  *
  * Only the fields the app reads are typed; the API carries more (`facts`, `address`, `stream`,
  * `maybe_same`, `occurrence`, ...). Fields the schema lists as required are required here; every
@@ -31,6 +31,13 @@ export enum PinakesStatus {
 export interface TPinakesPoint {
   lat: number;
   lon: number;
+}
+
+/** `VenueRef`: where an event takes place, by name. */
+export interface TPinakesVenueRef {
+  id?: string | null;
+  /** Plain text: escape before rendering as HTML. */
+  name?: string | null;
 }
 
 /** `GroupRef`: the group a card is in; its other members are in `also_on`. */
@@ -121,6 +128,9 @@ export interface TPinakesResourceDetail extends TPinakesCard {
   /** IANA time zone of an event (`America/Chicago`). */
   tz?: string | null;
   all_day?: boolean | null;
+  venue?: TPinakesVenueRef | null;
+  /** The event's status as the source gives it (`scheduled`); undocumented, so shown as written. */
+  event_status?: string | null;
   updated_at?: string | null;
 }
 

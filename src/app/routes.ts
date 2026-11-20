@@ -96,6 +96,20 @@ export enum POST_ROUTES {
   POST = '/post',
 }
 
+/** The page for one external resource (a link Pinakes reads into a card), by its link: `/resource?uri=…`. */
+export enum RESOURCE_ROUTES {
+  RESOURCE = '/resource',
+}
+
+/**
+ * Builds the URL of an external resource's page (`/resource?uri=…`), the link encoded as a query
+ * value, so any URI (`https:`, `isbn:`, `geo:`, …) round-trips unchanged.
+ */
+export function getResourceRoute(uri: string): string {
+  const params = new URLSearchParams({ uri });
+  return `${RESOURCE_ROUTES.RESOURCE}?${params.toString()}`;
+}
+
 export enum COPYRIGHT_ROUTES {
   COPYRIGHT = '/copyright',
 }

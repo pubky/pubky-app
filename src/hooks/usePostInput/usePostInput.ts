@@ -105,6 +105,7 @@ export function usePostInput({
   active = true,
   variant,
   postId,
+  parentUri,
   originalPostId,
   editPostId,
   editLock,
@@ -552,7 +553,11 @@ export function usePostInput({
         useLocalFilesStore.getState().setPostAttachments(createdPostId, attachments.map(newFileToLocalAttachment));
       }
 
-      if (variant === POST_INPUT_VARIANT.REPLY) {
+      // A reply to a post joins its thread. A reply to an external resource (its `parent` is no post)
+      // joins no feed either: like Nexus, the local write lists it only in the author's replies, so
+      // it never goes on top of the open timeline; the composer just collapses.
+      const isResourceReply = variant === POST_INPUT_VARIANT.REPLY && parentUri !== undefined;
+      if (variant === POST_INPUT_VARIANT.REPLY && !isResourceReply) {
         onSuccess?.(createdPostId);
         return;
       }
@@ -608,7 +613,11 @@ export function usePostInput({
 
     switch (variant) {
       case POST_INPUT_VARIANT.REPLY:
-        await reply({ postId: postId!, onSuccess: handleSuccess });
+        await reply(
+          parentUri !== undefined
+            ? { parentUri, onSuccess: handleSuccess }
+            : { postId: postId!, onSuccess: handleSuccess },
+        );
         break;
       case POST_INPUT_VARIANT.REPOST:
         await repost({
@@ -643,6 +652,7 @@ export function usePostInput({
     articleTitle,
     variant,
     postId,
+    parentUri,
     originalPostId,
     successToastTitle,
     reply,

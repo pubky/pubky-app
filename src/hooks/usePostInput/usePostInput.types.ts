@@ -9,8 +9,10 @@ export interface UsePostInputOptions {
   active?: boolean;
   /** Variant determines if this is a reply, repost, or a new post */
   variant: PostInputVariant;
-  /** Optional parent post ID (required if variant is 'reply') */
+  /** Parent post ID (a reply to a post) */
   postId?: string;
+  /** An external resource's URI (a reply to it): the reply's `parent`, instead of `postId` */
+  parentUri?: string;
   /** Optional original post ID (required if variant is 'repost') */
   originalPostId?: string;
   /** Optional edit post ID (required if variant is 'edit') */

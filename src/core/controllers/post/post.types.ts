@@ -12,7 +12,13 @@ export interface TCreatePostParams {
   attachments?: File[];
   /** An article's cover, written in the envelope (`cover_image`); ignored for any other post. */
   coverImage?: File;
+  /** The Pubky post this post replies to. Never with `parentUri`. */
   parentPostId?: string;
+  /**
+   * An external resource this post replies to (social v1 `parent`, any URI the spec allows; the app
+   * writes a web link or a known identifier scheme, as written). Never with `parentPostId`.
+   */
+  parentUri?: string;
   originalPostId?: string;
   /**
    * `pubky://` URL of a Locks lock file. Set only when this post is the public announcement of locked
@@ -42,6 +48,13 @@ export interface TCreateCollectionParams {
 export interface TUpdateCollectionItemParams {
   collectionId: string;
   postId: string;
+  shouldAdd: boolean;
+}
+
+export interface TUpdateCollectionResourceParams {
+  collectionId: string;
+  /** The external resource's link exactly as written: the item's `uri`. */
+  uri: string;
   shouldAdd: boolean;
 }
 

@@ -21,6 +21,19 @@ export class BookmarkNormalizer {
   }
 
   /**
+   * The bookmark of an external resource, targeting the link exactly as written. Private like
+   * every bookmark; its path spells the target, so building it again names the file a read or a
+   * delete needs.
+   */
+  static toResource(uri: string, userId: Pubky): Built<Bookmark> {
+    try {
+      return buildBookmark(userId, uri);
+    } catch (error) {
+      throw toSpecsValidationError(error, 'buildBookmark', { uri, userId });
+    }
+  }
+
+  /**
    * What one entry of the bookmarks directory listing names: the post its filename spells, or, for
    * the overflow form `~{hash}` (a target too long for a filename), nothing until the stored object
    * is read. Null for a file that is no bookmark of a post: another kind, a web or profile target,

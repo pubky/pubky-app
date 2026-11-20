@@ -1,3 +1,4 @@
+import { buildPost } from 'pubky-social-specs';
 import { fakeOwner } from 'pubky-social-specs/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
@@ -90,5 +91,49 @@ describe('PostValidators.validatePostId', () => {
     await expect(PostValidators.validatePostId({ postId: POST_ID, message: 'Parent post' })).rejects.toBeInstanceOf(
       AppError,
     );
+  });
+});
+
+describe('PostValidators.validateExternalParentUri', () => {
+  const ACCEPTED = [
+    'https://stacker.news/items/123',
+    'http://example.com/a?b=1',
+    'https://user@example.com:8080/x',
+    'https://[::1]/x',
+    'isbn:9780131103627',
+    'doi:10.1000/182',
+    'osm:node/123',
+    'geo:47.37,8.54',
+    'urn:isbn:9780131103627',
+    `https://example.com/${'a'.repeat(1024 - 'https://example.com/'.length)}`,
+    'https://example.com/\u{1F600}',
+  ];
+
+  it.each(ACCEPTED)('returns %s as written, and the spec accepts it as a parent', (uri) => {
+    expect(PostValidators.validateExternalParentUri(uri)).toBe(uri);
+    expect(() =>
+      buildPost(fakeOwner(1), { kind: 'note', content: 'hi', parent: uri, embed: null, attachments: [], lock: null }),
+    ).not.toThrow();
+  });
+
+  it.each([
+    ['', 'empty'],
+    [' https://example.com', 'padded'],
+    ['https://example.com/a b', 'a space inside'],
+    ['https://example.com/a\u00a0b', 'a no-break space inside'],
+    ['https://example.com/\u0007', 'a control character'],
+    ['not a uri', 'not a URI'],
+    ['javascript:alert(1)', 'a script'],
+    ['data:text/plain,hi', 'a data URI'],
+    ['pubky://abc/pub/social/v1/posts/0035QZPT4QG00', 'a Pubky object (posts are replied to by id)'],
+    ['HTTPS://example.com', 'an upper-case web scheme (not canonical)'],
+    ['http:example.com', 'a web link without //'],
+    ['ISBN:9780131103627', 'an upper-case scheme (not canonical)'],
+    ['https://', 'a web link without a host'],
+    ['https://user@:80/x', 'a web link with an empty host'],
+    ['isbn:', 'a scheme naming nothing'],
+    [`https://example.com/${'a'.repeat(1025 - 'https://example.com/'.length)}`, 'longer than the spec allows'],
+  ])('refuses %s (%s)', (uri) => {
+    expect(() => PostValidators.validateExternalParentUri(uri)).toThrow(AppError);
   });
 });

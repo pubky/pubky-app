@@ -2,6 +2,7 @@
 import { Container } from '@/atoms/Container/Container';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { isArticleContent } from '@/libs/post/articleContent';
+import { getShownEmbedUrl } from '@/libs/post/postEmbedUrl';
 import { cn, isPostDeleted } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
 import { PostLinkEmbeds } from '@/molecules/PostLinkEmbeds/PostLinkEmbeds';
@@ -24,7 +25,13 @@ import type { PostContentBaseProps } from './PostContentBase.types';
  * and attachments for regular posts; delegates `kind=collection` posts to
  * `CollectionCard` with `presentation="embed"`.
  */
-export function PostContentBase({ postId, className, textClassName, mediaVariant = 'default' }: PostContentBaseProps) {
+export function PostContentBase({
+  postId,
+  className,
+  textClassName,
+  mediaVariant = 'default',
+  embedUrl,
+}: PostContentBaseProps) {
   const localAttachments = useLocalFilesStore((s) => s.posts[postId]);
   const localArticleCover = useLocalFilesStore((s) => s.articleCovers[postId]);
 
@@ -85,7 +92,10 @@ export function PostContentBase({ postId, className, textClassName, mediaVariant
     return <CollectionCard authorPubky={pubky} postId={id} presentation="embed" className={className} />;
   }
 
-  if (!hasContent && !hasAttachments) return null;
+  // An edit can drop the embedded link from the text: then the text's own first link is previewed
+  const shownEmbedUrl = getShownEmbedUrl(embedUrl, postDetails.content);
+
+  if (!hasContent && !hasAttachments && !shownEmbedUrl) return null;
 
   if (mediaVariant === 'cards') {
     return (
@@ -96,7 +106,7 @@ export function PostContentBase({ postId, className, textClassName, mediaVariant
         className={cn('min-w-0', className)}
       >
         {hasContent && <PostText content={postDetails.content} className={textClassName} />}
-        {hasContent && <PostLinkEmbeds content={postDetails.content} />}
+        {(hasContent || shownEmbedUrl) && <PostLinkEmbeds content={postDetails.content} url={shownEmbedUrl} />}
       </PostAttachments>
     );
   }
@@ -108,6 +118,7 @@ export function PostContentBase({ postId, className, textClassName, mediaVariant
         attachments={postDetails.attachments}
         localAttachments={localAttachments}
         textClassName={textClassName}
+        embedUrl={shownEmbedUrl}
         {...(mediaVariant !== 'default' ? { mediaVariant } : {})}
       />
     </Container>

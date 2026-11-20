@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getFirstLinkUrl } from './postLinkUrl';
+import { getFirstLinkUrl, getLinkUrls } from './postLinkUrl';
 
 describe('getFirstLinkUrl', () => {
   it('returns the first URL when the content has several', () => {
@@ -38,5 +38,19 @@ describe('getFirstLinkUrl', () => {
   it('returns null for content without a link', () => {
     expect(getFirstLinkUrl('just some words')).toBeNull();
     expect(getFirstLinkUrl('')).toBeNull();
+  });
+});
+
+describe('getLinkUrls', () => {
+  it('returns every link in order, Markdown link targets included', () => {
+    expect(getLinkUrls('a https://a.example then [b](https://b.example) and c.com')).toEqual([
+      'https://a.example',
+      'https://b.example',
+      'http://c.com',
+    ]);
+  });
+
+  it('returns an empty list without links', () => {
+    expect(getLinkUrls('just some words')).toEqual([]);
   });
 });

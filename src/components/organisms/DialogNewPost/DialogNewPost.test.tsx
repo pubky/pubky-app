@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DialogContent } from '@/atoms/Dialog/Dialog';
 import { useConfirmableDialog } from '@/hooks/useConfirmableDialog/useConfirmableDialog';
+import { PostInput } from '@/organisms/PostInput/PostInput';
 import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutContext';
 import { DialogNewPost } from './DialogNewPost';
 
@@ -185,6 +186,14 @@ describe('DialogNewPost', () => {
     );
 
     expect(screen.getByTestId('post-input')).toHaveAttribute('data-layout-override', 'inline');
+  });
+
+  it('opens the composer with the text it is given', () => {
+    render(<DialogNewPost open onOpenChangeAction={vi.fn()} initialContent="https://example.com/a" />);
+
+    expect(vi.mocked(PostInput).mock.lastCall?.[0]).toEqual(
+      expect.objectContaining({ initialContent: 'https://example.com/a' }),
+    );
   });
 
   it('calls onOpenChangeAction when PostInput onSuccess is called', async () => {

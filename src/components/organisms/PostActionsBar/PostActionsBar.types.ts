@@ -9,6 +9,8 @@ export interface PostActionsBarProps {
   onRepostClick?: () => void;
   className?: string;
   variant?: 'default' | 'visual';
+  /** What the row sits on: `muted` is the `bg-embed` of a quoted post (see `postActionsButtonVariants`). */
+  surface?: 'default' | 'muted';
 }
 
 export interface ActionButtonConfig {

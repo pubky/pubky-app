@@ -306,7 +306,13 @@ export class LocalPostService {
   static async create({ compositePostId, post }: TLocalSavePostParams) {
     const { content, kind, parent, attachments, embed, lock } = post.object;
 
-    const parentUri = parent ?? undefined;
+    // `replied` names a parent post. A post whose `parent` is an external resource (a web link,
+    // `isbn:`, ...) keeps `replied` null: no post's reply count to bump, no thread to join. It is
+    // still a reply, as Nexus lists and counts it: in the author's replies, never in a timeline or
+    // the author's posts.
+    const parentUri =
+      parent && buildCompositeIdFromPubkyUri({ uri: parent, domain: CompositeIdDomain.POSTS }) ? parent : undefined;
+    const isResourceReply = !!parent && !parentUri;
     const repostedUri = embed ?? null;
     const normalizedKind = toLocalPostKind(kind);
 
@@ -422,7 +428,7 @@ export class LocalPostService {
               userId: authorId,
               countChanges: {
                 posts: 1,
-                replies: parentUri ? 1 : 0,
+                replies: parentUri || isResourceReply ? 1 : 0,
                 collections: normalizedKind === 'collection' ? 1 : 0,
               },
             }),
@@ -432,6 +438,7 @@ export class LocalPostService {
             compositePostId,
             kind: normalizedKind,
             parentUri,
+            isResourceReply,
             lock,
             ops,
             action: HttpMethod.PUT,
@@ -549,7 +556,20 @@ export class LocalPostService {
             return;
           }
           const postRelationships = await PostRelationshipsModel.findById(compositePostId);
-          const parentUri = postRelationships?.replied ?? undefined;
+          // As on create: only a parent post is a thread to leave. A reply to an external resource
+          // leaves the author's replies: Nexus serves its link in `replied`; one written here keeps
+          // `replied` null and is known by its id in that stream, where `create` put it (while the
+          // stream still holds it: a Nexus reload before indexing drops it, and its count heals with
+          // the next user counts read).
+          const replied = postRelationships?.replied ?? undefined;
+          const parentUri =
+            replied && buildCompositeIdFromPubkyUri({ uri: replied, domain: CompositeIdDomain.POSTS })
+              ? replied
+              : undefined;
+          const isResourceReply =
+            !parentUri &&
+            (!!replied ||
+              !!(await PostStreamModel.findById(`author_replies:${authorId}`))?.stream.includes(compositePostId));
           const repostedUri = postRelationships?.reposted ?? undefined;
           const kind = postDetails?.kind ?? 'short';
 
@@ -615,7 +635,7 @@ export class LocalPostService {
               userId: authorId,
               countChanges: {
                 posts: -1,
-                replies: parentUri ? -1 : 0,
+                replies: parentUri || isResourceReply ? -1 : 0,
                 collections: kind === 'collection' ? -1 : 0,
               },
             }),
@@ -626,6 +646,7 @@ export class LocalPostService {
             compositePostId,
             kind,
             parentUri,
+            isResourceReply,
             lock: postDetails?.lock,
             ops,
             action: HttpMethod.DELETE,
@@ -653,6 +674,7 @@ export class LocalPostService {
     compositePostId,
     kind,
     parentUri,
+    isResourceReply,
     lock,
     ops,
     action,
@@ -684,6 +706,9 @@ export class LocalPostService {
       });
       ops.push(updateStream(`author_replies:${authorId}`, [compositePostId]));
       ops.push(updateStream(`post_replies:${parentCompositeId}`, [compositePostId]));
+    } else if (isResourceReply) {
+      // No post thread to join: the author's replies are the only stream that lists it.
+      ops.push(updateStream(`author_replies:${authorId}`, [compositePostId]));
     } else if (kind === 'collection') {
       ops.push(updateStream(buildAuthorCollectionsStreamId(authorId), [compositePostId]));
       ops.push(updateStream(PostStreamTypes.TIMELINE_ALL_COLLECTION, [compositePostId]));

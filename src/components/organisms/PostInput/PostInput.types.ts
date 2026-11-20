@@ -84,10 +84,24 @@ interface PostInputBaseProps {
 
 export type PostInputProps =
   | (PostInputBaseProps & {
-      /** Variant: reply */
+      /** Variant: reply to a post */
       variant: typeof POST_INPUT_VARIANT.REPLY;
       /** Parent post ID (required for replies) */
       postId: string;
+      parentUri?: never;
+      originalPostId?: never;
+      editPostId?: never;
+      editContent?: never;
+      editIsArticle?: never;
+      editAttachments?: never;
+      editLock?: never;
+    })
+  | (PostInputBaseProps & {
+      /** Variant: reply to an external resource */
+      variant: typeof POST_INPUT_VARIANT.REPLY;
+      /** The external resource's URI, written as the reply's `parent` */
+      parentUri: string;
+      postId?: never;
       originalPostId?: never;
       editPostId?: never;
       editContent?: never;
@@ -101,6 +115,7 @@ export type PostInputProps =
       /** Original post ID (required for reposts) */
       originalPostId: string;
       postId?: never;
+      parentUri?: never;
       editPostId?: never;
       editContent?: never;
       editIsArticle?: never;
@@ -111,6 +126,7 @@ export type PostInputProps =
       /** Variant: new root post */
       variant: typeof POST_INPUT_VARIANT.POST;
       postId?: never;
+      parentUri?: never;
       originalPostId?: never;
       editPostId?: never;
       editContent?: never;
@@ -122,6 +138,7 @@ export type PostInputProps =
       /** Variant: edit post */
       variant: typeof POST_INPUT_VARIANT.EDIT;
       postId?: never;
+      parentUri?: never;
       originalPostId?: never;
       /** Edit post ID (required for edit) */
       editPostId: string;
