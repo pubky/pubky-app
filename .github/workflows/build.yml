@@ -43,6 +43,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+        # The build never runs Cypress; type-checking cypress/ only needs the package.
+        env:
+          CYPRESS_INSTALL_BINARY: 0
 
       - name: Build prod
         run: npm run build
