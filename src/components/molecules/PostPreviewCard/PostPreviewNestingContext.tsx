@@ -15,7 +15,9 @@ const PostPreviewNestingContext = createContext(false);
  * `navigable={false}` — the quoted post in the Reply/Repost dialogs — where a
  * navigation would land behind the open modal, and the composer's link preview,
  * where it would leave the post being written. The leaves read it directly
- * because they sit several layers down the markdown render.
+ * because they sit several layers down the markdown render. Resource previews
+ * read `false` as a post being written: no card player opens, and Reply and
+ * Post about this show disabled.
  */
 const PostPreviewNavigableContext = createContext(true);
 

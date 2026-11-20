@@ -6,7 +6,10 @@ import { isPinakesConfigured, PINAKES_SLOW_READ_MS } from '@/config/pinakes';
 import { MENU_VARIANT } from '@/config/ui';
 import { useOgMetadata } from '@/hooks/useOgMetadata/useOgMetadata';
 import { usePinakesCard } from '@/hooks/usePinakesCard/usePinakesCard';
-import { PostPreviewNestingProvider } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
+import {
+  PostPreviewNavigableProvider,
+  PostPreviewNestingProvider,
+} from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import { ResourceSurfaceProvider } from '@/molecules/ResourceCard/ResourceSurfaceContext';
 import type { ResourceExtraMenuContent } from '@/organisms/ResourceActions/ResourceMoreMenu';
 import articleFixture from '@/services/pinakes/fixtures/by-uri.article.json';
@@ -312,13 +315,16 @@ describe('GenericResourcePreview', () => {
     expect(actions).toHaveAttribute('data-tags-label', 'Tags on this artist');
   });
 
-  it('leaves out the action row and tag bar while composing', () => {
-    mockUsePinakesCard.mockReturnValue({ data: articleFixture, isLoading: false, isError: false });
+  it('keeps the action row and tag bar while composing, on the card’s canonical link, without Play on', () => {
+    mockUsePinakesCard.mockReturnValue({ data: ARTIST, isLoading: false, isError: false });
 
-    render(<GenericResourcePreview url={URL} isComposing />);
+    render(<GenericResourcePreview url={ARTIST.uri} isComposing />);
 
-    expect(screen.getByTestId('resource-card')).toBeInTheDocument();
-    expect(screen.queryByTestId('resource-actions')).not.toBeInTheDocument();
+    const actions = within(screen.getByTestId('resource-card')).getByTestId('resource-actions');
+    expect(actions).toHaveAttribute('data-uri', ARTIST.uri);
+    expect(actions).toHaveAttribute('data-has-extra-menu', 'true');
+    // The composer previews: no card player opens there.
+    expect(within(actions).queryByRole('button', { name: /^Play on/ })).not.toBeInTheDocument();
   });
 
   it('grows the box smoothly in a post, and leaves the composer to size its own height', () => {
@@ -363,29 +369,53 @@ describe('GenericResourcePreview', () => {
     viewport.isVisible = false;
   });
 
-  it('leaves the action rows out of the composer’s skeleton', () => {
+  it('keeps the action rows in the composer’s skeleton', () => {
     mockUsePinakesCard.mockReturnValue({ data: undefined, isLoading: true, isError: false });
 
     render(<GenericResourcePreview url={URL} isComposing />);
 
     expect(screen.getByTestId('resource-card-skeleton')).toBeInTheDocument();
-    expect(screen.queryByTestId('resource-card-skeleton-actions')).not.toBeInTheDocument();
+    expect(screen.getByTestId('resource-card-skeleton-actions')).toBeInTheDocument();
   });
 
-  it.each([true, false])('leaves out the action row and tag bar inside a quoted post (navigable: %s)', (navigable) => {
-    mockUsePinakesCard.mockReturnValue({ data: articleFixture, isLoading: false, isError: false });
+  it('renders a feed quote’s card as its own post does: action row, tag bar and the embed/card switch', () => {
+    mockUsePinakesCard.mockReturnValue({ data: ARTIST, isLoading: false, isError: false });
 
     render(
-      <PostPreviewNestingProvider navigable={navigable}>
-        <GenericResourcePreview url={URL} />
+      <PostPreviewNestingProvider>
+        <GenericResourcePreview url={ARTIST.uri} />
       </PostPreviewNestingProvider>,
     );
 
-    expect(screen.getByTestId('resource-card')).toBeInTheDocument();
-    expect(screen.queryByTestId('resource-actions')).not.toBeInTheDocument();
+    const actions = within(screen.getByTestId('resource-card')).getByTestId('resource-actions');
+    expect(actions).toHaveAttribute('data-uri', ARTIST.uri);
+    expect(actions).toHaveAttribute('data-has-extra-menu', 'true');
+    expect(within(actions).queryByRole('button', { name: /^Play on/ })).not.toBeInTheDocument();
+    expect(
+      within(screen.getByTestId('resource-card')).getByRole('button', { name: 'Card: choose another service' }),
+    ).toBeInTheDocument();
   });
 
-  it('leaves out the actions of the link’s own preview and of the skeleton inside a quoted post', () => {
+  it('keeps the action row and tag bar of a dialog’s quoted post, a preview without Play on', () => {
+    mockUsePinakesCard.mockReturnValue({ data: ARTIST, isLoading: false, isError: false });
+
+    render(
+      <PostPreviewNestingProvider navigable={false}>
+        <GenericResourcePreview url={ARTIST.uri} />
+      </PostPreviewNestingProvider>,
+    );
+
+    const actions = within(screen.getByTestId('resource-card')).getByTestId('resource-actions');
+    expect(actions).toHaveAttribute('data-uri', ARTIST.uri);
+    expect(actions).toHaveAttribute('data-has-extra-menu', 'true');
+    // The Reply and Repost dialogs preview as the composer does: no Play on, the switch in the header.
+    expect(within(actions).queryByRole('button', { name: /^Play on/ })).not.toBeInTheDocument();
+    expect(
+      within(screen.getByTestId('resource-card')).getByRole('button', { name: 'Card: choose another service' }),
+    ).toBeInTheDocument();
+  });
+
+  it('keeps the actions of the link’s own preview and of the skeleton inside a quoted post', () => {
     mockUsePinakesCard.mockReturnValue({ data: null, isLoading: false, isError: false });
     const { rerender } = render(
       <PostPreviewNestingProvider>
@@ -393,8 +423,10 @@ describe('GenericResourcePreview', () => {
       </PostPreviewNestingProvider>,
     );
 
-    expect(screen.getByTestId('resource-link-card')).toBeInTheDocument();
-    expect(screen.queryByTestId('resource-actions')).not.toBeInTheDocument();
+    expect(within(screen.getByTestId('resource-link-card')).getByTestId('resource-actions')).toHaveAttribute(
+      'data-uri',
+      URL,
+    );
 
     mockUsePinakesCard.mockReturnValue({ data: undefined, isLoading: true, isError: false });
     rerender(
@@ -404,7 +436,7 @@ describe('GenericResourcePreview', () => {
     );
 
     expect(screen.getByTestId('resource-card-skeleton')).toBeInTheDocument();
-    expect(screen.queryByTestId('resource-card-skeleton-actions')).not.toBeInTheDocument();
+    expect(screen.getByTestId('resource-card-skeleton-actions')).toBeInTheDocument();
   });
 
   it('shows the link’s own preview in the card frame, with actions, when Pinakes has no card', () => {
@@ -674,13 +706,13 @@ describe('GenericResourcePreview', () => {
       expect(screen.queryByTestId('resource-card')).not.toBeInTheDocument();
     });
 
-    it('previews the same embed in the composer, without the footer', () => {
+    it('previews the same embed in the composer, with the footer', () => {
       mockUsePinakesCard.mockReturnValue({ data: { ...musicFixture, also_on: [] }, isLoading: false, isError: false });
       render(<GenericResourcePreview url={SPOTIFY} isComposing />);
 
-      expect(screen.getByTestId('resource-embed-frame')).toBeInTheDocument();
-      expect(screen.getByTestId('resource-player-frame')).toBeInTheDocument();
-      expect(screen.queryByTestId('resource-actions')).not.toBeInTheDocument();
+      const frame = screen.getByTestId('resource-embed-frame');
+      expect(within(frame).getByTestId('resource-player-frame')).toBeInTheDocument();
+      expect(within(frame).getByTestId('resource-actions')).toHaveAttribute('data-uri', musicFixture.uri);
     });
 
     describe('with platform embeds up front off', () => {
@@ -729,7 +761,7 @@ describe('GenericResourcePreview', () => {
       });
     });
 
-    it('keeps the card in a quoted post', () => {
+    it('shows the same embed up front in a quoted post, with the footer', () => {
       mockUsePinakesCard.mockReturnValue({ data: { ...musicFixture, also_on: [] }, isLoading: false, isError: false });
       render(
         <PostPreviewNestingProvider>
@@ -737,8 +769,12 @@ describe('GenericResourcePreview', () => {
         </PostPreviewNestingProvider>,
       );
 
-      expect(screen.getByTestId('resource-card')).toBeInTheDocument();
-      expect(document.querySelector('iframe')).toBeNull();
+      const frame = screen.getByTestId('resource-embed-frame');
+      expect(within(frame).getByTestId('resource-player-frame').getAttribute('src')).toMatch(
+        /^https:\/\/open\.spotify\.com\/embed\/track\//,
+      );
+      expect(within(frame).getByTestId('resource-actions')).toHaveAttribute('data-uri', SPOTIFY);
+      expect(document.querySelectorAll('iframe')).toHaveLength(1);
     });
   });
   describe('a song', () => {
@@ -834,7 +870,7 @@ describe('GenericResourcePreview', () => {
       });
     });
 
-    it('previews the same player and switch in the composer, without the footer', () => {
+    it('previews the same player and switch in the composer, with the footer', () => {
       mockUsePinakesCard.mockReturnValue({ data: SONG, isLoading: false, isError: false });
       render(<GenericResourcePreview url={SONG.uri} isComposing />);
 
@@ -843,7 +879,9 @@ describe('GenericResourcePreview', () => {
         'https://open.spotify.com/embed/track/1YQWosTIljIvxAgHWTp7KP',
       );
       expect(switchButton()).toBeInTheDocument();
-      expect(screen.queryByTestId('resource-actions')).not.toBeInTheDocument();
+      const actions = within(screen.getByTestId('resource-embed-frame')).getByTestId('resource-actions');
+      expect(actions).toHaveAttribute('data-uri', SONG.uri);
+      expect(within(actions).queryByRole('button', { name: /^Play on/ })).not.toBeInTheDocument();
     });
 
     it('shows our card in place from the switch’s Card, with the switch to pick a service again', () => {
@@ -903,14 +941,15 @@ describe('GenericResourcePreview', () => {
         expect(switchButton()).toHaveAccessibleName('Card: choose another service');
       });
 
-      it('previews our card in the composer, without the footer', () => {
+      it('previews our card in the composer, with its footer and no Play on', () => {
         mockUsePinakesCard.mockReturnValue({ data: SONG, isLoading: false, isError: false });
         render(<GenericResourcePreview url={SONG.uri} isComposing />);
 
         expect(screen.getByTestId('resource-card')).toBeInTheDocument();
         expect(document.querySelector('iframe')).toBeNull();
         expect(switchButton()).toBeInTheDocument();
-        expect(screen.queryByTestId('resource-actions')).not.toBeInTheDocument();
+        const actions = screen.getByTestId('resource-actions');
+        expect(within(actions).queryByRole('button', { name: /^Play on/ })).not.toBeInTheDocument();
       });
     });
 
@@ -930,7 +969,7 @@ describe('GenericResourcePreview', () => {
       });
     });
 
-    it('keeps the card in a quoted post', () => {
+    it('shows the same player, switch and footer in a quoted post', () => {
       mockUsePinakesCard.mockReturnValue({ data: SONG, isLoading: false, isError: false });
       render(
         <PostPreviewNestingProvider>
@@ -938,8 +977,41 @@ describe('GenericResourcePreview', () => {
         </PostPreviewNestingProvider>,
       );
 
-      expect(screen.getByTestId('resource-card')).toBeInTheDocument();
-      expect(document.querySelector('iframe')).toBeNull();
+      const frame = screen.getByTestId('resource-embed-frame');
+      expect(within(frame).getByTestId('resource-player-frame')).toHaveAttribute(
+        'src',
+        'https://open.spotify.com/embed/track/1YQWosTIljIvxAgHWTp7KP',
+      );
+      expect(switchButton()).toBeInTheDocument();
+      expect(within(frame).getByTestId('resource-actions')).toHaveAttribute('data-uri', SONG.uri);
+      expect(screen.queryByTestId('resource-card')).not.toBeInTheDocument();
+      expect(document.querySelectorAll('iframe')).toHaveLength(1);
+    });
+
+    it.each([
+      { surface: 'a feed quote', navigable: true, docks: true },
+      { surface: 'a dialog (a post being written)', navigable: false, docks: false },
+    ])('lets a pressed player in $surface dock: $docks', ({ navigable, docks }) => {
+      vi.useFakeTimers();
+      try {
+        mockUsePinakesCard.mockReturnValue({ data: SONG, isLoading: false, isError: false });
+        render(
+          <PostPreviewNavigableProvider navigable={navigable}>
+            <GenericResourcePreview url={SONG.uri} />
+          </PostPreviewNavigableProvider>,
+        );
+
+        const frame = screen.getByTestId('resource-player-frame');
+        act(() => {
+          fireEvent.mouseOver(frame);
+          frame.focus();
+          window.dispatchEvent(new Event('blur'));
+          vi.advanceTimersByTime(1);
+        });
+        expect(document.querySelector('[data-keep-playing]') !== null).toBe(docks);
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 });

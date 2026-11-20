@@ -20,8 +20,9 @@ const toLinkLabel = (url: string) => url.replace(/^https?:\/\//, '');
 
 /**
  * The link a new post embeds, shown in the composer as the post will show it: the same external
- * resource card (or the link's own preview) in the same frame, without its action row and tag bar,
- * since there is nothing to act on yet. A line above it names the link and holds the button that
+ * resource card (or the link's own preview) in the same frame, with its footer: the resource can be
+ * tagged and saved before the post is sent, while Reply and Post about this, which would open another
+ * composer, show disabled. A line above it names the link and holds the button that
  * removes the embed; on the card's corner that button would cover the card's source. The card must
  * not navigate away from the post being written. While the text holds several links that can be
  * embedded, the line also holds a Switch menu listing them, the embedded one checked: a post embeds

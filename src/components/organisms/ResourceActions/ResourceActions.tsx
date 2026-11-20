@@ -11,6 +11,7 @@ import { useResourceCounts } from '@/hooks/useResourceCounts/useResourceCounts';
 import { useResourceTags } from '@/hooks/useResourceTags/useResourceTags';
 import { isExternalParentUri } from '@/libs/post/externalParent';
 import { cn } from '@/libs/utils/utils';
+import { useIsPostPreviewNavigable } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import { useResourceSurface } from '@/molecules/ResourceCard/ResourceSurfaceContext';
 import { DialogReply } from '@/organisms/DialogReply/DialogReply';
 import { PostActionButton } from '@/organisms/PostActionsBar/PostActionButton';
@@ -23,6 +24,7 @@ import { ResourceTagBar } from './ResourceTagBar';
 
 const REPLY_LABEL = 'Reply to this external resource';
 const CANNOT_REPLY_LABEL = 'Replies to this external resource are not supported';
+const WRITING_REPLY_LABEL = `${REPLY_LABEL}: not available while writing a post`;
 
 interface ResourceActionsProps {
   /**
@@ -97,6 +99,10 @@ interface ResourceActionsProps {
  * On the resource page, the tags on the same thing's other links join the tag list (`otherTagList`); on
  * a card in a feed, those of its `card`'s other links, read by the footer itself.
  *
+ * Inside a post being written (the composer's preview, the Reply and Repost dialogs: `navigable`
+ * false), Reply and Post about this would open another composer over it: they show disabled, with
+ * their counts. Tags, Save and ⋯ work as anywhere.
+ *
  * The zone is all controls, so a click on it never counts as a click through the card.
  */
 export function ResourceActions({
@@ -118,6 +124,7 @@ export function ResourceActions({
   onReplySubmitted,
 }: ResourceActionsProps) {
   const { requireAuth } = useRequireAuth();
+  const isWriting = !useIsPostPreviewNavigable();
   // Once read, the tags stay while the card scrolls out of view.
   const [hasBeenOnScreen, setHasBeenOnScreen] = useState(isOnScreen);
   if (isOnScreen && !hasBeenOnScreen) setHasBeenOnScreen(true);
@@ -150,7 +157,7 @@ export function ResourceActions({
   const surface = isLarge || onCard ? 'default' : 'muted';
   // A reply's `parent` must be a URI the app writes (a web link or a known identifier scheme).
   const canReply = isExternalParentUri(uri);
-  const replyLabel = canReply ? REPLY_LABEL : CANNOT_REPLY_LABEL;
+  const replyLabel = !canReply ? CANNOT_REPLY_LABEL : isWriting ? WRITING_REPLY_LABEL : REPLY_LABEL;
 
   return (
     <Container
@@ -231,11 +238,11 @@ export function ResourceActions({
                 : replyLabel
             }
             title={replyLabel}
-            disabled={!canReply}
+            disabled={!canReply || isWriting}
             onClick={() => requireAuth(() => setIsReplying(true))}
             data-testid="resource-reply-button"
           />
-          <ResourcePostButton uri={postUri} count={embeds} surface={surface} />
+          <ResourcePostButton uri={postUri} count={embeds} surface={surface} isWriting={isWriting} />
           <ResourceSavePicker uri={uri} spellings={spellings} collectionsCount={collections} surface={surface} />
           <ResourceMoreMenu
             uri={uri}

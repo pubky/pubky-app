@@ -12,20 +12,24 @@ import { PostActionButton, type PostActionSurface } from '@/organisms/PostAction
  * so the composer shows its card with the X that removes it. `count` is how many posts embed the link
  * (Nexus' `embeds_count`); none shows while it is read or not counted. Signed out, it asks to sign
  * in. Without a web link (`null`: a resource known only as `isbn:`, `doi:`, ...) it is disabled, as
- * the composer embeds web links only.
+ * the composer embeds web links only. Inside a post being written (`isWriting`) it is disabled too,
+ * its count kept: it would open another composer over that one.
  * `surface` is what the row sits on (`muted` on a card in a post).
  */
 export function ResourcePostButton({
   uri,
   count,
   surface = 'muted',
+  isWriting = false,
 }: {
   uri: string | null;
   count?: number;
   surface?: PostActionSurface;
+  isWriting?: boolean;
 }) {
   const { requireAuth } = useRequireAuth();
   const [open, setOpen] = useState(false);
+  const label = isWriting ? 'Post about this: not available while writing a post' : 'Post about this';
 
   return (
     <>
@@ -34,12 +38,10 @@ export function ResourcePostButton({
         surface={surface}
         count={count}
         ariaLabel={
-          count === undefined
-            ? 'Post about this'
-            : `Post about this (${count} ${count === 1 ? 'post embeds' : 'posts embed'} it)`
+          count === undefined ? label : `${label} (${count} ${count === 1 ? 'post embeds' : 'posts embed'} it)`
         }
-        title="Post about this"
-        disabled={!uri}
+        title={label}
+        disabled={!uri || isWriting}
         onClick={() => requireAuth(() => setOpen(true))}
         data-testid="resource-post-button"
       />
