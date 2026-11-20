@@ -52,6 +52,17 @@ describe('LocksRegionNotice', () => {
       );
     });
 
+    it.each([
+      ['start', undefined],
+      ['end', 'end'],
+    ] as const)('aligns the opened info to %s', (expected, align) => {
+      render(<LocksRegionNotice variant="icon" align={align} />);
+
+      fireEvent.click(screen.getByRole('button', { name: "Paid unlocks aren't available in your region yet." }));
+
+      expect(screen.getByTestId('locks-region-info').closest('[data-align]')).toHaveAttribute('data-align', expected);
+    });
+
     it('names the unreadable location in its label', () => {
       render(<LocksRegionNotice variant="icon" cause="unknown" />);
 
