@@ -70,6 +70,8 @@ describe('contacts', () => {
         expectProfileTabCount('following', 0);
         cy.contains('[data-cy="profile-follower-item-name"]:visible', targetName).should('be.visible');
 
+        // The own Following list keeps an unfollowed row until it mounts again. Switching to
+        // another profile tab and back remounts it, so the test never reloads the page.
         openProfileTab('followers');
         openProfileTab('following');
         expectProfileTabCount('following', 0);
