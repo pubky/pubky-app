@@ -67,6 +67,7 @@ vi.mock('@/app/routes', async (importOriginal) => ({
     const segments = path.split('/').filter(Boolean);
     return (
       (segments[0] === 'post' && segments.length === 3) ||
+      path === '/resource' ||
       (segments[0] === 'profile' && segments.length === 2 && segments[1].length === 52) ||
       (segments[0] === 'collections' && segments.length === 3 && segments[1] !== 'bookmarks')
     );
@@ -644,20 +645,25 @@ describe('RouteGuardProvider — social v1 migration gate (ADR-0026)', () => {
     mocks.isLoading = false;
   });
 
-  it.each(['/feed', '/home', '/landing', `/post/${pubky}/0034BBBDFK83G`, `/profile/${pubky}`, '/shop/marketplace'])(
-    'sends a held account from %s to the gate, the public pages included',
-    (pathname) => {
-      mocks.pathname = pathname;
-      render(
-        <RouteGuardProvider>
-          <div>Page Content</div>
-        </RouteGuardProvider>,
-      );
-      expect(screen.queryByText('Page Content')).not.toBeInTheDocument();
-      expect(screen.getByText('Redirecting...')).toBeInTheDocument();
-      expect(mocks.mockRouterPush).toHaveBeenCalledWith('/migration');
-    },
-  );
+  it.each([
+    '/feed',
+    '/home',
+    '/landing',
+    `/post/${pubky}/0034BBBDFK83G`,
+    `/profile/${pubky}`,
+    '/shop/marketplace',
+    '/resource',
+  ])('sends a held account from %s to the gate, the public pages included', (pathname) => {
+    mocks.pathname = pathname;
+    render(
+      <RouteGuardProvider>
+        <div>Page Content</div>
+      </RouteGuardProvider>,
+    );
+    expect(screen.queryByText('Page Content')).not.toBeInTheDocument();
+    expect(screen.getByText('Redirecting...')).toBeInTheDocument();
+    expect(mocks.mockRouterPush).toHaveBeenCalledWith('/migration');
+  });
 
   it.each(['/migration', '/logout', '/terms-of-use'])('renders %s for a held account', (pathname) => {
     mocks.pathname = pathname;
@@ -849,7 +855,7 @@ describe('RouteGuardProvider — signed-out notice of the migration gate', () =>
 
   afterEach(() => sessionStorage.clear());
 
-  it.each(['/home', '/', '/landing', `/post/${pubky}/0034BBBDFK83G`, `/profile/${pubky}`, '/collections'])(
+  it.each(['/home', '/', '/landing', `/post/${pubky}/0034BBBDFK83G`, `/profile/${pubky}`, '/collections', '/resource'])(
     'brings a signed-out tab reloaded onto %s back to the explanation while the notice is pending',
     (pathname) => {
       writeSocialMigrationSignedOutNotice({ reason: 'missing-scopes' });

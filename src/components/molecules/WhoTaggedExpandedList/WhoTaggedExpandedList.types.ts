@@ -16,6 +16,17 @@ export interface WhoTaggedExpandedListProps {
   hasError?: boolean;
   /** Called when the bottom sentinel scrolls into view */
   onLoadMore?: () => void;
+  /**
+   * A second group, after a thin rule: e.g. people who put the tag only on the same thing's other
+   * links (an external resource's page). The groups are named for screen readers by `groupNames`.
+   */
+  secondaryTaggerIds?: Pubky[];
+  /** The two groups' names, read by screen readers only (`[first, second]`). */
+  groupNames?: readonly [string, string];
+  /** Shown in a tagger's row after the name, e.g. the icons of the services they put the tag on. */
+  renderTaggerAside?: (taggerId: Pubky) => React.ReactNode;
+  /** People counted but not listed, with no way to load them: a muted "+N" at the end. */
+  moreCount?: number;
   /** Test ID */
   'data-testid'?: string;
 }

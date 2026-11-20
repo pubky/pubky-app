@@ -11,4 +11,6 @@ export interface TaggerUserRowProps {
   onUserClick: (userId: string) => void;
   /** Callback when follow button is clicked */
   onFollowClick: (userId: string, isFollowing: boolean) => void;
+  /** Shown after the name, e.g. the icons of the services the tagger put the tag on */
+  nameAside?: React.ReactNode;
 }

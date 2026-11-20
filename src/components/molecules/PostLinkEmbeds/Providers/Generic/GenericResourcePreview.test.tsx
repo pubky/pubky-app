@@ -128,13 +128,13 @@ describe('GenericResourcePreview', () => {
     expect(mockUseOgMetadata).not.toHaveBeenCalled();
   });
 
-  it('shows the resource card with its actions on the post’s link', () => {
+  it('shows the resource card, its source linking to the post’s link, with its actions on that link', () => {
     mockUsePinakesCard.mockReturnValue({ data: articleFixture, isLoading: false, isError: false });
 
     render(<GenericResourcePreview url={URL} />);
 
     expect(screen.getByTestId('resource-card')).toBeInTheDocument();
-    expect(screen.getByTestId('resource-card-title')).toHaveAttribute('href', URL);
+    expect(screen.getByTestId('resource-card-source')).toHaveAttribute('href', URL);
     const actions = screen.getByTestId('resource-actions');
     expect(actions).toHaveAttribute('data-uri', URL);
     expect(actions).toHaveAttribute('data-collections', String(articleFixture.collections));
@@ -318,7 +318,7 @@ describe('GenericResourcePreview', () => {
       expect(eventFixture.also_on).toHaveLength(0);
       expect(screen.getByTestId('resource-actions')).toHaveAttribute('data-has-extra-menu', 'false');
       expect(screen.getByTestId('resource-card')).toHaveAttribute('data-click-through', 'true');
-      expect(screen.getByTestId('resource-card-title')).toHaveAttribute('href', eventFixture.uri);
+      expect(screen.getByTestId('resource-card-source')).toHaveAttribute('href', eventFixture.uri);
     });
 
     it('lists the other services under "Also on" in the ⋯ menu, one row each, without its own', () => {

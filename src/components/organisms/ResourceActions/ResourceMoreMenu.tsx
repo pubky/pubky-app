@@ -9,7 +9,7 @@ import { MENU_VARIANT, type MenuVariant } from '@/config/ui';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useShareUrl } from '@/hooks/useShareUrl/useShareUrl';
-import { PostActionButton } from '@/organisms/PostActionsBar/PostActionButton';
+import { PostActionButton, type PostActionSurface } from '@/organisms/PostActionsBar/PostActionButton';
 import {
   PostMenuActionList,
   type PostMenuActionListItem,
@@ -29,6 +29,8 @@ interface ResourceMoreMenuProps {
   /** The card's title, copied by "Copy title"; no item without one. */
   title?: string | null;
   extraMenuContent?: ResourceExtraMenuContent;
+  /** What the row sits on: `muted` on a card in a post, `default` on the page's large card. */
+  surface?: PostActionSurface;
 }
 
 /**
@@ -37,7 +39,7 @@ interface ResourceMoreMenuProps {
  * header already opens the link on its site, so the menu does not. Every item only reads, so the menu
  * opens signed out too. Both shells scroll when the extra entries make the menu taller than the screen.
  */
-export function ResourceMoreMenu({ uri, linkUrl, title, extraMenuContent }: ResourceMoreMenuProps) {
+export function ResourceMoreMenu({ uri, linkUrl, title, extraMenuContent, surface = 'muted' }: ResourceMoreMenuProps) {
   const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const { shareUrl: copyLink } = useShareUrl({ successTitle: 'Link copied to clipboard' });
@@ -67,7 +69,7 @@ export function ResourceMoreMenu({ uri, linkUrl, title, extraMenuContent }: Reso
   }
 
   const trigger = (
-    <PostActionButton icon={Ellipsis} surface="muted" ariaLabel="More options" data-testid="resource-more-button" />
+    <PostActionButton icon={Ellipsis} surface={surface} ariaLabel="More options" data-testid="resource-more-button" />
   );
   const content = (variant: MenuVariant) => (
     <>

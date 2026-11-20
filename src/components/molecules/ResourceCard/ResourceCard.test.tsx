@@ -1,5 +1,7 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { getResourceRoute } from '@/app/routes';
+import { PostPreviewNavigableProvider } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import articleFixture from '@/services/pinakes/fixtures/by-uri.article.json';
 import bookFixture from '@/services/pinakes/fixtures/by-uri.book.json';
 import eventFixture from '@/services/pinakes/fixtures/by-uri.event.json';
@@ -33,6 +35,7 @@ describe('ResourceCard', () => {
       expect(source()).toHaveTextContent('Wikipedia (en)');
       expect(source()).not.toHaveTextContent('en.wikipedia.org/wiki');
       expect(source().querySelector('svg.lucide-arrow-up-right')).toBeInTheDocument();
+      expect(source()).toHaveAccessibleName('Open in Wikipedia (en)');
     });
 
     it('opens the link in a new tab on a click anywhere on the card', () => {
@@ -149,7 +152,7 @@ describe('ResourceCard', () => {
       expect(open).not.toHaveBeenCalled();
       expect(card()).not.toHaveAttribute('data-click-through');
       expect(card().firstElementChild).not.toHaveClass('cursor-pointer');
-      expect(title()).toHaveAttribute('href', videoFixture.uri);
+      expect(title()).toHaveAttribute('href', getResourceRoute(videoFixture.uri));
       expect(source()).toHaveAttribute('href', videoFixture.uri);
     });
 
@@ -205,16 +208,31 @@ describe('ResourceCard', () => {
       expect(screen.queryByTestId('resource-card-status')).not.toBeInTheDocument();
     });
 
-    it('links the title and the source to the post’s link in a new tab', () => {
+    it('links the title to the resource’s page and the source to the post’s link in a new tab', () => {
       const href = 'https://en.m.wikipedia.org/wiki/Bitcoin';
       render(<ResourceCard card={ARTICLE} href={href} />);
 
-      for (const link of [title(), source()]) {
-        expect(link.tagName).toBe('A');
-        expect(link).toHaveAttribute('href', href);
-        expect(link).toHaveAttribute('target', '_blank');
-        expect(link).toHaveAttribute('rel', 'noopener noreferrer');
-      }
+      expect(card()).toHaveAttribute('data-size', 'default');
+      expect(title().tagName).toBe('A');
+      expect(title()).toHaveAttribute('href', '/resource?uri=https%3A%2F%2Fen.wikipedia.org%2Fwiki%2FBitcoin');
+      expect(title()).not.toHaveAttribute('target');
+      expect(source().tagName).toBe('A');
+      expect(source()).toHaveAttribute('href', href);
+      expect(source()).toHaveAttribute('target', '_blank');
+      expect(source()).toHaveAttribute('rel', 'noopener noreferrer');
+    });
+
+    it('links the title out where links may not navigate (the composer, a quoted post in a dialog)', () => {
+      const href = 'https://en.m.wikipedia.org/wiki/Bitcoin';
+      render(
+        <PostPreviewNavigableProvider navigable={false}>
+          <ResourceCard card={ARTICLE} href={href} />
+        </PostPreviewNavigableProvider>,
+      );
+
+      expect(title()).toHaveAttribute('href', href);
+      expect(title()).toHaveAttribute('target', '_blank');
+      expect(title()).toHaveAttribute('rel', 'noopener noreferrer');
     });
 
     it('takes the favicon from the card’s own site when the post uses another host', () => {
@@ -226,10 +244,10 @@ describe('ResourceCard', () => {
       );
     });
 
-    it('links to the card’s own link without a post link', () => {
+    it('links the source to the card’s own link without a post link', () => {
       render(<ResourceCard card={ARTICLE} />);
 
-      expect(title()).toHaveAttribute('href', ARTICLE.uri);
+      expect(source()).toHaveAttribute('href', ARTICLE.uri);
     });
 
     it('shows the site’s favicon, then its parent domain’s, and a globe when both fail to load', () => {
@@ -349,12 +367,12 @@ describe('ResourceCard', () => {
   });
 
   describe('links that are not web pages', () => {
-    it('renders an isbn: card without a post link as text, with a book icon', () => {
+    it('links an isbn: card without a post link only to its page, with a book icon', () => {
       render(<ResourceCard card={bookFixture} />);
 
-      expect(title().tagName).toBe('P');
       expect(title()).toHaveTextContent('Fantastic Mr. Fox');
-      expect(screen.queryByRole('link')).not.toBeInTheDocument();
+      expect(screen.getAllByRole('link')).toEqual([title()]);
+      expect(title()).toHaveAttribute('href', '/resource?uri=isbn%3A9780140328721');
       expect(screen.getByTestId('resource-card-source').querySelector('svg')).toHaveClass('lucide-book-open');
       expect(screen.queryByTestId('resource-source-favicon')).not.toBeInTheDocument();
     });
@@ -363,7 +381,7 @@ describe('ResourceCard', () => {
       const href = 'https://openlibrary.org/isbn/9780140328721';
       render(<ResourceCard card={bookFixture} href={href} />);
 
-      expect(title()).toHaveAttribute('href', href);
+      expect(source()).toHaveAttribute('href', href);
       expect(source()).toHaveTextContent('openlibrary.org');
       expect(screen.getByTestId('resource-source-favicon')).toHaveAttribute(
         'src',
@@ -392,7 +410,8 @@ describe('ResourceCard', () => {
     it('opens a pubky:// card at the address Pinakes gives for it, and hides its pubky:// image', () => {
       render(<ResourceCard card={pubkyFixture} />);
 
-      expect(title()).toHaveAttribute('href', pubkyFixture.open_in[0].url);
+      expect(source()).toHaveAttribute('href', pubkyFixture.open_in[0].url);
+      expect(title()).toHaveAttribute('href', getResourceRoute(pubkyFixture.uri));
       expect(source()).toHaveTextContent('loopky');
       expect(screen.getByTestId('resource-card-type')).toHaveTextContent('Learning resource');
       expect(screen.queryByTestId('resource-card-image')).not.toBeInTheDocument();
@@ -408,7 +427,9 @@ describe('ResourceCard', () => {
       };
       render(<ResourceCard card={unsafe} href="javascript:alert(3)" />);
 
-      expect(screen.queryByRole('link')).not.toBeInTheDocument();
+      // The one link is the app's own page for it, the URI only as an encoded query value.
+      expect(screen.getAllByRole('link')).toEqual([title()]);
+      expect(title()).toHaveAttribute('href', '/resource?uri=javascript%3Aalert%281%29');
       expect(screen.queryByTestId('resource-card-image')).not.toBeInTheDocument();
       expect(screen.queryByTestId('resource-source-favicon')).not.toBeInTheDocument();
     });
@@ -452,6 +473,57 @@ describe('ResourceCard', () => {
 
       expect(card()).toHaveAttribute('data-status', PinakesStatus.ERROR);
       expect(within(screen.getByTestId('resource-card-status')).getByText('Details could not be read')).toBeVisible();
+    });
+  });
+
+  describe('large', () => {
+    it('heads the resource page: its title is a heading, "Open in <site>" its one link out, and it is no click-through', () => {
+      const open = vi.spyOn(window, 'open').mockReturnValue(null);
+      render(<ResourceCard card={videoFixture} size="large" />);
+
+      expect(card()).toHaveAttribute('data-size', 'large');
+      // Where a post stands on its page: the post card's surface; the page's own heading is the `h1`.
+      expect(card()).toHaveClass('bg-card');
+      expect(card()).not.toHaveClass('bg-embed');
+      expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(videoFixture.name);
+      expect(title()).not.toHaveAttribute('href');
+      expect(source()).toHaveAttribute('href', videoFixture.uri);
+      expect(source()).toHaveAttribute('target', '_blank');
+      expect(source().textContent).toBe('YouTube');
+      expect(source()).toHaveAccessibleName('Open in YouTube');
+
+      fireEvent.click(screen.getByTestId('resource-card-description'));
+      expect(open).not.toHaveBeenCalled();
+      expect(card()).not.toHaveAttribute('data-click-through');
+    });
+
+    it('shows the whole description', () => {
+      render(<ResourceCard card={ARTICLE} size="large" />);
+
+      expect(screen.getByTestId('resource-card-description')).not.toHaveClass('line-clamp-2');
+    });
+
+    it('titles a card without a web link as text', () => {
+      render(<ResourceCard card={bookFixture} size="large" />);
+
+      expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Fantastic Mr. Fox');
+      expect(title().tagName).toBe('SPAN');
+      expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    });
+
+    it('does not send the heading or the source to a link that is gone upstream', () => {
+      render(<ResourceCard card={missingFixture} size="large" />);
+
+      expect(title().tagName).toBe('SPAN');
+      expect(source().tagName).toBe('SPAN');
+      expect(screen.queryByRole('link')).not.toBeInTheDocument();
+      expect(screen.getByTestId('resource-card-status')).toHaveTextContent('No longer available at the source');
+    });
+
+    it('renders its actions inside the frame, after the body', () => {
+      render(<ResourceCard card={ARTICLE} size="large" actions={<div data-testid="actions" />} />);
+
+      expect(card().lastElementChild).toBe(screen.getByTestId('actions'));
     });
   });
 });

@@ -168,4 +168,26 @@ describe('Tag', () => {
     // Should still have border
     expect(tag.style.border).toBe('1px solid var(--tag-edge)');
   });
+
+  it('shows a wider count muted after the count', () => {
+    render(<Tag name="dance" count={5} total={10} />);
+    expect(screen.getByTestId('tag-count')).toHaveTextContent('5');
+    expect(screen.getByTestId('tag-total')).toHaveTextContent('(10)');
+    expect(screen.getByTestId('tag-total')).toHaveClass('text-(--tag-count)', 'font-normal');
+  });
+
+  it('draws the secondary variant without the fill, in the theme’s label colour', () => {
+    const { container } = render(<Tag name="dance" count={2} variant="secondary" />);
+    const tag = container.firstChild as HTMLElement;
+    expect(tag).toHaveAttribute('data-variant', 'secondary');
+    expect(tag.style.backgroundColor).not.toBe('var(--tag-fill)');
+    expect(tag.style.getPropertyValue('--tag-day-label')).toBe('var(--foreground)');
+    expect(screen.queryByTestId('tag-total')).not.toBeInTheDocument();
+  });
+
+  it('keeps the default chip without a variant attribute', () => {
+    const { container } = render(<Tag name="dance" />);
+    expect(container.firstChild).not.toHaveAttribute('data-variant');
+    expect((container.firstChild as HTMLElement).style.backgroundColor).toBe('var(--tag-fill)');
+  });
 });

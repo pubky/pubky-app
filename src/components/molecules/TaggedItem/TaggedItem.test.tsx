@@ -43,8 +43,8 @@ vi.mock('@/atoms/Button/Button', () => {
 
 vi.mock('@/atoms/Tag/Tag', () => {
   return {
-    Tag: ({ name, count }: { name: string; count?: number }) => (
-      <div data-testid="tag">
+    Tag: ({ name, count, total, variant }: { name: string; count?: number; total?: number; variant?: string }) => (
+      <div data-testid="tag" data-total={total} data-variant={variant}>
         {name} {count !== undefined && `(${count})`}
       </div>
     ),
@@ -210,5 +210,27 @@ describe('TaggedItem - Expand/Collapse (Controlled)', () => {
 
     rerender(<TaggedItem tag={mockTag} onTagClick={mockOnTagClick} isExpanded={true} />);
     expect(avatarGroupButton).toHaveAttribute('aria-expanded', 'true');
+  });
+
+  it('shows the given taggers in place of the expanded list', () => {
+    render(
+      <TaggedItem
+        tag={mockTag}
+        onTagClick={mockOnTagClick}
+        isExpanded
+        expandedTaggers={<div data-testid="grouped-taggers" />}
+      />,
+    );
+    expect(screen.getByTestId('grouped-taggers')).toBeInTheDocument();
+    expect(screen.queryByTestId('who-tagged-expanded-list')).not.toBeInTheDocument();
+  });
+
+  it('passes the total and the secondary look to the tag, and counts the overflow from the total', () => {
+    render(<TaggedItem tag={{ ...mockTag, total: 9, isSecondary: true }} onTagClick={mockOnTagClick} />);
+    const tag = screen.getByTestId('tag');
+    expect(tag).toHaveAttribute('data-total', '9');
+    expect(tag).toHaveAttribute('data-variant', 'secondary');
+    expect(screen.getByTestId('avatar-group-button')).toHaveAccessibleName('Show 9 users who tagged');
+    expect(screen.getByText('+5')).toBeInTheDocument();
   });
 });

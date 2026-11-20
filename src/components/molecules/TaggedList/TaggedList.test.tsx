@@ -46,6 +46,7 @@ vi.mock('@/molecules/TaggedItem/TaggedItem', () => {
       isLoadingMoreTaggers,
       hasMoreTaggers,
       onLoadMoreTaggers,
+      expandedTaggers,
     }: TaggedItemProps) => (
       <div
         data-testid="tagged-item"
@@ -59,6 +60,7 @@ vi.mock('@/molecules/TaggedItem/TaggedItem', () => {
         <button data-testid={`load-more-${tag.label}`} onClick={onLoadMoreTaggers}>
           more
         </button>
+        {expandedTaggers}
       </div>
     ),
   };
@@ -304,5 +306,17 @@ describe('TaggedList', () => {
     fireEvent.click(screen.getByText(label));
 
     expect(screen.getByText(label)).toHaveAttribute('data-expanded-ids', 'user1,user9');
+  });
+
+  it('gives only the expanded tag the taggers the caller renders for it', () => {
+    const renderExpandedTaggers = vi.fn((tag: TagWithAvatars) => <span data-testid="custom-taggers">{tag.label}</span>);
+    render(<TaggedList tags={mockTags} onTagToggle={mockOnTagToggle} renderExpandedTaggers={renderExpandedTaggers} />);
+    expect(screen.queryByTestId('custom-taggers')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByTestId('tagged-item')[1]);
+
+    expect(screen.getByTestId('custom-taggers')).toHaveTextContent('satoshi');
+    expect(renderExpandedTaggers).toHaveBeenCalledWith(expect.objectContaining({ label: 'satoshi' }));
+    expect(renderExpandedTaggers).not.toHaveBeenCalledWith(expect.objectContaining({ label: 'bitcoin' }));
   });
 });

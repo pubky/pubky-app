@@ -85,6 +85,16 @@ describe('getResourceRoute', () => {
 });
 
 describe('isDynamicPublicRoute', () => {
+  describe('resource route', () => {
+    it('returns true for the resource page, whose link is in the query', () => {
+      expect(isDynamicPublicRoute(RESOURCE_ROUTES.RESOURCE)).toBe(true);
+    });
+
+    it('returns false for paths below it', () => {
+      expect(isDynamicPublicRoute('/resource/extra')).toBe(false);
+    });
+  });
+
   describe('invite routes', () => {
     it('returns true for invite code route', () => {
       expect(isDynamicPublicRoute('/invite/abcdefghijkl')).toBe(true);

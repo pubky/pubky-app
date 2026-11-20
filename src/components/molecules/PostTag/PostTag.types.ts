@@ -5,6 +5,10 @@ export interface PostTagProps extends Omit<ButtonHTMLAttributes<HTMLButtonElemen
   label: string;
   /** Number of posts with this tag (optional) */
   count?: number;
+  /** A wider count, shown muted after `count` ("5 (10)": people across an external resource's services) */
+  total?: number;
+  /** `secondary`: a faint tint of the tag colour and a dashed edge (`SECONDARY_TAG_STYLE`), for a tag not here yet */
+  variant?: 'default' | 'secondary';
   /** Show the close/remove button */
   showClose?: boolean;
   /** Selected state */

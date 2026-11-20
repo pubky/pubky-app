@@ -19,8 +19,8 @@ import type { TResourceTagWriteResult, UseResourceTagsOptions, UseResourceTagsRe
 type TSettled = { key: string; tags: NexusTag[]; isTruncated: boolean; isError: boolean };
 
 /**
- * The tags people put on an external resource (a web link), read from Nexus by the link exactly as
- * written, with the viewer's own add and remove.
+ * The tags people put on an external resource (a link of any scheme), read from Nexus by the link
+ * exactly as written, with the viewer's own add and remove.
  *
  * Network only (no IndexedDB table holds web links): the controller's Nexus query is shared by
  * every reader of the same link and viewer, and each follows its changes, so a tag added on one

@@ -233,3 +233,28 @@ describe('UserListItem - deleted users', () => {
     expect(screen.getByRole('button', { name: /Follow \[DELETED\]/i })).toBeInTheDocument();
   });
 });
+
+describe('UserListItem - nameAside', () => {
+  it('shows it in the compact row between the profile button and the follow button', () => {
+    render(
+      <UserListItem
+        user={mockUser}
+        variant="compact"
+        onFollowClick={vi.fn()}
+        nameAside={<span data-testid="name-aside">icons</span>}
+      />,
+    );
+
+    const aside = screen.getByTestId('name-aside');
+    const profile = screen.getByRole('button', { name: "View Test User's profile" });
+    const follow = screen.getByRole('button', { name: /Follow Test User/i });
+    expect(profile).not.toContainElement(aside);
+    expect(profile.compareDocumentPosition(aside) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(aside.compareDocumentPosition(follow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('leaves the row as it was without one', () => {
+    render(<UserListItem user={mockUser} variant="compact" onFollowClick={vi.fn()} />);
+    expect(screen.queryByTestId('name-aside')).not.toBeInTheDocument();
+  });
+});

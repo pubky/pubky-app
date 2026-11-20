@@ -6,6 +6,9 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { cn } from '@/libs/utils/utils';
 import { postActionsButtonVariants, postActionsCountVariants } from './PostActionsBar.variants';
 
+/** What a row of action buttons sits on (see `postActionsButtonVariants`). */
+export type PostActionSurface = 'default' | 'muted';
+
 type PostActionButtonProps = Omit<ComponentProps<typeof Button>, 'variant' | 'size' | 'children' | 'aria-label'> & {
   icon: ComponentType<{ className?: string; strokeWidth?: number; fill?: string }>;
   /** Shown after the icon; nothing shows when `count` is undefined. */
@@ -13,7 +16,7 @@ type PostActionButtonProps = Omit<ComponentProps<typeof Button>, 'variant' | 'si
   ariaLabel: string;
   variant?: 'default' | 'visual';
   /** What the row sits on: `muted` is the embed surface (`bg-embed`) of a resource card or a quoted post. */
-  surface?: 'default' | 'muted';
+  surface?: PostActionSurface;
   iconProps?: { fill?: string; className?: string };
 };
 

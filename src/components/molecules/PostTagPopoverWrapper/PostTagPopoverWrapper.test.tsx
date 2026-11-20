@@ -184,4 +184,20 @@ describe('PostTagPopoverWrapper', () => {
     expect(screen.getByTestId('who-tagged-expanded-list')).toHaveAttribute('aria-busy', 'false');
     expect(screen.getByTestId('who-tagged-expanded-list-sentinel')).toBeInTheDocument();
   });
+
+  it('shows the given content on hover in place of the avatars, also with no taggers listed', async () => {
+    render(
+      <PostTagPopoverWrapper taggers={[]} taggersCount={0} content={<div data-testid="tag-detail">detail</div>}>
+        <button data-testid="trigger">Tag</button>
+      </PostTagPopoverWrapper>,
+    );
+
+    fireEvent.mouseEnter(screen.getByTestId('trigger'));
+    await act(async () => {
+      vi.advanceTimersByTime(POPOVER_HOVER_DELAY);
+    });
+
+    expect(screen.getByTestId('tag-detail')).toBeInTheDocument();
+    expect(screen.queryByTestId('avatar-Alice')).not.toBeInTheDocument();
+  });
 });

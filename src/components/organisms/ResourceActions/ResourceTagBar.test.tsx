@@ -1,8 +1,11 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { TMergedTag } from '@/hooks/useOtherLinkTags/useOtherLinkTags.types';
+import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
 import type { NexusTag } from '@/services/nexus/nexus.types';
 import { ResourceTagBar } from './ResourceTagBar';
+import { MAX_OTHER_TAGS } from './ResourceTagBar.utils';
 
 const LABEL = 'Tags on this city';
 
@@ -37,20 +40,68 @@ vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({ useIsMobile: () => mocks.isM
 vi.mock('@/hooks/useEnrichedTags/useEnrichedTags', () => ({
   useEnrichedTags: (tags: unknown[]) => ({ enrichedTags: tags, isLoading: false }),
 }));
+// The hover detail as the content it is given (the default avatars when none).
 vi.mock('@/molecules/PostTagPopoverWrapper/PostTagPopoverWrapper', () => ({
-  PostTagPopoverWrapper: ({ children }: { children: ReactNode }) => <>{children}</>,
+  PostTagPopoverWrapper: ({ children, content }: { children: ReactNode; content?: ReactNode }) => (
+    <>
+      {children}
+      {content && <div data-testid="tag-detail">{content}</div>}
+    </>
+  ),
 }));
 vi.mock('@/molecules/TaggedList/TaggedList', () => ({
-  TaggedList: ({ tags, onTagToggle }: { tags: NexusTag[]; onTagToggle: (tag: NexusTag) => unknown }) => (
+  TaggedList: ({
+    tags,
+    onTagToggle,
+    renderExpandedTaggers,
+  }: {
+    tags: TagWithAvatars[];
+    onTagToggle: (tag: TagWithAvatars) => unknown;
+    renderExpandedTaggers?: (tag: TagWithAvatars) => ReactNode;
+  }) => (
     <div data-testid="tagged-list">
       {tags.map((tag) => (
-        <button key={tag.label} type="button" onClick={() => void onTagToggle(tag)}>
-          {tag.label}
-          {tag.taggers_count}
-        </button>
+        <div key={tag.label} data-secondary={tag.isSecondary ?? false} data-total={tag.total ?? 'none'}>
+          <button type="button" onClick={() => void onTagToggle(tag)}>
+            {tag.label}
+            {tag.taggers_count}
+          </button>
+          {renderExpandedTaggers?.(tag)}
+        </div>
       ))}
     </div>
   ),
+}));
+// Who tagged it, as the groups and row ends it is given.
+vi.mock('@/molecules/WhoTaggedExpandedList/WhoTaggedExpandedList', () => ({
+  WhoTaggedExpandedList: ({
+    taggerIds,
+    secondaryTaggerIds = [],
+    groupNames,
+    moreCount,
+    renderTaggerAside,
+  }: {
+    taggerIds: string[];
+    secondaryTaggerIds?: string[];
+    groupNames?: readonly string[];
+    moreCount?: number;
+    renderTaggerAside?: (id: string) => ReactNode;
+  }) => (
+    <div data-testid="tag-people" data-groups={groupNames?.join('|')} data-more={moreCount}>
+      {[taggerIds, secondaryTaggerIds].map((ids, group) => (
+        <div key={group} data-testid={`tag-people-${group}`}>
+          {ids.map((id) => (
+            <div key={id} data-testid="tag-person" data-id={id}>
+              {renderTaggerAside?.(id)}
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  ),
+}));
+vi.mock('@/molecules/ResourceCard/ResourceSourceIcon', () => ({
+  ResourceSourceIcon: ({ uri }: { uri: string }) => <i data-testid="source-icon" data-uri={uri} />,
 }));
 vi.mock('@/molecules/TagInput/TagInput', () => ({
   TagInput: ({
@@ -96,7 +147,14 @@ const chipLabels = () =>
     .map((chip) => chip.textContent);
 
 /** The bar as the zone renders it: the tags it read once, whether they are expanded, whether "+" shows the input. */
-function TagBar({ isExpanded = false, isAdding = false }: { isExpanded?: boolean; isAdding?: boolean }) {
+function TagBar({
+  isExpanded = false,
+  isAdding = false,
+  ...other
+}: { isExpanded?: boolean; isAdding?: boolean } & Pick<
+  React.ComponentProps<typeof ResourceTagBar>,
+  'otherTags' | 'uri'
+>) {
   return (
     <ResourceTagBar
       resourceTags={{
@@ -111,9 +169,36 @@ function TagBar({ isExpanded = false, isAdding = false }: { isExpanded?: boolean
       isExpanded={isExpanded}
       isAdding={isAdding}
       onAddingChange={mocks.onAddingChange}
+      {...other}
     />
   );
 }
+
+const LINK = 'https://www.openstreetmap.org/node/240109189';
+const service = (name: string, taggers: string[]) => ({
+  uri: `https://${name.toLowerCase()}.example/x`,
+  name,
+  count: taggers.length,
+  taggers,
+});
+// The other services' tags of the same thing, merged (`mergeOtherLinkTags`): `travel` is on the link too
+// (`b` tagged it here and on Wikipedia), `capital` and `europe` are only there.
+const OTHER_TAGS: TMergedTag[] = [
+  {
+    label: 'travel',
+    taggers: ['b', 'c', 'd'],
+    count: 3,
+    isComplete: true,
+    sources: [service('Wikipedia', ['b', 'c']), service('Wikidata', ['d', 'b'])],
+  },
+  { label: 'capital', taggers: ['e', 'f'], count: 2, isComplete: true, sources: [service('Wikidata', ['e', 'f'])] },
+  { label: 'europe', taggers: ['e'], count: 1, isComplete: true, sources: [service('Wikipedia', ['e'])] },
+];
+const TWO_TAGS = NEXUS_TAGS.slice(0, 2);
+const secondaryChips = () =>
+  within(screen.getByTestId('resource-tag-bar'))
+    .getAllByRole('button')
+    .filter((button) => button.dataset.variant === 'secondary');
 
 describe('ResourceTagBar', () => {
   beforeEach(() => {
@@ -304,5 +389,273 @@ describe('ResourceTagBar', () => {
     input?.onClick?.();
 
     expect(mocks.signInRequests).toBe(1);
+  });
+
+  it('counts on an own chip the people across services too, muted after its own count', () => {
+    render(<TagBar otherTags={OTHER_TAGS} uri={LINK} />);
+
+    // Own tags fill the three places: no secondary chip.
+    expect(chipLabels()).toEqual(['berlin3', 'travel2(4)', 'city1']);
+    expect(secondaryChips()).toHaveLength(0);
+    const travel = screen.getByText('travel').closest('button');
+    expect(travel).toHaveAccessibleName('travel, 2 here, 4 across services');
+    expect(within(travel!).getByTestId('tag-total')).toHaveTextContent('(4)');
+    // A label only on this link keeps the post tag's own name and count.
+    expect(screen.getByText('berlin').closest('button')).toHaveAccessibleName('berlin tag (3 posts)');
+  });
+
+  it('fills the places the own tags leave free with the other services’ tags, most popular first, as secondary chips', () => {
+    mocks.tags = TWO_TAGS;
+    render(<TagBar otherTags={OTHER_TAGS} uri={LINK} />);
+
+    expect(chipLabels()).toEqual(['berlin3', 'travel2(4)', 'capital0(2)']);
+    const [capital] = secondaryChips();
+    expect(capital).toHaveTextContent('capital0(2)');
+    expect(capital).toHaveAccessibleName('capital, 0 here, 2 on other services, add it here');
+    expect(capital).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('shows no total when the other services add nobody: one person on two services counts once', () => {
+    mocks.tags = [{ label: 'travel', taggers: ['c', 'd'], taggers_count: 2, relationship: false, tag_uri: null }];
+    render(<TagBar otherTags={[{ ...OTHER_TAGS[0], taggers: ['c', 'd'], count: 2 }]} uri={LINK} />);
+
+    expect(chipLabels()).toEqual(['travel2']);
+    expect(screen.getByText('travel').closest('button')).toHaveAccessibleName('travel, 2 here, 2 across services');
+  });
+
+  it('shows the own tags alone when no other service has tags', () => {
+    mocks.tags = TWO_TAGS;
+    render(<TagBar otherTags={[]} uri={LINK} />);
+
+    expect(chipLabels()).toEqual(['berlin3', 'travel2']);
+    expect(screen.queryByTestId('tag-detail')).not.toBeInTheDocument();
+  });
+
+  it('adds a secondary chip’s tag to this link, asking to sign in when signed out', () => {
+    mocks.tags = TWO_TAGS;
+    const { unmount } = render(<TagBar otherTags={OTHER_TAGS} />);
+    fireEvent.click(secondaryChips()[0]);
+    expect(mocks.addTag).toHaveBeenCalledWith('capital');
+    expect(mocks.toggleTag).not.toHaveBeenCalled();
+    unmount();
+
+    mocks.isSignedIn = false;
+    render(<TagBar otherTags={OTHER_TAGS} />);
+    fireEvent.click(secondaryChips()[0]);
+    expect(mocks.addTag).toHaveBeenCalledTimes(1);
+    expect(mocks.signInRequests).toBe(1);
+  });
+
+  it('details who tagged a label once each: this link’s taggers, then the others, with the icons of where they tagged it', () => {
+    mocks.tags = TWO_TAGS;
+    render(<TagBar otherTags={OTHER_TAGS} uri={LINK} />);
+
+    // Only the chips whose label is on other services get the detail: travel (own) and capital (secondary).
+    const [travel, capital] = screen.getAllByTestId('tag-detail');
+    expect(screen.getAllByTestId('tag-detail')).toHaveLength(2);
+    const people = within(travel).getByTestId('tag-people');
+    expect(people).toHaveAttribute('data-groups', 'Tagged on this link|Tagged only on other services');
+    expect(people).toHaveAttribute('data-more', '0');
+    const ids = (group: number) =>
+      within(within(travel).getByTestId(`tag-people-${group}`))
+        .getAllByTestId('tag-person')
+        .map((person) => person.dataset.id);
+    expect(ids(0)).toEqual(['viewer', 'b']);
+    expect(ids(1)).toEqual(['c', 'd']);
+    const icons = (id: string) =>
+      within(
+        within(travel)
+          .getAllByTestId('tag-person')
+          .find((person) => person.dataset.id === id)!,
+      )
+        .queryAllByTestId('source-icon')
+        .map((icon) => icon.dataset.uri);
+    expect(icons('b')).toEqual([LINK, 'https://wikipedia.example/x', 'https://wikidata.example/x']);
+    expect(icons('viewer')).toEqual([LINK]);
+    expect(icons('c')).toEqual(['https://wikipedia.example/x']);
+    expect(within(travel).getByText('Tagged here and on Wikipedia, Wikidata')).toHaveClass('sr-only');
+    expect(within(travel).getByText('Tagged on Wikipedia')).toHaveClass('sr-only');
+
+    expect(within(within(capital).getByTestId('tag-people-0')).queryAllByTestId('tag-person')).toHaveLength(0);
+    expect(
+      within(within(capital).getByTestId('tag-people-1'))
+        .getAllByTestId('tag-person')
+        .map((person) => person.dataset.id),
+    ).toEqual(['e', 'f']);
+  });
+
+  it('keeps "+N" for the people Nexus counts but does not list', () => {
+    mocks.tags = [{ ...TWO_TAGS[1], taggers_count: 6 }];
+    render(<TagBar otherTags={OTHER_TAGS} uri={LINK} />);
+
+    // viewer and b here (6 counted), c and d elsewhere: at least 6 people, 4 listed.
+    const [travel] = screen.getAllByTestId('tag-detail');
+    expect(within(travel).getByTestId('tag-people')).toHaveAttribute('data-more', '2');
+    expect(screen.getByText('travel').closest('button')).toHaveAccessibleName(
+      'travel, 6 here, at least 6 across services',
+    );
+  });
+
+  it('lists every other services’ tag after the own ones once expanded, secondary, with the same detail', async () => {
+    render(<TagBar isExpanded otherTags={OTHER_TAGS} uri={LINK} />);
+
+    const list = await screen.findByTestId('tagged-list');
+    expect(chipLabels()).toEqual(['berlin3', 'travel2', 'city1', 'capital0', 'europe0']);
+    const rows = [...list.children] as HTMLElement[];
+    expect(rows.map((row) => row.dataset.secondary)).toEqual(['false', 'false', 'false', 'true', 'true']);
+    expect(rows.map((row) => row.dataset.total)).toEqual(['none', '4', 'none', '2', '1']);
+    expect(within(rows[1]).getByTestId('tag-people')).toBeInTheDocument();
+    expect(within(rows[0]).queryByTestId('tag-people')).not.toBeInTheDocument();
+
+    fireEvent.click(within(rows[3]).getByRole('button', { name: 'capital0' }));
+    expect(mocks.addTag).toHaveBeenCalledWith('capital');
+    fireEvent.click(within(rows[1]).getByRole('button', { name: 'travel2' }));
+    expect(mocks.toggleTag).toHaveBeenCalledWith(expect.objectContaining({ label: 'travel', relationship: true }));
+  });
+
+  it('turns a secondary chip into an own one once the viewer added its tag, with no second chip', () => {
+    mocks.tags = TWO_TAGS;
+    const { rerender } = render(<TagBar otherTags={OTHER_TAGS} uri={LINK} />);
+    expect(secondaryChips()[0]).toHaveTextContent('capital0(2)');
+    fireEvent.click(secondaryChips()[0]);
+    expect(mocks.addTag).toHaveBeenCalledWith('capital');
+
+    // The write is applied to the link's own tags (`useResourceTags`): `capital` is now the viewer's here.
+    mocks.tags = [
+      ...TWO_TAGS,
+      { label: 'capital', taggers: ['viewer'], taggers_count: 1, relationship: true, tag_uri: 'pubky://viewer/c' },
+    ];
+    rerender(<TagBar otherTags={OTHER_TAGS} uri={LINK} />);
+
+    expect(chipLabels()).toEqual(['berlin3', 'travel2(4)', 'capital1(3)']);
+    expect(secondaryChips()).toHaveLength(0);
+    expect(screen.getByText('capital').closest('button')).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('shows a secondary chip as "0 (n)": nobody here, n counted like an own chip’s total', () => {
+    mocks.tags = TWO_TAGS;
+    render(<TagBar otherTags={OTHER_TAGS} uri={LINK} />);
+
+    const [capital] = secondaryChips();
+    expect(within(capital).getByTestId('tag-count')).toHaveTextContent('0');
+    expect(within(capital).getByTestId('tag-total')).toHaveTextContent('(2)');
+    // The own chip next to it keeps its count and total.
+    const travel = screen.getByText('travel').closest('button')!;
+    expect(within(travel).getByTestId('tag-count')).toHaveTextContent('2');
+    expect(within(travel).getByTestId('tag-total')).toHaveTextContent('(4)');
+  });
+
+  it('says "at least" on a secondary chip when Nexus did not list every tagger, and after a press', () => {
+    mocks.tags = TWO_TAGS;
+    // Spotify counts 5 people and lists 2.
+    const album: TMergedTag = {
+      label: 'album',
+      taggers: ['x', 'y'],
+      count: 5,
+      isComplete: false,
+      sources: [{ ...service('Spotify', ['x', 'y']), count: 5 }],
+    };
+    const { rerender } = render(<TagBar otherTags={[album]} uri={LINK} />);
+    const [chip] = secondaryChips();
+    expect(chip).toHaveTextContent('album0(5)');
+    expect(chip).toHaveAccessibleName('album, 0 here, at least 5 on other services, add it here');
+    fireEvent.click(chip);
+    expect(mocks.addTag).toHaveBeenCalledWith('album');
+
+    mocks.tags = [
+      ...TWO_TAGS,
+      { label: 'album', taggers: ['viewer'], taggers_count: 1, relationship: true, tag_uri: 'pubky://viewer/a' },
+    ];
+    rerender(<TagBar otherTags={[album]} uri={LINK} />);
+    // The viewer may be one of the 3 Spotify does not list: still at least 5 across services.
+    const own = screen.getByText('album').closest('button')!;
+    expect(own).toHaveTextContent('album1(5)');
+    expect(own).toHaveAccessibleName('album, 1 here, at least 5 across services');
+    expect(secondaryChips()).toHaveLength(0);
+  });
+
+  it('counts the viewer once after a press when they already put the tag on another service', () => {
+    mocks.tags = TWO_TAGS;
+    const capital: TMergedTag = {
+      label: 'capital',
+      taggers: ['e', 'viewer'],
+      count: 2,
+      isComplete: true,
+      sources: [service('Wikidata', ['e', 'viewer'])],
+    };
+    const { rerender } = render(<TagBar otherTags={[capital]} uri={LINK} />);
+    expect(chipLabels()).toEqual(['berlin3', 'travel2', 'capital0(2)']);
+    fireEvent.click(secondaryChips()[0]);
+    expect(mocks.addTag).toHaveBeenCalledWith('capital');
+
+    mocks.tags = [
+      ...TWO_TAGS,
+      { label: 'capital', taggers: ['viewer'], taggers_count: 1, relationship: true, tag_uri: 'pubky://viewer/c' },
+    ];
+    rerender(<TagBar otherTags={[capital]} uri={LINK} />);
+    // 1 here, 2 in all: the viewer here and on Wikidata is one person.
+    expect(chipLabels()).toEqual(['berlin3', 'travel2', 'capital1(2)']);
+    expect(screen.getByText('capital').closest('button')).toHaveAccessibleName('capital, 1 here, 2 across services');
+  });
+
+  it('shows just "1" after a press when the viewer was the only one on the other services', () => {
+    mocks.tags = TWO_TAGS;
+    const mine: TMergedTag = {
+      label: 'capital',
+      taggers: ['viewer'],
+      count: 1,
+      isComplete: true,
+      sources: [service('Wikidata', ['viewer'])],
+    };
+    const { rerender } = render(<TagBar otherTags={[mine]} uri={LINK} />);
+    expect(chipLabels()).toEqual(['berlin3', 'travel2', 'capital0(1)']);
+
+    mocks.tags = [
+      ...TWO_TAGS,
+      { label: 'capital', taggers: ['viewer'], taggers_count: 1, relationship: true, tag_uri: 'pubky://viewer/c' },
+    ];
+    rerender(<TagBar otherTags={[mine]} uri={LINK} />);
+    // As on any own chip, no total when the other services add nobody.
+    expect(chipLabels()).toEqual(['berlin3', 'travel2', 'capital1']);
+  });
+
+  it('lists at most MAX_OTHER_TAGS other services’ tags once expanded', async () => {
+    mocks.tags = [];
+    const many = Array.from({ length: MAX_OTHER_TAGS + 5 }, (_, index) => ({
+      label: `t${String(index).padStart(2, '0')}`,
+      taggers: ['e'],
+      count: 1,
+      isComplete: true,
+      sources: [service('Wikidata', ['e'])],
+    }));
+    render(<TagBar isExpanded otherTags={many} uri={LINK} />);
+
+    const rows = [...(await screen.findByTestId('tagged-list')).children] as HTMLElement[];
+    expect(rows).toHaveLength(MAX_OTHER_TAGS);
+    expect(rows.every((row) => row.dataset.secondary === 'true')).toBe(true);
+  });
+
+  it('shows one icon for this link’s own site when a person also tagged another spelling there', () => {
+    mocks.tags = [TWO_TAGS[1]];
+    // Named like another service (a mislabelled entry): dropping it must not drop that service's icon.
+    const sameSite = { uri: 'https://www.openstreetmap.org/way/1', name: 'Wikipedia', count: 1, taggers: ['b'] };
+    render(<TagBar otherTags={[{ ...OTHER_TAGS[0], sources: [sameSite, ...OTHER_TAGS[0].sources] }]} uri={LINK} />);
+
+    const [detail] = screen.getAllByTestId('tag-detail');
+    const b = within(detail)
+      .getAllByTestId('tag-person')
+      .find((person) => person.dataset.id === 'b')!;
+    expect(
+      within(b)
+        .getAllByTestId('source-icon')
+        .map((icon) => icon.dataset.uri),
+    ).toEqual([LINK, 'https://wikipedia.example/x', 'https://wikidata.example/x']);
+  });
+
+  it('compares labels as Nexus stores them, case-folded', () => {
+    mocks.tags = [{ ...TWO_TAGS[1], label: 'Travel' }];
+    render(<TagBar otherTags={OTHER_TAGS} uri={LINK} />);
+
+    expect(chipLabels()).toEqual(['Travel2(4)', 'capital0(2)', 'europe0(1)']);
   });
 });

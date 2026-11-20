@@ -18,4 +18,6 @@ export interface TaggedListProps {
   onLoadMore?: () => void;
   /** Function to toggle tag (add/remove as tagger) */
   onTagToggle: (tag: TagWithAvatars) => void | Promise<void>;
+  /** An expanded tag's taggers in place of the default user list; `undefined` keeps the default */
+  renderExpandedTaggers?: (tag: TagWithAvatars) => React.ReactNode;
 }

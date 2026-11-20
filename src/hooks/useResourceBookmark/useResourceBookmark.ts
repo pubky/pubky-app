@@ -10,9 +10,9 @@ import type { UseResourceBookmarkOptions, UseResourceBookmarkResult } from './us
 type TSettled = { key: string; isBookmarked: boolean };
 
 /**
- * The viewer's own bookmark of an external resource (a web link). Bookmarks are private: this is
- * only ever the viewer's state, never a count. Read from the viewer's homeserver once signed in
- * (web bookmarks have no local row); signed out it reads `false` and `toggle` asks to sign in.
+ * The viewer's own bookmark of an external resource (a link of any scheme). Bookmarks are private:
+ * this is only ever the viewer's state, never a count. Read from the viewer's homeserver once signed
+ * in (web bookmarks have no local row); signed out it reads `false` and `toggle` asks to sign in.
  *
  * `toggle` flips the bookmark at once and back again, with an error toast, when the write fails.
  *

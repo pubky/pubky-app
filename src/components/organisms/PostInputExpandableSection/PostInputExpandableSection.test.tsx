@@ -1,5 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { getResourceRoute } from '@/app/routes';
+import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
 import { POST_INPUT_VARIANT } from '../PostInput/PostInput.constants';
 import { PostInputExpandableSection } from './PostInputExpandableSection';
 
@@ -49,9 +51,21 @@ vi.mock('@/molecules/EmojiPickerDialog/EmojiPickerDialog', () => {
   };
 });
 
-vi.mock('@/molecules/PostLinkEmbeds/PostLinkEmbeds', () => {
+// A draft with the video's link previews it as the real resource card would.
+vi.mock('@/molecules/PostLinkEmbeds/PostLinkEmbeds', async () => {
+  const { ResourceCard } = await vi.importActual<typeof import('@/molecules/ResourceCard/ResourceCard')>(
+    '@/molecules/ResourceCard/ResourceCard',
+  );
+  const { default: video } = await vi.importActual<{
+    default: typeof import('@/services/pinakes/fixtures/by-uri.video.json');
+  }>('@/services/pinakes/fixtures/by-uri.video.json');
   return {
-    PostLinkEmbeds: ({ content }: { content: string }) => <div data-testid="post-link-embeds">{content}</div>,
+    PostLinkEmbeds: ({ content }: { content: string }) => (
+      <div data-testid="post-link-embeds">
+        {content}
+        {content.includes(video.uri) && <ResourceCard card={video} href={video.uri} />}
+      </div>
+    ),
   };
 });
 
@@ -166,6 +180,15 @@ describe('PostInputExpandableSection', () => {
     render(<PostInputExpandableSection {...defaultProps} content="Check https://example.com" isArticle={false} />);
 
     expect(screen.getByTestId('post-link-embeds')).toBeInTheDocument();
+  });
+
+  it('keeps a resource card’s title from navigating away from the draft: it links out in a new tab', () => {
+    render(<PostInputExpandableSection {...defaultProps} content={`Watch ${videoFixture.uri}`} />);
+
+    const title = screen.getByTestId('resource-card-title');
+    expect(title).toHaveAttribute('href', videoFixture.uri);
+    expect(title).not.toHaveAttribute('href', getResourceRoute(videoFixture.uri));
+    expect(title).toHaveAttribute('target', '_blank');
   });
 
   it('does not render PostLinkEmbeds when content is empty', () => {

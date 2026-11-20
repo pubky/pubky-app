@@ -30,6 +30,7 @@ export function PostTagPopoverWrapper({
   postId,
   tagLabel,
   children,
+  content,
 }: PostTagPopoverWrapperProps) {
   const [open, setOpen] = useState(false);
   const [showAllTaggers, setShowAllTaggers] = useState(false);
@@ -54,7 +55,7 @@ export function PostTagPopoverWrapper({
   }, [showAllTaggers, postId, tagLabel, taggersCount, loadTaggers]);
 
   // On mobile or when no taggers, just render children without popover
-  if (isMobile || (taggers.length === 0 && taggersCount === 0)) {
+  if (isMobile || (!content && taggers.length === 0 && taggersCount === 0)) {
     return <>{children}</>;
   }
 
@@ -71,48 +72,50 @@ export function PostTagPopoverWrapper({
         className="w-auto border-none bg-transparent p-0 shadow-none"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        <Container overrideDefaults className="flex items-center">
-          {visibleTaggers.map((tagger, index) => (
-            <TaggerAvatar key={tagger.id} tagger={tagger} index={index} />
-          ))}
-          {overflowCount > 0 && (
-            <Popover open={showAllTaggers} onOpenChange={setShowAllTaggers}>
-              <PopoverTrigger asChild>
-                <Button
-                  overrideDefaults
-                  className="z-0 -ml-2 flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 border-background bg-muted text-xs font-medium shadow-sm transition-opacity hover:opacity-80"
-                  aria-label={`Show all ${taggersCount} taggers`}
+        {content ?? (
+          <Container overrideDefaults className="flex items-center">
+            {visibleTaggers.map((tagger, index) => (
+              <TaggerAvatar key={tagger.id} tagger={tagger} index={index} />
+            ))}
+            {overflowCount > 0 && (
+              <Popover open={showAllTaggers} onOpenChange={setShowAllTaggers}>
+                <PopoverTrigger asChild>
+                  <Button
+                    overrideDefaults
+                    className="z-0 -ml-2 flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full border-2 border-background bg-muted text-xs font-medium shadow-sm transition-opacity hover:opacity-80"
+                    aria-label={`Show all ${taggersCount} taggers`}
+                  >
+                    +{overflowCount}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  side="bottom"
+                  sideOffset={8}
+                  align="start"
+                  className="w-auto p-0"
+                  onOpenAutoFocus={(e) => e.preventDefault()}
                 >
-                  +{overflowCount}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent
-                side="bottom"
-                sideOffset={8}
-                align="start"
-                className="w-auto p-0"
-                onOpenAutoFocus={(e) => e.preventDefault()}
-              >
-                {showAllTaggers && (
-                  <WhoTaggedExpandedList
-                    taggerIds={mergeTaggerIds({
-                      fetchedIds: taggerState?.hasFetched ? taggerState.ids : undefined,
-                      previewIds: previewTaggerIds,
-                      viewerId,
-                      isViewerTagger: taggerState?.isViewerTagger,
-                    })}
-                    fallbackTaggers={taggers}
-                    isLoadingTaggers={isFetching && !taggerState?.hasFetched}
-                    isLoadingMore={isFetching && taggerState?.hasFetched}
-                    hasMore={taggerState?.hasMore}
-                    hasError={taggerState?.hasError}
-                    onLoadMore={() => void loadMoreTaggers(tagLabel ?? '')}
-                  />
-                )}
-              </PopoverContent>
-            </Popover>
-          )}
-        </Container>
+                  {showAllTaggers && (
+                    <WhoTaggedExpandedList
+                      taggerIds={mergeTaggerIds({
+                        fetchedIds: taggerState?.hasFetched ? taggerState.ids : undefined,
+                        previewIds: previewTaggerIds,
+                        viewerId,
+                        isViewerTagger: taggerState?.isViewerTagger,
+                      })}
+                      fallbackTaggers={taggers}
+                      isLoadingTaggers={isFetching && !taggerState?.hasFetched}
+                      isLoadingMore={isFetching && taggerState?.hasFetched}
+                      hasMore={taggerState?.hasMore}
+                      hasError={taggerState?.hasError}
+                      onLoadMore={() => void loadMoreTaggers(tagLabel ?? '')}
+                    />
+                  )}
+                </PopoverContent>
+              </Popover>
+            )}
+          </Container>
+        )}
       </PopoverContent>
     </Popover>
   );

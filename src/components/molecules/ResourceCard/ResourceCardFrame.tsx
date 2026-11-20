@@ -22,7 +22,8 @@ interface ResourceCardFrameProps extends Omit<React.HTMLAttributes<HTMLElement>,
 /**
  * The frame an external resource sits in inside a post: the app's embedded-post surface
  * (`rounded-md bg-embed`, like a quoted post), in two parts with no line between them: the
- * header and body, then the bottom zone of actions and tags.
+ * header and body, then the bottom zone of actions and tags. The resource page's large card
+ * overrides the surface through `className`.
  *
  * With a `clickThroughUrl`, a mouse click anywhere on the card that is not one of its controls
  * opens the link in a new tab. The frame itself has no interactive role, so no control is nested
@@ -88,13 +89,13 @@ export function ResourceCardHeader({ typeLabel, sourceUri, href, siteName }: Res
 }
 
 /**
- * The site the card's link goes to: favicon, name and ↗, linking out when the link is web. On a phone
- * the link shows the favicon and ↗ only; "Open in <site>" stays its accessible name.
+ * The site the card's link goes to: favicon, name and ↗, linking out when the link is web. The same
+ * text on every card; the link's accessible name says what it does: "Open in <site>".
  */
 function ResourceSource({ uri, href, name }: { uri: string; href: string | null; name: string | null }) {
   const className = 'ml-auto flex min-w-0 shrink items-center gap-1.5 text-xs font-medium text-muted-foreground';
 
-  // Without a name the icon alone would be an unlabelled link: the title already links out.
+  // Without a name the icon alone would be an unlabelled link: the title opens the resource instead.
   if (!href || !name) {
     return (
       <Typography as="span" overrideDefaults data-testid="resource-card-source" className={className}>
@@ -106,8 +107,8 @@ function ResourceSource({ uri, href, name }: { uri: string; href: string | null;
   return (
     <Link
       href={href}
-      aria-label={`Open in ${name}`}
       overrideDefaults
+      aria-label={`Open in ${name}`}
       data-testid="resource-card-source"
       className={cn(className, 'hover:text-brand max-sm:shrink-0')}
     >
