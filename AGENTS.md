@@ -72,14 +72,14 @@ Controller naming encodes IO: `fetch*` network only, `get*` local only, `getMany
   one from either spelling of a post reference or a version path. `docs/data-patterns.md`
 - Data model: `pubky-social-specs` builds, decodes and encodes every homeserver object; the app PUTs `built.body`
   through `putBlob`, never a hand-spelled path or `JSON.stringify` body, never user text or a file name in a path
-  segment (names the app builds are `A-Za-z0-9-_.~` only; the SDK escapes anything else), and never imports
-  `pubky-social-specs/client` outside `src/test-utils`. Posts are versioned (an edit writes the next version from the
-  decoded head, spread so `$unknown` survives); media is content addressed and shared (`files/{hash}.{ext}`, never
-  deleted on an edit); bookmarks, mutes and feeds are private and locally owned (no Nexus bookmark field is read); kinds
-  cross to `note`/`article` only in `toLocalPostKind` / `toStoredPostKind`; post URIs match both spellings
-  (`postReferenceSpellings`) and are written in the v1 one; the compliance gate's `PERMANENT` list is the only home of a
-  0.x spelling (a new match is ported, never listed). `docs/data-patterns.md`, `docs/migrations/social-v1.md`,
-  ADR-0027/0028
+  segment (names the app builds are `A-Za-z0-9-_.~` only; the SDK escapes anything else; the one exception is the
+  reader's Locks copy, which reuses the creator's names), and never imports `pubky-social-specs/client` outside
+  `src/test-utils`. Posts are versioned (an edit writes the next version from the decoded head, spread so `$unknown`
+  survives); media is content addressed and shared (`files/{hash}.{ext}`, never deleted on an edit); bookmarks, mutes
+  and feeds are private and locally owned (no Nexus bookmark field is read); kinds cross to `note`/`article` only in
+  `toLocalPostKind` / `toStoredPostKind`; post URIs match both spellings (`postReferenceSpellings`) and are written in
+  the v1 one; the compliance gate's `PERMANENT` list is the only home of a 0.x spelling (a new match is ported, never
+  listed). `docs/data-patterns.md`, `docs/migrations/social-v1.md`, ADR-0027/0028
 - Article bodies embed every media kind as `![alt](attachment:{n})`; the kind comes from file metadata, never the
   markdown; the cover is the envelope `cover_image` and stays image-only; every reader goes through
   `resolveArticleCover` (rules A, A′ for a migrated article, B for a 0.x one). `docs/data-patterns.md`, ADR-0023
