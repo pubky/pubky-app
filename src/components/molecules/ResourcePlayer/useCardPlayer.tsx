@@ -15,11 +15,11 @@ import { useSettingsStore } from '@/stores/settings/settings.store';
 import { usePlayerHost } from './PlayerHost';
 import {
   CARD_PLAYER,
+  type EmbedProvider,
   getOwnPlayer,
   getPlayerTargets,
   getUpFrontTarget,
   isCardFirst,
-  type PlayerProvider,
   type PlayerTarget,
 } from './resourcePlayer.utils';
 import { type PagePlayer, PlayerDock, PlayerSwitch } from './ResourcePlayerControls';
@@ -102,7 +102,9 @@ export function useCardPlayer(
   const targets = card ? getPlayerTargets(card, { href, players: { playerOrder, hiddenPlayers } }) : [];
   // The link is itself on a service with a player, not gone upstream nor removed from Players: that
   // player goes first. Else the link is generic here: its card goes first.
-  const own = card && getResourceStatus(card.status) !== PinakesStatus.MISSING ? getOwnPlayer(card, href) : null;
+  const ownTarget = card && getResourceStatus(card.status) !== PinakesStatus.MISSING ? getOwnPlayer(card, href) : null;
+  // A document frame (slides, an oEmbed) with platform embeds up front off: its card, the frame in the switch.
+  const own = ownTarget?.frame === 'rich' && !embedsUpFront ? null : ownTarget;
   const linked = own !== null && targets.some((target) => target.provider === own.provider);
   // The app's player host keeps the frame of any player but a preview's: it plays on across pages.
   const hosted = usePlayerHost() !== null && !preview;
@@ -165,7 +167,7 @@ export function useCardPlayer(
 }
 
 /** What a card's switch picks: a service, or its card. */
-type EmbedChoice = PlayerProvider | typeof CARD_PLAYER;
+type EmbedChoice = EmbedProvider | typeof CARD_PLAYER;
 
 interface EmbedPlayerProps {
   card: TPinakesResourceDetail;
@@ -228,6 +230,18 @@ function EmbedPlayer({
     wasPlaying.current = isActive;
   }, [isActive, onOptIn]);
 
+  // A post, map or document frame stays in its card, not in the player host: hidden with the card
+  // (a feed behind an open post), it is let go until the card shows again, as the host's frames are.
+  const [isHidden, setIsHidden] = useState(false);
+  const framed = Boolean(target.frame) && showsPlayer;
+  useEffect(() => {
+    const box = boxRef.current;
+    if (!framed || !box || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => setIsHidden(box.getClientRects().length === 0));
+    observer.observe(box);
+    return () => observer.disconnect();
+  }, [framed]);
+
   const frameKey = `${target.provider}:${round}`;
   // Platform embeds turned off while this player was the page's: its frame is gone, so is its claim.
   useEffect(() => {
@@ -242,13 +256,19 @@ function EmbedPlayer({
 
   const open = () => {
     onOptIn(true);
-    if (preview) return;
+    // A post, map or document frame is shown, not played: what plays keeps playing.
+    if (preview || target.frame) return;
     setAutoStart(true);
     player.play(target);
   };
 
   if (!showsPlayer) {
-    const label = preview ? `Show the ${target.name} player` : `Play on ${target.name}`;
+    // A post, map or document frame is shown, not played.
+    const label = target.frame
+      ? `Show on ${target.name}`
+      : preview
+        ? `Show the ${target.name} player`
+        : `Play on ${target.name}`;
     const summary = getResourceSummary(card);
     return (
       <Container
@@ -287,22 +307,24 @@ function EmbedPlayer({
         target={target}
         title={title}
         onClose={close}
-        dockable={isActive && !player.paused && !preview}
-        pagePlayer={pagePlayer}
+        dockable={isActive && !player.paused && !preview && !target.frame}
+        pagePlayer={target.frame ? undefined : pagePlayer}
       >
-        <ResourcePlayerFrame
-          key={frameKey}
-          target={autoStart ? target : getUpFrontTarget(target)}
-          title={title}
-          // Opened by Play on, it is the page's player (`player.current`): its load state, with the
-          // service's page when it has not answered. Up front, quiet, it only hides its placeholder.
-          load={autoStart && isActive ? player.load : loadedKey === frameKey ? 'ready' : 'loading'}
-          onLoaded={autoStart && isActive ? player.onLoaded : () => setLoadedKey(frameKey)}
-          quiet={!autoStart}
-          onPlay={(media) => player.play(target, media)}
-          // Paused or ended in its card, it does not go to the dock.
-          onPause={player.pause}
-        />
+        {!(framed && isHidden) && (
+          <ResourcePlayerFrame
+            key={frameKey}
+            target={autoStart ? target : getUpFrontTarget(target)}
+            title={title}
+            // Opened by Play on, it is the page's player (`player.current`): its load state, with the
+            // service's page when it has not answered. Up front, quiet, it only hides its placeholder.
+            load={autoStart && isActive ? player.load : loadedKey === frameKey ? 'ready' : 'loading'}
+            onLoaded={autoStart && isActive ? player.onLoaded : () => setLoadedKey(frameKey)}
+            quiet={!autoStart}
+            onPlay={target.frame ? undefined : (media) => player.play(target, media)}
+            // Paused or ended in its card, it does not go to the dock.
+            onPause={player.pause}
+          />
+        )}
       </PlayerDock>
     </div>
   );

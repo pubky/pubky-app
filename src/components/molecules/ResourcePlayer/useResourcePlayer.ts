@@ -2,7 +2,7 @@
 
 import { type RefObject, useEffect, useEffectEvent, useRef, useState, useSyncExternalStore } from 'react';
 import { onMediaStop, stopOtherMedia } from '@/hooks/useOnePlayer/useOnePlayer';
-import type { PlayerProvider, PlayerTarget } from './resourcePlayer.utils';
+import type { EmbedProvider, PlayerTarget } from './resourcePlayer.utils';
 
 /**
  * The one player open on the page: `{ owner, provider }`, or `null`. Opening a player anywhere
@@ -11,7 +11,7 @@ import type { PlayerProvider, PlayerTarget } from './resourcePlayer.utils';
  * `paused`: the viewer paused it, or it ended, as far as the player tells (`useMediaBox`'s
  * `onPause`): paused in its card, it does not go to the dock (`PlayerHost`).
  */
-export type ActivePlayer = { owner: string; provider: PlayerProvider; paused?: boolean } | null;
+export type ActivePlayer = { owner: string; provider: EmbedProvider; paused?: boolean } | null;
 
 let active: ActivePlayer = null;
 const listeners = new Set<() => void>();

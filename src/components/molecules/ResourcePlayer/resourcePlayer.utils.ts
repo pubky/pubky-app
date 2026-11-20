@@ -1,7 +1,7 @@
 import { inferMediaKindFromUrl } from '@/libs/file/inlineMediaKind';
 import { extractVimeoVideoId, extractYouTubeVideoId } from '@/libs/utils/videoUrl';
 import { VIDEO_EMBED_PROPS } from '@/molecules/PostLinkEmbeds/Providers/Provider.constants';
-import type { TPinakesCard, TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
+import type { TPinakesCard, TPinakesEmbed, TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import type { MediaPreferences } from '@/stores/settings/settings.types';
 
 /** The services whose own player the card can load. Anything else stays "Open in" only. */
@@ -17,6 +17,12 @@ export enum PlayerProvider {
   APPLE_PODCASTS = 'apple-podcasts',
   AUDIO_FILE = 'audio-file',
 }
+
+/**
+ * Who serves a frame: a service in `PlayerProvider`, or any other provider Pinakes names in a card's
+ * `embed` (`mastodon`, `openstreetmap`, an oEmbed provider such as `speaker-deck`).
+ */
+export type EmbedProvider = PlayerProvider | (string & {});
 
 /** A service the viewer ranks or removes (Settings, Links & Media, Players): every one but a plain audio file. */
 export type ListedPlayer = Exclude<PlayerProvider, PlayerProvider.AUDIO_FILE>;
@@ -82,7 +88,7 @@ export function getPlayerList({ playerOrder, hiddenPlayers }: PlayerPreferences)
  * Whether a service may load at all: not removed from Players. A plain audio file is no service, so
  * it always may.
  */
-export function isPlayerShown(provider: PlayerProvider, hiddenPlayers: readonly string[] = []): boolean {
+export function isPlayerShown(provider: EmbedProvider, hiddenPlayers: readonly string[] = []): boolean {
   return !hiddenPlayers.includes(provider);
 }
 
@@ -106,7 +112,7 @@ export function isPlayerListEntry(id: string): id is PlayerListEntry {
  * order comes after Card; a plain audio file is no service in the list, so it still plays. Without
  * Card in the order (never moved, or a client that does not know it), the player shows.
  */
-export function isCardFirst(provider: PlayerProvider, playerOrder: readonly string[]): boolean {
+export function isCardFirst(provider: EmbedProvider, playerOrder: readonly string[]): boolean {
   const card = playerOrder.indexOf(CARD_PLAYER);
   if (card === -1) return false;
   const service = playerOrder.indexOf(provider);
@@ -122,22 +128,26 @@ export function isRankedOrder(playerOrder: readonly string[]): boolean {
 }
 
 /**
- * How the player sits in the card: a video keeps 16:9 at the card's width, audio its own strip
- * height; `dockHeight` is the service's own compact height, used in the dock (defaults to `height`).
+ * How the player sits in the card: a video keeps its `aspect` (16:9 by default) at the card's
+ * width, audio (and any other frame of fixed height: a post, a document) its own strip height;
+ * `dockHeight` is the service's own compact height, used in the dock (defaults to `height`).
  */
-export type PlayerLayout = { kind: 'video' } | { kind: 'audio'; height: number; dockHeight?: number };
+export type PlayerLayout = { kind: 'video'; aspect?: number } | { kind: 'audio'; height: number; dockHeight?: number };
 
 export interface PlayerTarget {
-  provider: PlayerProvider;
-  /** The service's name ("YouTube"), or the host for a plain audio file. */
+  provider: EmbedProvider;
+  /** The service's name ("YouTube"); for any other frame its site's name or host, as for a plain audio file. */
   name: string;
   /** The resource's page on that service: what "Open in" opens and the favicon is read from. */
   link: string;
-  /** What loads after the click, built from parsed parts only, never a supplied iframe URL as is. */
+  /**
+   * What loads after the click: Pinakes' `embed.src` (an `https:` address it checked, never a
+   * provider's HTML), or from an older Pinakes one built from the link's parsed parts.
+   */
   src: string;
   element: 'iframe' | 'audio';
   layout: PlayerLayout;
-  /** The frame's permissions: the app's video embed set, or what the service's own embed code asks for. */
+  /** The frame's permissions: what the service's embed code asks for, within `FRAME_FEATURES`. */
   allow: string;
   /**
    * The player starts on the viewer's press on our Play: by a `src` parameter (YouTube, Vimeo,
@@ -148,6 +158,11 @@ export interface PlayerTarget {
   autoplay: boolean;
   /** How a player without an autoplay parameter is told to start, through its embed's own messages. */
   start?: PlayerStart;
+  /**
+   * A frame that is no player (Pinakes' `embed` of kind `post`, `map` or `rich`: a Mastodon post, a
+   * place's map, slides): shown like one, it never docks.
+   */
+  frame?: 'post' | 'map' | 'rich';
 }
 
 /**
@@ -516,7 +531,11 @@ const LINK_PARSERS = [
   audioFile,
 ];
 
-/** The player for one link, when the link is on a service in the allowlist. */
+/**
+ * The player for one link, when the link is on a service in the allowlist, built from the link: for
+ * a link Pinakes has not read, and for a Pinakes that serves no `embed` (`getLinkTarget`). Pinakes'
+ * `embed` gives the same addresses.
+ */
 export function getPlayerTarget(link: string): PlayerTarget | null {
   for (const parse of LINK_PARSERS) {
     const target = parse(link);
@@ -525,8 +544,120 @@ export function getPlayerTarget(link: string): PlayerTarget | null {
   return null;
 }
 
+/** The `src` parameters that start a player on load. */
+const AUTOPLAY_PARAMS = ['autoplay', 'auto_play'] as const;
+
+/**
+ * What the app adds to a service's frame from Pinakes (`embed`): how its player is told to start,
+ * and its compact height in the dock. Pinakes builds every frame address.
+ */
+const PLAYER_COMMANDS: Partial<Record<ListedPlayer, { start?: PlayerStart; dockHeight?: number }>> = {
+  // Spotify's iFrame API command (`EmbedController.play()`), spoken to our own frame: no Spotify
+  // script runs in the page. The embed posts `{ type: 'ready' }` when it can take it.
+  [PlayerProvider.SPOTIFY]: {
+    start: { origin: 'https://open.spotify.com', message: { command: 'play' }, readyType: 'ready' },
+    dockHeight: 80,
+  },
+  [PlayerProvider.SOUNDCLOUD]: { dockHeight: 166 },
+  // What TIDAL's own embed script sends. It posts no ready message, so this goes once it has loaded.
+  [PlayerProvider.TIDAL]: {
+    start: { origin: 'https://embed.tidal.com', message: JSON.stringify({ commandName: 'play' }) },
+    dockHeight: 120,
+  },
+  [PlayerProvider.DEEZER]: { dockHeight: 150 },
+  [PlayerProvider.APPLE_MUSIC]: { dockHeight: 175 },
+  [PlayerProvider.APPLE_PODCASTS]: { dockHeight: 175 },
+};
+
+/** Providers whose links the app shows with a component of its own (X: `react-tweet`), never as a frame. */
+const OWN_RENDERERS = new Set(['x']);
+
+/**
+ * The Permissions Policy features a frame may have, whatever Pinakes names: a page's or an oEmbed
+ * answer's frame asks for its own, and a permission prompt names this app.
+ */
+const FRAME_FEATURES = new Set([
+  'accelerometer',
+  'autoplay',
+  'clipboard-write',
+  'encrypted-media',
+  'fullscreen',
+  'gyroscope',
+  'picture-in-picture',
+  'web-share',
+]);
+
+/** A frame of fixed height whose provider names none (a Mastodon post), before it scrolls itself. */
+const FRAME_HEIGHT = 420;
+
+/**
+ * The frame Pinakes names for a link (`embed`), as a card shows it: a player (`audio`, `video`; a
+ * listed service's with its start command and dock height), or a post, map or document frame shown the
+ * same way (`frame`). Its address is Pinakes' as is, with the `autoplay_param` only for a press on
+ * Play (`getUpFrontTarget` takes it off again), plus TIDAL's `hideOverlays` (not for a video).
+ * `link` is what "Open in" opens; `site` names a
+ * service the app does not list. `null` for an address that is not `https:`, and for X's posts.
+ */
+export function getEmbedTarget(embed: TPinakesEmbed, link: string, site?: string | null): PlayerTarget | null {
+  if (OWN_RENDERERS.has(embed.provider)) return null;
+  let src: URL;
+  try {
+    src = new URL(embed.src);
+  } catch {
+    return null;
+  }
+  // Never this app's own host: the sandbox lets a frame run scripts as its origin. On the server there
+  // is no window; no frame mounts there (a card's frame shows once the client has read the card).
+  const ownHost = typeof window === 'undefined' ? null : window.location.hostname;
+  if (src.protocol !== 'https:' || src.username || src.password || src.port || src.hostname === ownHost) return null;
+  const listed = isListedPlayer(embed.provider) ? embed.provider : null;
+  const commands = listed ? PLAYER_COMMANDS[listed] : undefined;
+  const [param, value] = embed.autoplay_param?.split('=') ?? [];
+  const startsByParam = (AUTOPLAY_PARAMS as readonly string[]).includes(param ?? '') && Boolean(value);
+  if (startsByParam) src.searchParams.set(param, value);
+  // TIDAL's plain player, as for a TIDAL link the app reads itself (`tidal()`): no ⋯ menu, and no Sign up / Log
+  // in panel over it when a preview ends. Not for a video, which would lose its fullscreen button too.
+  if (embed.provider === PlayerProvider.TIDAL && embed.kind !== 'video') src.searchParams.set('hideOverlays', 'true');
+  const frame =
+    embed.kind === 'post' || embed.kind === 'map'
+      ? embed.kind
+      : embed.kind === 'audio' || embed.kind === 'video'
+        ? undefined
+        : 'rich';
+  return {
+    ...(frame && { frame }),
+    provider: embed.provider,
+    name: listed ? PROVIDER_NAMES[listed] : site?.trim() || src.hostname.replace(/^www\./, ''),
+    link,
+    src: src.href,
+    element: 'iframe',
+    layout: embed.aspect
+      ? { kind: 'video', aspect: embed.aspect }
+      : { kind: 'audio', height: embed.height ?? FRAME_HEIGHT, dockHeight: commands?.dockHeight },
+    allow: embed.allow.filter((feature) => FRAME_FEATURES.has(feature)).join('; '),
+    autoplay: startsByParam || Boolean(commands?.start),
+    start: commands?.start,
+  };
+}
+
+/**
+ * A link's frame: Pinakes' `embed` when the instance serves the field; else, from an older Pinakes
+ * without it, the player built from the link (`getPlayerTarget`). A link with no frame (`null`)
+ * that is a plain audio file keeps the browser's own player: the file is the link itself.
+ */
+function getLinkTarget(
+  link: string,
+  embed: TPinakesEmbed | null | undefined,
+  site?: string | null,
+): PlayerTarget | null {
+  if (embed === undefined) return getPlayerTarget(link);
+  return embed ? getEmbedTarget(embed, link, site) : audioFile(link);
+}
+
 /** A card's links its own player may be built from: its canonical `uri` and its other spellings. */
-type TOwnLinks = Pick<TPinakesCard, 'uri'> & Partial<Pick<TPinakesResourceDetail, 'aliases'>>;
+type TOwnLinks = Pick<TPinakesCard, 'uri'> &
+  Partial<Pick<TPinakesCard, 'embed' | 'site'>> &
+  Partial<Pick<TPinakesResourceDetail, 'aliases'>>;
 
 /**
  * The card's own link a player is built from: the link as written (`href`) when a player takes it,
@@ -548,13 +679,29 @@ export function isPlayable(card: TOwnLinks, href?: string | null): boolean {
   return getOwnPlayer(card, href) !== null;
 }
 
-/** The player of a card's own link (`getOwnLink`), or `null` when its link is on no service with a player. */
+/**
+ * The player of a card's own link: its `embed` from Pinakes, else (an older Pinakes) built from its
+ * links (`getOwnLink`); `null` when its link is on no service with a player. A place's map is no
+ * player of its own: its card comes first, the map in its switch (`getPlayerTargets`). A post's
+ * frame and a page's document frame (slides, an article's oEmbed) are their own.
+ */
 export function getOwnPlayer(card: TOwnLinks, href?: string | null): PlayerTarget | null {
-  return getPlayerTarget(getOwnLink(card, href));
+  const target = getOwnTarget(card, href);
+  return target?.frame === 'map' ? null : target;
 }
 
-/** The `src` parameters that start a player on load. */
-const AUTOPLAY_PARAMS = ['autoplay', 'auto_play'] as const;
+/**
+ * The frame of a card's own link, maps included (`getOwnPlayer`). With Pinakes'
+ * `embed`, "Open in" opens the link as written when it is a web link, else the card's first.
+ */
+function getOwnTarget(card: TOwnLinks, href?: string | null): PlayerTarget | null {
+  if (card.embed === undefined) return getPlayerTarget(getOwnLink(card, href));
+  const links = [...(href ? [href] : []), card.uri, ...(card.aliases ?? [])];
+  const web = links.filter((value) => /^https?:\/\//i.test(value));
+  // No frame from Pinakes: a spelling that is a plain audio file plays in the browser's own player.
+  const link = (card.embed === null ? web.find((value) => audioFile(value)) : undefined) ?? web[0] ?? card.uri;
+  return getLinkTarget(link, card.embed, card.site);
+}
 
 /**
  * A player shown up front, not after a press on Play: the same player without what starts it on
@@ -569,9 +716,10 @@ export function getUpFrontTarget(target: PlayerTarget): PlayerTarget {
 }
 
 /**
- * Every player the card offers, one per service: the card's own link first (`getOwnLink`), then
- * its `also_on` links in Pinakes' order (its best link of a service first). A `missing` card's own
- * link is gone upstream and offers no player. A player shows paused and starts on a press inside
+ * Every player the card offers, one per service: the card's own first (its `embed`, or from an
+ * older Pinakes its link's, `getOwnLink`), then its `also_on` links' in Pinakes' order (its best
+ * link of a service first); a post, map or document frame Pinakes names counts as one too. A
+ * `missing` card's own link is gone upstream and offers no player. A player shows paused and starts on a press inside
  * it, so no service is put first for starting on our press.
  *
  * The viewer's Players (`players`, Settings, Links & Media) come last: a removed service offers no
@@ -583,13 +731,12 @@ export function getPlayerTargets(
   card: Pick<TPinakesCard, 'status' | 'also_on'> & TOwnLinks,
   { href, players }: { href?: string | null; players?: PlayerPreferences } = {},
 ): PlayerTarget[] {
-  const own = card.status === 'missing' ? null : getOwnLink(card, href);
-  const links = [...(own ? [own] : []), ...card.also_on.map((entry) => entry.uri)];
+  const own = card.status === 'missing' ? null : getOwnTarget(card, href);
+  const others = card.also_on.map((entry) => getLinkTarget(entry.uri, entry.embed, entry.site));
 
-  const seen = new Set<PlayerProvider>();
+  const seen = new Set<EmbedProvider>();
   const targets: PlayerTarget[] = [];
-  for (const link of links) {
-    const target = getPlayerTarget(link);
+  for (const target of [own, ...others]) {
     if (!target || seen.has(target.provider)) continue;
     seen.add(target.provider);
     targets.push(target);

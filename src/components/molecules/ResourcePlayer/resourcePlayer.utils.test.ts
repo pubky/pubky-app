@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import musicFixture from '@/services/pinakes/fixtures/by-uri.music-recording.json';
-import type { TPinakesAlsoOn } from '@/services/pinakes/pinakes.types';
+import type { TPinakesAlsoOn, TPinakesEmbed } from '@/services/pinakes/pinakes.types';
 import {
   CARD_PLAYER,
+  getEmbedTarget,
+  getOwnPlayer,
   getPlayerList,
   getPlayerTarget,
   getPlayerTargets,
@@ -573,5 +575,349 @@ describe('getPlayerTargets in Pinakes’ order', () => {
   it('still puts the viewer’s first player first', () => {
     const players = { playerOrder: ['spotify'], hiddenPlayers: [] };
     expect(getPlayerTargets(song, { players }).map((target) => target.provider)).toEqual(['spotify', 'deezer']);
+  });
+});
+
+describe('from Pinakes’ embed', () => {
+  const PLAYER_ALLOW = [
+    'accelerometer',
+    'autoplay',
+    'clipboard-write',
+    'encrypted-media',
+    'gyroscope',
+    'picture-in-picture',
+    'web-share',
+  ];
+  const spotify: TPinakesEmbed = {
+    provider: 'spotify',
+    kind: 'audio',
+    src: 'https://open.spotify.com/embed/track/69kOkLUCkxIZYexIgSG8rq',
+    height: 152,
+    aspect: null,
+    allow: PLAYER_ALLOW,
+    autoplay_param: null,
+  };
+  const youtube: TPinakesEmbed = {
+    provider: 'youtube',
+    kind: 'video',
+    src: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1&rel=0',
+    height: null,
+    aspect: 1.7778,
+    allow: PLAYER_ALLOW,
+    autoplay_param: 'autoplay=1',
+  };
+  const toot: TPinakesEmbed = {
+    provider: 'mastodon',
+    kind: 'post',
+    src: 'https://mastodon.social/@Mastodon/117466985005297414/embed',
+    height: null,
+    aspect: null,
+    allow: [],
+    autoplay_param: null,
+  };
+  const map: TPinakesEmbed = {
+    provider: 'openstreetmap',
+    kind: 'map',
+    src: 'https://www.openstreetmap.org/export/embed.html?bbox=8.9%2C45.9%2C9.0%2C46.1&layer=mapnik&marker=46.0%2C8.95',
+    height: null,
+    aspect: 1.7778,
+    allow: [],
+    autoplay_param: null,
+  };
+
+  it('gives the player the link gave, from Pinakes’ address, with the app’s start command and dock height', () => {
+    const link = 'https://open.spotify.com/track/69kOkLUCkxIZYexIgSG8rq';
+    const fromEmbed = getEmbedTarget(spotify, link);
+    expect(fromEmbed).toEqual(getPlayerTarget(link));
+  });
+
+  it('loads TIDAL’s plain player from Pinakes’ address, and keeps a TIDAL video’s overlays', () => {
+    const id = '77646168';
+    const track: TPinakesEmbed = {
+      ...spotify,
+      provider: 'tidal',
+      src: `https://embed.tidal.com/tracks/${id}`,
+      height: 120,
+    };
+    expect(getEmbedTarget(track, `https://tidal.com/browse/track/${id}`)?.src).toBe(
+      `https://embed.tidal.com/tracks/${id}?hideOverlays=true`,
+    );
+    const video: TPinakesEmbed = {
+      ...youtube,
+      provider: 'tidal',
+      src: `https://embed.tidal.com/videos/${id}`,
+      autoplay_param: null,
+    };
+    expect(getEmbedTarget(video, `https://tidal.com/browse/video/${id}`)?.src).toBe(
+      `https://embed.tidal.com/videos/${id}`,
+    );
+  });
+
+  /** pinakes#139's adapters (`embed::link`): the embed it serves for each link. */
+  const ADAPTERS: [string, TPinakesEmbed][] = [
+    ['https://www.youtube.com/watch?v=dQw4w9WgXcQ', youtube],
+    [
+      'https://www.youtube.com/playlist?list=PLFgquLnL59alCl_2TQvOiD5Vgm1hCaGSI',
+      {
+        ...youtube,
+        src: 'https://www.youtube-nocookie.com/embed/videoseries?list=PLFgquLnL59alCl_2TQvOiD5Vgm1hCaGSI&enablejsapi=1&rel=0',
+      },
+    ],
+    [
+      'https://www.youtube.com/channel/UC_kRDKYrUlrbtrSiyu5Tflg',
+      {
+        ...youtube,
+        src: 'https://www.youtube-nocookie.com/embed/videoseries?list=UU_kRDKYrUlrbtrSiyu5Tflg&enablejsapi=1&rel=0',
+      },
+    ],
+    [
+      'https://vimeo.com/76979871',
+      { ...youtube, provider: 'vimeo', src: 'https://player.vimeo.com/video/76979871?dnt=1' },
+    ],
+    [
+      'https://open.spotify.com/track/003vvx7Niy0yvhvHt4a68B',
+      { ...spotify, src: 'https://open.spotify.com/embed/track/003vvx7Niy0yvhvHt4a68B' },
+    ],
+    [
+      'https://open.spotify.com/artist/1dfeR4HaWDbWqFHLkxsg1d',
+      { ...spotify, src: 'https://open.spotify.com/embed/artist/1dfeR4HaWDbWqFHLkxsg1d', height: 352 },
+    ],
+    [
+      'https://soundcloud.com/radiohead/creep',
+      {
+        ...spotify,
+        provider: 'soundcloud',
+        src: 'https://w.soundcloud.com/player/?url=https%3A%2F%2Fsoundcloud.com%2Fradiohead%2Fcreep&visual=false&show_teaser=false',
+        height: 166,
+        autoplay_param: 'auto_play=true',
+      },
+    ],
+    [
+      'https://soundcloud.com/user-1/sets/a-set',
+      {
+        ...spotify,
+        provider: 'soundcloud',
+        src: 'https://w.soundcloud.com/player/?url=https%3A%2F%2Fsoundcloud.com%2Fuser-1%2Fsets%2Fa-set&visual=false&show_teaser=false',
+        height: 450,
+        autoplay_param: 'auto_play=true',
+      },
+    ],
+    [
+      'https://www.mixcloud.com/spartacus/party-time/',
+      {
+        ...spotify,
+        provider: 'mixcloud',
+        src: 'https://www.mixcloud.com/widget/iframe/?feed=https%3A%2F%2Fwww.mixcloud.com%2Fspartacus%2Fparty-time%2F&hide_cover=1',
+        height: 120,
+      },
+    ],
+    [
+      'https://tidal.com/track/551040646',
+      {
+        ...spotify,
+        provider: 'tidal',
+        src: 'https://embed.tidal.com/tracks/551040646',
+        height: 120,
+        allow: ['autoplay', 'clipboard-write', 'encrypted-media', 'fullscreen', 'web-share'],
+      },
+    ],
+    [
+      'https://tidal.com/video/123456',
+      {
+        ...spotify,
+        provider: 'tidal',
+        kind: 'video',
+        src: 'https://embed.tidal.com/videos/123456',
+        height: null,
+        aspect: 1.7778,
+        allow: ['autoplay', 'clipboard-write', 'encrypted-media', 'fullscreen', 'web-share'],
+      },
+    ],
+    [
+      'https://www.deezer.com/fr/track/3135556',
+      {
+        ...spotify,
+        provider: 'deezer',
+        src: 'https://widget.deezer.com/widget/dark/track/3135556',
+        height: 150,
+        allow: ['clipboard-write', 'encrypted-media'],
+      },
+    ],
+    [
+      'https://music.apple.com/gb/album/ok-computer/1097861387?i=1097862062',
+      {
+        ...spotify,
+        provider: 'apple-music',
+        src: 'https://embed.music.apple.com/gb/song/1097862062',
+        height: 175,
+        allow: ['autoplay', 'clipboard-write', 'encrypted-media', 'fullscreen'],
+      },
+    ],
+    [
+      'https://podcasts.apple.com/us/podcast/the-home-depot/id1050462261?i=1000789467893',
+      {
+        ...spotify,
+        provider: 'apple-podcasts',
+        src: 'https://embed.podcasts.apple.com/us/episode/1000789467893',
+        height: 175,
+        allow: ['autoplay', 'clipboard-write', 'encrypted-media', 'fullscreen'],
+      },
+    ],
+  ];
+  /** A frame address with its query in order, so two spellings of one address compare equal. */
+  const sorted = (src: string) => {
+    const url = new URL(src);
+    url.searchParams.sort();
+    return url.href;
+  };
+  /** A feature list as a set: Apple's own code writes `autoplay *` where Pinakes names `autoplay`. */
+  const features = (allow: string) =>
+    allow
+      .split(';')
+      .map((feature) => feature.trim().split(' ')[0])
+      .sort();
+
+  it.each(ADAPTERS)('plays %s as the player the link gave', (link, embed) => {
+    const legacy = getPlayerTarget(link);
+    const target = getEmbedTarget(embed, link);
+    expect(legacy && target).toBeTruthy();
+    if (!legacy || !target) return;
+    expect(sorted(getUpFrontTarget(target).src)).toBe(sorted(getUpFrontTarget(legacy).src));
+    expect(target.provider).toBe(legacy.provider);
+    expect(target.name).toBe(legacy.name);
+    expect(target.autoplay).toBe(legacy.autoplay);
+    expect(target.start).toEqual(legacy.start);
+    expect(features(target.allow)).toEqual(features(legacy.allow));
+    if (legacy.layout.kind === 'audio') {
+      expect(target.layout).toEqual(legacy.layout);
+    } else {
+      expect(target.layout).toEqual({ kind: 'video', aspect: 1.7778 });
+    }
+    expect(target.frame).toBeUndefined();
+  });
+
+  it('adds the autoplay parameter only for a press on Play: up front, the address the link gave', () => {
+    const link = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+    const target = getEmbedTarget(youtube, link);
+    expect(target?.src).toBe('https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1&rel=0&autoplay=1');
+    expect(target?.autoplay).toBe(true);
+    expect(target?.layout).toEqual({ kind: 'video', aspect: 1.7778 });
+    const legacy = getPlayerTarget(link);
+    expect(target && getUpFrontTarget(target).src).toBe(legacy && getUpFrontTarget(legacy).src);
+  });
+
+  it('reads every player from the card and its Also on, never from the links', () => {
+    const tidal = { ...spotify, provider: 'tidal', src: 'https://embed.tidal.com/tracks/20115564', height: 120 };
+    const targets = getPlayerTargets({
+      ...card('https://musicbrainz.org/recording/0e2fd1c1-0000-0000-0000-000000000000', [
+        { uri: 'https://tidal.com/track/20115564', site: 'TIDAL', embed: tidal },
+        // Pinakes names no frame for this link: none, whatever the link looks like.
+        { uri: 'https://www.deezer.com/track/67238735', site: 'Deezer', embed: null },
+      ]),
+      embed: null,
+    });
+    expect(targets.map((target) => [target.provider, target.src])).toEqual([
+      ['tidal', 'https://embed.tidal.com/tracks/20115564?hideOverlays=true'],
+    ]);
+    expect(targets[0].start).toEqual({
+      origin: 'https://embed.tidal.com',
+      message: JSON.stringify({ commandName: 'play' }),
+    });
+  });
+
+  it('builds from the links only for a Pinakes without the field', () => {
+    const old = card('https://www.example.org/song', [
+      { uri: 'https://www.deezer.com/track/67238735', site: 'Deezer' },
+    ]);
+    expect(getPlayerTargets(old).map((target) => target.provider)).toEqual([PlayerProvider.DEEZER]);
+  });
+
+  it('shows a Mastodon post in its own frame up front, which never docks', () => {
+    const post = {
+      ...card('https://mastodon.social/@Mastodon/117466985005297414'),
+      embed: toot,
+      site: 'mastodon.social',
+    };
+    const own = getOwnPlayer(post);
+    expect(own).toMatchObject({
+      provider: 'mastodon',
+      name: 'mastodon.social',
+      frame: 'post',
+      layout: { kind: 'audio', height: 420 },
+      allow: '',
+    });
+    expect(isPlayable(post)).toBe(true);
+  });
+
+  it('puts a place’s card first, its map in the switch', () => {
+    const place = { ...card('https://www.openstreetmap.org/node/240109189'), embed: map, site: 'OpenStreetMap' };
+    expect(getOwnPlayer(place)).toBeNull();
+    expect(getPlayerTargets(place)).toMatchObject([{ provider: 'openstreetmap', frame: 'map', name: 'OpenStreetMap' }]);
+  });
+
+  it('shows an article’s document frame up front, as a post’s', () => {
+    const rich: TPinakesEmbed = {
+      ...toot,
+      provider: 'blog.example',
+      kind: 'rich',
+      src: 'https://blog.example/post/embed/',
+    };
+    const article = { ...card('https://blog.example/post/'), embed: rich, site: 'A Blog' };
+    expect(getOwnPlayer(article)).toMatchObject({ provider: 'blog.example', frame: 'rich' });
+    expect(isPlayable(article)).toBe(true);
+    expect(getPlayerTargets(article)).toMatchObject([{ provider: 'blog.example', frame: 'rich' }]);
+  });
+
+  it('keeps a plain audio file’s own player when Pinakes names no frame', () => {
+    const file = { ...card('https://files.example/episode.mp3'), embed: null };
+    expect(getOwnPlayer(file)).toMatchObject({ provider: PlayerProvider.AUDIO_FILE, element: 'audio' });
+    const listed = getPlayerTargets({
+      ...card('https://www.example.org/show', [
+        { uri: 'https://files.example/one.mp3', site: 'files.example', embed: null },
+      ]),
+      embed: null,
+    });
+    expect(listed.map((target) => target.element)).toEqual(['audio']);
+  });
+
+  it('opens the link as written, Pinakes’ frame for the card', () => {
+    const track = { ...card('isrc:GBAYE0601498'), embed: spotify, aliases: ['https://open.spotify.com/track/x'] };
+    expect(getOwnPlayer(track, 'https://open.spotify.com/track/69kOkLUCkxIZYexIgSG8rq')?.link).toBe(
+      'https://open.spotify.com/track/69kOkLUCkxIZYexIgSG8rq',
+    );
+    expect(getOwnPlayer(track)?.link).toBe('https://open.spotify.com/track/x');
+  });
+
+  it('gives a frame only the features the app allows, and no address on a port or this app', () => {
+    const asks = { ...toot, kind: 'rich', allow: ['camera', 'autoplay; microphone *', 'fullscreen', 'geolocation'] };
+    expect(getEmbedTarget(asks, 'https://a.example/1')?.allow).toBe('fullscreen');
+    expect(
+      getEmbedTarget({ ...toot, src: 'https://mastodon.social:8443/@a/1/embed' }, 'https://a.example/1'),
+    ).toBeNull();
+    expect(getEmbedTarget({ ...toot, src: `https://${window.location.hostname}/x` }, 'https://a.example/1')).toBeNull();
+  });
+
+  it('names a player of a service the app does not list after its site', () => {
+    const podcast: TPinakesEmbed = {
+      ...spotify,
+      provider: 'podbean',
+      src: 'https://www.podbean.com/player-v2/?i=abc',
+      height: 150,
+    };
+    expect(getEmbedTarget(podcast, 'https://show.podbean.com/e/one/', 'Podbean')).toMatchObject({
+      provider: 'podbean',
+      name: 'Podbean',
+      layout: { kind: 'audio', height: 150 },
+      autoplay: false,
+    });
+  });
+
+  it('leaves X to its own component, and refuses an address that is not https', () => {
+    const x = { ...toot, provider: 'x', src: 'https://platform.twitter.com/embed/Tweet.html?id=20&dnt=true' };
+    expect(getEmbedTarget(x, 'https://x.com/jack/status/20')).toBeNull();
+    expect(
+      getEmbedTarget({ ...toot, src: 'http://mastodon.social/@a/1/embed' }, 'https://mastodon.social/@a/1'),
+    ).toBeNull();
+    expect(getEmbedTarget({ ...toot, src: 'javascript:alert(1)' }, 'https://mastodon.social/@a/1')).toBeNull();
   });
 });

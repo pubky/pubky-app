@@ -6,6 +6,7 @@ import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
 import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { useSettingsStore } from '@/stores/settings/settings.store';
 import { defaultMediaPreferences } from '@/stores/settings/settings.types';
+import { asOpaque } from '@/test-utils/type-assertions';
 import { useCardPlayer } from './useCardPlayer';
 
 // A generic link (an artist's MusicBrainz page) Pinakes knows on a service with a player (Spotify,
@@ -700,6 +701,23 @@ describe('useCardPlayer, a song', () => {
       uri: 'https://www.deezer.com/track/67238735',
       site: 'Deezer',
     };
+    const TOOT: TPinakesResourceDetail = {
+      ...SONG_ALONE,
+      uri: 'https://mastodon.social/@Mastodon/117466985005297414',
+      name: 'A post',
+      site: 'mastodon.social',
+      type: 'SocialMediaPosting',
+      type_path: ['Thing', 'CreativeWork', 'SocialMediaPosting'],
+      embed: {
+        provider: 'mastodon',
+        kind: 'post',
+        src: 'https://mastodon.social/@Mastodon/117466985005297414/embed',
+        height: null,
+        aspect: null,
+        allow: [],
+        autoplay_param: null,
+      },
+    };
     const YOUTUBE = 'https://www.youtube-nocookie.com';
     const youtubeSays = (frame: HTMLElement, playerState: number, origin = YOUTUBE, source?: Window | null) =>
       act(() => {
@@ -722,6 +740,47 @@ describe('useCardPlayer, a song', () => {
         </>
       );
     }
+
+    it('keeps what plays when a post’s frame is pressed: a post or map frame is no player', () => {
+      vi.useFakeTimers();
+      render(
+        <>
+          <Song card={DEEZER_SONG} href={DEEZER_SONG.uri} testId="deezer" />
+          <Song card={TOOT} testId="toot" />
+        </>,
+      );
+      const deezer = frameOf('deezer');
+      engage(deezer);
+      const playing = deezer.closest('[data-keep-playing]');
+      expect(playing).not.toBeNull();
+
+      const toot = frameOf('toot');
+      expect(toot).toHaveAttribute('src', TOOT.embed?.src);
+      engage(toot);
+      expect(frameOf('deezer')).toBe(deezer);
+      expect(Array.from(docked())).toEqual([playing]);
+      expect(toot.closest('[data-keep-playing]')).toBeNull();
+      expect(document.querySelector('[data-docked]')).toBeNull();
+    });
+
+    it('keeps what plays on Show on: a post’s frame shown on a press stops nothing', () => {
+      setMedia({ embedsUpFront: false });
+      render(
+        <>
+          <Song card={DEEZER_SONG} href={DEEZER_SONG.uri} testId="deezer" />
+          <Song card={TOOT} testId="toot" />
+        </>,
+      );
+      fireEvent.click(screen.getByRole('button', { name: 'Play on Deezer' }));
+      const deezer = frameOf('deezer');
+      const playing = deezer.closest('[data-keep-playing]');
+      expect(playing).not.toBeNull();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Show on mastodon.social' }));
+      expect(frameOf('toot')).toHaveAttribute('src', TOOT.embed?.src);
+      expect(frameOf('deezer')).toBe(deezer);
+      expect(Array.from(docked())).toEqual([playing]);
+    });
 
     it('asks a YouTube player to say when it plays, and makes it the page’s player only once it does', () => {
       vi.useFakeTimers();
@@ -1209,5 +1268,193 @@ describe('useCardPlayer, anything that plays', () => {
 
     expect(within(screen.getByTestId('item-header')).getByTestId('player-switch')).toHaveTextContent('YouTube');
     expect(within(screen.getByTestId('embed-player')).queryByTestId('player-switch')).not.toBeInTheDocument();
+  });
+});
+
+describe('useCardPlayer, a frame Pinakes names (`embed`)', () => {
+  const POST: TPinakesResourceDetail = {
+    ...musicFixture,
+    uri: 'https://mastodon.social/@Mastodon/117466985005297414',
+    site: 'mastodon.social',
+    type: 'SocialMediaPosting',
+    type_path: ['Thing', 'CreativeWork', 'SocialMediaPosting'],
+    aliases: [],
+    also_on: [],
+    embed: {
+      provider: 'mastodon',
+      kind: 'post',
+      src: 'https://mastodon.social/@Mastodon/117466985005297414/embed',
+      height: null,
+      aspect: null,
+      allow: [],
+      autoplay_param: null,
+    },
+  };
+  const PLACE: TPinakesResourceDetail = {
+    ...musicFixture,
+    uri: 'https://www.openstreetmap.org/node/240109189',
+    name: 'Lugano',
+    site: 'OpenStreetMap',
+    type: 'Place',
+    type_path: ['Thing', 'Place'],
+    aliases: [],
+    also_on: [],
+    embed: {
+      provider: 'openstreetmap',
+      kind: 'map',
+      src: 'https://www.openstreetmap.org/export/embed.html?bbox=8.94%2C46.00%2C8.96%2C46.01&layer=mapnik&marker=46.00%2C8.95',
+      height: null,
+      aspect: 1.7778,
+      allow: [],
+      autoplay_param: null,
+    },
+  };
+
+  const SLIDES: TPinakesResourceDetail = {
+    ...musicFixture,
+    uri: 'https://speakerdeck.com/jlugia/what-is-pubky',
+    name: 'What is Pubky',
+    site: 'Speaker Deck',
+    type: 'PresentationDigitalDocument',
+    type_path: ['Thing', 'CreativeWork', 'DigitalDocument', 'PresentationDigitalDocument'],
+    aliases: [],
+    also_on: [],
+    embed: {
+      provider: 'speaker-deck',
+      kind: 'rich',
+      src: 'https://speakerdeck.com/player/0123456789abcdef',
+      height: null,
+      aspect: 1.7778,
+      allow: [],
+      autoplay_param: null,
+    },
+  };
+
+  it('shows a rich frame up front like any embed, while a place keeps its card first', () => {
+    render(
+      <>
+        <Card card={SLIDES} testId="slides" />
+        <Card card={PLACE} testId="place" />
+      </>,
+    );
+
+    expect(screen.getByTestId('slides')).toHaveAttribute('data-card', 'false');
+    expect(screen.getByTestId('resource-player-frame')).toHaveAttribute('src', SLIDES.embed?.src);
+    expect(screen.getByRole('region', { name: /^Speaker Deck embed:/ })).toBeInTheDocument();
+    expect(within(screen.getByTestId('slides')).queryByTestId('player-switch')).not.toBeInTheDocument();
+    expect(screen.getByTestId('place')).toHaveAttribute('data-card', 'true');
+    expect(within(screen.getByTestId('place')).queryByTestId('resource-player-frame')).not.toBeInTheDocument();
+    expect(within(screen.getByTestId('place-header')).getByTestId('player-switch')).toHaveTextContent('Card');
+  });
+
+  it('keeps a rich link’s card with platform embeds up front off: its frame in the switch, then Show on', () => {
+    useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } });
+    onTestFinished(() => {
+      useSettingsStore.setState({ media: defaultMediaPreferences });
+    });
+    render(
+      <>
+        <Card card={SLIDES} testId="slides" />
+        <Card card={PLACE} testId="place" />
+      </>,
+    );
+
+    expect(document.querySelector('iframe')).toBeNull();
+    expect(screen.getByTestId('slides')).toHaveAttribute('data-card', 'true');
+    expect(screen.getByTestId('place')).toHaveAttribute('data-card', 'true');
+    const menu = openSwitchOf('slides');
+    expect(rowsOf(menu)).toEqual(['Speaker Deck']);
+    fireEvent.click(within(menu).getAllByTestId('play-on-row')[0]);
+    expect(document.querySelector('iframe')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Show on Speaker Deck' }));
+    expect(screen.getByTestId('resource-player-frame')).toHaveAttribute('src', SLIDES.embed?.src);
+    expect(document.querySelectorAll('iframe')).toHaveLength(1);
+    expect(screen.queryByTestId('player-dock-close')).not.toBeInTheDocument();
+  });
+
+  it('lets a frame go while its card is hidden (a feed behind an open post), and loads it again when shown', () => {
+    // Cards inside `[data-hidden]` are laid out nowhere; any other far below the viewport.
+    vi.spyOn(Element.prototype, 'getClientRects').mockImplementation(function (this: Element) {
+      return asOpaque<DOMRectList>(this.closest('[data-hidden]') ? [] : [{}]);
+    });
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(
+      () => ({ top: 5000, bottom: 5080, left: 0, right: 400, width: 400, height: 80, x: 0, y: 5000 }) as DOMRect,
+    );
+    let resizes: Array<() => void> = [];
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        private readonly report: () => void;
+        constructor(report: () => void) {
+          this.report = report;
+        }
+        observe() {
+          resizes.push(this.report);
+        }
+        unobserve() {}
+        disconnect() {
+          resizes = resizes.filter((report) => report !== this.report);
+        }
+      },
+    );
+    onTestFinished(() => {
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+    });
+    const Feed = ({ hidden }: { hidden: boolean }) => (
+      <div data-hidden={hidden || undefined}>
+        <Card card={SLIDES} testId="slides" />
+      </div>
+    );
+    const resize = () => act(() => resizes.forEach((report) => report()));
+    const { rerender } = render(<Feed hidden={false} />);
+
+    // Off screen but laid out: it stays.
+    resize();
+    expect(screen.getByTestId('resource-player-frame')).toHaveAttribute('src', SLIDES.embed?.src);
+
+    rerender(<Feed hidden />);
+    resize();
+    expect(document.querySelector('iframe')).toBeNull();
+    expect(screen.getByTestId('embed-player')).toBeInTheDocument();
+
+    rerender(<Feed hidden={false} />);
+    resize();
+    expect(screen.getByTestId('resource-player-frame')).toHaveAttribute('src', SLIDES.embed?.src);
+    expect(document.querySelectorAll('iframe')).toHaveLength(1);
+  });
+
+  it('shows a post’s own frame up front, its only source: no switch, no Card', () => {
+    render(<Card card={POST} testId="post" />);
+
+    expect(screen.getByTestId('resource-player-frame')).toHaveAttribute('src', POST.embed?.src);
+    expect(screen.getByRole('region', { name: /^mastodon\.social embed:/ })).toBeInTheDocument();
+    expect(screen.queryByTestId('player-switch')).not.toBeInTheDocument();
+  });
+
+  it('shows a place’s card first and its map in the switch, at the map’s shape', () => {
+    render(<Card card={PLACE} testId="place" />);
+
+    expect(screen.getByTestId('place')).toHaveAttribute('data-card', 'true');
+    expect(document.querySelector('iframe')).toBeNull();
+    const menu = openSwitchOf('place');
+    expect(rowsOf(menu)).toEqual(['OpenStreetMap']);
+    fireEvent.click(within(menu).getAllByTestId('play-on-row')[0]);
+    expect(screen.getByTestId('resource-player-frame')).toHaveAttribute('src', PLACE.embed?.src);
+    expect(screen.getByRole('region', { name: /^OpenStreetMap embed:/ })).toHaveStyle({ aspectRatio: '1.7778' });
+  });
+
+  it('loads no frame with platform embeds up front off: Show on, nothing from the site', () => {
+    useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } });
+    onTestFinished(() => {
+      useSettingsStore.setState({ media: defaultMediaPreferences });
+    });
+    render(<Card card={POST} testId="post" />);
+
+    expect(document.querySelector('iframe')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Show on mastodon.social' }));
+    // Shown, not played: it is not the page's player, so it neither docks nor stops what plays.
+    expect(screen.getByTestId('resource-player-frame')).toHaveAttribute('src', POST.embed?.src);
+    expect(screen.queryByTestId('player-dock-close')).not.toBeInTheDocument();
   });
 });
