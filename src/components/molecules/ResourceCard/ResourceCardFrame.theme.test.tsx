@@ -1,8 +1,10 @@
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { ResourceCardSkeleton } from '@/molecules/ResourceCardSkeleton/ResourceCardSkeleton';
 import { ResourceCardFrame } from './ResourceCardFrame';
 import { ResourceSurfaceProvider } from './ResourceSurfaceContext';
+
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 
 describe('resource embed surface', () => {
   it('shares the post and link preview surface token for the frame and its skeleton', () => {

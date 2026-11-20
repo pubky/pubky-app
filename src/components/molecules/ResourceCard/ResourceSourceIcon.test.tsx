@@ -154,4 +154,13 @@ describe('ResourceSourceIcon', () => {
       );
     });
   });
+
+  it.each(['https://x.com/a/status/1', 'https://twitter.com/a/status/1', 'https://www.x.com/a/status/1'])(
+    'draws the app’s X mark for %s instead of X’s black favicon tile',
+    (uri) => {
+      render(<ResourceSourceIcon uri={uri} />);
+      expect(screen.getByTestId('resource-source-brand')).toBeInTheDocument();
+      expect(screen.queryByTestId('resource-source-favicon')).not.toBeInTheDocument();
+    },
+  );
 });

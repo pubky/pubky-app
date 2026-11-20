@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { isPinakesConfigured, PINAKES_SLOW_READ_MS } from '@/config/pinakes';
 import { usePinakesCard } from '@/hooks/usePinakesCard/usePinakesCard';
@@ -8,7 +8,7 @@ import { useViewportObserver } from '@/hooks/useViewportObserver/useViewportObse
 import { fileNameFromUrl, inferMediaKindFromUrl } from '@/libs/file/inlineMediaKind';
 import { useIsNestedPostPreview } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import { ResourceAlsoOn } from '@/molecules/ResourceCard/ResourceAlsoOn';
-import { pickAlsoOn } from '@/molecules/ResourceCard/ResourceAlsoOn.utils';
+import { getMenuAlsoOn } from '@/molecules/ResourceCard/ResourceAlsoOn.utils';
 import { ResourceCard } from '@/molecules/ResourceCard/ResourceCard';
 import {
   getHttpUrl,
@@ -16,30 +16,17 @@ import {
   getResourceStatus,
   getResourceTagsLabel,
 } from '@/molecules/ResourceCard/ResourceCard.utils';
+import { ResourceEmbedFrame } from '@/molecules/ResourceCard/ResourceEmbedFrame';
 import { ResourceLinkCard } from '@/molecules/ResourceCard/ResourceLinkCard';
 import { useResourceSurface } from '@/molecules/ResourceCard/ResourceSurfaceContext';
 import { ResourceCardSkeleton } from '@/molecules/ResourceCardSkeleton/ResourceCardSkeleton';
-import { AnimatedHeight } from '@/molecules/ResourcePlayer/ResourcePlayerFrame';
+import { getEmbedTarget } from '@/molecules/ResourcePlayer/resourcePlayer.utils';
+import { AnimatedHeight, ResourcePlayerFrame } from '@/molecules/ResourcePlayer/ResourcePlayerFrame';
 import { useCardPlayer } from '@/molecules/ResourcePlayer/useCardPlayer';
 import { ResourceActions } from '@/organisms/ResourceActions/ResourceActions';
 import { PinakesStatus, type TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { GenericPreview } from './GenericPreview';
-
-/**
- * `true` once the read of `key` has taken longer than `ms`, and from then on while `key` stays: the
- * link's own preview stands in for the skeleton until the card is read. Another `key` (the
- * composer's link changes) starts over.
- */
-function useSlowRead(key: string | null, isLoading: boolean, ms: number): boolean {
-  const [slowKey, setSlowKey] = useState<string | null>(null);
-  const slow = key !== null && slowKey === key;
-  useEffect(() => {
-    if (key === null || !isLoading || slow) return;
-    const timer = setTimeout(() => setSlowKey(key), ms);
-    return () => clearTimeout(timer);
-  }, [key, isLoading, slow, ms]);
-  return slow;
-}
+import { useSlowRead } from './useSlowRead';
 
 const IMAGE_FILE_EXTENSION = /\.(avif|bmp|gif|jpe?g|png|svg|webp)$/i;
 
@@ -65,16 +52,6 @@ function isDirectMediaFile(url: string): boolean {
 function hasNothingToShow(card: TPinakesResourceDetail): boolean {
   const status = getResourceStatus(card.status);
   return !card.name && (status === PinakesStatus.PENDING || status === PinakesStatus.ERROR);
-}
-
-/**
- * The ⋯ menu's Also on: the card's other services, one row each, without its own service (the
- * card's header opens it), or `null` when that leaves none.
- */
-function getMenuAlsoOn(card: TPinakesResourceDetail, url: string): TPinakesResourceDetail['also_on'] | null {
-  const { sourceUri, siteName } = getResourceLinks(card, url);
-  const alsoOn = pickAlsoOn(card.also_on, { site: siteName, uris: [card.uri, url, sourceUri] });
-  return alsoOn.length > 0 ? alsoOn : null;
 }
 
 interface GenericResourcePreviewProps {
@@ -103,6 +80,10 @@ interface GenericResourcePreviewProps {
  *
  * A card on a service that allows embedding plays there in place (`useCardPlayer`: "Play on
  * <service>" in the action row, a dock when it scrolls away); not in the composer or a quoted post.
+ *
+ * A card on such a service with no Also on shows that service's embed up front instead, in the
+ * resource frame (`ResourceEmbedFrame`), as `NativeEmbedResource` does for a video; in a post, the
+ * composer and a collection alike. It plays only on a press inside it.
  *
  * A link Pinakes does not know yet (a post published seconds ago) is read again while the preview
  * is on screen (`usePinakesCard`'s `recheck`), and its card replaces the link's own preview in the
@@ -145,9 +126,11 @@ function ResourcePreview({
     resolve: isComposing,
   });
   const isSlow = useSlowRead(lookupUrl, isLoading, PINAKES_SLOW_READ_MS);
+  // The up-front service embed that has loaded (see `embedTarget`); another link loads anew.
+  const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
   const withActions = !isComposing && !isNested;
   // A card with an action row plays its services in place; not while composing or in a quoted post.
-  const { playOn, renderBody } = useCardPlayer(
+  const { playOn, renderBody, isOpen } = useCardPlayer(
     withActions && card && !hasNothingToShow(card) ? card : null,
     url,
     actionSurface,
@@ -160,9 +143,16 @@ function ResourcePreview({
   const shownCard = card && !hasNothingToShow(card) ? card : null;
   // The ⋯ menu copies what the card links.
   const linkUrl = shownCard ? getResourceLinks(shownCard, url).linkUrl : getHttpUrl(url);
-  // A card on other services too lists them in its ⋯ menu ("Also on") and is then no click-through:
-  // one row per service, never the card's own (`pickAlsoOn`).
-  const alsoOn = withActions && shownCard ? getMenuAlsoOn(shownCard, url) : null;
+  // A card on other services too lists them in its ⋯ menu ("Also on"): one row per service, never
+  // the card's own (`pickAlsoOn`).
+  const cardAlsoOn = shownCard ? getMenuAlsoOn(shownCard, url) : null;
+  const alsoOn = withActions ? cardAlsoOn : null;
+  // No Also on and the link (or the card's canonical link) is on a service with an embed: that embed,
+  // up front, in the resource frame.
+  const embedTarget =
+    !isNested && shownCard && !cardAlsoOn && getResourceStatus(shownCard.status) === PinakesStatus.OK
+      ? getEmbedTarget(url, shownCard)
+      : null;
   const actions = !withActions ? null : (
     <ResourceActions
       uri={url}
@@ -171,7 +161,7 @@ function ResourcePreview({
       linkUrl={linkUrl}
       title={shownCard?.name}
       isOnScreen={isOnScreen}
-      playOn={shownCard ? playOn : undefined}
+      playOn={shownCard && !embedTarget ? playOn : undefined}
       extraMenuContent={
         alsoOn
           ? ({ variant, closeMenu }) => <ResourceAlsoOn alsoOn={alsoOn} variant={variant} closeMenu={closeMenu} />
@@ -180,14 +170,27 @@ function ResourcePreview({
     />
   );
   if (!shownCard) return <ResourceLinkCard url={url} actions={actions} />;
+  if (embedTarget) {
+    return (
+      <ResourceEmbedFrame url={url} card={shownCard} actions={actions}>
+        <ResourcePlayerFrame
+          target={embedTarget}
+          title={shownCard.name?.trim() || url}
+          load={loadedSrc === embedTarget.src ? 'ready' : 'loading'}
+          onLoaded={() => setLoadedSrc(embedTarget.src)}
+          quiet
+        />
+      </ResourceEmbedFrame>
+    );
+  }
   return (
     <ResourceCard
       card={shownCard}
       href={url}
       actions={actions}
-      hasAlsoOn={alsoOn !== null}
       isOnScreen={isOnScreen}
       renderBody={renderBody}
+      isBodyReplaced={isOpen}
     />
   );
 }

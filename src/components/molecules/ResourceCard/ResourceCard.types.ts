@@ -43,12 +43,6 @@ export interface ResourceCardProps {
    */
   actions?: ReactNode;
   /**
-   * Whether the actions' ⋯ menu lists other services under "Also on" (the card is on other services
-   * too). Then the viewer picks the service there and the card is no click-through; else it is,
-   * unless large.
-   */
-  hasAlsoOn?: boolean;
-  /**
    * `default`: a card in a post, whose title opens the resource's page. `large`: the card heading
    * that page, whose title is no link (its header's "Open in <site>" opens the resource).
    */
@@ -60,8 +54,13 @@ export interface ResourceCardProps {
   isOnScreen?: boolean;
   /**
    * Wraps the card's image and text, e.g. to put a service's player in their place
-   * (`useCardPlayer`); the header, details, credits and `actions` stay. A card given one is no
-   * click-through: its body may turn into a player.
+   * (`useCardPlayer`); the header, details, credits and `actions` stay.
    */
   renderBody?: (body: ReactNode) => ReactNode;
+  /**
+   * Whether `renderBody` shows a service's player or a platform's embed in place of the body now:
+   * that body is then its own set of controls, never a click-through. The `large` card leaves out
+   * its Details then (the resource page's X post shows them itself).
+   */
+  isBodyReplaced?: boolean;
 }

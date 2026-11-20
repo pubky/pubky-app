@@ -1,8 +1,12 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { getResourceRoute } from '@/app/routes';
 import { useOgMetadata } from '@/hooks/useOgMetadata/useOgMetadata';
+import { PostPreviewNavigableProvider } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import { ResourceLinkCard } from './ResourceLinkCard';
 
+const mockPush = vi.fn();
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: mockPush }) }));
 vi.mock('@/hooks/useOgMetadata/useOgMetadata', () => ({ useOgMetadata: vi.fn() }));
 
 const URL = 'https://www.example.com/articles/a-long-path?ref=feed';
@@ -20,13 +24,17 @@ describe('ResourceLinkCard', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    mockPush.mockClear();
   });
 
   it('shows the link’s preview in the card frame, with the host as its source', () => {
     render(<ResourceLinkCard url={URL} actions={<div data-testid="actions" />} />);
 
     expect(screen.getByTestId('resource-link-card-title')).toHaveTextContent('An article');
-    expect(screen.getByTestId('resource-link-card-title')).toHaveAttribute('href', URL);
+    // The title opens the resource's page, the site link the link itself in a new tab.
+    expect(screen.getByTestId('resource-link-card-title')).toHaveAttribute('href', getResourceRoute(URL));
+    expect(screen.getByTestId('resource-link-card-title')).not.toHaveAttribute('target');
+    expect(screen.getByTestId('resource-card-source')).toHaveAttribute('target', '_blank');
     expect(screen.getByTestId('resource-link-card-image')).toHaveAttribute('src', 'https://cdn.example.com/a.png');
     expect(screen.getByTestId('resource-card-source')).toHaveTextContent('example.com');
     expect(screen.getByTestId('resource-card-source')).toHaveAccessibleName('Open in example.com');
@@ -34,6 +42,19 @@ describe('ResourceLinkCard', () => {
     expect(screen.getByTestId('resource-card-source')).toHaveAttribute('href', URL);
     expect(screen.queryByTestId('resource-card-type')).not.toBeInTheDocument();
     expect(screen.getByTestId('actions')).toBeInTheDocument();
+  });
+
+  it('opens the resource page in a new tab from the title where links may not navigate (the composer)', () => {
+    render(
+      <PostPreviewNavigableProvider navigable={false}>
+        <ResourceLinkCard url={URL} />
+      </PostPreviewNavigableProvider>,
+    );
+
+    const title = screen.getByTestId('resource-link-card-title');
+    expect(title).toHaveAttribute('href', getResourceRoute(URL));
+    expect(title).toHaveAttribute('target', '_blank');
+    expect(title).toHaveAttribute('rel', 'noopener noreferrer');
   });
 
   it('titles the card with the link without its scheme when there is no preview', () => {
@@ -46,13 +67,16 @@ describe('ResourceLinkCard', () => {
     );
   });
 
-  it('is a click-through to the link', () => {
+  it('opens the link’s resource page on a click on the card: only its source opens the link', () => {
     const open = vi.spyOn(window, 'open').mockReturnValue(null);
     render(<ResourceLinkCard url={URL} />);
 
+    fireEvent.click(screen.getByTestId('resource-link-card-image'));
     fireEvent.click(screen.getByTestId('resource-link-card'));
 
-    expect(open).toHaveBeenCalledWith(URL, '_blank', 'noopener,noreferrer');
+    expect(mockPush).toHaveBeenCalledTimes(2);
+    expect(mockPush).toHaveBeenCalledWith(getResourceRoute(URL));
+    expect(open).not.toHaveBeenCalled();
   });
 
   it('shows the frame skeleton while the preview loads', () => {

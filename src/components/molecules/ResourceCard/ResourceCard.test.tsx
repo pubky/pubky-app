@@ -23,6 +23,8 @@ import { PinakesStatus, type TPinakesResourceDetail } from '@/services/pinakes/p
 import { ResourceCard } from './ResourceCard';
 import { ResourceFamily } from './ResourceCard.types';
 
+const mockPush = vi.fn();
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: mockPush }) }));
 // The link's own preview (OpenGraph) fills only what a card lacks; its tests are in ResourceCard.fallback.test.
 vi.mock('@/hooks/useOgMetadata/useOgMetadata', () => ({
   useOgMetadata: () => ({ metadata: null, isLoading: false, error: null }),
@@ -37,14 +39,49 @@ const source = () => screen.getByTestId('resource-card-source');
 describe('ResourceCard', () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    mockPush.mockClear();
   });
 
   describe('header and click-through', () => {
-    it('is no click-through when its body may turn into a player', () => {
-      render(<ResourceCard card={videoFixture} renderBody={(body) => <div data-testid="wrapped">{body}</div>} />);
+    it('stays a click-through while a player or an embed stands in its body, and a click in that body stays there', () => {
+      const wrap = (body: React.ReactNode) => <div data-testid="wrapped">{body}</div>;
+      const { rerender } = render(<ResourceCard card={videoFixture} renderBody={wrap} />);
 
-      expect(card()).not.toHaveAttribute('data-click-through');
+      // A body that may turn into a player is the card's until it does.
+      expect(card()).toHaveAttribute('data-click-through', 'true');
       expect(screen.getByTestId('wrapped')).toContainElement(title());
+      expect(screen.getByTestId('wrapped').closest('[data-resource-controls]')).toBeNull();
+
+      const wrapped = screen.getByTestId('wrapped');
+      rerender(<ResourceCard card={videoFixture} renderBody={wrap} isBodyReplaced />);
+      // Opening a player remounts nothing the body renders (its AnimatedHeight animates the change).
+      expect(screen.getByTestId('wrapped')).toBe(wrapped);
+      // The player (or embed) and the space around it are its own controls, as in the embed frame.
+      const controls = screen.getByTestId('wrapped').closest('[data-resource-controls]');
+      expect(controls).toHaveClass('cursor-auto');
+      fireEvent.click(screen.getByTestId('wrapped'));
+      fireEvent.click(controls!);
+      expect(mockPush).not.toHaveBeenCalled();
+
+      // The rest of the card still opens the resource page.
+      expect(card()).toHaveAttribute('data-click-through', 'true');
+      fireEvent.click(screen.getByTestId('resource-card-type'));
+      expect(mockPush).toHaveBeenCalledTimes(1);
+      expect(mockPush).toHaveBeenCalledWith(getResourceRoute(videoFixture.uri));
+    });
+
+    it('stays a click-through while its episode plays in the card, and a click on the audio stays there', () => {
+      const stream = { url: 'https://cdn.example.com/episode.mp3', type: 'audio/mpeg', preview: false };
+      render(<ResourceCard card={{ ...ARTICLE, stream }} href={ARTICLE.uri} />);
+      const audio = screen.getByTestId('resource-card-audio');
+
+      fireEvent.play(audio);
+      fireEvent.click(audio);
+      expect(mockPush).not.toHaveBeenCalled();
+
+      expect(card()).toHaveAttribute('data-click-through', 'true');
+      fireEvent.click(screen.getByTestId('resource-card-description'));
+      expect(mockPush).toHaveBeenCalledWith(getResourceRoute(ARTICLE.uri));
     });
 
     it('names the site top right with an arrow, never the full link', () => {
@@ -56,27 +93,66 @@ describe('ResourceCard', () => {
       expect(source()).toHaveAccessibleName('Open in Wikipedia (en)');
     });
 
-    it('opens the link in a new tab on a click anywhere on the card', () => {
+    it('opens the resource page in the same tab on a click anywhere on the card', () => {
       const open = vi.spyOn(window, 'open').mockReturnValue(null);
       render(<ResourceCard card={ARTICLE} href={ARTICLE.uri} />);
 
       fireEvent.click(screen.getByTestId('resource-card-description'));
+      fireEvent.click(screen.getByTestId('resource-card-image'));
+      fireEvent.click(screen.getByTestId('resource-card-type'));
 
-      expect(open).toHaveBeenCalledWith(ARTICLE.uri, '_blank', 'noopener,noreferrer');
+      expect(mockPush).toHaveBeenCalledTimes(3);
+      expect(mockPush).toHaveBeenCalledWith(getResourceRoute(ARTICLE.uri));
+      expect(open).not.toHaveBeenCalled();
       expect(card()).toHaveAttribute('data-click-through', 'true');
       expect(card()).not.toHaveAttribute('role');
+    });
+
+    it('opens the resource page in a new tab on Cmd, Ctrl or Shift-click and on a middle click, as a link does', () => {
+      const open = vi.spyOn(window, 'open').mockReturnValue(null);
+      render(<ResourceCard card={ARTICLE} href={ARTICLE.uri} />);
+      const description = screen.getByTestId('resource-card-description');
+
+      fireEvent.click(description, { metaKey: true });
+      fireEvent.click(description, { ctrlKey: true });
+      fireEvent.click(description, { shiftKey: true });
+      fireEvent(description, new MouseEvent('auxclick', { bubbles: true, cancelable: true, button: 1 }));
+      // A right click opens the context menu, not the page.
+      fireEvent(description, new MouseEvent('auxclick', { bubbles: true, cancelable: true, button: 2 }));
+
+      expect(open).toHaveBeenCalledTimes(4);
+      expect(open).toHaveBeenCalledWith(getResourceRoute(ARTICLE.uri), '_blank', 'noopener,noreferrer');
+      expect(mockPush).not.toHaveBeenCalled();
+    });
+
+    it('opens the resource page in a new tab where links may not navigate (the composer)', () => {
+      const open = vi.spyOn(window, 'open').mockReturnValue(null);
+      render(
+        <PostPreviewNavigableProvider navigable={false}>
+          <ResourceCard card={ARTICLE} href={ARTICLE.uri} />
+        </PostPreviewNavigableProvider>,
+      );
+
+      fireEvent.click(screen.getByTestId('resource-card-description'));
+
+      expect(open).toHaveBeenCalledWith(getResourceRoute(ARTICLE.uri), '_blank', 'noopener,noreferrer');
+      expect(mockPush).not.toHaveBeenCalled();
     });
 
     it('keeps the click on the card, away from the surrounding post', () => {
       vi.spyOn(window, 'open').mockReturnValue(null);
       const onPostClick = vi.fn();
       render(
-        <div onClick={onPostClick}>
+        <div onClick={onPostClick} onAuxClick={onPostClick}>
           <ResourceCard card={ARTICLE} href={ARTICLE.uri} />
         </div>,
       );
 
       fireEvent.click(screen.getByTestId('resource-card-description'));
+      fireEvent(
+        screen.getByTestId('resource-card-description'),
+        new MouseEvent('auxclick', { bubbles: true, cancelable: true, button: 1 }),
+      );
 
       expect(onPostClick).not.toHaveBeenCalled();
     });
@@ -102,6 +178,7 @@ describe('ResourceCard', () => {
       fireEvent.click(screen.getByTestId('actions-gap'));
 
       expect(open).not.toHaveBeenCalled();
+      expect(mockPush).not.toHaveBeenCalled();
     });
 
     it('keeps Enter and Space on its links and controls away from the surrounding post', () => {
@@ -154,60 +231,33 @@ describe('ResourceCard', () => {
       expect(card().children).toHaveLength(2);
     });
 
-    it('leaves the link to the ⋯ menu when it lists other services under Also on', () => {
+    it('opens the resource page whatever its ⋯ menu lists (Also on): only the source opens the link', () => {
       const open = vi.spyOn(window, 'open').mockReturnValue(null);
       render(
         <ResourceCard
           card={videoFixture}
           href={videoFixture.uri}
           actions={<div data-resource-controls data-testid="actions" />}
-          hasAlsoOn
         />,
       );
 
       fireEvent.click(screen.getByTestId('resource-card-description'));
 
+      expect(mockPush).toHaveBeenCalledWith(getResourceRoute(videoFixture.uri));
       expect(open).not.toHaveBeenCalled();
-      expect(card()).not.toHaveAttribute('data-click-through');
-      expect(card().firstElementChild).not.toHaveClass('cursor-pointer');
+      expect(card().firstElementChild).toHaveClass('cursor-pointer');
       expect(title()).toHaveAttribute('href', getResourceRoute(videoFixture.uri));
       expect(source()).toHaveAttribute('href', videoFixture.uri);
+      expect(source()).toHaveAttribute('target', '_blank');
     });
 
-    it('stays a click-through on other services too while its ⋯ menu lists no Also on', () => {
-      const open = vi.spyOn(window, 'open').mockReturnValue(null);
-      render(
-        <ResourceCard
-          card={videoFixture}
-          href={videoFixture.uri}
-          actions={<div data-resource-controls data-testid="actions" />}
-        />,
-      );
-
-      fireEvent.click(screen.getByTestId('resource-card-description'));
-
-      expect(open).toHaveBeenCalledWith(videoFixture.uri, '_blank', 'noopener,noreferrer');
-      expect(card()).toHaveAttribute('data-click-through', 'true');
-    });
-
-    it('stays a click-through on other services too while it has no actions (composing)', () => {
-      const open = vi.spyOn(window, 'open').mockReturnValue(null);
-      render(<ResourceCard card={videoFixture} href={videoFixture.uri} />);
-
-      fireEvent.click(screen.getByTestId('resource-card-description'));
-
-      expect(open).toHaveBeenCalledWith(videoFixture.uri, '_blank', 'noopener,noreferrer');
-    });
-
-    it('has no click-through without a web link', () => {
-      const open = vi.spyOn(window, 'open').mockReturnValue(null);
+    it('opens the resource page of a resource without a web link too', () => {
       render(<ResourceCard card={{ ...bookFixture, open_in: [] }} />);
 
-      fireEvent.click(title());
+      fireEvent.click(card().firstElementChild as HTMLElement);
 
-      expect(open).not.toHaveBeenCalled();
-      expect(card()).not.toHaveAttribute('data-click-through');
-      expect(card().firstElementChild).not.toHaveClass('cursor-pointer');
+      expect(mockPush).toHaveBeenCalledWith(getResourceRoute(bookFixture.uri));
+      expect(card().firstElementChild).toHaveClass('cursor-pointer');
     });
   });
 
@@ -256,7 +306,7 @@ describe('ResourceCard', () => {
       expect(source()).toHaveAttribute('rel', 'noopener noreferrer');
     });
 
-    it('links the title out where links may not navigate (the composer, a quoted post in a dialog)', () => {
+    it('links the title to the resource page in a new tab where links may not navigate (the composer, a quoted post in a dialog)', () => {
       const href = 'https://en.m.wikipedia.org/wiki/Bitcoin';
       render(
         <PostPreviewNavigableProvider navigable={false}>
@@ -264,9 +314,12 @@ describe('ResourceCard', () => {
         </PostPreviewNavigableProvider>,
       );
 
-      expect(title()).toHaveAttribute('href', href);
+      expect(title()).toHaveAttribute('href', getResourceRoute(ARTICLE.uri));
       expect(title()).toHaveAttribute('target', '_blank');
       expect(title()).toHaveAttribute('rel', 'noopener noreferrer');
+      // The site link still opens the link as written, in a new tab.
+      expect(source()).toHaveAttribute('href', href);
+      expect(source()).toHaveAttribute('target', '_blank');
     });
 
     it('takes the favicon from the card’s own site when the post uses another host', () => {
@@ -699,6 +752,7 @@ describe('ResourceCard', () => {
 
       fireEvent.click(screen.getByTestId('resource-card-description'));
       expect(open).not.toHaveBeenCalled();
+      expect(mockPush).not.toHaveBeenCalled();
       expect(card()).not.toHaveAttribute('data-click-through');
     });
 
@@ -743,16 +797,18 @@ describe('ResourceCard', () => {
     it('does not send the card, its source or its heading to a link that is gone upstream', () => {
       const { unmount } = render(<ResourceCard card={missingFixture} href={missingFixture.uri} />);
       expect(source().tagName).toBe('SPAN');
-      expect(card()).not.toHaveAttribute('data-click-through');
+      // The card, like its title, opens the resource's page (which says it is gone).
+      fireEvent.click(card().firstElementChild as HTMLElement);
+      expect(mockPush).toHaveBeenCalledWith(getResourceRoute(missingFixture.uri));
       unmount();
 
-      // Where links may not navigate, its title is text too.
+      // Its title still opens the resource's page (which says it is gone), never the link.
       const { unmount: unmountQuoted } = render(
         <PostPreviewNavigableProvider navigable={false}>
           <ResourceCard card={missingFixture} href={missingFixture.uri} />
         </PostPreviewNavigableProvider>,
       );
-      expect(title().tagName).not.toBe('A');
+      expect(title()).toHaveAttribute('href', getResourceRoute(missingFixture.uri));
       unmountQuoted();
 
       render(<ResourceCard card={missingFixture} size="large" />);
@@ -809,13 +865,13 @@ describe('ResourceCard', () => {
 
       fireEvent.click(screen.getByRole('link', { name: 'Wikipedia' }));
       expect(open).not.toHaveBeenCalled();
+      expect(mockPush).not.toHaveBeenCalled();
 
       fireEvent.click(screen.getByTestId('resource-card-description'));
-      expect(open).toHaveBeenCalledWith(MB_GROUP.uri, '_blank', 'noopener,noreferrer');
+      expect(mockPush).toHaveBeenCalledWith(getResourceRoute(MB_GROUP.uri));
     });
 
     it('treats a source that is not an http(s) page as the card’s surface, like the description', () => {
-      const open = vi.spyOn(window, 'open').mockReturnValue(null);
       const card = {
         ...MB_GROUP,
         credits: MB_GROUP.credits?.map((credit) => ({ ...credit, source_url: 'urn:x', license_url: null })),
@@ -824,7 +880,7 @@ describe('ResourceCard', () => {
 
       expect(within(credits()).queryByRole('link')).not.toBeInTheDocument();
       fireEvent.click(screen.getAllByTestId('resource-credit-source')[0]);
-      expect(open).toHaveBeenCalledWith(MB_GROUP.uri, '_blank', 'noopener,noreferrer');
+      expect(mockPush).toHaveBeenCalledWith(getResourceRoute(MB_GROUP.uri));
     });
 
     it('drops the image’s credit when the image fails to load', () => {

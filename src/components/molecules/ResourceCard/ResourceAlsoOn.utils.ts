@@ -1,5 +1,5 @@
-import type { TPinakesAlsoOn } from '@/services/pinakes/pinakes.types';
-import { getAlsoOnName, getAlsoOnNote, getHttpUrl, getLinkHost } from './ResourceCard.utils';
+import type { TPinakesAlsoOn, TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
+import { getAlsoOnName, getAlsoOnNote, getHttpUrl, getLinkHost, getResourceLinks } from './ResourceCard.utils';
 
 /** One language edition of a service in Also on (`Wikipedia (de)`): its language code and entry. */
 export interface TAlsoOnEdition {
@@ -97,6 +97,16 @@ export function pickAlsoOn(alsoOn: TPinakesAlsoOn[], own: TOwnService): TPinakes
       return !ownName || getAlsoOnName(entry).toLowerCase() !== ownName;
     }),
   );
+}
+
+/**
+ * The ⋯ menu's Also on: the card's other services, one row each, without its own service (the
+ * card's header opens it), or `null` when that leaves none.
+ */
+export function getMenuAlsoOn(card: TPinakesResourceDetail, url: string): TPinakesResourceDetail['also_on'] | null {
+  const { sourceUri, siteName } = getResourceLinks(card, url);
+  const alsoOn = pickAlsoOn(card.also_on, { site: siteName, uris: [card.uri, url, sourceUri] });
+  return alsoOn.length > 0 ? alsoOn : null;
 }
 
 /**
