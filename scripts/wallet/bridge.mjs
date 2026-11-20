@@ -7,13 +7,16 @@ import { validGrant } from './transport.mjs';
 export const maxRelayPayload = 1024 * 1024;
 export const maxRelayClients = 256;
 
-export function acceptsRelayGrant(settings, origin, protocolHeader) {
+export function relayToken(settings, origin, protocolHeader) {
   const protocols = (protocolHeader ?? '').split(',').map((part) => part.trim());
   const auth = protocols.find((part) => part.startsWith('auth.'));
   // The hosted adapter negotiates the first offered protocol. The grant must never be echoed.
-  return (
-    origin === settings.appOrigin && protocols[0] === 'beignet.v1' && !!auth && validGrant(settings, auth.slice(5))
-  );
+  return origin === settings.appOrigin && protocols[0] === 'beignet.v1' && auth ? auth.slice(5) : null;
+}
+
+export function acceptsRelayGrant(settings, origin, protocolHeader) {
+  const token = relayToken(settings, origin, protocolHeader);
+  return !!token && validGrant(settings, token);
 }
 
 export function bridgeSocket(ws, target) {

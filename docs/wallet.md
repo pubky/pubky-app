@@ -28,13 +28,17 @@ The app includes the browser worker and a small Node relay. The operator supplie
 
 ## Host the wallet
 
-Serve the app over HTTPS on a stable origin. Run the relay as a persistent Node process on the host with access to the two configured upstreams. Put a TLS reverse proxy in front of its loopback port (8790 by default, configurable through `WALLET_RELAY_PORT`). Forward WebSocket upgrades for `/peer` and `/electrum`. Set `WALLET_APP_ORIGIN` to the literal HTTPS app origin and `WALLET_RELAY_ORIGIN` to the public WSS relay origin. Supply the same secret, primary, network and origins to the app server and relay. Keep the secret in server-side environment variables. The browser receives a 15-minute grant which the worker renews while open.
+Serve the app over HTTPS on a stable origin. Set `WALLET_APP_ORIGIN` to the literal HTTPS app origin and `WALLET_RELAY_ORIGIN` to the public WSS relay origin. The browser receives a 15-minute transport ticket which the worker renews while open.
+
+For standalone hosting, run the Node relay on a host that can reach both configured upstreams. Put a TLS reverse proxy in front of its loopback port (8790 by default, configurable through `WALLET_RELAY_PORT`). Forward WebSocket upgrades for `/peer` and `/electrum`. Supply matching primary, network, origins and `WALLET_RELAY_SECRET` to the app server and relay. They use this shared secret to issue and verify HMAC tickets.
 
 For zero-reserve receiving channels, set `BEIGNET_WAIVE_CLIENT_RESERVE=true` on the Beignet primary before the wallet requests a new, private just-in-time (JIT) receiving channel. A manual channel to a trusted peer alone does not qualify for the waiver. The embedded wallet advertises this feature and keeps the primary's reserve intact. The primary must monitor revoked commitments and enforce the penalty within the channel delay. Existing channels keep their negotiated terms, and a wallet that opened a channel must still cover its commitment costs. [Beignet zero-reserve policy](https://github.com/coreyphillips/beignet/blob/v0.43.6/docs/ZERO-RESERVE.md)
 
 Set `WALLET_ELECTRUM` to a `tls://host:port` URL for a TLS Electrum server. The relay verifies its certificate. For a primary behind Tor or another tunnel, configure a fixed local forward and set `WALLET_PEER_TUNNEL=tcp://127.0.0.1:<forwarded-port>`. Keep the primary’s real identity in `WALLET_PRIMARY_URI`. The peer authenticates over BOLT8. The relay can observe Electrum requests and network metadata.
 
-On Vercel, the included `/peer` and `/electrum` Node functions serve the relay on the app's own domain. Use `WALLET_RELAY_ORIGIN=wss://<app-host>`. Fluid compute supports WebSocket upgrades and connections can reopen after the function duration expires. A primary using Chicory's relay-only Iroh link accepts its full `<lightning-key>@iroh:<endpoint-id>?relay=<encoded-https-origin>` as `WALLET_PRIMARY_URI`. The relay opens an authenticated Iroh stream for the selected endpoint. The browser authenticates the selected Lightning key over BOLT8 inside that stream.
+On Vercel, the included `/peer` and `/electrum` Node functions serve the relay on the app's own domain. Use `WALLET_RELAY_ORIGIN=wss://<app-host>`. Vercel provides the shared ticket store. The issuer generates a random token and stores its absolute expiry under a SHA-256 digest of that token and the deployment settings. Both relay functions verify the origin and look up that digest in the same `iad1` Runtime Cache. Expired or evicted entries require a fresh ticket. The hosted setup requires the network, primary, Electrum and origins, with no relay secret to provision.
+
+A primary using Chicory's relay-only Iroh link accepts its full `<lightning-key>@iroh:<endpoint-id>?relay=<encoded-https-origin>` as `WALLET_PRIMARY_URI`. The relay opens an authenticated Iroh stream for the selected endpoint. The browser authenticates the selected Lightning key over BOLT8 inside that stream. Connections can reopen when the hosted function duration expires.
 
 The grant endpoint is public and permits transport to the two fixed upstreams. Use your proxy’s connection and rate limits for a public deployment. A static page host alone cannot run the relay. The fork can be listed in the Vibes registry once it has a stable reachable HTTPS deployment.
 
@@ -57,7 +61,7 @@ The portable engine is built from Beignet 0.43.6. [Pinned sources and reproducib
 ```sh
 npm run typecheck
 npm test -- src/components/templates/Wallet src/libs/wallet
-node --test scripts/wallet/relay.test.mjs
+node --test scripts/wallet/relay.test.mjs scripts/wallet/tickets.test.mjs
 npm run build
 ```
 

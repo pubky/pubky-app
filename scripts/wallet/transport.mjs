@@ -1,6 +1,6 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 
-const lifetimeMs = 15 * 60_000;
+export const lifetimeMs = 15 * 60_000;
 const loopback = new Set(['127.0.0.1', '[::1]', 'localhost']);
 
 function originOf(value, secureProtocol, localProtocol) {
@@ -18,13 +18,14 @@ function originOf(value, secureProtocol, localProtocol) {
 }
 
 export function connectionSettings(env) {
+  const hosted = env.VERCEL === '1';
   const network = env.WALLET_NETWORK;
   const primaryUri = env.WALLET_PRIMARY_URI;
-  const key = env.WALLET_RELAY_SECRET;
+  const key = hosted ? undefined : env.WALLET_RELAY_SECRET;
   if (
     !['regtest', 'testnet', 'mainnet'].includes(network) ||
     !/^(02|03)[a-f0-9]{64}@/i.test(primaryUri ?? '') ||
-    !/^[0-9a-f]{64}$/i.test(key ?? '')
+    (!hosted && !/^[0-9a-f]{64}$/i.test(key ?? ''))
   )
     throw new Error('Wallet transport is not configured');
   const [, address, extra] = primaryUri.split('@');
@@ -33,7 +34,17 @@ export function connectionSettings(env) {
   const appOrigin = originOf(env.WALLET_APP_ORIGIN, 'https:', 'http:');
   const relayOrigin = originOf(env.WALLET_RELAY_ORIGIN, 'wss:', 'ws:');
   if (appOrigin.startsWith('https:') && relayOrigin.startsWith('ws:')) throw new Error('Use WSS with HTTPS');
-  return { network, primaryUri, appOrigin, relayOrigin, peer, key: Buffer.from(key, 'hex') };
+  const settings = { network, primaryUri, appOrigin, relayOrigin, peer };
+  if (!hosted) return { ...settings, key: Buffer.from(key, 'hex') };
+  if (!appOrigin.startsWith('https:') || !relayOrigin.startsWith('wss:') || !env.VERCEL_URL) {
+    throw new Error('Invalid hosted wallet deployment');
+  }
+  return {
+    ...settings,
+    deploymentHost: env.VERCEL_URL,
+    electrumTarget: socketTarget(env.WALLET_ELECTRUM),
+    peerTarget: env.WALLET_PEER_TUNNEL ? socketTarget(env.WALLET_PEER_TUNNEL) : peer,
+  };
 }
 
 function irohTarget(address) {
@@ -84,6 +95,10 @@ export function connectionGrant(settings, now = Date.now()) {
   const expiresAt = now + lifetimeMs;
   const claim = randomBytes(24);
   claim.writeBigUInt64BE(BigInt(expiresAt));
+  return grantResponse(settings, Buffer.concat([claim, signature(settings, claim)]).toString('base64url'), expiresAt);
+}
+
+export function grantResponse(settings, token, expiresAt) {
   return {
     network: settings.network,
     // The browser's socket factory sends all peer bytes to the fixed WebSocket.
@@ -94,7 +109,7 @@ export function connectionGrant(settings, now = Date.now()) {
     electrum: { host: 'electrum.relay', port: 50001, tls: false },
     peerUrl: settings.relayOrigin + '/peer',
     electrumUrl: settings.relayOrigin + '/electrum',
-    token: Buffer.concat([claim, signature(settings, claim)]).toString('base64url'),
+    token,
     expiresAt,
   };
 }
