@@ -111,8 +111,8 @@ export class SettingsController {
   /**
    * Updates the links and media preferences and syncs to homeserver.
    */
-  static async setPlayers(playerOrder: string[], hiddenPlayers: string[]): Promise<void> {
-    useSettingsStore.getState().setPlayers(playerOrder, hiddenPlayers);
+  static async setPlayers(playerOrder: string[], hiddenPlayers: string[], category?: string): Promise<void> {
+    useSettingsStore.getState().setPlayers(playerOrder, hiddenPlayers, category);
     await this.commitUpdate();
   }
 

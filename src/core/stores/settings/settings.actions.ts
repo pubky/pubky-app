@@ -161,15 +161,16 @@ export const createSettingsActions = (set: ZustandSet<SettingsStore>): SettingsA
   },
 
   // Links and media actions
-  setPlayers: (playerOrder, hiddenPlayers) => {
+  setPlayers: (playerOrder, hiddenPlayers, category) => {
     set(
       (state) =>
         withTimestamp({
-          media: {
-            ...state.media,
-            playerOrder,
-            hiddenPlayers,
-          },
+          media: category
+            ? {
+                ...state.media,
+                players: { ...state.media.players, [category]: { order: playerOrder, hidden: hiddenPlayers } },
+              }
+            : { ...state.media, playerOrder, hiddenPlayers },
         }),
       false,
       SettingsActionTypes.SET_PLAYERS,

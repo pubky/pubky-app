@@ -73,15 +73,26 @@ describe('ResourceCard', () => {
     it('stays a click-through while its episode plays in the card, and a click on the audio stays there', () => {
       const stream = { url: 'https://cdn.example.com/episode.mp3', type: 'audio/mpeg', preview: false };
       render(<ResourceCard card={{ ...ARTICLE, stream }} href={ARTICLE.uri} />);
-      const audio = screen.getByTestId('resource-card-audio');
+      fireEvent.click(within(screen.getByTestId('resource-card-audio')).getByRole('button', { name: /^Play / }));
+      const controls = screen.getByTestId('resource-audio-controls');
+      const audio = controls.querySelector('audio');
+      expect(audio).toBeInTheDocument();
 
-      fireEvent.play(audio);
-      fireEvent.click(audio);
+      fireEvent.play(audio!);
+      fireEvent.click(controls);
+      fireEvent.click(within(controls).getByRole('button', { name: 'Forward 30 seconds' }));
       expect(mockPush).not.toHaveBeenCalled();
 
       expect(card()).toHaveAttribute('data-click-through', 'true');
       fireEvent.click(screen.getByTestId('resource-card-description'));
       expect(mockPush).toHaveBeenCalledWith(getResourceRoute(ARTICLE.uri));
+    });
+
+    it('puts no native tooltip on the title or the summary line', () => {
+      render(<ResourceCard card={placeFixture} href={placeFixture.uri} />);
+
+      expect(title()).not.toHaveAttribute('title');
+      expect(screen.getByTestId('resource-card-summary')).not.toHaveAttribute('title');
     });
 
     it('names the site top right with an arrow, never the full link', () => {
@@ -587,13 +598,68 @@ describe('ResourceCard', () => {
     };
     const audio = () => screen.queryByTestId('resource-card-audio');
 
-    it('plays an episode’s http(s) audio, loading nothing until played', () => {
+    it('plays an episode’s http(s) audio in the app’s player, loading nothing until played', () => {
       render(<ResourceCard card={EPISODE} href={EPISODE.uri} />);
 
-      expect(audio()).toHaveAttribute('src', 'https://example.org/episode.mp3');
-      expect(audio()).toHaveAttribute('preload', 'none');
-      expect(audio()).toHaveAccessibleName(`Play ${EPISODE.name}`);
+      // Play beside its length; the card's heading names it, so the row's title is for screen readers.
+      expect(within(audio()!).getByRole('button', { name: `Play ${EPISODE.name}` })).toBeInTheDocument();
+      expect(audio()).toHaveTextContent('45:28');
+      expect(within(audio()!).getByText(EPISODE.name!)).toHaveClass('sr-only');
+      expect(audio()!.querySelector('audio, iframe')).toBeNull();
       expect(screen.queryByText('Preview')).not.toBeInTheDocument();
+
+      fireEvent.click(within(audio()!).getByRole('button', { name: `Play ${EPISODE.name}` }));
+      expect(screen.getByTestId('resource-player-audio')).toHaveAttribute('src', 'https://example.org/episode.mp3');
+      expect(screen.getByTestId('resource-audio-controls')).toBeInTheDocument();
+    });
+
+    it('names an episode’s show, linked to the show’s page', () => {
+      const show = 'https://feeds.megaphone.fm/darknetdiaries';
+      render(
+        <ResourceCard
+          card={{ ...EPISODE, related: [{ rel: 'show', uri: show, name: 'Darknet Diaries' }] }}
+          href={EPISODE.uri}
+        />,
+      );
+
+      const from = screen.getByTestId('resource-card-show');
+      expect(from).toHaveTextContent('From Darknet Diaries');
+      expect(within(from).getByRole('link', { name: 'Darknet Diaries' })).toHaveAttribute(
+        'href',
+        `/resource?uri=${encodeURIComponent(show)}`,
+      );
+    });
+
+    it('names no show for an episode whose card names none', () => {
+      render(<ResourceCard card={EPISODE} href={EPISODE.uri} />);
+
+      expect(screen.queryByTestId('resource-card-show')).not.toBeInTheDocument();
+    });
+
+    it('lists a show’s latest episodes, each with its Play for the app’s audio player', () => {
+      const episodes = [182, 181, 180, 179].map((n) => ({
+        uri: `https://darknetdiaries.com/episode/${n}/`,
+        name: `Episode ${n}`,
+        guid: `guid-${n}`,
+        stream: { url: `https://example.org/ep${n}.mp3`, type: 'audio/mpeg', preview: false },
+      }));
+      render(<ResourceCard card={{ ...podcastFixture, episodes }} href={podcastFixture.uri} />);
+
+      expect(
+        screen.getAllByRole('button', { name: /^Play Episode/ }).map((el) => el.getAttribute('aria-label')),
+      ).toEqual(['Play Episode 182', 'Play Episode 181', 'Play Episode 180']);
+      expect(screen.getByRole('link', { name: 'All episodes' })).toHaveAttribute(
+        'href',
+        `/resource?uri=${encodeURIComponent(podcastFixture.uri)}#episodes`,
+      );
+      // A show has no audio of its own.
+      expect(audio()).not.toBeInTheDocument();
+    });
+
+    it('lists no episodes for a show without any', () => {
+      render(<ResourceCard card={podcastFixture} href={podcastFixture.uri} />);
+
+      expect(screen.queryByTestId('resource-card-episodes')).not.toBeInTheDocument();
     });
 
     it('plays a recording’s public preview too, and says it is one', () => {

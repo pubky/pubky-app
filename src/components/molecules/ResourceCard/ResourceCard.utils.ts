@@ -6,7 +6,9 @@ import {
   PinakesStatus,
   type TPinakesAlsoOn,
   type TPinakesCard,
+  type TPinakesEpisode,
   type TPinakesResourceDetail,
+  type TPinakesStream,
 } from '@/services/pinakes/pinakes.types';
 import { ResourceFamily } from './ResourceCard.types';
 
@@ -151,6 +153,49 @@ const CARD_CONTROL_SELECTOR =
 export function isCardSurfaceClick(card: Element, target: EventTarget | null): boolean {
   if (!(target instanceof Element) || !card.contains(target)) return false;
   return !target.closest(CARD_CONTROL_SELECTOR);
+}
+
+/** The `http(s)` audio a `stream` plays, else `null` (a video, a link that is not `http(s)`). */
+export function getAudioStreamUrl(stream: TPinakesStream | null | undefined): string | null {
+  return stream?.type?.startsWith('audio/') ? getHttpUrl(stream.url) : null;
+}
+
+/** One of a show's latest episodes that plays here, with the audio it plays. */
+export interface TPlayableEpisode {
+  episode: TPinakesEpisode;
+  audioUrl: string;
+}
+
+/** A show's latest episodes (`episodes`) that play here (`getAudioStreamUrl`), newest first. */
+export function getPlayableEpisodes(card: Partial<Pick<TPinakesResourceDetail, 'episodes'>>): TPlayableEpisode[] {
+  return (card.episodes ?? []).flatMap((episode) => {
+    const audioUrl = getAudioStreamUrl(episode.stream);
+    return audioUrl ? [{ episode, audioUrl }] : [];
+  });
+}
+
+/** The id of a show's Episodes section on its resource page: a show card's "All episodes" opens it. */
+export const EPISODES_ANCHOR = 'episodes';
+
+/**
+ * The show a podcast episode is from, as Pinakes names it (`related` entry `show`: the show's feed and
+ * title), or `null` when the card names none.
+ */
+export function getEpisodeShow(
+  card: Partial<Pick<TPinakesResourceDetail, 'related'>>,
+): { uri: string; name: string | null } | null {
+  const show = card.related?.find((entry) => entry.rel === 'show' && entry.uri);
+  return show?.uri ? { uri: show.uri, name: show.name?.trim() || null } : null;
+}
+
+/**
+ * Whether the card plays whole in the app's own audio player: its own audio that is no preview (a
+ * podcast episode's enclosure, an audio file Pinakes read), or a show's latest episodes. A
+ * recording's public preview is not.
+ */
+export function playsInCard(card: Partial<Pick<TPinakesResourceDetail, 'stream' | 'episodes'>>): boolean {
+  if (card.stream && !card.stream.preview && getAudioStreamUrl(card.stream)) return true;
+  return getPlayableEpisodes(card).length > 0;
 }
 
 /** The host of an `http(s)` link without `www.` (`getUrlHostLabel`), else `null`. */

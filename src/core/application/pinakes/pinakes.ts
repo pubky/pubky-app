@@ -1,7 +1,12 @@
 import { withNormalizedCredits } from '@/pipes/pinakes/pinakes.credits';
 import { getRecheckDelay, isUnsettledCard } from '@/pipes/pinakes/pinakes.recheck';
 import { PinakesService } from '@/services/pinakes/pinakes';
-import type { TPinakesCard, TPinakesGroupDetail, TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
+import type {
+  TPinakesCard,
+  TPinakesEpisodePage,
+  TPinakesGroupDetail,
+  TPinakesResourceDetail,
+} from '@/services/pinakes/pinakes.types';
 
 /**
  * External resource cards from Pinakes. Network only: a card enriches a link the way its Open
@@ -57,5 +62,14 @@ export class PinakesApplication {
   static getCachedGroup(id: string): TPinakesGroupDetail | null | undefined {
     const group = PinakesService.getCachedGroup(id);
     return group ? { ...group, members: group.members.map(withNormalizedCredits) } : group;
+  }
+
+  /** One page of a show's episodes; an empty last page when Pinakes does not know the show (or is not configured). */
+  static async fetchEpisodes(
+    id: string,
+    options: { limit: number; offset?: number | null; q?: string | null },
+  ): Promise<TPinakesEpisodePage> {
+    const page = await PinakesService.fetchEpisodes(id, options);
+    return { items: page?.items ?? [], next_offset: page?.next_offset ?? null, truncated: page?.truncated === true };
   }
 }

@@ -1,28 +1,25 @@
 'use client';
 
 import { type ReactNode, useEffect, useId, useRef, useState } from 'react';
-import { Play } from 'lucide-react';
-import { Button } from '@/atoms/Button/Button';
-import { Container } from '@/atoms/Container/Container';
-import { Typography } from '@/atoms/Typography/Typography';
 import { pauseMedia, tellsWhenPlaying } from '@/libs/utils/mediaPlayback';
-import { getResourceStatus, getResourceTarget } from '@/molecules/ResourceCard/ResourceCard.utils';
+import { getResourceStatus, getResourceTarget, playsInCard } from '@/molecules/ResourceCard/ResourceCard.utils';
 import { getResourceSummary } from '@/molecules/ResourceCard/ResourceFacts.utils';
 import type { PostActionSurface } from '@/organisms/PostActionsBar/PostActionButton';
-import { postActionsButtonVariants } from '@/organisms/PostActionsBar/PostActionsBar.variants';
 import { PinakesStatus, type TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { useSettingsStore } from '@/stores/settings/settings.store';
 import { usePlayerHost } from './PlayerHost';
 import {
   CARD_PLAYER,
   type EmbedProvider,
+  getCategoryPlayers,
   getOwnPlayer,
+  getPlayerCategory,
   getPlayerTargets,
   getUpFrontTarget,
-  isCardFirst,
+  isCardFirstFor,
   type PlayerTarget,
 } from './resourcePlayer.utils';
-import { type PagePlayer, PlayerDock, PlayerSwitch } from './ResourcePlayerControls';
+import { type PagePlayer, PlayerDock, PlayerSwitch, PlayStandIn } from './ResourcePlayerControls';
 import { ResourcePlayerFrame } from './ResourcePlayerFrame';
 import { type ResourcePlayerState, useResourcePlayer } from './useResourcePlayer';
 
@@ -43,6 +40,11 @@ export interface CardPlayer {
    * or Card (no player) above its first service in Players): no service's embed loads.
    */
   isCard?: boolean;
+  /**
+   * The service's player loads in `embed`: platform embeds up front, or its stand-in's Play on pressed
+   * with them off. `false` while `embed` is the stand-in, which loads nothing.
+   */
+  showsPlayer?: boolean;
 }
 
 export interface CardPlayerOptions {
@@ -68,10 +70,15 @@ export interface CardPlayerOptions {
  *   player) is above that service in Players: then the switch offers Card and that service. A
  *   viewer who wants cards turns "Show platform embeds up front" off (Settings, Links & Media).
  * - Several services: the link's own first, then the others; Card is always in the switch.
- * - The viewer's Players (Settings, Links & Media) still apply: services in the viewer's order go
- *   first (no order set: the link's own first, then Pinakes' order), removed ones are left out (a
- *   link whose own service is removed counts as generic), and Card (no player) above a link's first
- *   service shows the card. The default is no order.
+ * - The viewer's Players (Settings, Links & Media) still apply, those of the card's kind
+ *   (`getPlayerCategory`: Music, Podcasts, Video): services in the viewer's order go first (no order
+ *   set: the link's own first, then Pinakes' order), removed ones are left out (a link whose own
+ *   service is removed counts as generic), and Card (no player) above a link's first service shows
+ *   the card. The default is no order.
+ * - A podcast that plays in its card (an episode's audio, a show's latest episodes: `playsInCard`)
+ *   shows the card first, with the app's own player: Podcasts' Card is their built-in player, first
+ *   until the viewer moves it below a service. For a podcast with nothing to play there, the
+ *   built-in player's place counts for nothing (`isCardFirstFor`); the rules above stand.
  *
  * A pick switches in place, paused; what played stops. A player plays only on a press inside it
  * (never on mount or scroll); once it plays it is the page's one player and docks at the bottom of
@@ -92,14 +99,16 @@ export function useCardPlayer(
   // another player, so it never inherits the page's player (`useResourcePlayer` lets the old one go).
   const place = useId();
   const owner = `${place}|${card?.uri ?? ''}`;
-  const playerOrder = useSettingsStore((state) => state.media.playerOrder);
-  const hiddenPlayers = useSettingsStore((state) => state.media.hiddenPlayers);
-  const embedsUpFront = useSettingsStore((state) => state.media.embedsUpFront);
+  const media = useSettingsStore((state) => state.media);
+  const { embedsUpFront } = media;
   // What the viewer picked in the switch, a service or Card, for this resource only.
   const [picked, setPicked] = useState<{ uri: string; choice: EmbedChoice } | null>(null);
   // The resource whose Play was pressed with platform embeds up front off: its player shows.
   const [optedIn, setOptedIn] = useState<string | null>(null);
-  const targets = card ? getPlayerTargets(card, { href, players: { playerOrder, hiddenPlayers } }) : [];
+  // The Players of the card's kind: by its type, else by the service it plays on first.
+  const category = getPlayerCategory(card, card ? getPlayerTargets(card, { href })[0]?.provider : undefined);
+  const players = getCategoryPlayers(media, category);
+  const targets = card ? getPlayerTargets(card, { href, players }) : [];
   // The link is itself on a service with a player, not gone upstream nor removed from Players: that
   // player goes first. Else the link is generic here: its card goes first.
   const ownTarget = card && getResourceStatus(card.status) !== PinakesStatus.MISSING ? getOwnPlayer(card, href) : null;
@@ -115,7 +124,7 @@ export function useCardPlayer(
   const title = card.name?.trim() || href || card.uri;
   // Another resource starts over: nothing picked; a generic link's card, else the Players order
   // again (its first service, or the card when Card (no player) is above that service).
-  const cardFirst = !linked || isCardFirst(targets[0].provider, playerOrder);
+  const cardFirst = !linked || isCardFirstFor(category, targets[0].provider, players.playerOrder, playsInCard(card));
   const choice = (picked?.uri === card.uri ? picked.choice : null) ?? (cardFirst ? CARD_PLAYER : null);
   const selected = choice === CARD_PLAYER ? null : (targets.find((target) => target.provider === choice) ?? targets[0]);
   const showsPlayer = embedsUpFront || optedIn === card.uri;
@@ -147,6 +156,7 @@ export function useCardPlayer(
   if (!selected) return { isCard: true, switcher };
   return {
     switcher,
+    showsPlayer,
     embed: (
       // A new resource or service starts over: no Play on pressed. The same one (new counts or
       // tags) keeps its player.
@@ -269,35 +279,16 @@ function EmbedPlayer({
       : preview
         ? `Show the ${target.name} player`
         : `Play on ${target.name}`;
-    const summary = getResourceSummary(card);
     return (
-      <Container
-        overrideDefaults
+      <PlayStandIn
         data-resource-controls
         data-testid="embed-player"
-        className="flex min-w-0 items-center gap-3"
-      >
-        <Button
-          variant="secondary"
-          size="sm"
-          aria-label={label}
-          title={label}
-          onClick={open}
-          className={postActionsButtonVariants({ surface })}
-        >
-          <Play aria-hidden="true" className="fill-current" />
-        </Button>
-        <Container overrideDefaults className="flex min-w-0 flex-1 flex-col">
-          <Typography as="span" size="sm" dir="auto" className="truncate font-bold text-foreground">
-            {title}
-          </Typography>
-          {summary && (
-            <Typography as="span" size="xs" dir="auto" className="truncate font-normal text-muted-foreground">
-              {summary}
-            </Typography>
-          )}
-        </Container>
-      </Container>
+        label={label}
+        title={title}
+        detail={getResourceSummary(card)}
+        onPlay={open}
+        surface={surface}
+      />
     );
   }
 

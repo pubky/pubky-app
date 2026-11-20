@@ -22,6 +22,7 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { useOgMetadata } from '@/hooks/useOgMetadata/useOgMetadata';
 import { cn } from '@/libs/utils/utils';
 import { useIsPostPreviewNavigable } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
+import { ResourceAudioPlayer } from '@/molecules/ResourcePlayer/ResourceAudioPlayer';
 import { PinakesStatus, type TPinakesCredit } from '@/services/pinakes/pinakes.types';
 import { ResourceArrowText } from './ResourceArrowText';
 import { type ResourceCardProps, ResourceFamily } from './ResourceCard.types';
@@ -29,8 +30,10 @@ import {
   formatResourceDates,
   formatResourcePoint,
   getDisplayLink,
+  getEpisodeShow,
   getEventStatusNote,
   getHttpUrl,
+  getPlayableEpisodes,
   getResourceFamily,
   getResourceLinks,
   getResourceStatus,
@@ -43,8 +46,10 @@ import { ResourceChainBody, ResourceChainCopy, ResourceChainLines } from './Reso
 import { getChainView } from './ResourceChain.utils';
 import { ResourceCredits } from './ResourceCredits';
 import { getCardAttribution, getMapDataCredit, getShownCredits } from './ResourceCredits.utils';
+import { ResourceEpisodes } from './ResourceEpisodes';
 import { ResourceFactList } from './ResourceFactList';
-import { getResourceDetailRows, getResourceSummary } from './ResourceFacts.utils';
+import { formatDuration, getResourceDetailRows, getResourceSummary } from './ResourceFacts.utils';
+import { useResourceSurface } from './ResourceSurfaceContext';
 import { getResourceTypeIcon } from './ResourceTypeIcon';
 import { useResourceFallback } from './useResourceFallback';
 
@@ -74,7 +79,8 @@ const DETAIL_ICON_SIZE = 14;
  * and source on top, then the image (or the type's icon), the title, a summary line of the type's
  * facts (`getResourceSummary`) and the description. An event leads with its dates, venue,
  * organizer and attendance; a card with an audio `stream` (an episode, or a recording's preview)
- * plays it. A sparse card fills a missing description or image from a general database in its
+ * plays it, and a show its latest episodes (`ResourceEpisodes`). A sparse card fills a missing
+ * description or image from a general database in its
  * group (`useResourceFallback`), then a missing title or image from the link's OpenGraph data.
  *
  * The title opens the resource's page (in a new tab where links may not navigate), and so does a
@@ -108,6 +114,8 @@ export function ResourceCard({
   const typeLabel = getResourceTypeLabel(card);
   const { linkUrl, sourceUri, siteName } = getResourceLinks(card, href);
   const isLarge = size === 'large';
+  // The large card and a collection's item stand on the post card's surface: their pills are the post's.
+  const onCard = useResourceSurface() === 'card';
   // A `missing` card's own link is gone upstream: neither the card, its heading nor its source
   // send the viewer there.
   const titleUrl = isMissing ? null : linkUrl;
@@ -163,6 +171,10 @@ export function ResourceCard({
   const mapCredit = isLarge ? getMapDataCredit(card.attribution) : null;
   // Any audio `stream` plays: an episode's enclosure or a recording's public preview.
   const streamUrl = card.stream && card.stream.type?.startsWith('audio/') ? getHttpUrl(card.stream.url) : null;
+  // A show plays its latest episodes, each in the same player.
+  const episodes = getPlayableEpisodes(card);
+  // An episode names its show, linked to the show's page.
+  const show = getEpisodeShow(card);
 
   const credits = [
     ...getShownCredits(card, { imageShown: ownImageShown }),
@@ -295,7 +307,6 @@ export function ResourceCard({
                   rel={titleTarget ? 'noopener noreferrer' : undefined}
                   overrideDefaults
                   dir="auto"
-                  title={title}
                   data-testid="resource-card-title"
                   className="line-clamp-3 text-base font-bold wrap-anywhere text-foreground hover:text-brand"
                 >
@@ -303,12 +314,31 @@ export function ResourceCard({
                 </Link>
               )}
 
+              {show && (
+                <Typography
+                  size="sm"
+                  dir="auto"
+                  data-testid="resource-card-show"
+                  className="font-medium text-foreground/90"
+                >
+                  From{' '}
+                  <Link
+                    href={getResourceRoute(show.uri)}
+                    target={titleTarget}
+                    rel={titleTarget ? 'noopener noreferrer' : undefined}
+                    overrideDefaults
+                    className="font-bold wrap-anywhere hover:text-brand"
+                  >
+                    {show.name || getDisplayLink(show.uri)}
+                  </Link>
+                </Typography>
+              )}
+
               {summary && (
                 <Typography
                   size="sm"
                   dir="auto"
                   data-testid="resource-card-summary"
-                  title={summary}
                   className="line-clamp-2 font-medium wrap-anywhere text-foreground/90"
                 >
                   <ResourceArrowText text={summary} />
@@ -367,17 +397,39 @@ export function ResourceCard({
           </Container>,
         )}
 
-        {streamUrl && (
+        {/* An episode's whole audio plays in the app's player, Play beside its date and length. */}
+        {streamUrl && !card.stream?.preview && (
+          <Container overrideDefaults data-resource-controls className="min-w-0">
+            <ResourceAudioPlayer
+              src={streamUrl}
+              resource={card.uri}
+              title={title}
+              hideTitle
+              length={formatDuration(card.stream?.duration_s)}
+              from={show?.name ?? null}
+              image={shownImage}
+              surface={isLarge || onCard ? 'default' : 'muted'}
+              data-testid="resource-card-audio"
+            />
+          </Container>
+        )}
+        {/* A recording's public preview: the browser's own player, marked as a preview. */}
+        {streamUrl && card.stream?.preview && (
           <Container overrideDefaults data-resource-controls className="flex flex-col gap-1">
             <Audio src={streamUrl} preload="none" data-testid="resource-card-audio" aria-label={`Play ${title}`} />
-            {card.stream?.preview && (
-              <Typography size="xs" className="font-normal text-muted-foreground">
-                Preview
-              </Typography>
-            )}
+            <Typography size="xs" className="font-normal text-muted-foreground">
+              Preview
+            </Typography>
           </Container>
         )}
 
+        {episodes.length > 0 && (
+          <ResourceEpisodes
+            episodes={episodes}
+            show={{ uri: card.uri, name: card.name, image: getHttpUrl(card.image) }}
+            surface={isLarge || onCard ? 'default' : 'muted'}
+          />
+        )}
         {isLarge && chain && !isBodyReplaced && <ResourceChainBody view={chain} target={titleTarget} />}
 
         {isLarge && <ResourceFactList rows={detailRows} />}

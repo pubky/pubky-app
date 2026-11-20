@@ -71,6 +71,43 @@ export interface TPinakesStream {
   duration_s?: number | null;
 }
 
+/**
+ * `Episode`: one of a podcast show's episodes, as a show's card carries its latest (`episodes`) and
+ * `GET /v1/resources/{id}/episodes` lists them all, page by page.
+ */
+export interface TPinakesEpisode {
+  /**
+   * The episode's own link: its publisher's episode card when Pinakes has one, else the card its feed
+   * item `{feed}?guid=…` reads as (the item itself when it is its own card). Its card and resource page
+   * are read by it.
+   */
+  uri: string;
+  /** Plain text. */
+  name?: string | null;
+  image?: string | null;
+  /** RFC 3339. */
+  published?: string | null;
+  /** What names the item in its feed. */
+  guid: string;
+  stream?: TPinakesStream | null;
+  /** The episode's own card, when Pinakes has read one. */
+  id?: string | null;
+  /** Other links of the episode, read with `uri` (tags, counts, replies); at most 16, absent when none. */
+  aliases?: string[];
+}
+
+/** `EpisodePage`: `GET /v1/resources/{id}/episodes`, a show's episodes newest first. */
+export interface TPinakesEpisodePage {
+  items: TPinakesEpisode[];
+  /** Where the next page starts (`offset`); absent or `null` on the last page. */
+  next_offset?: number | null;
+  /**
+   * The show's feed lists older episodes than Pinakes keeps (its latest 1000): the same on every page.
+   * Absent from an older Pinakes.
+   */
+  truncated?: boolean;
+}
+
 /** `GroupRef`: the group a card is in; its other members are in `also_on`. */
 export interface TPinakesGroupRef {
   id: string;
@@ -235,10 +272,14 @@ export interface TPinakesCard {
 /**
  * `Related`: an object a chain card points at (a transaction's inputs and outputs and its block, a
  * block's neighbours and coinbase, an address's latest transactions, a Lightning node's channels),
- * with its own card root when it has one.
+ * with its own card root when it has one; on a podcast episode's card, its show (`show`: the show's
+ * feed and title).
  */
 export interface TPinakesRelated {
-  /** What it is to the card: `input`, `output`, `block`, `previous`, `next`, `coinbase`, `tx`, `channel`, ... */
+  /**
+   * What it is to the card: `input`, `output`, `block`, `previous`, `next`, `coinbase`, `tx`, `channel`,
+   * `show`, ...
+   */
   rel: string;
   /** Its card root (`btc:address/…`, `btc:tx/…`, `ln:node/…`), `null` for one with none (`OP_RETURN`). */
   uri?: string | null;
@@ -275,6 +316,11 @@ export interface TPinakesResourceDetail extends TPinakesCard {
   /** How an event is attended: `offline`, `online` or `mixed` as the source gives it. */
   attendance?: string | null;
   stream?: TPinakesStream | null;
+  /**
+   * A podcast show's latest episodes that have a `stream`, newest first (at most 5); absent on any
+   * other card and on a show without one.
+   */
+  episodes?: TPinakesEpisode[] | null;
   /** A chain card's related objects, bounded per `rel`; absent on other cards and older instances. */
   related?: TPinakesRelated[] | null;
   /** How many of each `rel` the object has when `related` lists fewer (`{ "input": 400 }`). */

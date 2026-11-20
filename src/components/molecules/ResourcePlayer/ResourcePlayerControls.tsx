@@ -3,6 +3,7 @@
 import { type ComponentProps, type ReactNode, useEffect, useRef, useState } from 'react';
 import { Check, ChevronDown, LinkIcon, Play, X } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
+import { Container } from '@/atoms/Container/Container';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,6 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/atoms/DropdownMenu/DropdownMenu';
+import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
 import { KEEP_PLAYING_ATTRIBUTE } from '@/hooks/usePauseMediaOutsideViewport/usePauseMediaOutsideViewport';
 import { cn } from '@/libs/utils/utils';
@@ -18,6 +20,7 @@ import { ResourceSourceIcon } from '@/molecules/ResourceCard/ResourceSourceIcon'
 import type { PostActionSurface } from '@/organisms/PostActionsBar/PostActionButton';
 import { postActionsButtonVariants } from '@/organisms/PostActionsBar/PostActionsBar.variants';
 import { DOCK_CLASS, DOCK_SLOT_CLASS, DockBar, DockSlotBack, PlayerSlot, usePlayerHost } from './PlayerHost';
+import { ResourceAudioArt } from './ResourceAudioArt';
 import type { PlayerTarget } from './resourcePlayer.utils';
 
 interface ProviderMenuProps {
@@ -34,8 +37,9 @@ interface ProviderMenuProps {
   onShowCard?: () => void;
 }
 
-const ROW = 'group gap-2 p-0';
-const ROW_TEXT = 'truncate text-base font-medium transition-colors group-hover:text-foreground';
+/** A row of the app's menus in the post menu's style (the service menu, the audio player's speeds). */
+export const MENU_ROW = 'group gap-2 p-0';
+export const MENU_ROW_TEXT = 'truncate text-base font-medium transition-colors group-hover:text-foreground';
 
 /**
  * The services to play on, in the post menu's style: one line per service (favicon and name), the
@@ -62,7 +66,7 @@ function ProviderMenu({ targets, current, onSelect, trigger, icons = true, label
               aria-label="Show the link card instead of a player"
               aria-current={cardShown || undefined}
               onSelect={onShowCard}
-              className={ROW}
+              className={MENU_ROW}
             >
               {icons && (
                 <LinkIcon
@@ -76,7 +80,7 @@ function ProviderMenu({ targets, current, onSelect, trigger, icons = true, label
               <Typography
                 as="span"
                 overrideDefaults
-                className={cn(ROW_TEXT, 'min-w-0 flex-1', cardShown ? 'text-foreground' : 'text-muted-foreground')}
+                className={cn(MENU_ROW_TEXT, 'min-w-0 flex-1', cardShown ? 'text-foreground' : 'text-muted-foreground')}
               >
                 Card
               </Typography>
@@ -95,13 +99,13 @@ function ProviderMenu({ targets, current, onSelect, trigger, icons = true, label
               title={target.maybe ? MAYBE_ALSO_ON_NOTE : undefined}
               aria-current={playing || undefined}
               onSelect={() => onSelect(target)}
-              className={ROW}
+              className={MENU_ROW}
             >
               {icons && <ResourceSourceIcon uri={target.link} />}
               <Typography
                 as="span"
                 overrideDefaults
-                className={cn(ROW_TEXT, 'min-w-0 flex-1', playing ? 'text-foreground' : 'text-muted-foreground')}
+                className={cn(MENU_ROW_TEXT, 'min-w-0 flex-1', playing ? 'text-foreground' : 'text-muted-foreground')}
               >
                 {target.name}
               </Typography>
@@ -203,6 +207,112 @@ export function PlayOnPill({
       <ResourceSourceIcon uri={uri} />
       {isOpen && <X aria-hidden="true" />}
     </Button>
+  );
+}
+
+/**
+ * A player that is not loaded yet, as one row: the action row's Play button (`label` its name and
+ * tooltip) beside the title and a line under it. Without `onPlay` (its player open under it) only
+ * the title and line. `useCardPlayer`'s stand-in with platform embeds up front off, a show's episode
+ * (`ResourceAudioPlayer`). With `href` (an episode's own page) the title is a link that covers the
+ * row: a press anywhere but Play opens it, in a new tab with `linkTarget` (where links may not
+ * navigate). `image` adds a cover after the title (`ResourceAudioArt`) and `titleLines` lets the
+ * title wrap (a show's newest episode); `hideTitle` leaves it to screen readers (a card whose heading
+ * names it). Without `onPlay`, `icon` stands where Play would, in the same pill, as part of the row
+ * (a press on it opens `href`): a link out of the list, such as a show's older episodes on its service.
+ */
+export function PlayStandIn({
+  title,
+  detail,
+  label,
+  onPlay,
+  surface = 'muted',
+  href,
+  linkTarget,
+  image,
+  titleLines = 1,
+  hideTitle = false,
+  icon,
+  className,
+  ...props
+}: {
+  title: string;
+  detail?: string | null;
+  label: string;
+  onPlay?: () => void;
+  surface?: PostActionSurface;
+  href?: string | null;
+  linkTarget?: '_blank';
+  /** A cover image (`http(s)`), or `null` for the type's tile; absent shows none. */
+  image?: string | null;
+  titleLines?: 1 | 2;
+  hideTitle?: boolean;
+  /** Decorative, in Play's place when there is no `onPlay` (a service's icon). */
+  icon?: ReactNode;
+} & Omit<ComponentProps<typeof Container>, 'title' | 'children'>) {
+  const titleClass = cn(
+    'font-bold text-foreground',
+    titleLines === 2 ? 'line-clamp-2 wrap-anywhere' : 'truncate',
+    hideTitle && 'sr-only',
+  );
+  return (
+    <Container
+      overrideDefaults
+      className={cn('flex min-w-0 items-center gap-3', href && 'relative', className)}
+      {...props}
+    >
+      {onPlay && (
+        <Button
+          variant="secondary"
+          size="sm"
+          aria-label={label}
+          title={label}
+          onClick={onPlay}
+          className={cn(postActionsButtonVariants({ surface }), href && 'relative z-10')}
+        >
+          <Play aria-hidden="true" className="fill-current" />
+        </Button>
+      )}
+      {!onPlay && icon && (
+        <Button
+          asChild
+          variant="secondary"
+          size="sm"
+          className={cn(postActionsButtonVariants({ surface }), 'pointer-events-none px-3.5')}
+        >
+          <span aria-hidden="true" data-testid="play-stand-in-icon">
+            {icon}
+          </span>
+        </Button>
+      )}
+      <Container overrideDefaults className="flex min-w-0 flex-1 flex-col">
+        {href ? (
+          <Link
+            href={href}
+            target={linkTarget}
+            rel={linkTarget ? 'noopener noreferrer' : undefined}
+            overrideDefaults
+            dir="auto"
+            data-testid="play-stand-in-title"
+            // Covers the row, so a press beside the title opens the page too; Play stays above it.
+            className={cn(titleClass, 'text-sm after:absolute after:inset-0 hover:text-brand')}
+          >
+            {title}
+          </Link>
+        ) : (
+          <Typography as="span" size="sm" dir="auto" className={titleClass}>
+            {title}
+          </Typography>
+        )}
+        {detail && (
+          <Typography as="span" size="xs" dir="auto" className="truncate font-normal text-muted-foreground">
+            {detail}
+          </Typography>
+        )}
+      </Container>
+      {/* After the text, so every row's title starts at the same place. */}
+      {image !== undefined && <ResourceAudioArt image={image} className="size-10" />}
+    </Container>
   );
 }
 

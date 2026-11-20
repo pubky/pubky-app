@@ -48,6 +48,18 @@ export interface MediaPreferences {
   hiddenPlayers: string[];
   /** A link's platform embed shows up front instead of our card. Default on. */
   embedsUpFront: boolean;
+  /**
+   * The viewer's Players for one kind of resource each (`PlayerCategory`: `music`, `podcasts`,
+   * `video`), saved once that kind's list is changed. A kind without its own uses `playerOrder` and
+   * `hiddenPlayers` (Podcasts with its built-in player first).
+   */
+  players?: Record<string, CategoryPlayers>;
+}
+
+/** One kind's Players: its order (`playerOrder`'s ids, `card` included) and its removed ones. */
+export interface CategoryPlayers {
+  order: string[];
+  hidden: string[];
 }
 
 export interface SettingsState {
@@ -74,7 +86,8 @@ export interface SettingsActions {
   setNeverShowPosts: (neverShowPosts: boolean) => void;
   setModerationBot: (moderationBot: Pubky) => void;
   // Links and media actions
-  setPlayers: (playerOrder: string[], hiddenPlayers: string[]) => void;
+  /** With `category`, that kind's Players (`players`); without, the ones every kind falls back to. */
+  setPlayers: (playerOrder: string[], hiddenPlayers: string[], category?: string) => void;
   setEmbedsUpFront: (embedsUpFront: boolean) => void;
   // Muted users actions
   addMutedUser: (userId: string) => void;
@@ -122,14 +135,30 @@ function getStrings(value: unknown): string[] | undefined {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : undefined;
 }
 
+function getRecord(value: unknown): Record<string, unknown> | undefined {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
+/** The stored kinds' Players with string lists; a kind without both lists is left out. */
+function getCategoryPlayers(value: unknown): Record<string, CategoryPlayers> | undefined {
+  const entries = Object.entries(getRecord(value) ?? {}).flatMap(([category, stored]) => {
+    const order = getStrings(getRecord(stored)?.order);
+    const hidden = getStrings(getRecord(stored)?.hidden);
+    return order && hidden ? [[category, { order, hidden }] as const] : [];
+  });
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+}
+
 /**
  * A stored `media` object (settings.json, the persisted store) with missing or malformed keys as
- * their defaults. Keys a later version adds are kept.
+ * their defaults. Keys a later version adds are kept, and so are kinds of `players` it adds.
  */
 export function normalizeMediaPreferences(media: unknown): MediaPreferences {
-  const stored =
-    typeof media === 'object' && media !== null && !Array.isArray(media) ? (media as Record<string, unknown>) : {};
-  return {
+  const stored = getRecord(media) ?? {};
+  const players = getCategoryPlayers(stored.players);
+  const normalized: MediaPreferences = {
     ...defaultMediaPreferences,
     ...stored,
     playerOrder: getStrings(stored.playerOrder) ?? [],
@@ -137,6 +166,9 @@ export function normalizeMediaPreferences(media: unknown): MediaPreferences {
     embedsUpFront:
       typeof stored.embedsUpFront === 'boolean' ? stored.embedsUpFront : defaultMediaPreferences.embedsUpFront,
   };
+  if (players) normalized.players = players;
+  else delete normalized.players;
+  return normalized;
 }
 
 export const settingsInitialState: SettingsState = {

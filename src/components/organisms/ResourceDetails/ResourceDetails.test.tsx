@@ -9,6 +9,7 @@ import mbGroupEnrichedFixture from '@/services/pinakes/fixtures/by-uri.mb-group.
 import mbRecordingEnrichedFixture from '@/services/pinakes/fixtures/by-uri.mb-recording.enriched.json';
 import missingFixture from '@/services/pinakes/fixtures/by-uri.missing.json';
 import placeFixture from '@/services/pinakes/fixtures/by-uri.place.json';
+import podcastFixture from '@/services/pinakes/fixtures/by-uri.podcast.json';
 import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
 import groupFixture from '@/services/pinakes/fixtures/group.video.json';
 import relatedFixture from '@/services/pinakes/fixtures/search.related.json';
@@ -408,6 +409,81 @@ describe('ResourceDetails', () => {
       );
       expect(within(card).getByRole('button', { name: 'Card: choose another service' })).toBeInTheDocument();
       expect(within(card).queryByRole('button', { name: /^Play on/ })).not.toBeInTheDocument();
+    });
+
+    describe('a podcast show with its latest episodes', () => {
+      const episodes = [1, 2].map((n) => ({
+        uri: `https://example.org/episode/${n}`,
+        name: `Episode ${n}`,
+        guid: `guid-${n}`,
+        stream: { url: `https://example.org/ep${n}.mp3`, type: 'audio/mpeg', preview: false },
+      }));
+      const pick = (card: HTMLElement, from: string, name: string) => {
+        fireEvent.pointerDown(within(card).getByRole('button', { name: `${from}: choose another service` }), {
+          button: 0,
+          ctrlKey: false,
+        });
+        fireEvent.click(screen.getByRole('menuitem', { name }));
+      };
+
+      it('shows them in its card; a service’s player picked in the switch replaces them, Card brings them back', () => {
+        read = settled({ ...podcastFixture, episodes });
+        renderDetails(podcastFixture.uri);
+
+        const card = screen.getByTestId('resource-card');
+        expect(document.querySelector('iframe')).toBeNull();
+        expect(within(card).getAllByTestId('resource-card-episode-audio')).toHaveLength(2);
+        pick(card, 'Card', 'Apple Podcasts');
+
+        expect(within(card).getByTestId('resource-player-frame')).toHaveAttribute(
+          'src',
+          'https://embed.podcasts.apple.com/us/podcast/173001861',
+        );
+        expect(within(card).queryByTestId('resource-card-episodes')).not.toBeInTheDocument();
+
+        fireEvent.pointerDown(within(card).getByRole('button', { name: 'Apple Podcasts: choose another service' }), {
+          button: 0,
+          ctrlKey: false,
+        });
+        fireEvent.click(screen.getByTestId('play-on-card'));
+        expect(document.querySelector('iframe')).toBeNull();
+        expect(within(card).getAllByTestId('resource-card-episode-audio')).toHaveLength(2);
+      });
+
+      it('keeps them beside a service’s stand-in with platform embeds up front off', () => {
+        useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } });
+        onTestFinished(() => {
+          useSettingsStore.setState({ media: defaultMediaPreferences });
+        });
+        read = settled({ ...podcastFixture, episodes });
+        renderDetails(podcastFixture.uri);
+
+        const card = screen.getByTestId('resource-card');
+        pick(card, 'Card', 'Apple Podcasts');
+        expect(document.querySelector('iframe')).toBeNull();
+        expect(within(card).getAllByTestId('resource-card-episode-audio')).toHaveLength(2);
+      });
+
+      it('gives way to the service’s player once its Play on is pressed with platform embeds up front off', () => {
+        useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } });
+        onTestFinished(() => {
+          useSettingsStore.setState({ media: defaultMediaPreferences });
+        });
+        read = settled({ ...podcastFixture, episodes });
+        renderDetails(podcastFixture.uri);
+
+        const card = screen.getByTestId('resource-card');
+        pick(card, 'Card', 'Apple Podcasts');
+        expect(within(card).getAllByTestId('resource-card-episode-audio')).toHaveLength(2);
+
+        fireEvent.click(within(card).getByRole('button', { name: 'Play on Apple Podcasts' }));
+
+        expect(within(card).getByTestId('resource-player-frame').getAttribute('src')).toMatch(
+          /^https:\/\/embed\.podcasts\.apple\.com\/us\/podcast\/173001861/,
+        );
+        expect(within(card).queryByTestId('resource-card-episodes')).not.toBeInTheDocument();
+        expect(within(card).queryByTestId('resource-card-episode-audio')).not.toBeInTheDocument();
+      });
     });
 
     it('plays a song on the service of the link the page was opened with', () => {

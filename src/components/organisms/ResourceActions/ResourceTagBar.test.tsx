@@ -154,7 +154,7 @@ function TagBar({
   ...other
 }: { isExpanded?: boolean; isAdding?: boolean } & Pick<
   React.ComponentProps<typeof ResourceTagBar>,
-  'otherTags' | 'uri'
+  'otherTags' | 'uri' | 'inline'
 >) {
   return (
     <ResourceTagBar
@@ -329,6 +329,15 @@ describe('ResourceTagBar', () => {
     const bar = screen.getByTestId('resource-tag-bar');
     expect(within(bar).getAllByRole('button')).toHaveLength(1);
     expect(screen.getByRole('button', { name: 'Add new tag' })).toBeInTheDocument();
+  });
+
+  it('shows inline the same chips, right-aligned from sm up, with no "+"', () => {
+    mocks.tags = MANY_TAGS;
+    render(<TagBar inline />);
+
+    expect(chipLabels()).toEqual(['music1', '80s1', 'rickroll1']);
+    expect(screen.getByTestId('resource-tag-bar')).toHaveClass('sm:justify-end');
+    expect(screen.queryByRole('button', { name: 'Add new tag' })).not.toBeInTheDocument();
   });
 
   it('toggles the viewer’s tag on a click', () => {

@@ -65,8 +65,8 @@ export function useSettingsActions(): UseSettingsActionsResult {
   const setNeverShowPosts = (neverShowPosts: boolean) =>
     run(() => SettingsController.setNeverShowPosts(neverShowPosts));
 
-  const setPlayers = (playerOrder: string[], hiddenPlayers: string[]) =>
-    run(() => SettingsController.setPlayers(playerOrder, hiddenPlayers));
+  const setPlayers = (playerOrder: string[], hiddenPlayers: string[], category?: string) =>
+    run(() => SettingsController.setPlayers(playerOrder, hiddenPlayers, category));
 
   const setEmbedsUpFront = (embedsUpFront: boolean) => run(() => SettingsController.setEmbedsUpFront(embedsUpFront));
 
