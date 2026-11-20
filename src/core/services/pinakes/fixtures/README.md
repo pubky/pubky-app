@@ -1,7 +1,8 @@
 # Pinakes response fixtures
 
 Captured from a Pinakes instance (`api_shape` 2) on 2026-11-04. Each file is the response body exactly as
-served (`curl -sS -o <file> '<url>'`), unmodified and unformatted; `.prettierignore` keeps
+served (`curl -sS -o <file> '<url>'`), unmodified and unformatted, except the `*.enriched.json`
+files, which are not captures (see _Enriched fixtures_ below); `.prettierignore` keeps
 Prettier off them. They are typed against `../pinakes.types.ts` in `../pinakes.test.ts`, so a
 schema drift in a re-capture fails the typecheck.
 
@@ -18,6 +19,10 @@ schema drift in a re-capture fails the typecheck.
 | `by-uri.movie.json`             | 200  | `/v1/resources/by-uri?uri=https%3A%2F%2Fletterboxd.com%2Ffilm%2Fthe-matrix%2F`                                                                      | `Movie`, status `ok`                        |
 | `by-uri.music-recording.json`   | 200  | `/v1/resources/by-uri?uri=https%3A%2F%2Fopen.spotify.com%2Ftrack%2F1YQWosTIljIvxAgHWTp7KP`                                                          | `MusicRecording`, status `ok`               |
 | `by-uri.pubky.json`             | 200  | `/v1/resources/by-uri?uri=pubky%3A%2F%2Fyjn8k7ww4sc4hskkmbcsep6b1xje8g4f8j3azpdqnwhhqckt7kso%2Fpub%2Floopky%2Fdecks%2Fp2uuj5jo5ln2%2Fmanifest.json` | `LearningResource`, status `ok`             |
+| `by-uri.mb-release-group.json`  | 200  | `/v1/resources/by-uri?uri=https%3A%2F%2Fmusicbrainz.org%2Frelease-group%2F8e8a594f-2175-38c7-a871-abb68ec363e7`                                     | `MusicAlbum` (Kind of Blue), status `ok`    |
+| `by-uri.mb-artist-sparse.json`  | 200  | `/v1/resources/by-uri?uri=https%3A%2F%2Fmusicbrainz.org%2Fartist%2Fb5416a54-4941-4fcf-b2a0-7f98da6f9344`                                            | `Person` (Sefa), no description or image    |
+| `by-uri.mb-recording.json`      | 200  | `/v1/resources/by-uri?uri=https%3A%2F%2Fmusicbrainz.org%2Frecording%2Fb1a9c0e9-d987-4042-ae91-78d6a3267d69`                                         | `MusicRecording` (Bohemian Rhapsody)        |
+| `by-uri.mb-group.json`          | 200  | `/v1/resources/by-uri?uri=https%3A%2F%2Fmusicbrainz.org%2Fartist%2F056e4f3e-d505-4dad-8ec1-d04f521cbb56`                                            | `MusicGroup` (Daft Punk)                    |
 | `by-uri.missing.json`           | 200  | `/v1/resources/by-uri?uri=https%3A%2F%2Fmusic.apple.com%2Fsong%2F1440717826`                                                                        | `WebPage`, status `missing`                 |
 | `by-uri.unreachable.json`       | 200  | `/v1/resources/by-uri?uri=https%3A%2F%2Fwww.binance.com%2F`                                                                                         | `WebPage`, status `unreachable`             |
 | `by-uri.not-found.json`         | 404  | `/v1/resources/by-uri?uri=https%3A%2F%2Fexample.com%2Fpinakes-does-not-know-this-link-1104`                                                         | unknown link: `{"error": "link not known"}` |
@@ -32,6 +37,26 @@ same paper as `by-uri.scholarly-article`, read by its publisher's link: its `als
 (found with `/v1/search?sort=recent&limit=500`): a `pubky://` card whose `image` is `pubky://` too
 and whose `open_in` names the client that opens it. `by-uri.missing` (the object
 is gone upstream) and `by-uri.unreachable` were found with `/v1/search?sort=recent&limit=500`.
+
+The four `by-uri.mb-*.json` captures are MusicBrainz cards, captured the same way. The recording
+is _Bohemian Rhapsody_ (found with `/v1/search?type=MusicRecording&limit=200`).
+
+## Enriched fixtures (`*.enriched.json`): not captured
+
+Pinakes sends no `credits` yet. Each `by-uri.mb-<name>.enriched.json` is the capture
+`by-uri.mb-<name>.json` above with only `description`, `image` and `credits` set, as the Pinakes
+`Card.credits` contract defines them (`field`, `provider`, `source_url`, `author`, `license`,
+`license_url`, `lang`, `excerpted`, `modified`, `subject`). Every other field is the captured value
+(`pinakes.test.ts` checks it). The values come from the English Wikipedia REST summary (its
+`extract`), Wikidata `P18`, the Commons file's `extmetadata` (artist, license) and MusicBrainz
+(the recording's work). Replace them with real captures once Pinakes serves credits.
+
+| File                                    | Fields added                                                                                                                                                                                                                        |
+| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `by-uri.mb-release-group.enriched.json` | `description` (Wikipedia _Kind of Blue_, replaces the capture's "Miles Davis"); `credits`: one `description` credit (wikipedia, CC-BY-SA-4.0, `en`, excerpted). `image` stays `null`: Wikidata has no `P18` for the album.          |
+| `by-uri.mb-artist-sparse.enriched.json` | `credits: []` only: nothing found, a sparse card.                                                                                                                                                                                   |
+| `by-uri.mb-recording.enriched.json`     | `description` (Wikipedia _Bohemian Rhapsody_, the work's article) with `subject` = the MusicBrainz work `41c94a08-a551-3c86-bb17-d9a52e3a618b`; `image` (Commons, US vinyl label, author Queen, `public-domain`, no `license_url`). |
+| `by-uri.mb-group.enriched.json`         | `description` (Wikipedia _Daft Punk_); `image` (Commons _Daft Punk in 2013.jpg_, author Sony Music Entertainment, CC-BY-4.0).                                                                                                       |
 
 To re-capture, run the same requests against a Pinakes instance and update the date above; do not
 edit the bodies by hand.

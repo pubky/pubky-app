@@ -4,7 +4,9 @@ import { usePinakesGroup } from '@/hooks/usePinakesGroup/usePinakesGroup';
 import type { UsePinakesQueryResult } from '@/hooks/usePinakesQuery/usePinakesQuery.types';
 import { usePinakesRelated } from '@/hooks/usePinakesRelated/usePinakesRelated';
 import bookFixture from '@/services/pinakes/fixtures/by-uri.book.json';
+import mbRecordingEnrichedFixture from '@/services/pinakes/fixtures/by-uri.mb-recording.enriched.json';
 import missingFixture from '@/services/pinakes/fixtures/by-uri.missing.json';
+import placeFixture from '@/services/pinakes/fixtures/by-uri.place.json';
 import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
 import groupFixture from '@/services/pinakes/fixtures/group.video.json';
 import relatedFixture from '@/services/pinakes/fixtures/search.related.json';
@@ -183,6 +185,46 @@ describe('ResourceDetails', () => {
       renderDetails(bookFixture.uri);
 
       expect(screen.getByTestId('resource-actions')).toHaveAttribute('data-post-uri', 'none');
+    });
+
+    it('shows an enriched card’s whole text and image with their sources', () => {
+      read = settled(mbRecordingEnrichedFixture);
+      renderDetails(mbRecordingEnrichedFixture.uri);
+
+      const card = screen.getByTestId('resource-card');
+      expect(within(card).getByTestId('resource-card-description')).toHaveTextContent(
+        mbRecordingEnrichedFixture.description,
+      );
+      expect(within(card).getByTestId('resource-card-image')).toHaveAttribute('src', mbRecordingEnrichedFixture.image);
+      const sources = within(card).getByRole('region', { name: 'Sources' });
+      expect(
+        within(sources)
+          .getAllByRole('listitem')
+          .map((line) => line.textContent),
+      ).toEqual([
+        'Text: Wikipedia (en), excerpt, about its MusicBrainz work · CC BY-SA 4.0',
+        'Image: Queen · Wikimedia Commons · Public domain',
+      ]);
+    });
+
+    it('names OpenStreetMap once under Sources on a place’s page, not on its card', () => {
+      read = settled(placeFixture);
+      renderDetails(placeFixture.uri);
+
+      const card = within(screen.getByTestId('resource-card'));
+      expect(card.queryByTestId('resource-card-attribution')).not.toBeInTheDocument();
+      const sources = within(card.getByRole('region', { name: 'Sources' }));
+      expect(sources.getAllByRole('listitem').map((line) => line.textContent)).toEqual(['Map data: OpenStreetMap']);
+      expect(sources.getByTestId('resource-credit-source')).toHaveAttribute(
+        'href',
+        'https://www.openstreetmap.org/copyright',
+      );
+    });
+
+    it('lists no map data on the page of a resource OpenStreetMap does not credit', () => {
+      renderDetails(VIDEO.uri);
+
+      expect(screen.getByTestId('resource-card')).not.toHaveTextContent('Map data');
     });
 
     it('merges into the card’s tag list the tags of its other links: group members, then Also on, by URI', () => {

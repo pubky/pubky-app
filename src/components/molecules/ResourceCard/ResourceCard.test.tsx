@@ -5,6 +5,11 @@ import { PostPreviewNavigableProvider } from '@/molecules/PostPreviewCard/PostPr
 import articleFixture from '@/services/pinakes/fixtures/by-uri.article.json';
 import bookFixture from '@/services/pinakes/fixtures/by-uri.book.json';
 import eventFixture from '@/services/pinakes/fixtures/by-uri.event.json';
+import mbArtistSparseEnrichedFixture from '@/services/pinakes/fixtures/by-uri.mb-artist-sparse.enriched.json';
+import mbArtistSparseFixture from '@/services/pinakes/fixtures/by-uri.mb-artist-sparse.json';
+import mbGroupEnrichedFixture from '@/services/pinakes/fixtures/by-uri.mb-group.enriched.json';
+import mbReleaseGroupEnrichedFixture from '@/services/pinakes/fixtures/by-uri.mb-release-group.enriched.json';
+import mbReleaseGroupFixture from '@/services/pinakes/fixtures/by-uri.mb-release-group.json';
 import missingFixture from '@/services/pinakes/fixtures/by-uri.missing.json';
 import movieFixture from '@/services/pinakes/fixtures/by-uri.movie.json';
 import musicRecordingFixture from '@/services/pinakes/fixtures/by-uri.music-recording.json';
@@ -333,15 +338,50 @@ describe('ResourceCard', () => {
       expect(screen.getByTestId('resource-card-event-status')).toHaveTextContent('Event status: cancelled');
     });
 
-    it('shows where a place is, with its attribution', () => {
+    it('shows where a place is, without OpenStreetMap’s credit: its page names it under Sources', () => {
       render(<ResourceCard card={placeFixture} href={placeFixture.uri} />);
 
       expect(card()).toHaveAttribute('data-family', ResourceFamily.PLACE);
       expect(screen.getByTestId('resource-card-type')).toHaveTextContent('City');
       expect(screen.getByTestId('resource-card-point')).toHaveTextContent('52.5174, 13.3951');
-      expect(screen.getByTestId('resource-card-attribution')).toHaveTextContent('© OpenStreetMap contributors (ODbL)');
+      expect(screen.queryByTestId('resource-card-attribution')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('resource-credits')).not.toBeInTheDocument();
+      expect(card()).not.toHaveTextContent('ODbL');
       expect(screen.queryByTestId('resource-card-dates')).not.toBeInTheDocument();
       expect(screen.queryByTestId('resource-card-image')).not.toBeInTheDocument();
+    });
+
+    it('names OpenStreetMap once under Sources on the page of a place or of an event placed from its data', () => {
+      const zone = 'Timezone Boundary Builder / OpenStreetMap contributors (ODbL-1.0), tzf-rel 2025c';
+      for (const attribution of [placeFixture.attribution, `${placeFixture.attribution}; ${zone}`, zone]) {
+        const { unmount } = render(<ResourceCard card={{ ...placeFixture, attribution }} size="large" />);
+
+        expect(screen.queryByTestId('resource-card-attribution')).not.toBeInTheDocument();
+        const sources = within(screen.getByRole('region', { name: 'Sources' }));
+        expect(sources.getAllByRole('listitem').map((line) => line.textContent)).toEqual(['Map data: OpenStreetMap']);
+        expect(sources.getByTestId('resource-credit-source')).toHaveAttribute(
+          'href',
+          'https://www.openstreetmap.org/copyright',
+        );
+        unmount();
+      }
+    });
+
+    it('keeps a credit other than OpenStreetMap’s on the card, with no map data under Sources', () => {
+      const fedlex = 'Source: Fedlex, www.fedlex.admin.ch';
+      render(<ResourceCard card={{ ...ARTICLE, credits: [], attribution: fedlex }} size="large" />);
+
+      expect(screen.getByTestId('resource-card-attribution').textContent).toBe(fedlex);
+      expect(screen.queryByRole('region', { name: 'Sources' })).not.toBeInTheDocument();
+    });
+
+    it('keeps only the other source’s credit on a feed card whose attribution also credits OpenStreetMap', () => {
+      const fedlex = 'Source: Fedlex, www.fedlex.admin.ch';
+      const attribution = `${fedlex}; ${placeFixture.attribution}`;
+      render(<ResourceCard card={{ ...ARTICLE, credits: [], attribution }} href={ARTICLE.uri} />);
+
+      expect(screen.getByTestId('resource-card-attribution').textContent).toBe(fedlex);
+      expect(screen.queryByTestId('resource-credits')).not.toBeInTheDocument();
     });
 
     it.each([
@@ -524,6 +564,112 @@ describe('ResourceCard', () => {
       render(<ResourceCard card={ARTICLE} size="large" actions={<div data-testid="actions" />} />);
 
       expect(card().lastElementChild).toBe(screen.getByTestId('actions'));
+    });
+  });
+
+  describe('enrichment credits', () => {
+    const MB_GROUP: TPinakesResourceDetail = mbGroupEnrichedFixture;
+    const credits = () => screen.getByTestId('resource-credits');
+
+    it('names the sources of the text and image in one line at the bottom of the body, above the actions', () => {
+      render(<ResourceCard card={MB_GROUP} actions={<div data-testid="actions" />} />);
+
+      expect(credits()).toHaveAttribute('data-variant', 'compact');
+      expect(credits().compareDocumentPosition(screen.getByTestId('actions'))).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+      expect(credits()).toHaveTextContent(
+        'Sources: Text: Wikipedia, CC BY-SA 4.0 · Image: Sony Music Entertainment, Wikimedia Commons, CC BY 4.0',
+      );
+      expect(screen.getByRole('link', { name: 'Wikipedia' })).toHaveAttribute(
+        'href',
+        'https://en.wikipedia.org/wiki/Daft_Punk',
+      );
+      expect(screen.getByTestId('resource-card-description')).toHaveClass('line-clamp-2');
+    });
+
+    it('lists every source with its license under the large card’s text and image, above the actions', () => {
+      render(<ResourceCard card={MB_GROUP} size="large" actions={<div data-testid="actions" />} />);
+
+      expect(credits()).toHaveAttribute('data-variant', 'full');
+      expect(credits().compareDocumentPosition(screen.getByTestId('actions'))).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+      expect(screen.getByRole('region', { name: 'Sources' })).toBe(credits());
+      expect(screen.getAllByTestId('resource-credit').map((line) => line.textContent)).toEqual([
+        'Text: Wikipedia (en), excerpt · CC BY-SA 4.0',
+        'Image: Sony Music Entertainment · Wikimedia Commons · CC BY 4.0',
+      ]);
+      expect(screen.getByTestId('resource-card-description')).not.toHaveClass('line-clamp-2');
+      expect(screen.getByTestId('resource-card-image')).toHaveAttribute('src', MB_GROUP.image);
+    });
+
+    it('lets a source in the line open its own page on a card that is a click-through', () => {
+      const open = vi.spyOn(window, 'open').mockReturnValue(null);
+      render(<ResourceCard card={MB_GROUP} href={MB_GROUP.uri} actions={<div data-resource-controls />} />);
+
+      fireEvent.click(screen.getByRole('link', { name: 'Wikipedia' }));
+      expect(open).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByTestId('resource-card-description'));
+      expect(open).toHaveBeenCalledWith(MB_GROUP.uri, '_blank', 'noopener,noreferrer');
+    });
+
+    it('treats a source that is not an http(s) page as the card’s surface, like the description', () => {
+      const open = vi.spyOn(window, 'open').mockReturnValue(null);
+      const card = {
+        ...MB_GROUP,
+        credits: MB_GROUP.credits?.map((credit) => ({ ...credit, source_url: 'urn:x', license_url: null })),
+      };
+      render(<ResourceCard card={card} href={MB_GROUP.uri} actions={<div data-resource-controls />} />);
+
+      expect(within(credits()).queryByRole('link')).not.toBeInTheDocument();
+      fireEvent.click(screen.getAllByTestId('resource-credit-source')[0]);
+      expect(open).toHaveBeenCalledWith(MB_GROUP.uri, '_blank', 'noopener,noreferrer');
+    });
+
+    it('drops the image’s credit when the image fails to load', () => {
+      render(<ResourceCard card={MB_GROUP} />);
+
+      fireEvent.error(screen.getByTestId('resource-card-image'));
+
+      expect(credits()).toHaveTextContent('Sources: Text: Wikipedia');
+      expect(credits()).not.toHaveTextContent('Wikimedia Commons');
+    });
+
+    it('credits only the text when an album has no image', () => {
+      render(<ResourceCard card={mbReleaseGroupEnrichedFixture} size="large" />);
+
+      expect(screen.queryByTestId('resource-card-image')).not.toBeInTheDocument();
+      expect(screen.getAllByTestId('resource-credit')).toHaveLength(1);
+      expect(screen.getByTestId('resource-credit')).toHaveAttribute('data-field', 'description');
+    });
+
+    it('shows a card without credits as before: its own description and image, no sources', () => {
+      render(<ResourceCard card={mbReleaseGroupFixture} size="large" />);
+
+      expect(screen.getByTestId('resource-card-description')).toHaveTextContent('Miles Davis');
+      expect(screen.queryByTestId('resource-credits')).not.toBeInTheDocument();
+    });
+
+    it('still shows an image that has no credit', () => {
+      render(<ResourceCard card={{ ...MB_GROUP, credits: MB_GROUP.credits?.slice(0, 1) }} />);
+
+      expect(screen.getByTestId('resource-card-image')).toHaveAttribute('src', MB_GROUP.image);
+      expect(credits()).toHaveTextContent('Sources: Text: Wikipedia');
+      expect(credits()).not.toHaveTextContent('Wikimedia Commons');
+    });
+
+    it('shows no sources line on a card without credits', () => {
+      render(<ResourceCard card={ARTICLE} />);
+
+      expect(screen.queryByTestId('resource-credits')).not.toBeInTheDocument();
+    });
+
+    it.each([
+      ['stable', mbArtistSparseFixture],
+      ['enriched, nothing found', mbArtistSparseEnrichedFixture],
+    ])('shows neither a description nor sources for a card without either (%s)', (_, sparse) => {
+      render(<ResourceCard card={sparse} size="large" />);
+
+      expect(screen.queryByTestId('resource-card-description')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('resource-credits')).not.toBeInTheDocument();
     });
   });
 });

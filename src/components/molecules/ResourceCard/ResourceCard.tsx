@@ -24,6 +24,8 @@ import {
   hasWideImage,
 } from './ResourceCard.utils';
 import { ResourceCardFrame, ResourceCardHeader } from './ResourceCardFrame';
+import { ResourceCredits } from './ResourceCredits';
+import { getCardAttribution, getMapDataCredit, getShownCredits } from './ResourceCredits.utils';
 
 /** What a card that is not `ok` says about itself. Only `missing` has a documented meaning (`/llms.txt`). */
 const STATUS_NOTES: Readonly<
@@ -49,6 +51,11 @@ const DETAIL_ICON_SIZE = 14;
  * The whole card is a click-through to the link, unless its actions' ⋯ menu lists other services
  * (`hasAlsoOn`: the same thing on other services too, `also_on`), where the viewer picks the
  * service; the source is its link either way.
+ *
+ * A text or image Pinakes enriched the card with comes with its credit (`credits`): the `large`
+ * card lists them under "Sources", the default card names the sources in one line; both close the
+ * card's body, above its actions.
+ * A value without a credit is the source page's own and shows as it is.
  *
  * The title opens the resource's page (`/resource?uri=<card.uri>`), or links out where links may
  * not navigate (the composer, a dialog). The `large` card heads that page: a heading title, "Open in
@@ -78,6 +85,11 @@ export function ResourceCard({ card, href, actions, hasAlsoOn = false, size = 'd
   const point = family !== ResourceFamily.WEB && !venue && card.point ? formatResourcePoint(card.point) : null;
   const eventStatusNote = family === ResourceFamily.EVENT ? getEventStatusNote(card.event_status) : null;
   const statusNote = status === PinakesStatus.OK ? null : STATUS_NOTES[status];
+  // OpenStreetMap is credited once, under the resource page's Sources ("Map data"), not on every
+  // card; another source's credit stays on the card.
+  const cardAttribution = getCardAttribution(card.attribution);
+  const mapCredit = isLarge ? getMapDataCredit(card.attribution) : null;
+  const credits = getShownCredits(card, { imageShown: showImage });
   // A `missing` card's link is gone upstream: the large card's source does not send the viewer there.
   const titleUrl = status === PinakesStatus.MISSING ? null : linkUrl;
   const smallTitleUrl = navigable ? getResourceRoute(card.uri) : linkUrl;
@@ -162,13 +174,13 @@ export function ResourceCard({ card, href, actions, hasAlsoOn = false, size = 'd
             {eventStatusNote && (
               <ResourceDetail icon={CircleAlert} text={eventStatusNote} testId="resource-card-event-status" />
             )}
-            {card.attribution && (
+            {cardAttribution && (
               <Typography
                 size="xs"
                 data-testid="resource-card-attribution"
                 className="font-normal wrap-anywhere text-muted-foreground"
               >
-                {card.attribution}
+                {cardAttribution}
               </Typography>
             )}
             {statusNote && (
@@ -176,6 +188,11 @@ export function ResourceCard({ card, href, actions, hasAlsoOn = false, size = 'd
             )}
           </Container>
         </Container>
+
+        <ResourceCredits
+          credits={mapCredit ? [...credits, mapCredit] : credits}
+          variant={isLarge ? 'full' : 'compact'}
+        />
       </Container>
 
       {actions}

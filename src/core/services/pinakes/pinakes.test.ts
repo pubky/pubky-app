@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { omit } from 'lodash-es';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PINAKES_REQUEST_TIMEOUT_MS } from '@/config/pinakes';
 import { ClientErrorCode, NetworkErrorCode, RateLimitErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
@@ -9,6 +10,14 @@ import { asOpaque } from '@/test-utils/type-assertions';
 import articleFixture from './fixtures/by-uri.article.json';
 import bookFixture from './fixtures/by-uri.book.json';
 import eventFixture from './fixtures/by-uri.event.json';
+import mbArtistSparseEnrichedFixture from './fixtures/by-uri.mb-artist-sparse.enriched.json';
+import mbArtistSparseFixture from './fixtures/by-uri.mb-artist-sparse.json';
+import mbGroupEnrichedFixture from './fixtures/by-uri.mb-group.enriched.json';
+import mbGroupFixture from './fixtures/by-uri.mb-group.json';
+import mbRecordingEnrichedFixture from './fixtures/by-uri.mb-recording.enriched.json';
+import mbRecordingFixture from './fixtures/by-uri.mb-recording.json';
+import mbReleaseGroupEnrichedFixture from './fixtures/by-uri.mb-release-group.enriched.json';
+import mbReleaseGroupFixture from './fixtures/by-uri.mb-release-group.json';
 import missingFixture from './fixtures/by-uri.missing.json';
 import movieFixture from './fixtures/by-uri.movie.json';
 import musicRecordingFixture from './fixtures/by-uri.music-recording.json';
@@ -59,6 +68,17 @@ const RESOURCE_FIXTURES: Record<string, TPinakesResourceDetail> = {
   pubky: pubkyFixture,
   missing: missingFixture,
   unreachable: unreachableFixture,
+  'mb-release-group': mbReleaseGroupFixture,
+  'mb-artist-sparse': mbArtistSparseFixture,
+  'mb-recording': mbRecordingFixture,
+  'mb-group': mbGroupFixture,
+};
+// Stable captures with only the enrichment fields of the Pinakes contract added (fixtures README).
+const ENRICHED_FIXTURES: Record<string, TPinakesResourceDetail> = {
+  'mb-release-group': mbReleaseGroupEnrichedFixture,
+  'mb-artist-sparse': mbArtistSparseEnrichedFixture,
+  'mb-recording': mbRecordingEnrichedFixture,
+  'mb-group': mbGroupEnrichedFixture,
 };
 const GROUP_FIXTURE: TPinakesGroupDetail = groupFixture;
 const RELATED_FIXTURE: TPinakesSearchResponse = relatedFixture;
@@ -108,6 +128,13 @@ describe('captured fixtures', () => {
       expect(card.because?.taggers.length).toBeGreaterThan(0);
       expect(card.because?.taggers.length).toBeLessThanOrEqual(3);
     }
+  });
+
+  it.each(Object.keys(ENRICHED_FIXTURES))('add only image, description and credits to the %s capture', (name) => {
+    const enrichment = ['image', 'description', 'credits'];
+
+    expect(omit(ENRICHED_FIXTURES[name], enrichment)).toStrictEqual(omit(RESOURCE_FIXTURES[name], enrichment));
+    expect(ENRICHED_FIXTURES[name].credits).toEqual(expect.any(Array));
   });
 
   it('place every card type in the schema.org tree, root first', () => {
