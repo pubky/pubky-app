@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { QrCodeSlot } from './QrCodeSlot';
 
@@ -83,6 +83,15 @@ describe('QrCodeSlot', () => {
     expect(ringLogo).toHaveAttribute('width', '48');
   });
 
+  it('draws the given centre logo instead of the Pubky Ring mark', () => {
+    render(<QrCodeSlot {...baseProps} logo={{ src: '/images/bitkit-qr-logo.svg', alt: 'Bitkit' }} />);
+
+    const logo = screen.getByAltText('Bitkit');
+    expect(logo).toHaveAttribute('src', '/images/bitkit-qr-logo.svg');
+    expect(logo).toHaveAttribute('width', '48');
+    expect(screen.queryByAltText('Pubky Ring')).not.toBeInTheDocument();
+  });
+
   it('scales the QR code and ring logo for a non-default size', () => {
     render(<QrCodeSlot {...baseProps} size={220} />);
 
@@ -104,23 +113,12 @@ describe('QrCodeSlot', () => {
     expect(screen.getByAltText('Pubky Ring').getAttribute('class') ?? '').toContain('group-hover:opacity-90');
   });
 
-  it('renders blurred QR + reload label without inline button when no reload action', () => {
+  it('renders blurred QR + reload label without an inline button', () => {
     render(<QrCodeSlot {...baseProps} url="" isExpired />);
 
     const blurred = screen.getByTestId('next-image');
     expect(blurred).toHaveAttribute('src', '/images/qr-blurred.png');
     expect(screen.getByText('Click to reload')).toBeInTheDocument();
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
-  });
-
-  it('wraps expired state in inline button when reload action is provided', () => {
-    const onClick = vi.fn();
-    render(<QrCodeSlot {...baseProps} url="" isExpired expiredReloadAction={{ onClick, ariaLabel: 'Reload QR' }} />);
-
-    const reloadButton = screen.getByRole('button', { name: 'Reload QR' });
-    expect(reloadButton).toBeInTheDocument();
-
-    fireEvent.click(reloadButton);
-    expect(onClick).toHaveBeenCalledTimes(1);
   });
 });

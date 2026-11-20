@@ -2,6 +2,20 @@
 @import 'tw-animate-css';
 @plugin '@tailwindcss/typography';
 
+/* The parser marks the bootstrap script for saved accounts. The hydrated shell removes
+   the script once it knows whether to show the public landing or restore the account. */
+.landing-account-spinner {
+  display: none;
+}
+
+script[data-saved-account] ~ .landing-account-spinner {
+  display: flex;
+}
+
+script[data-saved-account] ~ .landing-public-content {
+  display: none;
+}
+
 body {
   font-family: 'Inter Tight', sans-serif;
   min-width: 375px;
@@ -984,17 +998,6 @@ body {
     );
     -webkit-mask-repeat: no-repeat;
     -webkit-mask-size: 100% 100%;
-  }
-
-  /* Same artwork in the light brand colour, as the logo swaps to `pubky-logo-on-light.svg`. */
-  .light .landing-swirl-background__graphic {
-    background-image: url('/images/bg-home-on-light.svg');
-  }
-
-  /* The posters are white line art on transparency, drawn for a dark card; outline them on a light one. */
-  .light .landing-broken-art {
-    filter: drop-shadow(1px 0 0 var(--foreground)) drop-shadow(-1px 0 0 var(--foreground))
-      drop-shadow(0 1px 0 var(--foreground)) drop-shadow(0 -1px 0 var(--foreground));
   }
 
   :root[data-landing-swirl='broken'] .landing-swirl-background__graphic {

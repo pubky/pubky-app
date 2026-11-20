@@ -1,31 +1,36 @@
-import { HasBackedUp, BackupType, CheckForNewPosts, OnboardingExperience, PostType, WaitForNewPosts } from './enums';
+import { HasBackedUp, CheckForNewPosts, OnboardingExperience, PostType, WaitForNewPosts } from './enums';
 
 declare global {
   namespace Cypress {
     interface Chainable<Subject = any> {
       signOut(hasBackedUp: HasBackedUp): Chainable<void>;
-      signInWithEncryptedFile(backupFilepath: string, passcode?: string): Chainable<void>;
-      signInWithRecoveryPhrase(recoveryPhrase: string): Chainable<void>;
-      completeOnboardingFromInstall(
-        profileName: string,
-        profileBio?: string,
-        backup?: BackupType[],
-        pubkyAlias?: string,
-        experience?: OnboardingExperience,
+      signInWithPubkyRing(
+        name: string,
+        landingPath?: string,
+        options?: {
+          /** The account has a 0.x tree: wait on the gate's Continue screen, click Continue, wait on the progress screen, then up to an extended timeout for the landing route. */
+          migrates?: boolean;
+          /** `false`: the account already passed the gate, so the sign-in fails if `/migration` or the Continue button shows; without `migrates` only. */
+          asked?: false;
+          /** Runs on the gate's Continue screen before Continue is clicked, e.g. to check nothing was written yet; with `migrates` only. */
+          beforeContinue?: () => void;
+          /** Runs on /migration after Continue, before the run is under way, e.g. while another holder has the migration lock; with `migrates` only. */
+          beforeRun?: () => void;
+          /** Runs on the gate's progress screen, before the command waits for the landing route; with `migrates` only. */
+          whileMigrating?: () => void;
+          /** Clicks through the summary of a run that left something behind; a string is the summary text to expect first. */
+          acknowledgesSummary?: boolean | string;
+        },
       ): Chainable<void>;
       onboardAsNewUser(
         profileName: string,
         profileBio?: string,
-        backup?: BackupType[],
         pubkyAlias?: string,
         experience?: OnboardingExperience,
       ): Chainable<void>;
+      completeSignUpWithPubkyRing(profileName: string): Chainable<void>;
       finishFollowBestMatchesStep(): Chainable<void>;
-      backupRecoveryFile(passcode?: string): Chainable<void>;
-      deleteDownloadsFolder(): Chainable<void>;
       waitForFileExistsWithSuffix(folder: string, suffix: string): Chainable<void>;
-      deleteFile(filePath: string): Chainable<void>;
-      renameFile(fromPath: string, toPath: string): Chainable<void>;
       innerTextShouldEq(text: string): Chainable<Subject>;
       innerTextShouldContain(text: string): Chainable<Subject>;
       innerTextContains(text: string): Chainable<Subject>;
@@ -34,7 +39,7 @@ declare global {
       saveStringToAlias(text: string, alias: string): Chainable<void>;
       saveElementValueToAlias(selector: string, alias: string): Chainable<void>;
       saveCopiedPubkyToAlias(alias: string): Chainable<void>;
-      saveCopiedTextToAlias(alias: string): Chainable<void>;
+      copyAuthLinkFromQr(): Chainable<string>;
       assertElementDoesNotExist(selector: string): Chainable<void>;
       waitReload(time?: number): Chainable<void>;
       waitReloadWhileElementDoesNotExist(selector: string, attempts?: number): Chainable<void>;

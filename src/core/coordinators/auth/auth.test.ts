@@ -18,6 +18,7 @@ vi.mock('@/controllers/auth/auth', () => ({
     syncRemovedSession: vi.fn().mockResolvedValue(undefined),
     subscribeSessionFailures: vi.fn(() => vi.fn()),
     requireSessionReauthentication: vi.fn(() => true),
+    retrySocialMigration: vi.fn(),
   },
 }));
 const coordinator = AuthCoordinator.getInstance();
@@ -36,6 +37,27 @@ afterEach(() => {
 });
 
 describe('AuthCoordinator', () => {
+  it('runs only guest cleanup on startup and network return until the landing releases it', () => {
+    useAuthStore.setState({ hasHydrated: true });
+    const stop = coordinator.watchGuestCleanup();
+    window.dispatchEvent(new Event('online'));
+    window.dispatchEvent(new Event('online'));
+    for (const retry of [
+      AuthController.retireLegacyCookieSessions,
+      AuthController.retrySessionRetirement,
+      AuthController.retryShopCleanup,
+    ]) {
+      expect(retry).toHaveBeenCalledTimes(2);
+    }
+    expect(AuthController.syncSessionFromStorage).not.toHaveBeenCalled();
+    expect(AuthController.subscribeSessionFailures).not.toHaveBeenCalled();
+    expect(AuthController.restorePersistedSession).not.toHaveBeenCalled();
+    stop();
+    vi.advanceTimersByTime(10_000);
+    window.dispatchEvent(new Event('online'));
+    expect(AuthController.retryShopCleanup).toHaveBeenCalledTimes(2);
+  });
+
   it('shares only accepted failure generations, ignores malformed events and closes subscriptions', () => {
     const postMessage = vi.fn();
     const close = vi.fn();
@@ -164,6 +186,23 @@ describe('AuthCoordinator', () => {
     document.dispatchEvent(new Event('visibilitychange'));
     expect(AuthController.restorePersistedSession).toHaveBeenCalledTimes(2);
   });
+  it('retries a blocked migration on foreground and network return under the same cooldown', () => {
+    useAuthStore.setState({ hasHydrated: true, restoreStatus: 'social-migration' });
+    coordinator.start();
+    vi.clearAllMocks();
+    document.dispatchEvent(new Event('visibilitychange'));
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(AuthController.retrySocialMigration).toHaveBeenCalledOnce();
+    expect(AuthController.restorePersistedSession).not.toHaveBeenCalled();
+    // The network return gets its own retry even inside the focus cooldown
+    window.dispatchEvent(new Event('online'));
+    expect(AuthController.retrySocialMigration).toHaveBeenCalledTimes(2);
+    vi.advanceTimersByTime(10_000);
+    document.dispatchEvent(new Event('visibilitychange'));
+    expect(AuthController.retrySocialMigration).toHaveBeenCalledTimes(3);
+    expect(AuthController.retireLegacyCookieSessions).not.toHaveBeenCalled();
+  });
+
   it('retries immediately when the network returns during the focus cooldown', () => {
     useAuthStore.setState({ hasHydrated: true, restoreStatus: 'temporary-error' });
     coordinator.start();

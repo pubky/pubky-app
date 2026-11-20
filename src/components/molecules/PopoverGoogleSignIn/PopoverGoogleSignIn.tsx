@@ -5,44 +5,40 @@ import { Heading } from '@/atoms/Heading/Heading';
 import { Link } from '@/atoms/Link/Link';
 import { Popover, PopoverContent, PopoverTrigger } from '@/atoms/Popover/Popover';
 import { Typography } from '@/atoms/Typography/Typography';
+import { isPassportAppleEnabled } from '@/config/network';
 import { cn } from '@/libs/utils/utils';
 
 const PASSPORT_README_URL = 'https://github.com/pubky/pubky-passport/blob/main/README.md';
 
-const POINTS = [
-  {
-    term: "Google's role:",
-    text: 'Helps identify you and securely retrieve your encrypted backup. It does not create or control your pubky.',
-  },
-  {
-    term: 'Your keys:',
-    text: 'Keys are created in your browser and encrypted before storage on Google Drive. Google never sees the private key.',
-  },
-  {
-    term: 'Recovery:',
-    text: 'Recovery requires both your encrypted Google Drive backup and a separate recovery key from Passport.',
-  },
-  {
-    term: 'Split security:',
-    text: 'Neither Google nor Passport can recover your pubky on its own, reducing reliance on either one.',
-  },
-];
-
 /**
  * PopoverGoogleSignIn
  *
- * Help popover behind the "Continue with Google" pill: what Google does, where the keys live, and
- * why neither Google nor Passport can recover an account alone. Opens on click (and Enter/Space)
- * rather than hover, so an icon-only trigger stays reachable by keyboard, and on touch devices.
+ * Help popover for Passport sign-in: where the keys and their encrypted backup live, and what
+ * recovery requires. Opens on click (and Enter/Space) rather than hover, so an icon-only trigger
+ * stays reachable by keyboard, and on touch devices.
  */
 export function PopoverGoogleSignIn({ className }: { className?: string }) {
+  const appleEnabled = isPassportAppleEnabled();
+  const points = [
+    {
+      term: 'Your keys:',
+      text: appleEnabled
+        ? 'Created in your browser, with an encrypted backup stored in your iCloud or Google Drive.'
+        : 'Created in your browser, with an encrypted backup stored in your Google Drive.',
+    },
+    {
+      term: 'Recovery:',
+      text: 'Restoring your pubky requires your encrypted backup and a separate key from Passport.',
+    },
+  ];
+
   return (
     <Popover>
       <PopoverTrigger asChild>
         <Button
           variant="ghost"
           size="icon"
-          aria-label="About signing in with Google"
+          aria-label={appleEnabled ? 'About signing in with Apple or Google' : 'About signing in with Google'}
           data-cy="passport-google-help-btn"
           className={cn(
             'size-8 text-secondary-foreground/70 hover:bg-secondary-foreground/10 hover:text-foreground',
@@ -52,12 +48,18 @@ export function PopoverGoogleSignIn({ className }: { className?: string }) {
           <CircleHelp className="size-4" data-testid="circle-help-icon" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-6">
+      <PopoverContent
+        collisionPadding={16}
+        className="mx-0 max-h-(--radix-popover-content-available-height) w-80 overflow-y-auto p-6"
+      >
         <Container className="gap-4">
           <Heading level={4} size="sm" className="text-popover-foreground">
-            {'Continue with Google, powered by Pubky Passport.'}
+            {appleEnabled ? 'Sign in with Apple or Google' : 'Sign in with Google'}
           </Heading>
-          {POINTS.map((point) => (
+          <Typography size="sm" className="text-muted-foreground">
+            {'Use an existing account to create or access your pubky with Pubky Passport.'}
+          </Typography>
+          {points.map((point) => (
             <Typography key={point.term} size="sm" className="text-muted-foreground">
               <Typography as="strong" size="sm" className="font-semibold text-secondary-foreground">
                 {point.term}

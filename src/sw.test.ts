@@ -1,11 +1,15 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { APP_VERSION } from '@/config/app';
+import { SW_CLIENT_ANNOUNCE, SW_TAKEOVER_SKIPPED } from '@/config/pwa';
 import { asOpaque } from '@/test-utils/type-assertions';
 
 /**
  * `src/sw.ts` runs inside a service worker; here it is evaluated in jsdom with the
  * `serwist` runtime mocked so the test can assert the configuration that matters:
- * no data caching, a NetworkOnly navigation route with the static offline fallback,
- * user-consented updates, and the share-target / legacy-cache listeners.
+ * no data caching, a NetworkOnly navigation route with the static offline fallback, the
+ * forced takeover of the social v1 cut-over and the announce handshake that exempts pages of
+ * the new build from it (ADR-0021 amendment, until PR-E2), and the share-target / legacy-cache
+ * listeners.
  */
 
 type Matcher = (context: { request: Request; sameOrigin: boolean; url: URL; event?: unknown }) => boolean;
@@ -74,9 +78,14 @@ describe('src/sw.ts', () => {
     await import('./sw');
   });
 
-  it('builds a worker that waits for user consent before taking over', () => {
+  afterEach(() => {
+    Reflect.deleteProperty(globalThis, 'clients');
+    Reflect.deleteProperty(globalThis, 'registration');
+  });
+
+  it('builds a worker that activates as soon as it installs (social v1 cut-over, until PR-E2)', () => {
     expect(mocks.options).toMatchObject({
-      skipWaiting: false,
+      skipWaiting: true,
       clientsClaim: true,
       navigationPreload: true,
       precacheOptions: { cleanupOutdatedCaches: true },
@@ -93,7 +102,7 @@ describe('src/sw.ts', () => {
 
     expect(route.matcher(navigationContext('https://pubky.app/home'))).toBe(true);
     expect(route.matcher(navigationContext('https://pubky.app/home', { mode: 'cors' }))).toBe(false);
-    expect(route.matcher(navigationContext('https://nexus.pubky.app/v0/stream', { sameOrigin: false }))).toBe(false);
+    expect(route.matcher(navigationContext('https://nexus.pubky.app/v1/stream', { sameOrigin: false }))).toBe(false);
     expect(route.matcher(navigationContext('https://pubky.app/api/feedback'))).toBe(false);
     for (const path of [
       '/shop-embed',
@@ -140,6 +149,169 @@ describe('src/sw.ts', () => {
 
     expect(caches.delete).toHaveBeenCalledWith('api-cache');
     expect(deleteDatabase).toHaveBeenCalledWith('serwist-expiration');
+  });
+
+  describe('social v1 cut-over takeover', () => {
+    const order: string[] = [];
+    const windowClient = (id: string, url: string, outcome: 'ok' | 'rejected' | 'pending') => ({
+      id,
+      type: 'window' as const,
+      url,
+      postMessage: vi.fn(),
+      navigate: vi.fn((target: string) => {
+        order.push(`navigate:${target}`);
+        if (outcome === 'rejected') return Promise.reject(new TypeError('The client is not controlled by this worker'));
+        // A navigation is a fetch served by this worker, which the browser holds until activation ends.
+        if (outcome === 'pending') return new Promise<null>(() => {});
+        return Promise.resolve(null);
+      }),
+    });
+    const claim = vi.fn(async () => {
+      order.push('claim');
+    });
+    let windows: ReturnType<typeof windowClient>[];
+    let matchAll: ReturnType<typeof vi.fn>;
+
+    beforeEach(() => {
+      order.length = 0;
+      claim.mockClear();
+      windows = [
+        windowClient('tab-home', 'https://pubky.app/home', 'ok'),
+        windowClient('tab-settings', 'https://pubky.app/settings', 'rejected'),
+        windowClient('tab-post', 'https://pubky.app/post/alice:0123', 'pending'),
+      ];
+      matchAll = vi.fn().mockResolvedValue(windows);
+      Object.defineProperty(globalThis, 'clients', { configurable: true, value: { claim, matchAll } });
+    });
+
+    // Delivers a `message` event to the worker the way a page's `worker.postMessage(data)` would:
+    // `source` is the sending client (a WindowClient for a page), or whatever the test passes.
+    const receiveMessage = (
+      source: unknown,
+      data: unknown = { type: SW_CLIENT_ANNOUNCE, appVersion: 'page-build' },
+    ) => {
+      const [onMessage] = listeners.get('message') ?? [];
+      expect(onMessage).toBeDefined();
+      onMessage({ data, source });
+    };
+
+    // Runs the worker's own install then activate listeners (Serwist's are mocked away) the way the
+    // browser would: `registration.active` is the worker being replaced, or null on a first install.
+    const installThenActivate = async (active: object | null) => {
+      Object.defineProperty(globalThis, 'registration', { configurable: true, value: { active } });
+      for (const onInstall of listeners.get('install') ?? []) onInstall({ waitUntil: vi.fn() });
+      // The takeover listener is registered after the legacy-cache one.
+      const [, onTakeover] = listeners.get('activate') ?? [];
+      expect(onTakeover).toBeDefined();
+      const waitUntil = vi.fn();
+      onTakeover({ waitUntil });
+      // Activation must settle on its own: a rejected navigate or claim must not reject it, and a
+      // navigation still in flight must not hold it open (its fetch waits for this very activation).
+      await expect(waitUntil.mock.calls[0][0]).resolves.toBeUndefined();
+    };
+
+    // No page announced itself: every window runs a build without the handshake (0.x).
+    it('claims then navigates every window client without waiting for the navigations', async () => {
+      await installThenActivate({ scriptURL: 'https://pubky.app/sw.js' });
+
+      expect(claim).toHaveBeenCalledTimes(1);
+      expect(matchAll).toHaveBeenCalledWith({ type: 'window', includeUncontrolled: true });
+      expect(order[0]).toBe('claim');
+      for (const client of windows) {
+        expect(client.navigate).toHaveBeenCalledWith(client.url);
+        expect(client.postMessage).not.toHaveBeenCalled();
+      }
+    });
+
+    it('leaves a window that announced itself in place and answers it with its own build', async () => {
+      const [announced, ...others] = windows;
+      receiveMessage(announced);
+
+      await installThenActivate({ scriptURL: 'https://pubky.app/sw.js' });
+
+      expect(announced.postMessage).toHaveBeenCalledTimes(1);
+      expect(announced.postMessage).toHaveBeenCalledWith({ type: SW_TAKEOVER_SKIPPED, appVersion: APP_VERSION });
+      expect(announced.navigate).not.toHaveBeenCalled();
+      for (const client of others) {
+        expect(client.navigate).toHaveBeenCalledWith(client.url);
+        expect(client.postMessage).not.toHaveBeenCalled();
+      }
+    });
+
+    it('navigates nothing when the only window announced itself', async () => {
+      const [announced] = windows;
+      matchAll.mockResolvedValue([announced]);
+      receiveMessage(announced);
+
+      await installThenActivate({ scriptURL: 'https://pubky.app/sw.js' });
+
+      expect(claim).toHaveBeenCalledTimes(1);
+      expect(announced.navigate).not.toHaveBeenCalled();
+      expect(announced.postMessage).toHaveBeenCalledWith({ type: SW_TAKEOVER_SKIPPED, appVersion: APP_VERSION });
+    });
+
+    // The announcements live in the worker instance, like `replacesActiveWorker` (ADR-0021 amendment): a
+    // worker the browser restarts between install and activate loses both and takes the first-install
+    // path, so it claims and navigates nothing; 0.x tabs then wait for their own next load or update check.
+    it('takes the first-install path when the worker instance restarts before activation', async () => {
+      receiveMessage(windows[0]);
+      listeners.clear();
+      vi.resetModules();
+      await import('./sw');
+      Object.defineProperty(globalThis, 'registration', {
+        configurable: true,
+        value: { active: { scriptURL: 'https://pubky.app/sw.js' } },
+      });
+
+      // `install` fired once, on the instance that is gone; only `activate` reaches the restarted one.
+      const [, onTakeover] = listeners.get('activate') ?? [];
+      expect(onTakeover).toBeDefined();
+      const waitUntil = vi.fn();
+      onTakeover({ waitUntil });
+      await expect(waitUntil.mock.calls[0][0]).resolves.toBeUndefined();
+
+      expect(claim).not.toHaveBeenCalled();
+      expect(matchAll).not.toHaveBeenCalled();
+      for (const client of windows) {
+        expect(client.navigate).not.toHaveBeenCalled();
+      }
+    });
+
+    it('ignores other message types and announces from anything but a window client', async () => {
+      const [home, settings, post] = windows;
+      receiveMessage(home, { type: 'SKIP_WAITING' });
+      receiveMessage(home, SW_CLIENT_ANNOUNCE);
+      receiveMessage(null);
+      // A dedicated worker client carries an id and a type but is not a window.
+      receiveMessage({ id: settings.id, type: 'worker', postMessage: settings.postMessage });
+      // A MessagePort source has neither.
+      receiveMessage({ postMessage: post.postMessage });
+
+      await installThenActivate({ scriptURL: 'https://pubky.app/sw.js' });
+
+      for (const client of windows) {
+        expect(client.navigate).toHaveBeenCalledWith(client.url);
+        expect(client.postMessage).not.toHaveBeenCalled();
+      }
+    });
+
+    it('still navigates when claiming fails', async () => {
+      claim.mockRejectedValueOnce(new DOMException('claim failed', 'InvalidStateError'));
+
+      await installThenActivate({ scriptURL: 'https://pubky.app/sw.js' });
+
+      expect(windows.map((client) => client.navigate.mock.calls.length)).toEqual([1, 1, 1]);
+    });
+
+    it('leaves a first install to clientsClaim: no reload of a first-time visitor', async () => {
+      await installThenActivate(null);
+
+      expect(claim).not.toHaveBeenCalled();
+      expect(matchAll).not.toHaveBeenCalled();
+      for (const client of windows) {
+        expect(client.navigate).not.toHaveBeenCalled();
+      }
+    });
   });
 
   it('turns a share-target POST into a redirect to /share and stashes the files', async () => {

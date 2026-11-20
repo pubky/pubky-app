@@ -12,13 +12,15 @@ import { cn } from '@/libs/utils/utils';
 interface DatabaseErrorScreenProps {
   /** Re-runs database initialization (wired to `DatabaseContext.retry`). */
   onRetry: () => void | Promise<void>;
+  /** Replaces the generic explanation when the cause is known (e.g. another tab runs a different app version). */
+  description?: string;
 }
 
 /**
  * Full-screen recovery state shown when the local IndexedDB database fails to initialize.
  * Blocks the broken app from rendering and offers the user a way to recover without losing context.
  */
-export function DatabaseErrorScreen({ onRetry }: DatabaseErrorScreenProps) {
+export function DatabaseErrorScreen({ onRetry, description }: DatabaseErrorScreenProps) {
   const [isRetrying, setIsRetrying] = useState(false);
 
   const handleRetry = async () => {
@@ -49,9 +51,8 @@ export function DatabaseErrorScreen({ onRetry }: DatabaseErrorScreenProps) {
           {'Storage unavailable'}
         </Typography>
         <Typography as="p" className="text-center text-base leading-6 font-medium text-secondary-foreground">
-          {
-            "We couldn't access your device's local storage. Some mobile browsers, especially in-app browsers, can interrupt it. Please try again or reload the page."
-          }
+          {description ??
+            "We couldn't access your device's local storage. Some mobile browsers, especially in-app browsers, can interrupt it. Please try again or reload the page."}
         </Typography>
       </Container>
 

@@ -1,4 +1,4 @@
-import { PubkyAppUser } from 'pubky-app-specs';
+import type { User } from 'pubky-social-specs';
 import { getProfileLocalEditTtlMs } from '@/config/user';
 import { db } from '@/database/franky/franky';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
@@ -78,20 +78,17 @@ export class LocalProfileService {
    * @returns Promise resolving to void
    */
   static async upsertCounts(userId: Pubky, userCounts: NexusUserCounts): Promise<void> {
-    await UserCountsModel.upsert({
-      id: userId,
-      ...userCounts,
-    });
+    await UserCountsModel.upsert(UserCountsModel.toSchema([userId, userCounts]));
   }
 
   /**
    * Stores a profile the user just published as a pending local edit, creating the row when it
    * is missing. An existing row keeps its known Nexus revision and badge tier.
-   * @param user - The published profile
+   * @param user - The published profile, as the data model stores it
    * @param pubky - The profile owner
    * @returns Promise resolving to void
    */
-  static async updateDetails(user: PubkyAppUser, pubky: Pubky): Promise<void> {
+  static async updateDetails(user: User, pubky: Pubky): Promise<void> {
     await db.transaction('rw', [UserDetailsModel.table, UserTtlModel.table], async () => {
       const now = Date.now();
       const existing = await UserDetailsModel.findById(pubky);

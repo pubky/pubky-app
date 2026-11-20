@@ -1,16 +1,20 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { getPassportUrl } from '@/config/network';
+import { getPassportUrl, isPassportAppleEnabled } from '@/config/network';
 import {
   PASSPORT_ATTEMPT_TIMEOUT_MS,
   PASSPORT_POPUP_CLOSED_CONFIRMATIONS,
   PASSPORT_POPUP_CLOSED_POLL_MS,
-  PASSPORT_POPUP_FEATURES,
+  PASSPORT_POPUP_HEIGHT,
   PASSPORT_POPUP_NAME_PREFIX,
+  PASSPORT_POPUP_WIDTH,
 } from '@/config/passport';
-import { AuthController } from '@/controllers/auth/auth';
-import { isAuthApprovalMismatchError, isAuthFlowCanceledError } from '@/libs/error/auth-flow-canceled';
+import {
+  isAuthApprovalCapabilityError,
+  isAuthApprovalMismatchError,
+  isAuthFlowCanceledError,
+} from '@/libs/error/auth-flow-canceled';
 import { isAppError, isWrongEnvironmentHomeserverError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
 import {
@@ -24,6 +28,7 @@ import {
 import type { PassportOutcome } from '@/libs/passport/passport.types';
 import { getShopReauthorizationIdentity } from '@/libs/shop-embed/sign-in';
 import { toast } from '@/molecules/Toaster/toast';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import type {
   PassportAttemptResult,
   PassportFailureReason,
@@ -65,6 +70,19 @@ const FAILURE_TOAST_COPY: Record<PassportFailureReason, string> = {
   'flow-error': 'Sign in with Google failed. Try again.',
 };
 
+/** Same copy without a provider name when Passport also offers Apple (`isPassportAppleEnabled`). */
+const FAILURE_TOAST_COPY_WITH_APPLE: Record<PassportFailureReason, string> = {
+  'popup-blocked': 'Allow pop-ups for this site to continue with Passport.',
+  cancel: 'Passport sign-in was cancelled.',
+  error: 'Passport could not complete the sign-in. Try again.',
+  'popup-closed': 'The Passport window was closed before sign-in finished.',
+  timeout: 'Passport sign-in timed out. Try again.',
+  'flow-error': 'Sign in with Passport failed. Try again.',
+};
+
+const failureToastCopy = (reason: PassportFailureReason): string =>
+  (isPassportAppleEnabled() ? FAILURE_TOAST_COPY_WITH_APPLE : FAILURE_TOAST_COPY)[reason];
+
 /**
  * Drive one Pubky Passport ("Continue with Google") attempt.
  *
@@ -78,6 +96,7 @@ export function usePassportAuth(options: UsePassportAuthOptions = {}): UsePasspo
   const isMountedRef = useRef(true);
   const activeAttemptRef = useRef<PassportAttempt | null>(null);
   const onAttemptSettledRef = useRef(options.onAttemptSettled);
+  const abandonPreflightRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     onAttemptSettledRef.current = options.onAttemptSettled;
@@ -85,10 +104,11 @@ export function usePassportAuth(options: UsePassportAuthOptions = {}): UsePasspo
 
   useEffect(() => {
     isMountedRef.current = true;
-    // The attempt deliberately survives unmount: session initialization mutates global stores
-    // and must complete even if the page re-renders while the popup is open.
     return () => {
       isMountedRef.current = false;
+      // A newer page can offer Ring immediately. An older click still waiting for its
+      // dependencies must never start a grant there. Existing relay/SDK work keeps its owner.
+      abandonPreflightRef.current?.();
     };
   }, []);
 
@@ -98,6 +118,15 @@ export function usePassportAuth(options: UsePassportAuthOptions = {}): UsePasspo
     if (attempt.phase === 'settled' || !isCurrent(attempt)) return;
     attempt.phase = 'settled';
     attempt.stopAuthorizationTimers();
+    attempt.stopMessageListener();
+    try {
+      if (!attempt.popup.closed) attempt.popup.close();
+    } catch {
+      // Closing a cross-origin popup is best effort.
+    }
+    abandonPreflightRef.current = null;
+    activeAttemptRef.current = null;
+    if (isMountedRef.current) setIsPending(false);
     onAttemptSettledRef.current?.({ attemptId: attempt.id, result });
   };
 
@@ -105,7 +134,7 @@ export function usePassportAuth(options: UsePassportAuthOptions = {}): UsePasspo
   const fail = (attempt: PassportAttempt, reason: PassportFailureReason) => {
     if (attempt.phase !== 'authorizing' || !isCurrent(attempt)) return;
     attempt.cancelAuthFlow?.();
-    toast({ variant: 'error', description: FAILURE_TOAST_COPY[reason] });
+    toast({ variant: 'error', description: failureToastCopy(reason) });
     settle(attempt, 'failed');
   };
 
@@ -184,8 +213,19 @@ export function usePassportAuth(options: UsePassportAuthOptions = {}): UsePasspo
     };
 
     try {
+      const entryUrl = window.location.href;
+      abandonPreflightRef.current = () => settle(attempt, 'superseded');
+      const identity = getShopReauthorizationIdentity();
+      const generation = useAuthStore.getState().generation;
+      const [{ AuthController }] = await Promise.all([import('@/controllers/auth/auth'), options.prepare?.()]);
+      if (attempt.phase !== 'authorizing' || !isCurrent(attempt)) return;
+      if (useAuthStore.getState().generation !== generation || window.location.href !== entryUrl) {
+        settle(attempt, 'superseded');
+        return;
+      }
+      abandonPreflightRef.current = null;
       const { authorizationUrl, awaitApproval, cancelAuthFlow } = await AuthController.getPassportAuthUrl({
-        ...getShopReauthorizationIdentity(),
+        ...identity,
         xCallback: buildPassportCallbacks(appOrigin, attempt.id),
       });
 
@@ -221,9 +261,11 @@ export function usePassportAuth(options: UsePassportAuthOptions = {}): UsePasspo
           variant: 'error',
           description: isWrongEnvironment
             ? 'This account is linked to a different homeserver. Use a staging account on this site.'
-            : isAuthApprovalMismatchError(error)
-              ? 'Approve with the account you are signed in with.'
-              : 'Sign in failed. Try again.',
+            : isAuthApprovalCapabilityError(error)
+              ? 'Authorization failed. Approve every requested permission and try again.'
+              : isAuthApprovalMismatchError(error)
+                ? 'Approve with the account you are signed in with.'
+                : 'Sign in failed. Try again.',
         });
         settle(attempt, 'failed');
         return;
@@ -232,7 +274,7 @@ export function usePassportAuth(options: UsePassportAuthOptions = {}): UsePasspo
     } catch (error) {
       if (attempt.phase !== 'authorizing' || !isCurrent(attempt)) return;
       if (isAuthFlowCanceledError(error)) {
-        // A newer auth flow (for example a recovery-phrase sign-in) took over: end quietly and
+        // A newer auth flow (for example a Pubky Ring sign-in) took over: end quietly and
         // do not report a failure, the other flow owns the session now.
         settle(attempt, 'superseded');
         return;
@@ -240,18 +282,6 @@ export function usePassportAuth(options: UsePassportAuthOptions = {}): UsePasspo
       // App errors were already logged and captured by their Err.* factory.
       if (!isAppError(error)) Logger.error('Passport authorization failed:', error);
       fail(attempt, 'flow-error');
-    } finally {
-      attempt.stopAuthorizationTimers();
-      attempt.stopMessageListener();
-      try {
-        if (!attempt.popup.closed) attempt.popup.close();
-      } catch {
-        // Closing a cross-origin popup is best effort.
-      }
-      if (isCurrent(attempt)) {
-        activeAttemptRef.current = null;
-        if (isMountedRef.current) setIsPending(false);
-      }
     }
   };
 
@@ -266,14 +296,33 @@ export function usePassportAuth(options: UsePassportAuthOptions = {}): UsePasspo
     }
 
     const attemptId = crypto.randomUUID();
+    const width = Math.min(PASSPORT_POPUP_WIDTH, window.screen.availWidth || PASSPORT_POPUP_WIDTH);
+    const height = Math.min(PASSPORT_POPUP_HEIGHT, window.screen.availHeight || PASSPORT_POPUP_HEIGHT);
     // Opened synchronously from the click; awaiting first would trigger popup blocking.
-    const popup = window.open('about:blank', `${PASSPORT_POPUP_NAME_PREFIX}${attemptId}`, PASSPORT_POPUP_FEATURES);
+    // Keep window.opener: Passport needs it for the outcome hand-off.
+    const popup = window.open(
+      'about:blank',
+      `${PASSPORT_POPUP_NAME_PREFIX}${attemptId}`,
+      `popup,width=${width},height=${height}`,
+    );
     if (!popup) {
       // No auth flow was started and nothing else was touched: report it as its own outcome so
       // callers do not regenerate a Ring request that is still perfectly valid.
-      toast({ variant: 'error', description: FAILURE_TOAST_COPY['popup-blocked'] });
+      toast({ variant: 'error', description: failureToastCopy('popup-blocked') });
       onAttemptSettledRef.current?.({ attemptId, result: 'popup-blocked' });
       return;
+    }
+
+    try {
+      const doc = popup.document;
+      doc.documentElement.lang = 'en';
+      doc.title = 'Opening Passport…';
+      const status = doc.createElement('p');
+      status.setAttribute('role', 'status');
+      status.textContent = doc.title;
+      doc.body.append(status);
+    } catch {
+      // A browser can restrict access to the popup document while still allowing navigation.
     }
 
     const attempt: PassportAttempt = {

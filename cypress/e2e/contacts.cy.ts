@@ -1,8 +1,8 @@
 import { slowCypressDown } from 'cypress-slow-down';
-import { BackupType, HasBackedUp } from '../support/types/enums';
+import { HasBackedUp } from '../support/types/enums';
 import { goToProfilePageFromHeader } from '../support/header';
-import { followFromPostMenu, searchAndFollowProfile } from '../support/contacts';
-import { backupDownloadFilePath } from '../support/auth';
+import { userIdFromPubky } from '../support/common';
+import { followFromPostMenu, searchAndFollowProfile, unfollowAndWaitForNexus } from '../support/contacts';
 import { followIndexed, postIndexed, userIndexed, waitForNexus } from '../support/nexus';
 import { createPostViaApi, seedUserViaApi } from '../support/seed';
 import {
@@ -10,7 +10,6 @@ import {
   expectProfileTabCount,
   expectProfileTabLabel,
   openProfileTab,
-  reloadUntilOwnFollowingIsEmpty,
   showProfileHeader,
   unfollowUserByUsername,
 } from '../support/profile';
@@ -19,64 +18,67 @@ import {
 describe('contacts', () => {
   before(() => {
     slowCypressDown();
-    cy.deleteDownloadsFolder();
   });
 
   it('can follow and unfollow', () => {
     const targetName = 'Unfollow Target';
     const actorName = 'Unfollow Actor';
     const targetAlias = 'unfollowTarget';
+    const actorAlias = 'unfollowActor';
 
-    cy.onboardAsNewUser(
-      targetName,
-      'Follow me, then stop',
-      [BackupType.RecoveryPhraseWithoutConfirmation],
-      targetAlias,
-    );
+    cy.onboardAsNewUser(targetName, 'Follow me, then stop', targetAlias);
     cy.signOut(HasBackedUp.Yes);
 
-    cy.onboardAsNewUser(actorName, 'I follow and then unfollow', [BackupType.RecoveryPhraseWithoutConfirmation]);
+    cy.onboardAsNewUser(actorName, 'I follow and then unfollow', actorAlias);
 
-    cy.get(`@${targetAlias}`).then((pubky) => {
-      searchAndFollowProfile(`${pubky}`, targetName);
+    cy.get<string>(`@${actorAlias}`).then((actorPubky) => {
+      cy.get<string>(`@${targetAlias}`).then((targetPubky) => {
+        const actor = { id: userIdFromPubky(actorPubky), name: actorName };
+        const target = { id: userIdFromPubky(targetPubky), name: targetName };
+
+        // An unfollow sent before Nexus has indexed the follow would pass `followGone` too early
+        searchAndFollowProfile(targetPubky, targetName);
+        waitForNexus(followIndexed(actor, target));
+
+        // The actor is listed as a follower, then drops out once they unfollow.
+        expectProfileTabCount('followers', 1);
+        openProfileTab('followers');
+        cy.get('[data-cy="profile-connections-list"]').within(() => {
+          cy.get('[data-cy="profile-follower-item-name"]').should('have.text', actorName);
+        });
+
+        showProfileHeader();
+        unfollowAndWaitForNexus(actor, target, clickUnfollowButton);
+        openProfileTab('followers');
+
+        expectProfileTabCount('followers', 0);
+        cy.get('[data-cy="profile-followers-empty"]').should('be.visible');
+        cy.get('[data-cy="profile-follower-item-name"]').should('not.exist');
+
+        goToProfilePageFromHeader();
+        expectProfileTabCount('following', 0);
+        openProfileTab('following');
+        cy.location('pathname').should('eq', '/profile/following');
+        cy.get('[data-cy="profile-following-empty"]').should('be.visible');
+        cy.contains('[data-cy="profile-follower-item-name"]', targetName).should('not.exist');
+
+        // Follow again and unfollow from the following list. The count drops at once; the row
+        // stays until the list mounts again, so it can be followed again.
+        searchAndFollowProfile(targetPubky, targetName);
+        waitForNexus(followIndexed(actor, target));
+        unfollowAndWaitForNexus(actor, target, () => unfollowUserByUsername(targetName));
+        expectProfileTabCount('following', 0);
+        cy.contains('[data-cy="profile-follower-item-name"]:visible', targetName).should('be.visible');
+
+        // The own Following list keeps an unfollowed row until it mounts again. Switching to
+        // another profile tab and back remounts it, so the test never reloads the page.
+        openProfileTab('followers');
+        openProfileTab('following');
+        expectProfileTabCount('following', 0);
+        cy.get('[data-cy="profile-following-empty"]').should('be.visible');
+        cy.contains('[data-cy="profile-follower-item-name"]', targetName).should('not.exist');
+      });
     });
-
-    // The actor is listed as a follower, then drops out once they unfollow.
-    expectProfileTabCount('followers', 1);
-    openProfileTab('followers');
-    cy.get('[data-cy="profile-connections-list"]').within(() => {
-      cy.get('[data-cy="profile-follower-item-name"]').should('have.text', actorName);
-    });
-
-    showProfileHeader();
-    clickUnfollowButton();
-    openProfileTab('followers');
-
-    expectProfileTabCount('followers', 0);
-    cy.get('[data-cy="profile-followers-empty"]').should('be.visible');
-    cy.get('[data-cy="profile-follower-item-name"]').should('not.exist');
-
-    goToProfilePageFromHeader();
-    expectProfileTabCount('following', 0);
-    openProfileTab('following');
-    cy.location('pathname').should('eq', '/profile/following');
-    reloadUntilOwnFollowingIsEmpty();
-    cy.get('[data-cy="profile-following-empty"]').should('be.visible');
-    cy.contains('[data-cy="profile-follower-item-name"]', targetName).should('not.exist');
-
-    // Follow again and unfollow from the following list. The count drops at once; the row
-    // stays until the list is reloaded from Nexus so it can be followed again.
-    cy.get(`@${targetAlias}`).then((pubky) => {
-      searchAndFollowProfile(`${pubky}`, targetName);
-    });
-    unfollowUserByUsername(targetName);
-    expectProfileTabCount('following', 0);
-
-    cy.location('pathname').should('eq', '/profile/following');
-    reloadUntilOwnFollowingIsEmpty();
-    expectProfileTabCount('following', 0);
-    cy.get('[data-cy="profile-following-empty"]').should('be.visible');
-    cy.contains('[data-cy="profile-follower-item-name"]', targetName).should('not.exist');
   });
 
   it('can follow a profile from their post menu', () => {
@@ -86,22 +88,20 @@ describe('contacts', () => {
     // both profiles are seeded through the API: this test is about the post menu, onboarding is covered elsewhere
     seedUserViaApi(`Menu Author ${stamp}`, { bio: 'Follow me from my post' }).then((author) => {
       createPostViaApi(author, postContent).then((post) => {
-        seedUserViaApi(`Menu Follower ${stamp}`, { bio: 'I follow from post menus', withRecoveryFile: true }).then(
-          (follower) => {
-            waitForNexus(postIndexed(post), userIndexed(follower));
-            cy.signInWithEncryptedFile(backupDownloadFilePath(follower.name));
-            followFromPostMenu(postContent);
-            waitForNexus(followIndexed(follower, author));
+        seedUserViaApi(`Menu Follower ${stamp}`, { bio: 'I follow from post menus' }).then((follower) => {
+          waitForNexus(postIndexed(post), userIndexed(follower));
+          cy.signInWithPubkyRing(follower.name);
+          followFromPostMenu(postContent);
+          waitForNexus(followIndexed(follower, author));
 
-            // the author is listed under the follower's following
-            goToProfilePageFromHeader();
-            expectProfileTabCount('following', 1);
-            openProfileTab('following');
-            cy.get('[data-cy="profile-connections-list"]').within(() => {
-              cy.get('[data-cy="profile-follower-item-name"]').should('have.text', author.name);
-            });
-          },
-        );
+          // the author is listed under the follower's following
+          goToProfilePageFromHeader();
+          expectProfileTabCount('following', 1);
+          openProfileTab('following');
+          cy.get('[data-cy="profile-connections-list"]').within(() => {
+            cy.get('[data-cy="profile-follower-item-name"]').should('have.text', author.name);
+          });
+        });
       });
     });
   });
@@ -114,13 +114,13 @@ describe('contacts', () => {
     // * create two profiles
 
     // Create profile 1
-    cy.onboardAsNewUser(profileName1, "Man's best friend", [BackupType.RecoveryPhraseWithoutConfirmation], pubkyAlias1);
+    cy.onboardAsNewUser(profileName1, "Man's best friend", pubkyAlias1);
 
     // Sign out of profile 1
     cy.signOut(HasBackedUp.Yes);
 
     // Create profile 2
-    cy.onboardAsNewUser(profileName2, "Man's second best friend", [BackupType.RecoveryPhraseWithoutConfirmation]);
+    cy.onboardAsNewUser(profileName2, "Man's second best friend");
 
     // * search for profile and follow
 
@@ -210,9 +210,7 @@ describe('contacts', () => {
     // * As profile 1, follow profile 2 back and make a friend
 
     // Sign in profile 1
-    cy.get(`@recoveryPhrase-${profileName1}`).then((recoveryPhrase) => {
-      cy.signInWithRecoveryPhrase(recoveryPhrase.toString());
-    });
+    cy.signInWithPubkyRing(profileName1);
     goToProfilePageFromHeader();
 
     // Check profile 1 (own) profile for follower

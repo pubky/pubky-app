@@ -10,7 +10,7 @@ import { REACH } from '@/stores/home/home.types';
 const DEFAULT_NETWORK_MIN_FOLLOWING = 3;
 
 export function useDefaultHomeReach(): void {
-  // The onboarding key step stores a generated pubky before sign-up; it has no counts on Nexus (#2955).
+  // A stored pubky without an account has no counts on Nexus (#2955).
   const currentUserPubky = useAuthStore(selectAccountUserPubky);
   const authHasHydrated = useAuthStore((state) => state.hasHydrated);
   const homeHasHydrated = useHomeStore((state) => state.hasHydrated);

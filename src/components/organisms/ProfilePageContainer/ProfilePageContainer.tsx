@@ -8,6 +8,7 @@ import { useUnlockedList } from '@/hooks/useUnlockedList/useUnlockedList';
 import { isPubkyIdentifier } from '@/libs/utils/utils';
 import { ProfileUserNotFoundDiscoveryView } from '@/organisms/ProfileUserNotFoundDiscoveryView/ProfileUserNotFoundDiscoveryView';
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
+import { ProfileStatsProvider } from '@/providers/ProfileStatsProvider/ProfileStatsProvider';
 import { UnlockedListProvider } from '@/providers/UnlockedListProvider/UnlockedListProvider';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { ProfilePageLayout } from '../ProfilePageLayout/ProfilePageLayout';
@@ -103,21 +104,23 @@ export function ProfilePageContainer({ children }: ProfilePageContainerProps) {
   // Delegate presentation to layout organism
   return (
     <UnlockedListProvider value={unlocked}>
-      <ProfilePageLayout
-        profile={profile}
-        stats={stats}
-        unlockedCount={unlockedCount}
-        actions={mergedActions}
-        activePage={activePage}
-        filterBarActivePage={filterBarActivePage}
-        navigateToPage={navigateToPage}
-        isLoading={isLoading}
-        isHeaderLoading={isProfileLoading}
-        isOwnProfile={isOwnProfile}
-        userId={pubky ?? ''}
-      >
-        {children}
-      </ProfilePageLayout>
+      <ProfileStatsProvider value={stats}>
+        <ProfilePageLayout
+          profile={profile}
+          stats={stats}
+          unlockedCount={unlockedCount}
+          actions={mergedActions}
+          activePage={activePage}
+          filterBarActivePage={filterBarActivePage}
+          navigateToPage={navigateToPage}
+          isLoading={isLoading}
+          isHeaderLoading={isProfileLoading}
+          isOwnProfile={isOwnProfile}
+          userId={pubky ?? ''}
+        >
+          {children}
+        </ProfilePageLayout>
+      </ProfileStatsProvider>
     </UnlockedListProvider>
   );
 }

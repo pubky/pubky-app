@@ -15,6 +15,7 @@ import { LandingVideo } from './LandingVideo';
 export function Landing() {
   return (
     <>
+      <link rel="preload" as="image" href="/images/bg-home.svg" fetchPriority="high" />
       <div aria-hidden className="landing-swirl-background">
         <div className="landing-swirl-background__graphic" />
         <div className="landing-swirl-background__graphic landing-swirl-background__graphic--secondary" />

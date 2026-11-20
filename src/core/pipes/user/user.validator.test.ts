@@ -1,5 +1,14 @@
+import { buildUser, ValidationError } from 'pubky-social-specs';
+import { fakeOwner } from 'pubky-social-specs/testing';
 import { describe, expect, it } from 'vitest';
+import { USER_LINK_URL_MAX_LENGTH } from '@/config/user';
 import { UserValidator } from './user.validator';
+
+const SCHEME_MESSAGE = 'Links must start with http:// or https://';
+const LENGTH_MESSAGE = `Links must be no more than ${USER_LINK_URL_MAX_LENGTH} characters`;
+const URL_PREFIX = 'https://example.com/';
+/** A URL of exactly the cap, in code points: an emoji is one, not two UTF-16 units. */
+const urlAtCap = (fill: string) => `${URL_PREFIX}${fill.repeat(USER_LINK_URL_MAX_LENGTH - URL_PREFIX.length)}`;
 
 describe('UserValidator', () => {
   // Test data factories
@@ -176,51 +185,94 @@ describe('UserValidator', () => {
         const links = [{ label: 'Invalid', url: invalidUrl }];
         const result = UserValidator.check('TestUser', '', links, null);
 
-        expect(result.error).toContainEqual({
-          type: 'link_0',
-          message: 'Invalid URL',
-        });
-      },
-    );
-
-    it.each([['https://example.com'], ['http://example.com'], ['mailto:test@example.com'], ['tel:+1234567890']])(
-      'should accept a safe profile URL: "%s"',
-      (validUrl) => {
-        const links = [{ label: 'Valid', url: validUrl }];
-        const result = UserValidator.check('TestUser', '', links, null);
-
-        expect(result.error).toHaveLength(0);
+        expect(result.error).toEqual([{ type: 'link_0', message: SCHEME_MESSAGE }]);
       },
     );
 
     it.each([
-      ['javascript:alert(1)'],
-      [' \u0000javascript:alert(1)'],
-      ['java\tscript:alert(1)'],
-      ['data:text/html,<script>alert(1)</script>'],
-      ['vbscript:msgbox(1)'],
-      ['ftp://files.example.com'],
-    ])('should reject an unsafe profile URL: "%s"', (unsafeUrl) => {
+      ['https://example.com'],
+      ['http://example.com'],
+      ['http://a'],
+      ['https://x.com/jack'],
+      ['https://[::1]/x'],
+      ['https://user:pw@example.com/p?q=1#f'],
+      ['https://example.com/%20'],
+      ['https://example.com/ümlaut'],
+    ])('should accept a web profile URL as typed: "%s"', (validUrl) => {
+      const links = [{ label: 'Valid', url: validUrl }];
+      const result = UserValidator.check('TestUser', '', links, null);
+
+      expect(result.error).toHaveLength(0);
+      expect(result.data?.links?.[0].url).toBe(validUrl);
+    });
+
+    // `safeExternalUrlSchema` still opens these on a legacy profile; the v1 data model refuses them (SF-5)
+    it.each([
+      ['mailto:test@example.com'],
+      ['tel:+1234567890'],
+      ['HTTPS://Example.com/x'],
+      ['Https://example.com'],
+      ['  HTTP://example.com  '],
+    ])('should refuse a profile URL the data model refuses: "%s"', (url) => {
+      const result = UserValidator.check('TestUser', '', [{ label: 'Legacy', url }], null);
+
+      expect(result.error).toEqual([{ type: 'link_0', message: SCHEME_MESSAGE }]);
+      expect(result.data).toBeUndefined();
+    });
+
+    it.each([
+      ['javascript:alert(1)', SCHEME_MESSAGE],
+      [' \u0000javascript:alert(1)', SCHEME_MESSAGE],
+      ['java\tscript:alert(1)', SCHEME_MESSAGE],
+      ['data:text/html,<script>alert(1)</script>', SCHEME_MESSAGE],
+      ['vbscript:msgbox(1)', SCHEME_MESSAGE],
+      ['ftp://files.example.com', SCHEME_MESSAGE],
+      ['https://', 'Invalid URL'],
+      ['https:///example.com/x', 'Invalid URL'],
+      ['https://:80/x', 'Invalid URL'],
+      ['https://user@:80/x', 'Invalid URL'],
+      ['https://example.com/a b', 'Invalid URL'],
+      ['https://example.com/a\tb', 'Invalid URL'],
+      ['https://example.com/a\u0000b', 'Invalid URL'],
+      ['https://example.com/a\u0085b', 'Invalid URL'],
+    ])('should reject an unsafe or malformed profile URL with one message: "%s"', (unsafeUrl, message) => {
       const result = UserValidator.check('TestUser', '', [{ label: 'Unsafe', url: unsafeUrl }], null);
 
-      expect(result.error).toContainEqual({
-        type: 'link_0',
-        message: 'Invalid URL',
-      });
+      expect(result.error).toEqual([{ type: 'link_0', message }]);
+    });
+
+    it(`should accept a URL of ${USER_LINK_URL_MAX_LENGTH} code points and refuse one code point more`, () => {
+      expect(UserValidator.check('TestUser', '', [{ label: 'Cap', url: urlAtCap('a') }], null).error).toHaveLength(0);
+      expect(UserValidator.check('TestUser', '', [{ label: 'Cap', url: urlAtCap('🎉') }], null).error).toHaveLength(0);
+
+      const result = UserValidator.check('TestUser', '', [{ label: 'Over', url: `${urlAtCap('a')}a` }], null);
+
+      expect(result.error).toEqual([{ type: 'link_0', message: LENGTH_MESSAGE }]);
     });
 
     it('should report errors for multiple invalid URLs with correct indices', () => {
       const links = [
         { label: 'Invalid1', url: 'not-a-url' },
         { label: 'Valid', url: 'https://example.com' },
-        { label: 'Invalid2', url: 'also-invalid' },
+        { label: 'Invalid2', url: 'mailto:test@example.com' },
       ];
 
       const result = UserValidator.check('TestUser', '', links, null);
 
       expect(result.error).toHaveLength(2);
-      expect(result.error).toContainEqual({ type: 'link_0', message: 'Invalid URL' });
-      expect(result.error).toContainEqual({ type: 'link_2', message: 'Invalid URL' });
+      expect(result.error).toContainEqual({ type: 'link_0', message: SCHEME_MESSAGE });
+      expect(result.error).toContainEqual({ type: 'link_2', message: SCHEME_MESSAGE });
+    });
+
+    it('should name the form row of an invalid URL, not its place among the rows with a URL', () => {
+      const links = [
+        { label: 'WEBSITE', url: '' },
+        { label: 'X (TWITTER)', url: 'mailto:test@example.com' },
+      ];
+
+      const result = UserValidator.check('TestUser', '', links, null);
+
+      expect(result.error).toEqual([{ type: 'link_1', message: SCHEME_MESSAGE }]);
     });
 
     /**
@@ -232,6 +284,58 @@ describe('UserValidator', () => {
       const result = UserValidator.check('TestUser', '', links, null);
 
       expect(result.data).toBeUndefined();
+    });
+  });
+
+  /**
+   * The form gate and the write share one rule: `buildUser` (`checkReference(..., 'web', 300)`) refuses
+   * a link that is no lower-case `http(s)` URL, carries a control or whitespace character or exceeds the
+   * cap in code points, so every link the validator lets through must be one the builder stores, else
+   * the save fails with a generic toast (SF-5).
+   */
+  describe('check - profile links against the v1 data model', () => {
+    const owner = fakeOwner(1);
+    const buildWith = (url: string) =>
+      buildUser(owner, { name: 'Test User', bio: null, image: null, links: [{ title: 'Link', url }], status: null });
+
+    it.each([
+      ['https://example.com'],
+      ['http://example.com'],
+      ['http://a'],
+      ['https://x.com/jack'],
+      ['https://[::1]/x'],
+      ['https://[::1]:80/x'],
+      ['https://@example.com'],
+      ['https://user:pw@example.com/p?q=1#f'],
+      ['https://example.com/%20'],
+      ['https://example.com/ümlaut'],
+      ['  https://example.com/padded  '],
+      [urlAtCap('a')],
+      [urlAtCap('🎉')],
+    ])('stores every link the validator accepts: "%s"', (url) => {
+      const result = UserValidator.check('TestUser', '', [{ label: 'Link', url }], null);
+
+      expect(result.error).toHaveLength(0);
+      const stored = result.data?.links?.[0].url ?? '';
+      expect(buildWith(stored).object.links?.[0].url).toBe(stored);
+    });
+
+    it.each([
+      ['mailto:test@example.com'],
+      ['tel:+1234567890'],
+      ['HTTPS://Example.com/x'],
+      ['ftp://files.example.com'],
+      ['https://'],
+      ['https:///example.com/x'],
+      ['https://:80/x'],
+      ['https://example.com/a b'],
+      ['https://example.com/a\u0085b'],
+      [`${urlAtCap('a')}a`],
+    ])('refuses, as the validator does, the link: "%s"', (url) => {
+      expect(UserValidator.check('TestUser', '', [{ label: 'Link', url }], null).error).toHaveLength(1);
+
+      expect(() => buildWith(url)).toThrow(ValidationError);
+      expect(() => buildWith(url)).toThrowError(expect.objectContaining({ field: 'links[0].url' }));
     });
   });
 
@@ -288,8 +392,8 @@ describe('UserValidator', () => {
 
       expect(result.error.length).toBe(4);
       expect(result.error).toContainEqual({ type: 'name', message: 'Name must be at least 3 characters' });
-      expect(result.error).toContainEqual({ type: 'link_0', message: 'Invalid URL' });
-      expect(result.error).toContainEqual({ type: 'link_2', message: 'Invalid URL' });
+      expect(result.error).toContainEqual({ type: 'link_0', message: SCHEME_MESSAGE });
+      expect(result.error).toContainEqual({ type: 'link_2', message: SCHEME_MESSAGE });
       expect(result.error).toContainEqual({ type: 'avatar', message: 'Avatar must be an image file' });
     });
 

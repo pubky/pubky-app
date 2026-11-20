@@ -19,7 +19,12 @@ const stopCardPropagation = (event: MouseEvent) => event.stopPropagation();
  * not involved. The `icon` variant is for a tight toolbar: only the icon shows, and the line moves into
  * what it opens.
  */
-export function LocksRegionNotice({ cause = 'region', variant = 'line', className }: LocksRegionNoticeProps) {
+export function LocksRegionNotice({
+  cause = 'region',
+  variant = 'line',
+  align = 'start',
+  className,
+}: LocksRegionNoticeProps) {
   const message =
     cause === 'unknown'
       ? "We can't tell where you are, so paid unlocks are paused."
@@ -56,7 +61,13 @@ export function LocksRegionNotice({ cause = 'region', variant = 'line', classNam
             <Info aria-hidden />
           </Button>
         </PopoverTrigger>
-        <PopoverContent side="top" align="start" sideOffset={6} className="flex flex-col gap-2 p-3">
+        <PopoverContent
+          side="top"
+          align={align}
+          sideOffset={6}
+          collisionPadding={16}
+          className="mx-0 flex flex-col gap-2 p-3"
+        >
           {isIcon && (
             <Typography overrideDefaults className="text-sm font-medium text-popover-foreground">
               {message}

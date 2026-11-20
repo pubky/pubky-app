@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react';
+import { buildFile } from 'pubky-social-specs';
+import { fakeOwner } from 'pubky-social-specs/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileController } from '@/controllers/file/file';
 import type { ExistingAttachment } from '@/hooks/usePost/usePost.types';
@@ -80,16 +82,33 @@ const RESOLVED_2: ExistingAttachment = {
 
 // Harness that owns the existingAttachments state with a real useState so the
 // hook's functional updates (prev-mapping, non-resurrection) are exercised
-function useEditAttachmentsHarness({ enabled, postId, uris }: { enabled: boolean; postId?: string; uris?: string[] }) {
+function useEditAttachmentsHarness({
+  enabled,
+  postId,
+  uris,
+  displayUris,
+}: {
+  enabled: boolean;
+  postId?: string;
+  uris?: string[];
+  displayUris?: string[];
+}) {
   const [existingAttachments, setExistingAttachments] = useState<ExistingAttachment[]>([]);
-  const { seededUris } = useEditAttachments({ enabled, postId, uris, existingAttachments, setExistingAttachments });
+  const { seededUris } = useEditAttachments({
+    enabled,
+    postId,
+    uris,
+    displayUris,
+    existingAttachments,
+    setExistingAttachments,
+  });
   return { existingAttachments, setExistingAttachments, seededUris };
 }
 
 describe('useEditAttachments', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    useLocalFilesStore.setState({ profile: null, posts: {}, collections: {} });
+    useLocalFilesStore.setState({ profile: null, posts: {}, articleCovers: {}, collections: {} });
     vi.mocked(FileController.getMetadata).mockResolvedValue([]);
     vi.mocked(FileController.fetchFiles).mockResolvedValue(undefined);
   });
@@ -214,6 +233,69 @@ describe('useEditAttachments', () => {
       rerender({ uris: [URI_1] });
 
       expect(result.current.existingAttachments).toEqual([]);
+    });
+  });
+
+  // An article's strip shows its cover alone (`displayUris`), and the cover is no attachment slot
+  // (ADR-0027 D14): its preview is the store's cover entry, never the inline list zipped by index.
+  describe('seeding an article cover strip', () => {
+    const OWNER = fakeOwner(1);
+    const ARTICLE_ID = `${OWNER}:0034BBBDFK83G`;
+    const mediaUri = (byte: number) => buildFile(OWNER, { bytes: new Uint8Array([byte]), type: 'image/png' }).url;
+    const COVER_URI = mediaUri(1);
+    const INLINE_URI = mediaUri(2);
+
+    it('seeds the cover from the store cover entry, not from the inline entry at its index', () => {
+      // A same-session article: `posts` holds its inline media, index-aligned with `uris`;
+      // `articleCovers` holds its cover
+      useLocalFilesStore
+        .getState()
+        .setPostAttachments(ARTICLE_ID, [
+          { type: 'image/png', name: 'shot.png', urls: { main: 'shot-main', feed: 'shot-feed' } },
+        ]);
+      useLocalFilesStore.getState().setArticleCover(ARTICLE_ID, {
+        type: 'image/png',
+        name: 'cover.png',
+        urls: { main: 'cover-main', feed: 'cover-feed' },
+      });
+
+      const { result } = renderHook(() =>
+        useEditAttachmentsHarness({ enabled: true, postId: ARTICLE_ID, uris: [INLINE_URI], displayUris: [COVER_URI] }),
+      );
+
+      expect(result.current.existingAttachments).toEqual([
+        { uri: COVER_URI, type: 'image/png', name: 'cover.png', urls: { main: 'cover-main', feed: 'cover-feed' } },
+      ]);
+      // The snapshot the save diffs against still holds every stored attachment
+      expect(result.current.seededUris).toEqual([INLINE_URI]);
+      expect(FileController.getMetadata).not.toHaveBeenCalled();
+    });
+
+    it('seeds a placeholder for a cover the store does not hold, never the inline entry at its index', async () => {
+      // A cover kept from an earlier session: `posts` holds this session's inline media, `articleCovers` nothing
+      useLocalFilesStore
+        .getState()
+        .setPostAttachments(ARTICLE_ID, [
+          { type: 'image/png', name: 'shot.png', urls: { main: 'shot-main', feed: 'shot-feed' } },
+        ]);
+      const coverPlaceholder: ExistingAttachment = {
+        uri: COVER_URI,
+        type: 'application/octet-stream',
+        name: COVER_URI.slice(COVER_URI.lastIndexOf('/') + 1),
+        urls: null,
+      };
+
+      const { result } = renderHook(() =>
+        useEditAttachmentsHarness({ enabled: true, postId: ARTICLE_ID, uris: [INLINE_URI], displayUris: [COVER_URI] }),
+      );
+
+      expect(result.current.existingAttachments).toEqual([coverPlaceholder]);
+      await waitFor(() => {
+        expect(FileController.getMetadata).toHaveBeenCalledWith({ fileAttachments: [COVER_URI] });
+      });
+      await waitFor(() => {
+        expect(result.current.existingAttachments).toEqual([{ ...coverPlaceholder, resolutionFailed: true }]);
+      });
     });
   });
 

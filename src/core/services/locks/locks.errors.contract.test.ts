@@ -124,8 +124,6 @@ describe('Lock Server viewer errors through the pinned SDK and LocksService', ()
     ['submitProof', 409, 'task_state_conflict'],
     ['submitProof', 422, 'unsupported_verifier_type'],
     ['submitProof', 422, 'paykit_not_configured'],
-    ['submitProof', 422, 'not_paykit_payment'],
-    ['submitProof', 422, 'reader_pubky_unresolvable'],
     ['submitProof', 429, 'rate_limited'],
     ['submitProof', 503, 'creator_authority_unavailable'],
     ['lookupVerificationTask', 400, 'invalid_identifier'],

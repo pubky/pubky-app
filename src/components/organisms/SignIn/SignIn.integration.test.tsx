@@ -56,13 +56,13 @@ describe('SignInContent Android signer handoff', () => {
 
   it('opens each signer package via an intent URL from the same sign-in request', async () => {
     render(<SignInContent />);
-    const bitkit = await screen.findByRole('button', { name: 'Authorize with Bitkit' });
+    const bitkit = await screen.findByRole('button', { name: 'Continue with Bitkit' });
 
     fireEvent.click(bitkit);
     expect(window.location.href).toBe(BITKIT_ANDROID_INTENT_URL);
     expect(screen.getByRole('button', { name: 'Opening Bitkit...' })).toBeDisabled();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Authorize with Pubky Ring' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Continue with Pubky Ring' }));
     expect(window.location.href).toBe(RING_ANDROID_INTENT_URL);
     expect(screen.getByRole('button', { name: 'Opening Pubky Ring...' })).toBeDisabled();
     expect(AuthController.getAuthUrl).toHaveBeenCalledOnce();

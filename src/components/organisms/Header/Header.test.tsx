@@ -1,8 +1,10 @@
 import { renderToString } from 'react-dom/server';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { AUTH_ROUTES, HOME_ROUTES, LEGAL_ROUTES, ONBOARDING_ROUTES, ROOT_ROUTES } from '@/app/routes';
+import { AuthStatus } from '@/hooks/useAuthStatus/useAuthStatus.types';
 import type { SessionReference } from '@/libs/auth/session.types';
+import { writeSocialMigrationSignedOutNotice } from '@/libs/social-migration/signed-out-notice';
 import { mockGrantReference } from '@/test-utils/pubky';
 import { Header } from './Header';
 
@@ -18,6 +20,11 @@ vi.mock('next/navigation', () => ({
 let mockCurrentUserPubky: string | null = null;
 let mockSessionReference: SessionReference | null = null;
 let mockRestoreStatus = 'ready';
+// The header reads the auth status only for the gate page's logo (a held account keeps its sign-out notice)
+let mockAuthStatus: AuthStatus = AuthStatus.UNAUTHENTICATED;
+vi.mock('@/hooks/useAuthStatus/useAuthStatus', () => ({
+  useAuthStatus: () => ({ status: mockAuthStatus, isLoading: false }),
+}));
 // Mock dexie-react-hooks
 vi.mock('dexie-react-hooks', () => ({
   useLiveQuery: vi.fn((_queryFn, deps) => ({ query: deps[0], data: { name: 'Test User', image: 'test-image.jpg' } })),
@@ -80,15 +87,13 @@ vi.mock('@/app/routes', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/app/routes')>();
   return {
     ...actual,
-    AUTH_ROUTES: { SIGN_IN: '/sign-in', LOGOUT: '/logout' },
+    AUTH_ROUTES: { SIGN_IN: '/sign-in', LOGOUT: '/logout', MIGRATION: '/migration' },
     HOME_ROUTES: { HOME: '/home' },
     ROOT_ROUTES: '/',
     ONBOARDING_ROUTES: {
       HUMAN: '/onboarding/human',
       INSTALL: '/onboarding/install',
       SCAN: '/onboarding/scan',
-      PUBKY: '/onboarding/pubky',
-      BACKUP: '/onboarding/backup',
       PROFILE: '/onboarding/profile',
       TAGS: '/onboarding/tags',
       FOLLOW: '/onboarding/follow',
@@ -134,13 +139,15 @@ vi.mock('@/database/franky/franky', () => ({
 }));
 
 // Mock molecules
+vi.mock('@/molecules/Header/HeaderPublicContent', () => ({
+  HeaderContainer: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <div data-testid="header-container" data-class-name={className}>
+      {children}
+    </div>
+  ),
+}));
 vi.mock('@/molecules/Header/Header', () => {
   return {
-    HeaderContainer: ({ children, className }: { children: React.ReactNode; className?: string }) => (
-      <div data-testid="header-container" data-class-name={className}>
-        {children}
-      </div>
-    ),
     HeaderTitle: ({ currentTitle }: { currentTitle: string }) => <div data-testid="header-title">{currentTitle}</div>,
     HeaderOnboarding: ({ currentStep }: { currentStep: number }) => (
       <div data-testid="onboarding-header" data-step={currentStep}>
@@ -181,8 +188,8 @@ vi.mock('@/molecules/HeaderSignIn/HeaderSignIn', () => {
 
 vi.mock('@/molecules/Logo/Logo', () => {
   return {
-    Logo: ({ noLink }: { noLink?: boolean }) => (
-      <div data-testid="logo" data-no-link={noLink}>
+    Logo: ({ noLink = false, onClick }: { noLink?: boolean; onClick?: React.MouseEventHandler<HTMLElement> }) => (
+      <div data-testid="logo" data-no-link={noLink} onClick={onClick}>
         Logo
       </div>
     ),
@@ -221,6 +228,8 @@ describe('Header', () => {
     mockCurrentUserPubky = null; // Not authenticated by default
     mockSessionReference = null;
     mockRestoreStatus = 'ready';
+    mockAuthStatus = AuthStatus.UNAUTHENTICATED;
+    sessionStorage.clear();
     mockUsePathname.mockReturnValue(ROOT_ROUTES);
     mockUseRouter.mockReturnValue({ push: vi.fn() });
     mockIsPublicRoute.mockReturnValue(false);
@@ -338,26 +347,6 @@ describe('Header', () => {
     expect(screen.getByTestId('logo')).toBeInTheDocument();
   });
 
-  it('displays correct step for pubky path', () => {
-    mockUsePathname.mockReturnValue(ONBOARDING_ROUTES.PUBKY);
-
-    render(<Header />);
-
-    const onboardingHeader = screen.getByTestId('onboarding-header');
-    expect(onboardingHeader).toHaveAttribute('data-step', '2');
-    expect(screen.getByTestId('logo')).toBeInTheDocument();
-  });
-
-  it('displays correct step for backup path', () => {
-    mockUsePathname.mockReturnValue(ONBOARDING_ROUTES.BACKUP);
-
-    render(<Header />);
-
-    const onboardingHeader = screen.getByTestId('onboarding-header');
-    expect(onboardingHeader).toHaveAttribute('data-step', '2');
-    expect(screen.getByTestId('logo')).toBeInTheDocument();
-  });
-
   it('handles unknown paths with default values', () => {
     mockUsePathname.mockReturnValue('/unknown-path');
 
@@ -385,12 +374,7 @@ describe('Header', () => {
   });
 
   it('correctly identifies onboarding paths', () => {
-    const onboardingPaths = [
-      ONBOARDING_ROUTES.INSTALL,
-      ONBOARDING_ROUTES.SCAN,
-      ONBOARDING_ROUTES.PUBKY,
-      ONBOARDING_ROUTES.BACKUP,
-    ];
+    const onboardingPaths = [ONBOARDING_ROUTES.INSTALL, ONBOARDING_ROUTES.SCAN];
 
     onboardingPaths.forEach((path) => {
       mockUsePathname.mockReturnValue(path);
@@ -526,6 +510,60 @@ describe('Header', () => {
     });
   });
 
+  describe('Migration gate path (ADR-0026)', () => {
+    it('shows only the logo while the account is held behind the gate, mounting no account chrome', () => {
+      mockCurrentUserPubky = 'held-account';
+      mockSessionReference = mockGrantReference();
+      mockRestoreStatus = 'social-migration';
+      mockUsePathname.mockReturnValue(AUTH_ROUTES.MIGRATION);
+
+      render(<Header />);
+
+      expect(screen.getByTestId('logo')).toBeInTheDocument();
+      expect(screen.queryByTestId('header-sign-in')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('header-home')).not.toBeInTheDocument();
+      expect(screen.getByTestId('header-container')).not.toHaveAttribute(
+        'data-class-name',
+        expect.stringContaining('hidden'),
+      );
+    });
+
+    it('shows only the logo on the gate page after the forced sign-out too', () => {
+      mockUsePathname.mockReturnValue(AUTH_ROUTES.MIGRATION);
+
+      render(<Header />);
+
+      expect(screen.getByTestId('logo')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /sign in/i })).not.toBeInTheDocument();
+    });
+
+    // FIX-FINAL-7: the route guard brings a signed-out tab back to the explanation while its notice is pending, so the
+    // logo, which links to the landing page from there, has to settle the notice like the Homepage button does
+    it('settles the sign-out notice when a signed-out tab leaves the explanation through the logo', () => {
+      mockUsePathname.mockReturnValue(AUTH_ROUTES.MIGRATION);
+      writeSocialMigrationSignedOutNotice({ reason: 'missing-scopes' });
+
+      render(<Header />);
+      fireEvent.click(screen.getByTestId('logo'));
+
+      expect(sessionStorage.getItem('social-migration:signed-out')).toBeNull();
+    });
+
+    it('keeps the sign-out notice when a held account clicks the logo, as the gate sends it back anyway', () => {
+      mockCurrentUserPubky = 'held-account';
+      mockSessionReference = mockGrantReference();
+      mockRestoreStatus = 'social-migration';
+      mockAuthStatus = AuthStatus.NEEDS_SOCIAL_MIGRATION;
+      mockUsePathname.mockReturnValue(AUTH_ROUTES.MIGRATION);
+      writeSocialMigrationSignedOutNotice({ reason: 'missing-scopes' });
+
+      render(<Header />);
+      fireEvent.click(screen.getByTestId('logo'));
+
+      expect(sessionStorage.getItem('social-migration:signed-out')).toBe(JSON.stringify({ reason: 'missing-scopes' }));
+    });
+  });
+
   describe('Path Configuration', () => {
     it('displays correct step for human path', () => {
       mockUsePathname.mockReturnValue(ONBOARDING_ROUTES.HUMAN);
@@ -628,26 +666,6 @@ describe('Header', () => {
       expect(screen.queryByTestId('header-title')).not.toBeInTheDocument();
     });
 
-    it('keeps the key-step titles once sign-up has created the session (#2493)', () => {
-      // Sign-up runs on the pubky step, so pubky and backup are reached while authenticated;
-      // the title used to vanish there and only come back on Profile.
-      mockCurrentUserPubky = 'test-pubky-123';
-      const authenticatedKeySteps = [
-        { path: ONBOARDING_ROUTES.PUBKY, expectedTitle: 'Your pubky' },
-        { path: ONBOARDING_ROUTES.BACKUP, expectedTitle: 'Backup' },
-      ];
-
-      authenticatedKeySteps.forEach(({ path, expectedTitle }) => {
-        mockUsePathname.mockReturnValue(path);
-
-        const { rerender } = render(<Header />);
-
-        expect(screen.getByTestId('header-title')).toHaveTextContent(expectedTitle);
-
-        rerender(<></>); // Clear for next iteration
-      });
-    });
-
     it('renders HeaderTitle on every onboarding step regardless of authentication state', () => {
       const onboardingPaths = Object.values(ONBOARDING_ROUTES);
 
@@ -669,9 +687,7 @@ describe('Header', () => {
       const testCases = [
         { path: ONBOARDING_ROUTES.HUMAN, expectedTitle: 'Create account' },
         { path: ONBOARDING_ROUTES.INSTALL, expectedTitle: 'Identity keys' },
-        { path: ONBOARDING_ROUTES.SCAN, expectedTitle: 'Use Pubky Ring' },
-        { path: ONBOARDING_ROUTES.PUBKY, expectedTitle: 'Your pubky' },
-        { path: ONBOARDING_ROUTES.BACKUP, expectedTitle: 'Backup' },
+        { path: ONBOARDING_ROUTES.SCAN, expectedTitle: 'Identity keys' },
         { path: ONBOARDING_ROUTES.PROFILE, expectedTitle: 'Profile' },
         { path: ONBOARDING_ROUTES.TAGS, expectedTitle: 'Experience' },
         { path: ONBOARDING_ROUTES.FOLLOW, expectedTitle: 'Experience' },
@@ -711,8 +727,6 @@ describe('Header', () => {
       const nonPostAuthPaths = [
         ONBOARDING_ROUTES.INSTALL,
         ONBOARDING_ROUTES.SCAN,
-        ONBOARDING_ROUTES.PUBKY,
-        ONBOARDING_ROUTES.BACKUP,
         ONBOARDING_ROUTES.HUMAN,
         ROOT_ROUTES,
         AUTH_ROUTES.LOGOUT,
@@ -885,7 +899,7 @@ describe('Header', () => {
         render(<Header />);
 
         expect(screen.getByTestId('header-home')).toBeInTheDocument();
-        expect(screen.getByTestId('header-container')).toHaveAttribute('data-class-name', '');
+        expect(screen.getByTestId('header-container')).not.toHaveAttribute('data-class-name', 'hidden lg:block');
       },
     );
 

@@ -1,29 +1,58 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
-import { Key, Loader2, RefreshCw } from 'lucide-react';
-import { ONBOARDING_ROUTES } from '@/app/routes';
-import { Button } from '@/atoms/Button/Button';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { KeyRound, Loader2, RefreshCw } from 'lucide-react';
+import { ONBOARDING_ROUTES, type OnboardingKeychain, parseOnboardingKeychain } from '@/app/routes';
+import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
-import { FooterLinks } from '@/atoms/FooterLinks/FooterLinks';
-import { Link } from '@/atoms/Link/Link';
 import { PageHeader } from '@/atoms/PageHeader/PageHeader';
 import { PageSubtitle } from '@/atoms/PageSubtitle/PageSubtitle';
 import { Typography } from '@/atoms/Typography/Typography';
-import { getPubkyProtocolLink, getPubkyRingLink } from '@/config/externalLinks';
 import { useMobileAuth } from '@/hooks/useMobileAuth/useMobileAuth';
 import { Logger } from '@/libs/logger/logger';
+import { isIosDevice } from '@/libs/pwa/platform';
+import { AuthQrCopyButton } from '@/molecules/AuthQrCopyButton/AuthQrCopyButton';
 import { BalancedQrCard } from '@/molecules/BalancedQrCard/BalancedQrCard';
 import { ButtonsNavigation } from '@/molecules/ButtonsNavigation/ButtonsNavigation';
-import { ContentCard } from '@/molecules/Content/Content';
 import { PageTitle } from '@/molecules/Page/Page';
-import { QrCodeSlot } from '@/molecules/QrCodeSlot/QrCodeSlot';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
+
+const noopSubscribe = () => () => {};
+const getServerIsIos = () => false;
+
+const KEYCHAINS = {
+  ring: {
+    name: 'Pubky Ring',
+    openingLabel: 'Opening Pubky Ring...',
+    logo: { src: '/images/logo-pubky-ring.svg', alt: 'Pubky Ring', width: 147, height: 32 },
+    qrLogo: undefined,
+    steps: ['Open Pubky Ring', 'Tap ‘Add pubky’', 'Choose ‘Signup QR’', 'Scan this QR', 'Authorize in the app'],
+  },
+  bitkit: {
+    name: 'Bitkit',
+    openingLabel: 'Opening Bitkit...',
+    logo: { src: '/images/bitkit-logo.svg', alt: 'Bitkit', width: 110, height: 32 },
+    qrLogo: { src: '/images/bitkit-qr-logo.svg', alt: 'Bitkit' },
+    steps: ['Open Bitkit', 'Tap ‘Scan’ icon', 'Scan this QR', 'Authorize in Bitkit'],
+  },
+} satisfies Record<OnboardingKeychain, unknown>;
+
+/**
+ * The keychain picked on the Install step (`?keychain=bitkit`). Bitkit iOS cannot open a sign-up
+ * request from a link, so an iOS device always gets Pubky Ring, as the Install step offers.
+ */
+const useScanKeychain = (): OnboardingKeychain => {
+  const searchParams = useSearchParams();
+  const isIos = useSyncExternalStore(noopSubscribe, isIosDevice, getServerIsIos);
+  const keychain = parseOnboardingKeychain(searchParams.get('keychain'));
+  return isIos ? 'ring' : keychain;
+};
 
 export const ScanContent = () => {
   const router = useRouter();
+  const keychain = useScanKeychain();
   const inviteCode = useOnboardingStore((state) => state.inviteCode);
   const hasInviteCode = inviteCode.trim().length > 0;
   useEffect(() => {
@@ -32,7 +61,17 @@ export const ScanContent = () => {
       router.replace(ONBOARDING_ROUTES.HUMAN);
     }
   }, [hasInviteCode, router]);
-  const { url, isLoading, isExpired, fetchUrl, isOpeningRing, onAuthorizeClick } = useMobileAuth(
+  const {
+    url,
+    isLoading,
+    isExpired,
+    fetchUrl,
+    copyAuthUrl,
+    isOpeningRing,
+    onAuthorizeClick,
+    isOpeningBitkit,
+    onAuthorizeBitkitClick,
+  } = useMobileAuth(
     hasInviteCode
       ? {
           type: 'signup',
@@ -43,119 +82,105 @@ export const ScanContent = () => {
         },
   );
   if (!hasInviteCode) return null;
-  const isMobileLaunching = isLoading || isOpeningRing;
-  // Onboarding uses signup_grant; Bitkit iOS only exposes a sign-in handoff.
+  const { name, openingLabel, logo, qrLogo, steps } = KEYCHAINS[keychain];
+  const isBitkit = keychain === 'bitkit';
+  const isOpening = isBitkit ? isOpeningBitkit : isOpeningRing;
+  const isMobileLaunching = isLoading || isOpening;
   const mobileAuthorizeContent = isMobileLaunching ? (
     <>
-      <Loader2 className="mr-2 size-4 animate-spin" />
+      <Loader2 className="size-4 animate-spin" />
       <Typography as="span" overrideDefaults aria-live="polite">
-        {isOpeningRing ? 'Opening Pubky Ring...' : 'Generating...'}
+        {isOpening ? openingLabel : 'Generating...'}
       </Typography>
     </>
   ) : isExpired ? (
     <>
-      <RefreshCw className="mr-2 size-4" />
+      <RefreshCw className="size-4" />
       {'Click to reload'}
     </>
   ) : (
     <>
-      <Key className="mr-2 size-4" />
-      {'Authorize with Pubky Ring'}
+      <KeyRound className="size-4" />
+      {'Authorize & configure'}
     </>
   );
   return (
     <>
       <Container size="container" className="hidden md:flex">
-        <ScanHeader isMobile={false} />
+        <ScanHeader isMobile={false} keychainName={name} />
         <BalancedQrCard
           data-testid="scan-qr-card"
           illustration={
             <Image
               priority
               src="/images/scan.webp"
-              alt="Pubky Ring phone scanning a QR code"
+              alt={`${name} phone scanning a QR code`}
               width={192}
               height={192}
               className="size-48"
             />
           }
+          aside={
+            <ol className="list-decimal pl-6 text-base leading-6 font-medium text-secondary-foreground">
+              {steps.map((step) => (
+                <li key={step}>{step}</li>
+              ))}
+            </ol>
+          }
         >
-          <div className="relative flex size-48 items-center justify-center rounded-md bg-white p-2">
-            <QrCodeSlot
-              isLoading={isLoading}
-              isExpired={isExpired}
-              url={url}
-              generatingLabel={'Generating QR Code...'}
-              clickToReloadLabel={'Click to reload'}
-              expiredReloadAction={{ onClick: fetchUrl, ariaLabel: 'Reload sign-up QR code' }}
-            />
-          </div>
+          <AuthQrCopyButton
+            url={url}
+            isLoading={isLoading}
+            isExpired={isExpired}
+            onCopy={copyAuthUrl}
+            onReload={fetchUrl}
+            reloadAriaLabel={'Reload sign-up QR code'}
+            logo={qrLogo}
+          />
         </BalancedQrCard>
       </Container>
 
       {/** Mobile view */}
       <Container size="container" className="md:hidden">
-        <ScanHeader isMobile={true} />
-        <ContentCard layout="column">
-          <Container className="flex-col items-center justify-center gap-12 lg:flex-row">
-            <Image
-              src="/images/logo-pubky-ring.svg"
-              alt="Pubky Ring"
-              width={137}
-              height={30}
-              className="light:invert"
-            />
-            <Button
-              className="w-full"
-              size="lg"
-              onClick={onAuthorizeClick}
-              disabled={isMobileLaunching || (!url && !isExpired)}
-              aria-busy={isMobileLaunching}
-              data-testid="button"
-            >
-              {mobileAuthorizeContent}
-            </Button>
-          </Container>
-        </ContentCard>
+        <ScanHeader isMobile={true} keychainName={name} />
+        <Container className="items-center gap-6 rounded-md bg-card p-6" data-testid="scan-authorize-card">
+          <Image src={logo.src} alt={logo.alt} width={logo.width} height={logo.height} className="h-8 w-auto" />
+          <Button
+            className="h-15 w-full border-0 leading-5"
+            variant={ButtonVariant.SECONDARY}
+            size="lg"
+            onClick={isBitkit ? onAuthorizeBitkitClick : onAuthorizeClick}
+            disabled={isMobileLaunching || (!url && !isExpired)}
+            aria-busy={isMobileLaunching}
+            data-testid="button"
+          >
+            {mobileAuthorizeContent}
+          </Button>
+        </Container>
       </Container>
     </>
   );
 };
-export const ScanFooter = () => {
-  return (
-    <FooterLinks className="py-6">
-      {'Use '}
-      <Link href={getPubkyRingLink()} target="_blank">
-        {'Pubky Ring'}
-      </Link>
-      {' or any other '}
-      <Link href={getPubkyProtocolLink()} target="_blank">
-        {'Pubky'}
-      </Link>
-      {'-powered keychain.'}
-    </FooterLinks>
-  );
-};
-export const ScanHeader = ({ isMobile }: { isMobile: boolean }) => {
+export const ScanHeader = ({ isMobile, keychainName }: { isMobile: boolean; keychainName: string }) => {
   return (
     <PageHeader>
       <PageTitle size="large">
         {isMobile ? (
           <>
-            {'Tap to '}
-            <span className="text-brand">{'Authorize.'}</span>
+            {'Authorize '}
+            <span className="block text-brand">{'with keychain.'}</span>
           </>
         ) : (
           <>
-            {'Scan '}
-            <span className="text-brand">{'QR Code.'}</span>
+            {'Scan QR '}
+            <span className="text-brand">{'with keychain.'}</span>
           </>
         )}
       </PageTitle>
       <PageSubtitle>
         {isMobile
-          ? 'Tap the button to open Pubky Ring, and authorize with your pubky.'
-          : "Open Pubky Ring, tap 'add pubky', and scan this QR."}
+          ? `Tap below to open ${keychainName} and automatically configure your pubky.`
+          : `Use ${keychainName} and follow the instructions below.`}
       </PageSubtitle>
     </PageHeader>
   );

@@ -1,6 +1,6 @@
 import type { Pubky } from '@/models/models.types';
 import type { PostStreamId, ReplyStreamCompositeId } from '@/models/stream/post/postStream.types';
-import type { NexusPostWithAttachmentMetadata } from '@/services/nexus/nexus.types';
+import type { NexusPost } from '@/services/nexus/nexus.types';
 import type { StreamSource, TStreamBase } from '@/services/nexus/stream/posts/postStream.types';
 
 export interface TStreamResult {
@@ -54,7 +54,7 @@ export interface THandleNotCommonStreamParamsParams {
 }
 
 export interface TPersistPostsParams {
-  posts: NexusPostWithAttachmentMetadata[];
+  posts: NexusPost[];
   /**
    * Set by the TTL refresh path. A post's details are kept (counts, tags,
    * relationships and TTL still refresh) when the local row is newer than the

@@ -1,5 +1,4 @@
 import { act, renderHook } from '@testing-library/react';
-import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
 import type { UseFormReturn } from 'react-hook-form';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { APP_ROUTES } from '@/app/routes';
@@ -42,9 +41,9 @@ const createFeed = (overrides: Partial<FeedModelSchema> = {}): FeedModelSchema =
   icon: 'mountain',
   tags: ['bitcoin'],
   domain_tags: [],
-  reach: PubkyAppFeedReach.All,
-  sort: PubkyAppFeedSort.Recent,
-  layout: PubkyAppFeedLayout.Columns,
+  reach: 'all',
+  sort: 'recent',
+  layout: 'columns',
   content: null,
   created_at: Date.now(),
   updated_at: Date.now(),
@@ -95,9 +94,9 @@ describe('useCustomFeedForm', () => {
       expect(result.current.form.getValues()).toEqual({
         [CUSTOM_FEED_FORM_FIELDS.NAME]: '',
         [CUSTOM_FEED_FORM_FIELDS.ICON]: DEFAULT_CUSTOM_FEED_ICON,
-        [CUSTOM_FEED_FORM_FIELDS.REACH]: PubkyAppFeedReach.All,
-        [CUSTOM_FEED_FORM_FIELDS.SORT]: PubkyAppFeedSort.Recent,
-        [CUSTOM_FEED_FORM_FIELDS.LAYOUT]: PubkyAppFeedLayout.Columns,
+        [CUSTOM_FEED_FORM_FIELDS.REACH]: 'all',
+        [CUSTOM_FEED_FORM_FIELDS.SORT]: 'recent',
+        [CUSTOM_FEED_FORM_FIELDS.LAYOUT]: 'columns',
         [CUSTOM_FEED_FORM_FIELDS.CONTENT]: CUSTOM_FEED_CONTENT_ALL,
         [CUSTOM_FEED_FORM_FIELDS.TAGS]: [],
         [CUSTOM_FEED_FORM_FIELDS.DOMAIN_TAGS]: [],
@@ -186,6 +185,22 @@ describe('useCustomFeedForm', () => {
       expect(mocks.push).toHaveBeenCalledWith(`${APP_ROUTES.FEED}/new-feed`);
     });
 
+    it('reports nothing when the account changed while the create waited for the sync lock', async () => {
+      mocks.commitCreate.mockResolvedValue(null);
+      const { result } = renderHook(() => useCustomFeedForm({ mode: 'create', open: true }));
+      await fillValidForm(result.current.form);
+
+      let saved: boolean | undefined;
+      await act(async () => {
+        saved = await result.current.submit();
+      });
+
+      expect(saved).toBe(false);
+      expect(mocks.commitCreate).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(toast)).not.toHaveBeenCalled();
+      expect(mocks.push).not.toHaveBeenCalled();
+    });
+
     it('ignores a second submit while one is in flight', async () => {
       let resolveCreate: ((value: { id: string; name: string }) => void) | undefined;
       mocks.commitCreate.mockImplementationOnce(
@@ -218,14 +233,14 @@ describe('useCustomFeedForm', () => {
       const { result } = renderHook(() => useCustomFeedForm({ mode: 'create', open: true }));
       await fillValidForm(result.current.form);
       await act(async () => {
-        result.current.form.setValue(CUSTOM_FEED_FORM_FIELDS.CONTENT, PubkyAppPostKind.Image);
+        result.current.form.setValue(CUSTOM_FEED_FORM_FIELDS.CONTENT, 'image');
       });
 
       await act(async () => {
         await result.current.submit();
       });
 
-      expect(mocks.commitCreate).toHaveBeenCalledWith(expect.objectContaining({ content: PubkyAppPostKind.Image }));
+      expect(mocks.commitCreate).toHaveBeenCalledWith(expect.objectContaining({ content: 'image' }));
     });
 
     it('reports failure and toasts an error when the controller throws', async () => {
@@ -260,6 +275,24 @@ describe('useCustomFeedForm', () => {
       });
 
       expect(mocks.replace).toHaveBeenCalledWith(`${APP_ROUTES.FEED}/new-id`);
+      expect(mocks.push).not.toHaveBeenCalled();
+    });
+
+    it('reports nothing when the account changed while the update waited for the sync lock', async () => {
+      const feed = createFeed({ id: 'old-id' });
+      mocks.pathname = `${APP_ROUTES.FEED}/old-id`;
+      mocks.commitUpdate.mockResolvedValue(null);
+
+      const { result } = renderHook(() => useCustomFeedForm({ mode: 'edit', feed, open: true }));
+
+      let saved: boolean | undefined;
+      await act(async () => {
+        saved = await result.current.submit();
+      });
+
+      expect(saved).toBe(false);
+      expect(vi.mocked(toast)).not.toHaveBeenCalled();
+      expect(mocks.replace).not.toHaveBeenCalled();
       expect(mocks.push).not.toHaveBeenCalled();
     });
 
@@ -333,7 +366,7 @@ describe('useCustomFeedForm', () => {
     it('deletes and sends you home when you were on the deleted feed', async () => {
       const feed = createFeed({ id: 'feed-abc123' });
       mocks.pathname = `${APP_ROUTES.FEED}/feed-abc123`;
-      mocks.commitDelete.mockResolvedValue(undefined);
+      mocks.commitDelete.mockResolvedValue(true);
 
       const { result } = renderHook(() => useCustomFeedForm({ mode: 'edit', feed, open: true }));
 
@@ -348,10 +381,28 @@ describe('useCustomFeedForm', () => {
       expect(mocks.replace).toHaveBeenCalledWith(APP_ROUTES.HOME);
     });
 
+    it('reports nothing when the account changed while the delete waited for the sync lock', async () => {
+      const feed = createFeed({ id: 'feed-abc123' });
+      mocks.pathname = `${APP_ROUTES.FEED}/feed-abc123`;
+      mocks.commitDelete.mockResolvedValue(false);
+
+      const { result } = renderHook(() => useCustomFeedForm({ mode: 'edit', feed, open: true }));
+
+      let deleted: boolean | undefined;
+      await act(async () => {
+        deleted = await result.current.deleteFeed();
+      });
+
+      expect(deleted).toBe(false);
+      expect(mocks.commitDelete).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(toast)).not.toHaveBeenCalled();
+      expect(mocks.replace).not.toHaveBeenCalled();
+    });
+
     it('does not navigate when you were reading a different feed', async () => {
       const feed = createFeed({ id: 'feed-abc123' });
       mocks.pathname = `${APP_ROUTES.FEED}/another-feed`;
-      mocks.commitDelete.mockResolvedValue(undefined);
+      mocks.commitDelete.mockResolvedValue(true);
 
       const { result } = renderHook(() => useCustomFeedForm({ mode: 'edit', feed, open: true }));
 

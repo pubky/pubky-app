@@ -50,7 +50,7 @@ const createIntersectionEntry = (target: Element, isIntersecting: boolean): Inte
 });
 
 // Mock molecules
-vi.mock('@/molecules/Header/Header', () => {
+vi.mock('@/molecules/Header/HeaderPublicContent', () => {
   return {
     HeaderSocialLinks: () => <div data-testid="header-social-links">Social Links</div>,
   };
@@ -59,12 +59,6 @@ vi.mock('@/molecules/Header/Header', () => {
 vi.mock('@/molecules/HeaderButtonSignIn/HeaderButtonSignIn', () => {
   return {
     HeaderButtonSignIn: () => <button data-testid="header-button-sign-in">Sign in</button>,
-  };
-});
-
-vi.mock('../ThemeToggle/ThemeToggle', () => {
-  return {
-    ThemeToggle: () => <button data-testid="header-theme-toggle">Toggle appearance</button>,
   };
 });
 
@@ -100,12 +94,8 @@ describe('HeaderHome', () => {
   it('renders Learn, Explore and Sign in on the landing page (social links live in the hero footer)', () => {
     render(<HeaderHome />);
 
-    const themeToggle = screen.getByTestId('header-theme-toggle');
-    const learn = screen.getByTestId('header-learn-btn');
-
     expect(screen.queryByTestId('header-social-links')).not.toBeInTheDocument();
-    expect(themeToggle.compareDocumentPosition(learn) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(learn).toBeInTheDocument();
+    expect(screen.getByTestId('header-learn-btn')).toBeInTheDocument();
     expect(screen.getByTestId('header-explore-btn')).toBeInTheDocument();
     expect(screen.getByTestId('header-button-sign-in')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /join/i })).not.toBeInTheDocument();
@@ -117,7 +107,6 @@ describe('HeaderHome', () => {
     render(<HeaderHome />);
 
     expect(screen.getByTestId('header-social-links')).toBeInTheDocument();
-    expect(screen.queryByTestId('header-theme-toggle')).not.toBeInTheDocument();
     expect(screen.queryByTestId('header-learn-btn')).not.toBeInTheDocument();
     expect(screen.getByTestId('header-button-sign-in')).toBeInTheDocument();
   });
@@ -127,12 +116,8 @@ describe('HeaderHome', () => {
 
     render(<HeaderHome />);
 
-    const themeToggle = screen.getByTestId('header-theme-toggle');
-    const learn = screen.getByTestId('header-learn-btn');
-
     expect(screen.queryByTestId('header-social-links')).not.toBeInTheDocument();
-    expect(themeToggle.compareDocumentPosition(learn) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(learn).toBeInTheDocument();
+    expect(screen.getByTestId('header-learn-btn')).toBeInTheDocument();
     expect(screen.getByTestId('header-explore-btn')).toBeInTheDocument();
     expect(screen.getByTestId('header-button-sign-in')).toBeInTheDocument();
   });

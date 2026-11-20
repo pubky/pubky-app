@@ -20,6 +20,8 @@ const mocks = vi.hoisted(() => ({
   signout: vi.fn(),
   setLockServiceConfig: vi.fn(),
   fetchPaykitSetupStatus: vi.fn(),
+  generatePaykitReconnectUrl: vi.fn(),
+  fetchPaykitCreatorHeld: vi.fn(),
   createLockContent: vi.fn(),
   deleteLockContent: vi.fn(),
   fetchLockFile: vi.fn(),
@@ -46,6 +48,8 @@ vi.mock('@/application/locks/locks', () => ({
     signout: mocks.signout,
     setLockServiceConfig: mocks.setLockServiceConfig,
     fetchPaykitSetupStatus: mocks.fetchPaykitSetupStatus,
+    generatePaykitReconnectUrl: mocks.generatePaykitReconnectUrl,
+    fetchPaykitCreatorHeld: mocks.fetchPaykitCreatorHeld,
     createLockContent: mocks.createLockContent,
     deleteLockContent: mocks.deleteLockContent,
     fetchLockFile: mocks.fetchLockFile,
@@ -519,6 +523,43 @@ describe('LocksController (auth)', () => {
     });
   });
 
+  describe('Paykit reconnect for the signed-in creator', () => {
+    it('builds the reconnect URL for the stored creator on the app origin', () => {
+      useLocksAuthStore
+        .getState()
+        .init({ session: fakeSession, secret: 'secret-abc', creatorPubky: MOCK_LOCK_AUTHOR_PUBKY });
+      mocks.generatePaykitReconnectUrl.mockReturnValue('https://paykit.server/setup/reconnect?x=1');
+
+      expect(LocksController.getPaykitReconnectUrl({ state: 'STATE' })).toBe(
+        'https://paykit.server/setup/reconnect?x=1',
+      );
+      expect(mocks.generatePaykitReconnectUrl).toHaveBeenCalledWith({
+        returnTo: window.location.origin,
+        state: 'STATE',
+        creator: MOCK_LOCK_AUTHOR_PUBKY,
+      });
+    });
+
+    it('asks whether Paykit holds the stored creator', async () => {
+      useLocksAuthStore
+        .getState()
+        .init({ session: fakeSession, secret: 'secret-abc', creatorPubky: MOCK_LOCK_AUTHOR_PUBKY });
+      mocks.fetchPaykitCreatorHeld.mockResolvedValue(true);
+
+      await expect(LocksController.fetchPaykitCreatorHeld()).resolves.toBe(true);
+      expect(mocks.fetchPaykitCreatorHeld).toHaveBeenCalledWith({ creator: MOCK_LOCK_AUTHOR_PUBKY });
+    });
+
+    it('refuses both without a creator, rather than probing for nobody', async () => {
+      useLocksAuthStore.setState(locksAuthInitialState);
+
+      expect(() => LocksController.getPaykitReconnectUrl({ state: 'STATE' })).toThrow('No Locks creator');
+      await expect(LocksController.fetchPaykitCreatorHeld()).rejects.toThrow('No Locks creator');
+      expect(mocks.generatePaykitReconnectUrl).not.toHaveBeenCalled();
+      expect(mocks.fetchPaykitCreatorHeld).not.toHaveBeenCalled();
+    });
+  });
+
   describe('fetchPaykitSetupStatus', () => {
     beforeEach(() => {
       useLocksAuthStore
@@ -698,7 +739,7 @@ describe('LocksController (content)', () => {
     mocks.createLockContent.mockResolvedValue(lock);
     const params = {
       attachments: [],
-      buildPost: () => ({ contentType: 'application/json', bytes: new Uint8Array() }),
+      post: { content: 'locked body', kind: 'short' },
       lockConfig: { amount: '1000', asset: 'BTC' as const },
     };
 
@@ -718,7 +759,7 @@ describe('LocksController (content)', () => {
       await expect(
         LocksController.createLockContent({
           attachments: [],
-          buildPost: () => ({ contentType: 'application/json', bytes: new Uint8Array() }),
+          post: { content: 'locked body', kind: 'short' },
           lockConfig: { amount: '1000', asset: 'BTC' as const },
         }),
       ).rejects.toBe(rejected);
@@ -866,14 +907,14 @@ describe('LocksController.replicateUnlockedContent', () => {
       lockUrl: VALID_LOCK_URL,
       readerPubky: 'pubkyreader',
       content,
-      postId: 'pubkyauthor:POST1',
+      postId: `${MOCK_LOCK_AUTHOR_PUBKY}:0035V9A20WSE4`,
     });
 
     expect(mocks.replicateUnlockedContent).toHaveBeenCalledWith({
       lockUrl: VALID_LOCK_URL,
       readerPubky: 'pubkyreader',
       content,
-      announcementUri: 'pubky://pubkyauthor/pub/pubky.app/posts/POST1',
+      announcementUri: `pubky://${MOCK_LOCK_AUTHOR_PUBKY}/pub/social/v1/posts/0035V9A20WSE4`,
       isCurrent: expect.any(Function),
     });
   });
@@ -978,7 +1019,7 @@ describe('LocksController cache writes are scoped to the viewer (#2797)', () => 
           lockUrl: VALID_LOCK_URL,
           readerPubky: 'pubkyreader',
           content: { post: { content: 's', kind: 'short', attachments: null }, attachments: [] },
-          postId: 'pubkyauthor:POST1',
+          postId: `${MOCK_LOCK_AUTHOR_PUBKY}:0035V9A20WSE4`,
         }),
       mocks.replicateUnlockedContent,
     ],

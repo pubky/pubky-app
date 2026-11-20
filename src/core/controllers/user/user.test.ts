@@ -1,4 +1,3 @@
-import { FollowResult } from 'pubky-app-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { UserApplication } from '@/application/user/user';
 import { HttpMethod } from '@/libs/http/http.types';
@@ -13,7 +12,6 @@ import {
 } from '@/services/nexus/nexus.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { mockAuthStore } from '@/test-utils/stores';
-import { asOpaque } from '@/test-utils/type-assertions';
 import { UserController } from './user';
 
 // Valid 52-character z-base32 encoded pubky IDs for testing
@@ -501,68 +499,57 @@ describe('UserController', () => {
   });
 
   describe('follow', () => {
-    it('should normalize follow request and delegate to UserApplication.commitFollow (PUT)', async () => {
-      const follower = TEST_PUBKY.USER_1;
-      const followee = TEST_PUBKY.USER_2;
+    const follower = TEST_PUBKY.USER_1;
+    const followee = TEST_PUBKY.USER_2;
 
-      const mockFollowJson = { foo: 'bar' } as Record<string, unknown>;
-      const mockToJson = vi.fn(() => mockFollowJson);
-      const mockMeta = { url: 'https://example.com/follow' } as { url: string };
-
-      const toSpy = vi.spyOn(FollowNormalizer, 'to').mockReturnValue(
-        asOpaque<FollowResult>({
-          meta: mockMeta,
-          follow: { toJson: mockToJson },
-        }),
-      );
-
+    it('builds the v1 follow and delegates a PUT with its URL and bytes', async () => {
+      const built = FollowNormalizer.to({ follower, followee });
+      const toSpy = vi.spyOn(FollowNormalizer, 'to').mockReturnValue(built);
       const followSpy = vi.spyOn(UserApplication, 'commitFollow').mockResolvedValue(undefined);
 
       await UserController.commitFollow(HttpMethod.PUT, { follower, followee });
 
       expect(toSpy).toHaveBeenCalledWith({ follower, followee });
-      expect(mockToJson).toHaveBeenCalled();
       expect(followSpy).toHaveBeenCalledWith({
         eventType: HttpMethod.PUT,
-        followUrl: mockMeta.url,
-        followJson: mockFollowJson,
+        followUrl: built.url,
+        followBody: built.body,
         follower,
         followee,
       });
     });
 
-    it('should support DELETE action and delegate correctly', async () => {
-      const follower = TEST_PUBKY.USER_1;
-      const followee = TEST_PUBKY.USER_2;
-
-      const mockFollowJson = { baz: 1 } as Record<string, unknown>;
-      const mockToJson = vi.fn(() => mockFollowJson);
-      const mockMeta = { url: 'https://example.com/unfollow' } as { url: string };
-
-      vi.spyOn(FollowNormalizer, 'to').mockReturnValue(
-        asOpaque<FollowResult>({
-          meta: mockMeta,
-          follow: { toJson: mockToJson },
-        }),
-      );
-
+    it('delegates a DELETE with both copies to delete and builds no follow', async () => {
+      const toSpy = vi.spyOn(FollowNormalizer, 'to');
       const followSpy = vi.spyOn(UserApplication, 'commitFollow').mockResolvedValue(undefined);
 
       await UserController.commitFollow(HttpMethod.DELETE, { follower, followee });
 
+      expect(toSpy).not.toHaveBeenCalled();
       expect(followSpy).toHaveBeenCalledWith({
         eventType: HttpMethod.DELETE,
-        followUrl: mockMeta.url,
-        followJson: mockFollowJson,
+        deleteUrls: FollowNormalizer.toDeleteUrls({ follower, followee }),
         follower,
         followee,
       });
     });
 
-    it('should bubble when FollowNormalizer.to fails and not delegate', async () => {
-      const follower = TEST_PUBKY.USER_1;
-      const followee = TEST_PUBKY.USER_2;
+    it.each([HttpMethod.PUT, HttpMethod.DELETE] as const)(
+      'strips the followee prefix before normalizing and delegating a %s',
+      async (eventType) => {
+        const toSpy = vi.spyOn(FollowNormalizer, 'to');
+        const deleteUrlsSpy = vi.spyOn(FollowNormalizer, 'toDeleteUrls');
+        const followSpy = vi.spyOn(UserApplication, 'commitFollow').mockResolvedValue(undefined);
 
+        await UserController.commitFollow(eventType, { follower, followee: `pk:${followee}` as Pubky });
+
+        const normalize = eventType === HttpMethod.PUT ? toSpy : deleteUrlsSpy;
+        expect(normalize).toHaveBeenCalledWith({ follower, followee });
+        expect(followSpy).toHaveBeenCalledWith(expect.objectContaining({ eventType, followee }));
+      },
+    );
+
+    it('should bubble when FollowNormalizer.to fails and not delegate', async () => {
       vi.spyOn(FollowNormalizer, 'to').mockImplementation(() => {
         throw new Error('normalize-fail');
       });
@@ -576,16 +563,6 @@ describe('UserController', () => {
     });
 
     it('should bubble when UserApplication.follow fails', async () => {
-      const follower = TEST_PUBKY.USER_1;
-      const followee = TEST_PUBKY.USER_2;
-
-      vi.spyOn(FollowNormalizer, 'to').mockReturnValue(
-        asOpaque<FollowResult>({
-          meta: { url: 'https://example.com/follow' },
-          follow: { toJson: () => ({}) },
-        }),
-      );
-
       vi.spyOn(UserApplication, 'commitFollow').mockRejectedValue(new Error('delegate-fail'));
 
       await expect(UserController.commitFollow(HttpMethod.PUT, { follower, followee })).rejects.toThrow(

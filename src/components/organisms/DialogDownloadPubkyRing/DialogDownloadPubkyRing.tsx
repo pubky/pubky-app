@@ -38,11 +38,11 @@ export function DialogDownloadPubkyRing({ store = 'apple' }: DialogDownloadPubky
     <Dialog>
       {store === 'apple' ? (
         <Link href={imageBadge.href} target="_blank" className="block sm:hidden">
-          <Image src={imageBadge.src} alt={imageBadge.alt} width={192} height={40} />
+          <Image src={imageBadge.src} alt={imageBadge.alt} width={120} height={40} />
         </Link>
       ) : (
         <Link href={imageBadge.href} target="_blank" className="block sm:hidden">
-          <Image src={imageBadge.src} alt={imageBadge.alt} width={210} height={40} />
+          <Image src={imageBadge.src} alt={imageBadge.alt} width={135} height={40} />
         </Link>
       )}
       <DialogTrigger asChild className="hidden cursor-pointer sm:block">

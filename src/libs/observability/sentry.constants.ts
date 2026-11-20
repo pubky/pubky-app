@@ -2,6 +2,13 @@ import { INLINE_MEDIA_UPLOAD_REJECTION_NAME } from '@/hooks/useInlineMediaUpload
 
 const Z32_ALPHABET = 'ybndrfg8ejkmcpqxot1uwisza345h769';
 
+/**
+ * Replay's default block class. Its subtree is removed from the Replay DOM recording, and `beforeBreadcrumb` drops
+ * the SDK `ui.*` breadcrumbs it raises. Replay's own click events still carry the target's id and classes, so ids and
+ * classes inside a blocked subtree must stay free of secrets.
+ */
+export const SENTRY_BLOCK_SELECTOR = '.sentry-block';
+
 export const PUBKY_REDACTED = '[redacted: pubky identifier]';
 export const EMAIL_REDACTED = '[redacted: email]';
 export const PHONE_REDACTED = '[redacted: phone]';
@@ -13,7 +20,7 @@ export const PUBKY_HTTP_HOST_PATTERN = /\bhttps?:\/\/_pubky\.[^\s"'<>]+/gi;
 export const PUBKY_COMPACT_URI_PATTERN = new RegExp(`\\bpubky[${Z32_ALPHABET}]{52}(?:\\/[^\\s"'<>]*)?`, 'gi');
 export const EMAIL_PATTERN = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
 export const PHONE_PATTERN = /\+?\d[\d\s().-]{7,}\d/g;
-export const NEXUS_POST_TAGS_PATH_PATTERN = /^\/v0\/post\/[^/]+\/[^/]+\/tags$/;
+export const NEXUS_POST_TAGS_PATH_PATTERN = /^\/v1\/post\/[^/]+\/[^/]+\/tags$/;
 /** `operation` tag set by `HomeserverService.subscribeUserEventStream`; matched by a Sentry drop rule. */
 export const HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION = 'subscribeUserEventStream';
 /**

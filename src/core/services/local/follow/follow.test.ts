@@ -7,14 +7,14 @@ import { UserStreamModel } from '@/models/stream/user/userStream';
 import { UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { UserConnectionsModel } from '@/models/user/connections/userConnections';
 import { UserCountsModel } from '@/models/user/counts/userCounts';
+import type { UserCountsModelSchema } from '@/models/user/counts/userCounts.schema';
 import { UserRelationshipsModel } from '@/models/user/relationships/userRelationships';
 import { UserTtlModel } from '@/models/user/ttl/userTtl';
 import { LocalFollowService } from '@/services/local/follow/follow';
 import { postStreamDirtyRegistry } from '@/services/local/stream/posts/postStreamDirtyRegistry';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
-import type { NexusUserCounts } from '@/services/nexus/nexus.types';
 
-const DEFAULT_USER_COUNTS: NexusUserCounts = {
+const DEFAULT_USER_COUNTS: Omit<UserCountsModelSchema, 'id'> = {
   tagged: 0,
   tags: 0,
   unique_tags: 0,

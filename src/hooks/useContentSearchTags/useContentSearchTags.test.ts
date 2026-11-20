@@ -38,7 +38,7 @@ describe('useContentSearchTags', () => {
     expect(mockFetchTagsByPrefix).toHaveBeenCalledWith({ prefix: 'design', limit: SEARCH_CONTENT_TAGS_PER_TERM_LIMIT });
   });
 
-  it('lowercases terms and dedupes repeated terms before fetching', async () => {
+  it('folds ASCII case and dedupes repeated terms before fetching', async () => {
     renderHook(() => useContentSearchTags('Bitcoin bitcoin'));
 
     await waitFor(() =>
@@ -47,6 +47,17 @@ describe('useContentSearchTags', () => {
         limit: SEARCH_CONTENT_TAGS_PER_TERM_LIMIT,
       }),
     );
+  });
+
+  // Nexus `/v1` `by_prefix` matches the prefix as given, and a stored label keeps its non-ASCII
+  // capitals: lowercasing `Äpfel` to `äpfel` would find no `Äpfel` tag.
+  it('keeps a non-ASCII capital in a term, as the stored label and the /v1 prefix lookup spell it', async () => {
+    renderHook(() => useContentSearchTags('Äpfel RUST'));
+
+    await waitFor(() => expect(mockFetchTagsByPrefix).toHaveBeenCalledTimes(2));
+
+    expect(mockFetchTagsByPrefix).toHaveBeenCalledWith({ prefix: 'Äpfel', limit: SEARCH_CONTENT_TAGS_PER_TERM_LIMIT });
+    expect(mockFetchTagsByPrefix).toHaveBeenCalledWith({ prefix: 'rust', limit: SEARCH_CONTENT_TAGS_PER_TERM_LIMIT });
   });
 
   it('orders exact term matches before prefix extensions and dedupes across terms', async () => {

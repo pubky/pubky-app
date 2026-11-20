@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import type { ElementType } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { APP_ROUTES, LEGAL_ROUTES, ONBOARDING_ROUTES } from '@/app/routes';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { LANDING_NEXT_SECTION_ID } from '@/templates/Public/Landing/Landing.constants';
 import { HomeActions, HomeBrandFooter, HomeFooter, HomePageHeading, HomeSectionTitle } from './Home';
 
@@ -88,7 +89,7 @@ vi.mock('@/config/externalLinks', () => ({
 }));
 
 // Social links moved from the landing navbar into the hero footer (design 41492-354461).
-vi.mock('../Header/Header', () => ({
+vi.mock('../Header/HeaderPublicContent', () => ({
   HeaderSocialLinks: ({ className }: { className?: string }) => (
     <div data-testid="header-social-links" className={className}>
       Social Links
@@ -181,6 +182,7 @@ vi.mock('@/atoms/Typography/Typography', () => {
 describe('HomeActions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useAuthStore.setState({ hasHydrated: true });
   });
 
   it('renders action buttons', () => {
@@ -238,10 +240,16 @@ describe('HomeActions', () => {
     expect(screen.queryByTestId('continue-with-google-button')).not.toBeInTheDocument();
   });
 
-  it('starts a Passport attempt from Continue with Google when enabled', () => {
+  it('keeps the landing usable and offers Passport once the saved auth generation has hydrated', () => {
     passportMocks.eligibility = 'enabled';
+    useAuthStore.setState({ hasHydrated: false, generation: '' });
     render(<HomeActions />);
 
+    expect(screen.queryByTestId('continue-with-google-button')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('create-account-button'));
+    expect(mockPush).toHaveBeenCalledWith(ONBOARDING_ROUTES.HUMAN);
+
+    act(() => useAuthStore.setState({ generation: 'legacy', hasHydrated: true }));
     fireEvent.click(screen.getByTestId('continue-with-google-button'));
 
     expect(passportMocks.startPassportAuth).toHaveBeenCalledTimes(1);

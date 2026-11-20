@@ -76,7 +76,7 @@ export function DialogBackup({ open, onOpenChange }: DialogBackupProps = {}) {
           </DialogTitle>
           <DialogDescription id="backup-dialog-description">
             {
-              'Safely back up and store the secret seed for your pubky. Which backup method do you prefer? You can choose multiple backup methods if you wish.'
+              'Pubky App now signs in with Pubky Ring. Export your secret seed to Pubky Ring to keep your account, or save a recovery phrase or encrypted file you can import into Pubky Ring later. You can choose more than one.'
             }
           </DialogDescription>
         </DialogHeader>

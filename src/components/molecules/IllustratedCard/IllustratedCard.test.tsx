@@ -26,6 +26,18 @@ describe('IllustratedCard', () => {
     expect(container.querySelector('[data-slot="card-content"]')).not.toHaveClass('lg:flex-row');
   });
 
+  it('forwards layout classes without changing the content column', () => {
+    const { container } = render(
+      <IllustratedCard layout="column" layoutClassName="gap-6 lg:gap-6">
+        <span>Content</span>
+      </IllustratedCard>,
+    );
+
+    expect(container.querySelector('[data-slot="card-content"]')).toHaveClass('gap-6', 'lg:gap-6');
+    expect(container.querySelector('[data-slot="card-content"]')).not.toHaveClass('lg:gap-12');
+    expect(screen.getByText('Content').parentElement).toHaveClass('max-w-xl', 'flex-1');
+  });
+
   it('supports medium-breakpoint card padding', () => {
     const { container } = render(
       <IllustratedCard paddingBreakpoint="md">
