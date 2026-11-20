@@ -63,19 +63,19 @@ database recreation, can show the unclassified count for one render before the g
 follow-up.) A followed collection still counts as a post in four cases: Nexus does not serve it, its batch failed, the
 session was replaced more often than the pass runs again, or the session was lost, not replaced, while the pass was
 out (a re-authentication or a removed session keeps the stored pubky and leaves nothing to run again under; the
-unclassified count then stays for that mount). A post Nexus does not serve stays uncached and keeps counting as a
-post, as the Bookmarks list shows it (a "Post not found." card); the controller remembers it in memory for the viewer
-session, so such an account asks once per page load and session, on the first page that shows the count, and not on
-every mount; a post Nexus had only not indexed yet is therefore picked up by the Followed Collections walk, the
-Bookmarks feed or the next page load, not by a later pass. A batch that fails ends the pass, so an outage holds the
-count for the retries of one batch (about 7 s for a 502, 503, 504 or a network error; a 500 is not retried), not of
-every batch; what was not fetched counts as a post, and the next mount asks again. One case does not settle: TanStack
-pauses a retry whose back-off ends while the tab is hidden and resumes it only through a mounted query client, and no
-Nexus query client is mounted, so the pass waits and the badge stays hidden until the page is loaded again, where the
-count used to be shown at once. That limit predates this change, holds for every Nexus read and is left to a change in
-`src/libs/query-client`. On a warm cache there is no miss and no request. The pass adds no store, coordinator, config
-value or schema change, and runs only on the pages that show the count (`/collections`, the Bookmarks page, a
-collection page).
+unclassified count then stays for that mount). A post Nexus does not serve (for example a note its author deleted; a
+`by_ids` request for it answers 200 with an empty list) stays uncached and keeps counting as a post, as the Bookmarks
+list shows it (a "Post not found." card). It also keeps the gate a miss, so on every mount of a page that shows the
+count one `by_ids` request for it goes out before the badge appears, answered from the query cache when the same
+request was made in the last 20 seconds; during a Nexus outage that wait is the retries of one batch. A batch that
+fails ends the pass, so an outage holds the count for the retries of one batch (about 7 s for a 502, 503, 504 or a
+network error; a 500 is not retried), not of every batch; what was not fetched counts as a post, and the next mount
+asks again. One case does not settle: TanStack pauses a retry whose back-off ends while the tab is hidden and resumes
+it only through a mounted query client, and no Nexus query client is mounted, so the pass waits and the badge stays
+hidden until the page is loaded again, where the count used to be shown at once. That limit predates this change,
+holds for every Nexus read and is left to a change in `src/libs/query-client`. When every bookmarked post is cached
+there is no miss and no request. The pass adds no store, coordinator, config value or schema change, and runs only on
+the pages that show the count (`/collections`, the Bookmarks page, a collection page).
 
 Part of the `pubky-social-specs` 1.x migration (`docs/migrations/social-v1.md`, decisions D7 and D17). Retires the
 bookmark removal protection (`recentUnbookmarks`, `BOOKMARK_REMOVAL_PROTECTION_MS`) and adds a leaf fetch to the two
@@ -182,7 +182,7 @@ field is ignored.**
   The Followed Collections walk asks for the same posts on those pages: a post one of them stored before the other
   read its misses is not asked for again, and requests in flight for the same viewer share their pending ids
   (`nexus.by-ids.ts`); the pass adds the tail the walk skips once its window is full. An account with a bookmark
-  Nexus does not serve pays one such round trip per page load and session, warm cache or not.
+  Nexus does not serve pays one `by_ids` request for it on every mount of such a page, whatever else is cached.
 - The 0.x copy of an un-bookmarked post stays on the homeserver and in Nexus until Nexus stops indexing
   `/pub/pubky.app/bookmarks/`; it is invisible in the app.
 - Followed Collections hydrates through the stream of all bookmarks, posts included: to fill a page with

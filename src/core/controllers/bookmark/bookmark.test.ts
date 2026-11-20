@@ -198,7 +198,7 @@ describe('BookmarkController', () => {
         await expect(BookmarkController.getMissingPostIds()).resolves.toEqual([]);
       });
 
-      it('leaves a post Nexus does not serve uncached and asks for it once per session', async () => {
+      it('leaves a post Nexus does not serve uncached, resolves, and asks again on the next call', async () => {
         await bookmarkAll([postAt(1), postAt(2)]);
         byIds.mockResolvedValue([served(postAt(2), 'collection')]);
 
@@ -207,33 +207,7 @@ describe('BookmarkController', () => {
         await expect(BookmarkController.getMissingPostIds()).resolves.toEqual([postAt(1)]);
         await expect(BookmarkController.getCount()).resolves.toBe(1);
 
-        // Nexus answered without it: a later call (the next mount) reads locally and sends nothing.
-        await BookmarkController.fetchMissingPosts();
-        expect(byIds).toHaveBeenCalledTimes(1);
-
-        // A bookmark added since is asked for, alone.
-        await BookmarkModel.table.put({ id: postAt(3), created_at: 20_000 });
-        await BookmarkController.fetchMissingPosts();
-        expect(byIds).toHaveBeenCalledTimes(2);
-        expect(requestedIds(1)).toEqual([postAt(3)]);
-
-        // Nexus served neither: both are known now, the one learned first included.
-        await BookmarkController.fetchMissingPosts();
-        expect(byIds).toHaveBeenCalledTimes(2);
-
-        // What a session learned ends with it: the next one asks for everything still missing.
-        signIn();
-        await BookmarkController.fetchMissingPosts();
-        expect(byIds).toHaveBeenCalledTimes(3);
-        expect(requestedIds(2)).toEqual([postAt(3), postAt(1)]);
-      });
-
-      it('asks again for the posts of a batch that failed', async () => {
-        vi.spyOn(Logger, 'warn').mockImplementation(() => {});
-        await bookmarkAll([postAt(1)]);
-        byIds.mockRejectedValueOnce(new Error('nexus is down'));
-
-        await BookmarkController.fetchMissingPosts();
+        // The post is still a miss: the next call (the next mount) reads again and asks for it.
         await BookmarkController.fetchMissingPosts();
 
         expect(byIds).toHaveBeenCalledTimes(2);

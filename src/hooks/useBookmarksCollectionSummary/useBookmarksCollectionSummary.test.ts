@@ -288,7 +288,7 @@ describe('useBookmarksCollectionSummary', () => {
       expect(shownCounts()).toEqual([3]);
     });
 
-    it('asks once for a bookmark Nexus does not serve, and not again on the next mount', async () => {
+    it('asks once on every mount for a bookmark Nexus does not serve, and shows the count after it', async () => {
       await bookmarkAll();
       byIds.mockResolvedValue(servedBookmarks().slice(1));
 
@@ -300,13 +300,24 @@ describe('useBookmarksCollectionSummary', () => {
       expect(byIds).toHaveBeenCalledTimes(1);
       first.unmount();
 
-      // The next page that shows the count: the unserved bookmark is known, so nothing is sent.
+      // The next page that shows the count: that bookmark is a miss again and is asked for, alone.
+      const answer: ByIdsAnswer = Promise.withResolvers();
+      byIds.mockReturnValue(answer.promise);
       const second = renderSummary();
+      await waitFor(() => expect(byIds).toHaveBeenCalledTimes(2));
+      expect(byIds.mock.calls[1][0]).toMatchObject({ post_ids: [BOOKMARKED[0]] });
+      // The badge waits for that answer, cached posts or not.
+      await settle();
+      expect(second.result.current.bookmarkCount).toBeUndefined();
+
+      await act(async () => answer.resolve([]));
+
+      // Two notes, and the bookmark Nexus does not serve counted as a post.
       await waitFor(() => expect(second.result.current.bookmarkCount).toBe(3));
-      await settle();
-      await settle();
-      expect(byIds).toHaveBeenCalledTimes(1);
       expect(second.shownCounts()).toEqual([3]);
+      await settle();
+      await settle();
+      expect(byIds).toHaveBeenCalledTimes(2);
     });
 
     it('fetches once for two mounted surfaces', async () => {

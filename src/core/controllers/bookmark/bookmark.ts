@@ -16,12 +16,6 @@ export class BookmarkController {
   /** The `fetchMissingPosts` pass in flight, with the viewer session it runs for. */
   private static missingPostsPass: { isCurrent: () => boolean; request: Promise<void> } | null = null;
 
-  /**
-   * The bookmarked posts Nexus answered without a row, with the viewer session that asked: in memory,
-   * so until the page is loaded again or the session changes.
-   */
-  private static unservedPosts: { isCurrent: () => boolean; ids: Set<string> } | null = null;
-
   /** How often one `fetchMissingPosts` call runs again because the account's session was replaced under it. */
   private static readonly MISSING_POSTS_SESSION_RERUNS = 2;
 
@@ -85,16 +79,16 @@ export class BookmarkController {
    * Fetches the bookmarked posts that are not cached (`getMissingPostIds`) from Nexus and persists
    * them, so every bookmark is classified and `getCount` is exact. Sequential `by_ids` batches of
    * `NEXUS_STREAM_MAX_LIMIT`, each followed by the application's requests for its 0.x file details,
-   * missing authors and repost originals; with nothing to ask for it is one local read and no request.
+   * missing authors and repost originals; with nothing missing it is one local read and no request.
    *
    * Resolves whatever Nexus answered, and rejects only when the local read of the missing ids fails.
    * A post Nexus does not serve stays uncached, where it keeps counting as a post, as the Bookmarks
-   * list shows it, and is not asked for again in this session and page lifetime. A batch that fails
-   * (logged by the application) ends the pass, so an outage costs the wait of one batch, not of
-   * every batch, and the next call asks again for its posts and the ones after them. One case does
-   * not settle: TanStack pauses a retry whose back-off ends while the tab is hidden and resumes it
-   * only through a mounted query client, and no Nexus client is mounted, so the pass and the callers
-   * that joined it wait until the page is loaded again.
+   * list shows it, and every later call asks for it again. A batch that fails (logged by the
+   * application) ends the pass, so an outage costs the wait of one batch, not of every batch, and
+   * the next call asks again for its posts and the ones after them. One case does not settle:
+   * TanStack pauses a retry whose back-off ends while the tab is hidden and resumes it only through
+   * a mounted query client, and no Nexus client is mounted, so the pass and the callers that joined
+   * it wait until the page is loaded again.
    *
    * Callers of one viewer session share the pass in flight. A pass whose session ends stops and
    * stores no post or user row under the next one; when the same account goes on under another
@@ -132,30 +126,17 @@ export class BookmarkController {
   }
 
   private static async fetchMissingPostsInBatches(viewerId: Pubky, isCurrent: () => boolean): Promise<void> {
-    // What another session learned ends with it, and so does the hold on that session.
-    if (this.unservedPosts && !this.unservedPosts.isCurrent()) this.unservedPosts = null;
-    const unserved = this.unservedPosts?.ids ?? new Set<string>();
-    const missingPostIds = (await this.getMissingPostIds()).filter((id) => !unserved.has(id));
-    const answered: string[] = [];
+    const missingPostIds = await this.getMissingPostIds();
     for (let index = 0; index < missingPostIds.length; index += NEXUS_STREAM_MAX_LIMIT) {
-      const batch = missingPostIds.slice(index, index + NEXUS_STREAM_MAX_LIMIT);
       // The controller orchestrates the two domains: `BookmarkApplication` calls no other Application (ADR-0009).
       const hydrated = await PostStreamApplication.fetchMissingPostsFromNexus({
-        cacheMissPostIds: batch,
+        cacheMissPostIds: missingPostIds.slice(index, index + NEXUS_STREAM_MAX_LIMIT),
         viewerId,
         isCurrent,
       });
       // False when the batch failed or the session changed: the batches left would fail or be dropped as well.
-      if (!hydrated) break;
-      answered.push(...batch);
+      if (!hydrated) return;
     }
-    if (answered.length === 0 || !isCurrent()) return;
-
-    // A post Nexus answered without a row stays missing: remember it, so the next page that shows the
-    // count reads it locally instead of asking again. A batch that failed is not remembered.
-    const stillMissing = new Set(await this.getMissingPostIds());
-    if (!isCurrent()) return;
-    this.unservedPosts = { isCurrent, ids: new Set([...unserved, ...answered.filter((id) => stillMissing.has(id))]) };
   }
 
   /**
