@@ -129,7 +129,7 @@ jobs:
     needs: [check_image]
     if: ${{ needs.check_image.outputs.image_exists != 'true' }}
     runs-on: ['ubuntu-latest']
-    # Fast-fail a hung amd64 build (a warm one takes ~7min). Manual dispatches can
+    # Fast-fail a hung amd64 build (one without a layer cache takes ~4.5min). Manual dispatches can
     # pick emulated arm64 platforms, which legitimately run far longer.
     timeout-minutes: ${{ inputs.platforms == 'linux/amd64' && 20 || 60 }}
     steps:
@@ -168,8 +168,8 @@ jobs:
           latest: ${{ inputs.latest }}
           # Content mode pushes the content tag together with the commit tag
           # (the composite's sha_tag), so consumers of either resolve the same
-          # image from the moment of push, even if the run is cancelled during
-          # cache export.
+          # image from the moment of push, even if the run is cancelled right
+          # after the push.
           tags: |
             type=raw,value=${{ needs.check_image.outputs.image_tag }},enable=${{ inputs.tag_mode == 'content' }}
           # NOTE: network values (NEXUS_URL, CDN_URL, HOMESERVER, HOMESERVER_URL, HOMEGATE_URL,
