@@ -83,7 +83,7 @@ export class BookmarkController {
    *
    * Resolves whatever Nexus answered, and rejects only when the local read of the missing ids fails.
    * A post Nexus does not serve stays uncached, where it keeps counting as a post, as the Bookmarks
-   * list shows it, and every later call asks for it again. A batch that fails (logged by the
+   * list shows it, and the next pass asks for it again. A batch that fails (logged by the
    * application) ends the pass, so an outage costs the wait of one batch, not of every batch, and
    * the next call asks again for its posts and the ones after them. One case does not settle:
    * TanStack pauses a retry whose back-off ends while the tab is hidden and resumes it only through

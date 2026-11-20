@@ -22,8 +22,9 @@ export function useBookmarksCollectionSummary(): UseBookmarksCollectionSummaryRe
   // A bookmark counts as a post until its cached details say it is a followed collection, so the
   // number is right only once every bookmarked post is cached. That is the local-first read: a
   // miss (`null`) while a bookmarked post has no details, which fetches them through `by_ids`, and
-  // settled when the fetch is, whatever came back. A post Nexus does not serve stays a miss and
-  // keeps counting as a post, as the Bookmarks list shows it. On a warm cache nothing is fetched.
+  // settled when the fetch is, whatever came back. A post Nexus does not serve stays a miss, so it is
+  // asked for on every mount, and keeps counting as a post, as the Bookmarks list shows it. When
+  // every bookmarked post is cached nothing is fetched.
   const { isLoading: isClassifying } = useLocalFirstQuery<true>({
     queryFn: async () => ((await BookmarkController.getMissingPostIds()).length === 0 ? true : null),
     fetchFn: () => BookmarkController.fetchMissingPosts(),

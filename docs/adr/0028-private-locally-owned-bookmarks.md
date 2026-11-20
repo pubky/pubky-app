@@ -67,15 +67,15 @@ unclassified count then stays for that mount). A post Nexus does not serve (for 
 `by_ids` request for it answers 200 with an empty list) stays uncached and keeps counting as a post, as the Bookmarks
 list shows it (a "Post not found." card). It also keeps the gate a miss, so on every mount of a page that shows the
 count one `by_ids` request for it goes out before the badge appears, answered from the query cache when the same
-request was made in the last 20 seconds; during a Nexus outage that wait is the retries of one batch. A batch that
-fails ends the pass, so an outage holds the count for the retries of one batch (about 7 s for a 502, 503, 504 or a
-network error; a 500 is not retried), not of every batch; what was not fetched counts as a post, and the next mount
-asks again. One case does not settle: TanStack pauses a retry whose back-off ends while the tab is hidden and resumes
-it only through a mounted query client, and no Nexus query client is mounted, so the pass waits and the badge stays
-hidden until the page is loaded again, where the count used to be shown at once. That limit predates this change,
-holds for every Nexus read and is left to a change in `src/libs/query-client`. When every bookmarked post is cached
-there is no miss and no request. The pass adds no store, coordinator, config value or schema change, and runs only on
-the pages that show the count (`/collections`, the Bookmarks page, a collection page).
+request was made in the last 20 seconds. A batch that fails ends the pass, so an outage holds the count, on such a
+mount as well, for the retries of one batch (about 7 s for a 502, 503, 504 or a network error; a 500 is not retried),
+not of every batch; what was not fetched counts as a post, and the next mount asks again. One case does not settle:
+TanStack pauses a retry whose back-off ends while the tab is hidden and resumes it only through a mounted query
+client, and no Nexus query client is mounted, so the pass waits and the badge stays hidden until the page is loaded
+again, where the count used to be shown at once. That limit predates this change, holds for every Nexus read and is
+left to a change in `src/libs/query-client`. When every bookmarked post is cached there is no miss and no request. The
+pass adds no store, coordinator, config value or schema change, and runs only on the pages that show the count
+(`/collections`, the Bookmarks page, a collection page).
 
 Part of the `pubky-social-specs` 1.x migration (`docs/migrations/social-v1.md`, decisions D7 and D17). Retires the
 bookmark removal protection (`recentUnbookmarks`, `BOOKMARK_REMOVAL_PROTECTION_MS`) and adds a leaf fetch to the two
