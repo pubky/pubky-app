@@ -236,6 +236,30 @@ describe('SettingsStore', () => {
       });
     });
 
+    it('should set the Wikipedia languages, keeping the players', () => {
+      const store = useSettingsStore.getState();
+      store.setPlayers(['tidal'], []);
+      store.setLanguages(['de', 'fr']);
+
+      expect(useSettingsStore.getState().media).toEqual({
+        playerOrder: ['tidal'],
+        hiddenPlayers: [],
+        embedsUpFront: true,
+        languages: ['de', 'fr'],
+      });
+
+      store.setLanguages([]);
+      expect(useSettingsStore.getState().media.languages).toEqual([]);
+    });
+
+    it('should keep the Wikipedia languages when rehydrating, and none from a store persisted without them', async () => {
+      await rehydrateFrom({ media: { ...defaultMediaPreferences, languages: ['it', 4] } });
+      expect(useSettingsStore.getState().media.languages).toEqual(['it']);
+
+      await rehydrateFrom({ media: { ...defaultMediaPreferences } });
+      expect(useSettingsStore.getState().media).not.toHaveProperty('languages');
+    });
+
     it('should set one kind’s players apart, keeping the ones every kind falls back to', () => {
       const store = useSettingsStore.getState();
       store.setPlayers(['tidal'], ['youtube']);

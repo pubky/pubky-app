@@ -5,6 +5,7 @@ import { MediaSettings } from './MediaSettings';
 
 const mockSetPlayers = vi.fn();
 const mockSetEmbedsUpFront = vi.fn();
+const mockSetLanguages = vi.fn();
 const mockUseSettingsStore = vi.fn();
 
 vi.mock('@/stores/settings/settings.store', () => ({
@@ -15,6 +16,7 @@ vi.mock('@/hooks/useSettingsActions/useSettingsActions', () => ({
   useSettingsActions: () => ({
     setPlayers: mockSetPlayers,
     setEmbedsUpFront: mockSetEmbedsUpFront,
+    setLanguages: mockSetLanguages,
   }),
 }));
 
@@ -85,6 +87,31 @@ describe('MediaSettings', () => {
 
     fireEvent.click(within(screen.getByRole('list', { name: 'Video' })).getByRole('button', { name: 'Remove Vimeo' }));
     expect(mockSetPlayers).toHaveBeenLastCalledWith([], ['vimeo'], 'video');
+  });
+
+  it('lists the Wikipedia languages under the players, none until one is added (Auto)', () => {
+    render(<MediaSettings />);
+
+    expect(screen.getByText('Wikipedia languages')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Wikipedia and other wikis open in the first of these languages they have. Until you add one, your browser’s languages are used.',
+      ),
+    ).toBeInTheDocument();
+    expect(rowNames('Wikipedia languages')).toEqual([]);
+    const lists = screen.getAllByRole('list').map((list) => list.getAttribute('data-testid'));
+    expect(lists.at(-1)).toBe('media-language-list');
+  });
+
+  it('shows the chosen languages by their own names and saves a change to them', () => {
+    setMedia({ languages: ['de', 'fr'] });
+    render(<MediaSettings />);
+
+    expect(rowNames('Wikipedia languages')).toEqual(['Deutsch (de)', 'Français (fr)']);
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Deutsch (de)' }));
+
+    expect(mockSetLanguages).toHaveBeenCalledWith(['fr']);
+    expect(mockSetPlayers).not.toHaveBeenCalled();
   });
 
   it('shows platform embeds up front off once turned off', () => {

@@ -9,6 +9,7 @@ import {
   getLanguageName,
   getLanguageTag,
   groupAlsoOn,
+  matchAlsoOnLanguages,
   pickAlsoOn,
   pickAlsoOnLanguage,
 } from './ResourceAlsoOn.utils';
@@ -150,6 +151,45 @@ describe('pickAlsoOnLanguage', () => {
   });
 });
 
+describe('matchAlsoOnLanguages', () => {
+  const langs = ['ar', 'de', 'en', 'fr', 'pt-br', 'zh'];
+
+  it('lists the row’s editions in the viewer’s languages, in the viewer’s order, each once', () => {
+    expect(matchAlsoOnLanguages(langs, ['fr', 'fi', 'de'])).toEqual(['fr', 'de']);
+    expect(matchAlsoOnLanguages(langs, ['de-CH', 'de', 'en-US', 'en'])).toEqual(['de', 'en']);
+  });
+
+  it('lists one edition when the row has one of the viewer’s languages', () => {
+    expect(matchAlsoOnLanguages(langs, ['de', 'it'])).toEqual(['de']);
+  });
+
+  it('lists none when the row has none of them, or the viewer has none', () => {
+    expect(matchAlsoOnLanguages(langs, ['fi', 'it'])).toEqual([]);
+    expect(matchAlsoOnLanguages(langs, [])).toEqual([]);
+  });
+
+  it('matches edition codes as they are when asked (the setting’s), never by their base language', () => {
+    expect(matchAlsoOnLanguages(['nds', 'be', 'de'], ['nds-nl', 'be-tarask', 'de'], { exact: true })).toEqual(['de']);
+    expect(matchAlsoOnLanguages(['nds', 'de'], ['nds-nl', 'de'])).toEqual(['nds', 'de']);
+    expect(pickAlsoOnLanguage(['nds', 'en'], ['nds-nl'], { exact: true })).toBe('en');
+  });
+
+  it('takes any stored code as a plain code, an object’s own key names included', () => {
+    expect(matchAlsoOnLanguages(['en', 'de'], ['constructor', '__proto__', 'toString', 'de'], { exact: true })).toEqual(
+      ['de'],
+    );
+    expect(pickAlsoOnLanguage(['en', 'de'], ['constructor', 'hasOwnProperty'])).toBe('en');
+    expect(getLanguageName('constructor')).toBe('constructor');
+    expect(getLanguageTag('constructor')).toBe('constructor');
+    expect(getLanguageTag('__proto__')).toBe('__proto__');
+  });
+
+  it('matches Wikimedia’s own codes and keeps hyphenated editions apart', () => {
+    expect(matchAlsoOnLanguages(['en', 'als', 'no'], ['nb', 'als'])).toEqual(['no', 'als']);
+    expect(matchAlsoOnLanguages(['en', 'zh-yue', 'simple'], ['zh-TW', 'simple'])).toEqual(['simple']);
+  });
+});
+
 describe('getLanguageName', () => {
   it('names a language in its own language, with its code', () => {
     expect(getLanguageName('de')).toBe('Deutsch (de)');
@@ -172,9 +212,9 @@ describe('getLanguageName', () => {
 });
 
 describe('getAlsoOnEditionNote', () => {
-  it('puts the language first, then the entry’s own note, without where it was found', () => {
-    expect(getAlsoOnEditionNote({ lang: 'de', entry: wiki('de') })).toBe('Deutsch (de)');
-    expect(getAlsoOnEditionNote({ lang: 'de', entry: { ...wiki('de'), kind: 'pdf' } })).toBe('Deutsch (de) · PDF');
+  it('is the entry’s own note only, without the language or where it was found', () => {
+    expect(getAlsoOnEditionNote({ lang: 'de', entry: wiki('de') })).toBeNull();
+    expect(getAlsoOnEditionNote({ lang: 'de', entry: { ...wiki('de'), kind: 'pdf' } })).toBe('PDF');
   });
 });
 

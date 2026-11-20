@@ -28,12 +28,14 @@ interface ResourceAlsoOnLanguagesProps {
  * One service in several languages in a card's ⋯ menu: a row for the viewer's edition, then a
  * "Change <name> language" toggle that unfolds the languages as radio items inside the menu (a
  * submenu would not fit on a phone). Picking one changes where the row links; it opens nothing.
+ * The languages are the viewer's ones the service has (`useAlsoOnEdition`); with only one of them,
+ * the row shows that edition and there is no toggle.
  */
 export function ResourceAlsoOnLanguages({ name, editions, variant, renderRow }: ResourceAlsoOnLanguagesProps) {
   const listId = useId();
   const toggleRef = useRef<HTMLElement>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const { edition, setLang } = useAlsoOnEdition(editions);
+  const { edition, choices, setLang } = useAlsoOnEdition(editions);
 
   const toggleProps = {
     'aria-expanded': isOpen,
@@ -57,6 +59,8 @@ export function ResourceAlsoOnLanguages({ name, editions, variant, renderRow }: 
     toggleRef.current?.focus();
     setIsOpen(false);
   };
+
+  if (choices.length < 2) return renderRow(edition);
 
   if (variant === MENU_VARIANT.SHEET) {
     return (
@@ -82,7 +86,7 @@ export function ResourceAlsoOnLanguages({ name, editions, variant, renderRow }: 
             className={cn('ml-8', LIST_CLASS_NAME)}
             onKeyDown={moveRadioFocus}
           >
-            {editions.map(({ lang }) => {
+            {choices.map(({ lang }) => {
               const isChecked = lang === edition.lang;
               return (
                 <Button
@@ -129,7 +133,7 @@ export function ResourceAlsoOnLanguages({ name, editions, variant, renderRow }: 
       </DropdownMenuItem>
       {isOpen && (
         <DropdownMenuRadioGroup {...listProps} value={edition.lang} className={cn('ml-4', LIST_CLASS_NAME)}>
-          {editions.map(({ lang }) => (
+          {choices.map(({ lang }) => (
             <DropdownMenuRadioItem
               key={lang}
               ref={lang === edition.lang ? focusIntoSight : undefined}

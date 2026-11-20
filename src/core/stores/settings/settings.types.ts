@@ -54,6 +54,12 @@ export interface MediaPreferences {
    * `hiddenPlayers` (Podcasts with its built-in player first).
    */
   players?: Record<string, CategoryPlayers>;
+  /**
+   * Language codes (Wikimedia's, `de`, `als`, `simple`) in the viewer's order: a service in several
+   * languages (Wikipedia, Wikivoyage) opens in the first it has, and its language switch lists only
+   * these. Saved once the list is changed; none (or empty) is Auto: the browser's languages.
+   */
+  languages?: string[];
 }
 
 /** One kind's Players: its order (`playerOrder`'s ids, `card` included) and its removed ones. */
@@ -89,6 +95,7 @@ export interface SettingsActions {
   /** With `category`, that kind's Players (`players`); without, the ones every kind falls back to. */
   setPlayers: (playerOrder: string[], hiddenPlayers: string[], category?: string) => void;
   setEmbedsUpFront: (embedsUpFront: boolean) => void;
+  setLanguages: (languages: string[]) => void;
   // Muted users actions
   addMutedUser: (userId: string) => void;
   removeMutedUser: (userId: string) => void;
@@ -158,6 +165,8 @@ function getCategoryPlayers(value: unknown): Record<string, CategoryPlayers> | u
 export function normalizeMediaPreferences(media: unknown): MediaPreferences {
   const stored = getRecord(media) ?? {};
   const players = getCategoryPlayers(stored.players);
+  // Each code once: a list from another client may repeat one.
+  const languages = getStrings(stored.languages)?.filter((code, index, all) => code && all.indexOf(code) === index);
   const normalized: MediaPreferences = {
     ...defaultMediaPreferences,
     ...stored,
@@ -168,6 +177,8 @@ export function normalizeMediaPreferences(media: unknown): MediaPreferences {
   };
   if (players) normalized.players = players;
   else delete normalized.players;
+  if (languages) normalized.languages = languages;
+  else delete normalized.languages;
   return normalized;
 }
 
@@ -194,6 +205,7 @@ export enum SettingsActionTypes {
   SET_MODERATION_BOT = 'SET_MODERATION_BOT',
   SET_PLAYERS = 'SET_PLAYERS',
   SET_EMBEDS_UP_FRONT = 'SET_EMBEDS_UP_FRONT',
+  SET_LANGUAGES = 'SET_LANGUAGES',
   ADD_MUTED_USER = 'ADD_MUTED_USER',
   REMOVE_MUTED_USER = 'REMOVE_MUTED_USER',
   SET_MUTED_USERS = 'SET_MUTED_USERS',

@@ -191,6 +191,20 @@ export const createSettingsActions = (set: ZustandSet<SettingsStore>): SettingsA
     );
   },
 
+  setLanguages: (languages) => {
+    set(
+      (state) =>
+        withTimestamp({
+          media: {
+            ...state.media,
+            languages,
+          },
+        }),
+      false,
+      SettingsActionTypes.SET_LANGUAGES,
+    );
+  },
+
   // Muted users actions
   addMutedUser: (userId) => {
     set(
