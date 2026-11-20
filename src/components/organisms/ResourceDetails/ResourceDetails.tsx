@@ -31,6 +31,8 @@ import { ResourceLinkCard } from '@/molecules/ResourceCard/ResourceLinkCard';
 import { ResourceCardSkeleton } from '@/molecules/ResourceCardSkeleton/ResourceCardSkeleton';
 import { PlayOnPill } from '@/molecules/ResourcePlayer/ResourcePlayerControls';
 import { useCardPlayer } from '@/molecules/ResourcePlayer/useCardPlayer';
+import { DialogNewPost } from '@/organisms/DialogNewPost/DialogNewPost';
+import { DialogReply } from '@/organisms/DialogReply/DialogReply';
 import { ResourceActions } from '@/organisms/ResourceActions/ResourceActions';
 import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { useSettingsStore } from '@/stores/settings/settings.store';
@@ -42,8 +44,11 @@ const EMPTY_STATE_IMAGE = '/images/post-not-found-empty-state.webp';
 interface ResourceDetailsProps {
   /** The link the page is for (`?uri=`), as given; `null` when the page was opened without one. */
   uri: string | null;
-  /** The page's read of the link's card (`usePinakesCard(uri)`), shared with its sidebar cards. */
-  read: UsePinakesQueryResult<TPinakesResourceDetail>;
+  /**
+   * The page's read of the link's card (`usePinakesCard(uri)`), shared with its sidebar cards;
+   * `isResolving` while Pinakes is asked to read a link it did not know.
+   */
+  read: UsePinakesQueryResult<TPinakesResourceDetail> & { isResolving?: boolean };
   /** Reads the card again (the page remounts its read: a failed read is not cached). */
   onRetry: () => void;
   /** The page's read of the link's replies (`useResourceReplies`), shared with Participants. */
@@ -54,8 +59,11 @@ interface ResourceDetailsProps {
  * The resource page's body, where a post's page has the post: the heading, then the link's large
  * card with a post's footer. Without a card (Pinakes does not know the link or is not configured),
  * the link's own preview takes its place, with the same footer; when Pinakes cannot be read, it
- * says so and offers the plain link. When a card replaces the link's preview (a resolve answering),
- * the footer is a new one (its tags and actions reset); the thread stays when its link is the same.
+ * says so and offers the plain link. While Pinakes reads a link it did not know (`resolve`: until it
+ * answers, up to about two minutes while a pending card settles), the loading card holds its place, as on the first read; the link's preview shows only
+ * once Pinakes has refused or given up. When a card replaces the link's preview (a resolve answering),
+ * the footer is a new one (its tags and actions reset); the thread stays when its link is the same,
+ * and so does a reply or a post being written in the page's Reply and Post about this composers.
  */
 export function ResourceDetails(props: ResourceDetailsProps) {
   return (
@@ -67,6 +75,16 @@ export function ResourceDetails(props: ResourceDetailsProps) {
 }
 
 function ResourceBody({ uri, read, onRetry, replies }: ResourceDetailsProps) {
+  // The page's composer, opened from the footer of whichever card shows, one at a time: a reply to
+  // the link, or a new post about it.
+  const [composer, setComposer] = useState<{ kind: 'reply' | 'post'; uri: string } | null>(null);
+  const dialogs: PageDialogs = {
+    onReply: (replyUri) => setComposer({ kind: 'reply', uri: replyUri }),
+    onPost: (postUri) => setComposer({ kind: 'post', uri: postUri }),
+  };
+  const closeComposer = (open: boolean) => {
+    if (!open) setComposer(null);
+  };
   if (!uri) {
     return (
       <ResourceEmptyState
@@ -78,21 +96,17 @@ function ResourceBody({ uri, read, onRetry, replies }: ResourceDetailsProps) {
     );
   }
   const { data: card, isLoading, isError } = read;
-  if (isPinakesConfigured() && isLoading) {
-    return (
-      // A labelled section, so the name is announced (a plain `div` cannot carry one).
-      <Container as="section" data-testid="resource-loading" aria-busy="true" aria-label="Loading external resource">
-        <ResourceCardSkeleton withActions size="large" />
-      </Container>
-    );
-  }
 
-  // The thread is on the acted-on link: the card's canonical one, else the page's.
-  let threadUri = uri;
+  // The thread is on the acted-on link: the card's canonical one, else the page's; none on the
+  // card's first read.
+  let threadUri: string | null = uri;
   let body: React.ReactNode;
-  // The tags and replies come from Nexus: they show without Pinakes too.
-  if (!isPinakesConfigured()) {
-    body = <ResourceUnknown uri={uri} replies={replies} />;
+  if (isPinakesConfigured() && isLoading) {
+    threadUri = null;
+    body = <ResourceLoading uri={uri} replies={replies} dialogs={dialogs} />;
+  } else if (!isPinakesConfigured()) {
+    // The tags and replies come from Nexus: they show without Pinakes too.
+    body = <ResourceUnknown uri={uri} replies={replies} dialogs={dialogs} />;
   } else if (isError) {
     body = (
       <ResourceEmptyState
@@ -111,20 +125,54 @@ function ResourceBody({ uri, read, onRetry, replies }: ResourceDetailsProps) {
       </ResourceEmptyState>
     );
   } else if (!card) {
-    body = <ResourceUnknown uri={uri} replies={replies} />;
+    // Pinakes is reading the link (`resolve`): its card may still come.
+    body = read.isResolving ? (
+      <ResourceLoading uri={uri} replies={replies} dialogs={dialogs} />
+    ) : (
+      <ResourceUnknown uri={uri} replies={replies} dialogs={dialogs} />
+    );
   } else {
     // The card's canonical link; the page's link, its refs and aliases are its spellings, read along.
     const target = getResourceTarget(card, uri);
     threadUri = target.uri;
-    body = <ResourceKnown card={card} uri={uri} target={target} replies={replies} />;
+    body = <ResourceKnown card={card} uri={uri} target={target} replies={replies} dialogs={dialogs} />;
   }
-  // The thread is rendered once, past the body, so a card that replaces the link's own preview (a
-  // resolve answering) keeps the thread and a half-typed quick reply when its link is the same.
+  // The thread and the composers are rendered once, past the body, so a card that replaces the
+  // loading card or the link's own preview (a resolve answering) keeps the thread and a half-typed
+  // quick reply when its link is the same, and a reply or a post being written.
   return (
     <>
       {body}
-      <ResourceReplies key={threadUri} uri={threadUri} replies={replies} />
+      {threadUri && <ResourceReplies key={threadUri} uri={threadUri} replies={replies} />}
+      {/* Once the thread's link is known (past the first read), so the reply joins it at once. */}
+      {composer?.kind === 'reply' && threadUri && (
+        <DialogReply
+          resourceUri={composer.uri}
+          open
+          onOpenChangeAction={closeComposer}
+          onReplySubmitted={replies.addReply}
+        />
+      )}
+      {composer?.kind === 'post' && (
+        <DialogNewPost open onOpenChangeAction={closeComposer} initialContent={composer.uri} />
+      )}
     </>
+  );
+}
+
+/**
+ * The large card while it is read: what is known without it (the link as its title, a web link's
+ * site, the footer on the link as written, as `ResourceUnknown` has it) and "Loading details...";
+ * skeletons for the rest (the footer's too for a link the app writes only once it has a card, such
+ * as `btc:`). The card or the link's preview that takes its place brings a new footer
+ * (an open menu or a half-typed tag start over); the thread and the page's composers stay.
+ */
+function ResourceLoading({ uri, replies, dialogs }: LinkActionsProps) {
+  return (
+    // A labelled section, so the name is announced (a plain `div` cannot carry one).
+    <Container as="section" data-testid="resource-loading" aria-busy="true" aria-label="Loading external resource">
+      <ResourceCardSkeleton withActions size="large" link={uri} actions={getLinkActions({ uri, replies, dialogs })} />
+    </Container>
   );
 }
 
@@ -138,11 +186,13 @@ function ResourceKnown({
   uri,
   target,
   replies,
+  dialogs,
 }: {
   card: TPinakesResourceDetail;
   uri: string;
   target: ReturnType<typeof getResourceTarget>;
   replies: UseResourceRepliesResult;
+  dialogs: PageDialogs;
 }) {
   const actionUri = target.uri;
   // What "Post about this" and the ⋯ menu's link give, as a post's card does: a link people wrote
@@ -174,6 +224,7 @@ function ResourceKnown({
       size="large"
       replyCount={replies.replyCount}
       onReplySubmitted={replies.addReply}
+      {...dialogs}
     />
   );
   return (
@@ -261,29 +312,42 @@ function usePostEmbed(card: TPinakesResourceDetail, uri: string) {
  * A URI the app does not write (`javascript:`, junk, a link with credentials) gets no footer. The
  * page puts the posts replying to it under it.
  */
-function ResourceUnknown({ uri, replies }: { uri: string; replies: UseResourceRepliesResult }) {
+function ResourceUnknown({ uri, replies, dialogs }: LinkActionsProps) {
+  return (
+    <Container overrideDefaults data-testid="resource-unknown" className="min-w-0">
+      <ResourceLinkCard url={uri} size="large" actions={getLinkActions({ uri, replies, dialogs })} />
+    </Container>
+  );
+}
+
+/** Open the page's composers (`ResourceActions` `onReply`, `onPost`). */
+interface PageDialogs {
+  onReply: (uri: string) => void;
+  onPost: (uri: string) => void;
+}
+
+interface LinkActionsProps {
+  uri: string;
+  replies: UseResourceRepliesResult;
+  dialogs: PageDialogs;
+}
+
+/** The footer on the link as written, with no card; none for a URI the app does not write. */
+function getLinkActions({ uri, replies, dialogs }: LinkActionsProps) {
+  if (!isWritableResourceUri(uri)) return undefined;
   // A link that is not web (`isbn:`, `geo:`) has no web address to post about or copy.
   const linkUrl = getHttpUrl(uri);
   return (
-    <Container overrideDefaults data-testid="resource-unknown" className="min-w-0">
-      <ResourceLinkCard
-        url={uri}
-        size="large"
-        actions={
-          isWritableResourceUri(uri) ? (
-            <ResourceActions
-              uri={uri}
-              postUri={linkUrl}
-              tagsLabel={getResourceTagsLabel(null)}
-              linkUrl={linkUrl}
-              size="large"
-              replyCount={replies.replyCount}
-              onReplySubmitted={replies.addReply}
-            />
-          ) : undefined
-        }
-      />
-    </Container>
+    <ResourceActions
+      uri={uri}
+      postUri={linkUrl}
+      tagsLabel={getResourceTagsLabel(null)}
+      linkUrl={linkUrl}
+      size="large"
+      replyCount={replies.replyCount}
+      onReplySubmitted={replies.addReply}
+      {...dialogs}
+    />
   );
 }
 

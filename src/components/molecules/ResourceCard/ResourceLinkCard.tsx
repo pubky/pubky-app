@@ -34,7 +34,8 @@ interface ResourceLinkCardProps {
  * the link's resource page; the source opens the link.
  *
  * A link the preview reads as an image, video or audio file keeps `GenericPreview`, which shows or
- * plays it inline; not on the resource page (`large`), which keeps the frame and its footer.
+ * plays it inline; not on the resource page (`large`), which keeps the frame and its footer. There,
+ * while the preview is read, its skeleton shows the link and the footer, as while Pinakes reads it.
  */
 export function ResourceLinkCard({ url, actions, size = 'default' }: ResourceLinkCardProps) {
   const linkUrl = getHttpUrl(url);
@@ -43,7 +44,13 @@ export function ResourceLinkCard({ url, actions, size = 'default' }: ResourceLin
   const [failedImage, setFailedImage] = useState<string | null>(null);
   const isLarge = size === 'large';
 
-  if (isLoading) return <ResourceCardSkeleton withActions={Boolean(actions)} size={size} />;
+  if (isLoading) {
+    return isLarge ? (
+      <ResourceCardSkeleton size={size} link={url} actions={actions} />
+    ) : (
+      <ResourceCardSkeleton withActions={Boolean(actions)} size={size} />
+    );
+  }
   if (metadata && metadata.type !== 'website' && !isLarge) return <GenericPreview url={url} />;
 
   const title = metadata?.title?.trim() || (linkUrl ? getDisplayLink(url) : url);

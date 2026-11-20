@@ -122,12 +122,17 @@ describe('ResourceLinkCard', () => {
       expect(open).not.toHaveBeenCalled();
     });
 
-    it('shows the large skeleton while the preview loads', () => {
+    it('shows the large skeleton while the preview loads, with the link, its site and the footer', () => {
       mockUseOgMetadata.mockReturnValue({ metadata: null, isLoading: true, error: null });
 
-      render(<ResourceLinkCard url={URL} size="large" actions={<div />} />);
+      render(<ResourceLinkCard url={URL} size="large" actions={<div data-testid="actions" />} />);
 
       expect(screen.getByTestId('resource-card-skeleton')).toHaveAttribute('data-size', 'large');
+      expect(screen.getByTestId('resource-card-skeleton-title')).toHaveAttribute('title', URL);
+      expect(screen.getByRole('status')).toHaveTextContent('Loading details...');
+      expect(screen.getByTestId('resource-card-source')).toHaveAttribute('href', URL);
+      expect(screen.getByTestId('actions')).toBeInTheDocument();
+      expect(screen.queryByTestId('resource-card-skeleton-actions')).not.toBeInTheDocument();
     });
 
     it('keeps the frame and its footer for a link the preview reads as a media file', () => {
