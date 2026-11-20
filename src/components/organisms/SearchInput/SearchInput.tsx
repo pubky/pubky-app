@@ -7,6 +7,10 @@ import { Container } from '@/atoms/Container/Container';
 import { CLICKABLE_TAGS_DEFAULT_MAX_LENGTH } from '@/config/tags';
 import { useHotTags } from '@/hooks/useHotTags/useHotTags';
 import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
+import {
+  isResourceFiltersSearch,
+  parseResourceSearchFilters,
+} from '@/hooks/useResourceSearchFilters/useResourceSearchFilters';
 import { useSearchAutocomplete } from '@/hooks/useSearchAutocomplete/useSearchAutocomplete';
 import { useSearchCriteria } from '@/hooks/useSearchCriteria/useSearchCriteria';
 import { useSearchInput } from '@/hooks/useSearchInput/useSearchInput';
@@ -17,6 +21,7 @@ import type { Pubky } from '@/models/models.types';
 import { SearchInputBar } from '@/molecules/SearchInputBar/SearchInputBar';
 import { SearchSuggestions } from '@/molecules/SearchSuggestions/SearchSuggestions';
 import { toast } from '@/molecules/Toaster/toast';
+import { classifyResourceSearchInput } from '@/pipes/resource/resource.search';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useSearchStore } from '@/stores/search/search.store';
 import { SearchInputProps } from './SearchInput.types';
@@ -35,6 +40,14 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
   const submitContentSearch = (value: string): void => {
     const validation = validateContentSearchQuery(value);
     if (!validation.isValid) {
+      // A link or an identifier too long for a post search still finds external resources
+      if (classifyResourceSearchInput(value).kind !== 'text') {
+        addQuery(value.trim());
+        setInputValue(value.trim());
+        navigate(() => router.push(getContentSearchUrl(value.trim())));
+        setFocus(false);
+        return;
+      }
       toast({ variant: 'error', description: validation.message });
       return;
     }
@@ -68,7 +81,8 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
   // editing. Only values this effect seeded are ever cleared — a draft the
   // user is typing must survive unrelated navigations. Keyed on primitives
   // because the criteria object gets a new identity on every unmemoized render.
-  const urlQuery = criteria.mode === 'content' || criteria.mode === 'invalid' ? criteria.query : null;
+  const urlQuery =
+    criteria.mode === 'content' || criteria.mode === 'invalid' || criteria.mode === 'resource' ? criteria.query : null;
   // Tags can never contain ',' (the URL parser splits on it) and arrive already
   // trimmed + lowercased, so joining and splitting back is lossless.
   const urlTagsKey = criteria.mode === 'tags' ? criteria.tags.join(',') : null;
@@ -121,7 +135,11 @@ export function SearchInput({ autoFocus = false }: SearchInputProps) {
     // (the URL sync empties the store once the params are gone). With no
     // active search it just clears the draft and closes.
     setInputValue('');
-    if (criteria.mode !== 'none') {
+    // Filters alone (the links a user shared, a collection's) are a search too
+    const isFiltersSearch =
+      pathname === APP_ROUTES.SEARCH &&
+      isResourceFiltersSearch(parseResourceSearchFilters(new URLSearchParams(window.location.search)));
+    if (criteria.mode !== 'none' || isFiltersSearch) {
       navigate(() => router.push(APP_ROUTES.SEARCH));
     }
     setFocus(false);

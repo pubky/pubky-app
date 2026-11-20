@@ -115,9 +115,14 @@ interface ResourceCardHeaderProps {
   siteName: string | null;
   /** A control next to the type (a card's embed/card switch, `useCardPlayer`'s `switcher`). */
   control?: ReactNode;
+  /** What stands on the right in place of the site (a pubky.app file's owner, `ResourceFileCard`). */
+  source?: ReactNode;
 }
 
-/** The type line on the left and the source on the right: the site's icon and name, linking out. */
+/**
+ * The type line on the left and the source on the right: the site's icon and name, linking out, or
+ * what the card gives in its place (`source`).
+ */
 export function ResourceCardHeader({
   typeLabel,
   typeHref,
@@ -125,6 +130,7 @@ export function ResourceCardHeader({
   href,
   siteName,
   control,
+  source,
 }: ResourceCardHeaderProps) {
   const navigable = useIsPostPreviewNavigable();
   // Never cut short: on a narrow card the type wraps instead (on a phone the switch and the link
@@ -157,7 +163,7 @@ export function ResourceCardHeader({
           {control}
         </Container>
       )}
-      <ResourceSource uri={sourceUri} href={href} name={siteName} />
+      {source ?? <ResourceSource uri={sourceUri} href={href} name={siteName} />}
     </Container>
   );
 }

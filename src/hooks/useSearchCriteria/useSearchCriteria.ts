@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { getMaxStreamTags } from '@/libs/runtime-config/runtime-config';
 import { validateContentSearchQuery } from '@/libs/search/contentSearch';
 import { canonicalizeTagLabel } from '@/libs/utils/utils';
+import { classifyResourceSearchInput, hasCredentialLink } from '@/pipes/resource/resource.search';
 
 /**
  * Parses tags from a comma-separated string parameter.
@@ -41,6 +42,8 @@ export type SearchCriteria =
   | { mode: 'tags'; tags: string[] }
   // `query` carries the rejected input so the UI can offer it for editing.
   | { mode: 'invalid'; message: string; query: string }
+  // A link or an identifier no post search takes (too long for one): external resources only.
+  | { mode: 'resource'; query: string; input: { kind: 'url'; url: string } | { kind: 'key'; key: string } }
   | { mode: 'none' };
 
 /**
@@ -54,10 +57,15 @@ export function useSearchCriteria(): SearchCriteria {
 
   // A blank q carries no intended search; fall through to tags.
   if (query !== null && query.trim() !== '') {
+    // A link that carries credentials (`user:password@`) is never sent, to posts or external resources
+    if (hasCredentialLink(query)) {
+      return { mode: 'invalid', message: 'Search cannot hold a link with a username or password', query: query.trim() };
+    }
     const validation = validateContentSearchQuery(query);
-    return validation.isValid
-      ? { mode: 'content', query: validation.query }
-      : { mode: 'invalid', message: validation.message, query: query.trim() };
+    if (validation.isValid) return { mode: 'content', query: validation.query };
+    const input = classifyResourceSearchInput(query);
+    if (input.kind !== 'text') return { mode: 'resource', query: query.trim(), input };
+    return { mode: 'invalid', message: validation.message, query: query.trim() };
   }
 
   const tags = parseTags(searchParams.get('tags'));

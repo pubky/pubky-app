@@ -1,6 +1,6 @@
 'use client';
 
-import { type ReactNode, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { PINAKES_SLOW_READ_MS } from '@/config/pinakes';
 import { usePinakesCard } from '@/hooks/usePinakesCard/usePinakesCard';
@@ -64,6 +64,24 @@ function useEmbedEngaged(box: React.RefObject<HTMLElement | null>): boolean {
 }
 
 /**
+ * `false` while `box` is laid out nowhere (`getClientRects`, as `PlayerHost` reads its slots): inside
+ * something hidden, as a feed kept behind an open post (`display: none`). Its size observer says so
+ * as the box's size goes to nothing and back; laid out until it first does (none in the test DOM). A
+ * box only scrolled away is laid out: this is not the viewport.
+ */
+function useIsLaidOut(box: React.RefObject<HTMLElement | null>): boolean {
+  const [laidOut, setLaidOut] = useState(true);
+  useEffect(() => {
+    const element = box.current;
+    if (!element || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => setLaidOut(element.getClientRects().length > 0));
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [box]);
+  return laidOut;
+}
+
+/**
  * A post's embedded X post, YouTube or Vimeo video as an external resource, embed or card. A video
  * Pinakes has read (`isPlayable`) shows its player up front (`useCardPlayer`'s `embed`) in the
  * resource frame, with the embed/card switch in the frame's header when it is on other services
@@ -80,21 +98,35 @@ function useEmbedEngaged(box: React.RefObject<HTMLElement | null>): boolean {
  *
  * In the composer, and in the Reply and Repost dialogs (a post being written: `navigable` false),
  * the footer tags the resource before the post is sent, and a player never docks (`preview`).
+ *
+ * A video's own embed is unloaded while the box is hidden (a feed kept behind an open post) and
+ * loaded again once shown, as `PlayerHost` does with the card player's frames: no live frame stays
+ * behind. An X post has no frame of its own and stays.
  */
 export function NativeEmbedResource(props: NativeEmbedResourceProps) {
   // The default margin: the box counts as near 200px before it scrolls in.
   const { ref, isVisible } = useViewportObserver();
+  const box = useRef<HTMLDivElement>(null);
+  const isLaidOut = useIsLaidOut(box);
   const [wasNear, setWasNear] = useState(false);
   if (isVisible && !wasNear) setWasNear(true);
   // The composer's preview is on screen; elsewhere the Pinakes read and the footer's reads wait.
   const choice =
     props.isComposing || wasNear ? (
-      <NativeEmbedChoice {...props} isOnScreen={isVisible} />
+      <NativeEmbedChoice {...props} isOnScreen={isVisible} isLaidOut={isLaidOut} />
     ) : (
       <ResourceCardSkeleton withActions />
     );
   return (
-    <div ref={ref} className="min-w-0" data-testid="native-embed-resource" data-kind={props.kind}>
+    <div
+      ref={(node) => {
+        ref(node);
+        box.current = node;
+      }}
+      className="min-w-0"
+      data-testid="native-embed-resource"
+      data-kind={props.kind}
+    >
       {/* The composer measures and snaps its own height; elsewhere the box grows smoothly. */}
       {props.isComposing ? choice : <AnimatedHeight>{choice}</AnimatedHeight>}
     </div>
@@ -107,7 +139,8 @@ function NativeEmbedChoice({
   renderEmbed,
   isComposing = false,
   isOnScreen,
-}: NativeEmbedResourceProps & { isOnScreen: boolean }) {
+  isLaidOut,
+}: NativeEmbedResourceProps & { isOnScreen: boolean; isLaidOut: boolean }) {
   const { data, isLoading, isResolving } = usePinakesCard(
     url,
     isComposing ? { resolve: true } : { recheck: isOnScreen },
@@ -193,6 +226,9 @@ function NativeEmbedChoice({
 
   if (isReading && !isSlow) return <ResourceCardSkeleton withActions />;
 
+  // A video's own embed (a plain frame, not hosted by `PlayerHost`) only while the box is laid out.
+  const loadsEmbed = kind !== 'video' || isLaidOut;
+
   // An embed the platform cannot show closes: the card takes its place, or the pill offers it again.
   const onEmbedError = () => {
     setFailed(true);
@@ -238,7 +274,7 @@ function NativeEmbedChoice({
         : (body: ReactNode) =>
             isPostOpen && !failed ? (
               <Container overrideDefaults className="min-w-0" data-testid="native-embed-body">
-                {renderEmbed({ onError: onEmbedError })}
+                {loadsEmbed && renderEmbed({ onError: onEmbedError })}
               </Container>
             ) : (
               body
@@ -260,7 +296,7 @@ function NativeEmbedChoice({
       {/* Nothing in the frame's body until the pill opens the embed. */}
       {!isEmbedOnPress || isPostOpen ? (
         <div ref={embedRef} className="min-w-0" data-testid="native-embed-body">
-          {renderEmbed({ onError: onEmbedError })}
+          {loadsEmbed && renderEmbed({ onError: onEmbedError })}
         </div>
       ) : null}
     </ResourceEmbedFrame>

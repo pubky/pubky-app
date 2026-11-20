@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { getResourceServicesQuery } from '@/pipes/resource/resource.search';
 import kindOfBlueEnrichedFixture from '@/services/pinakes/fixtures/by-uri.mb-release-group.enriched.json';
 import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
 import groupFixture from '@/services/pinakes/fixtures/group.video.json';
@@ -17,6 +18,8 @@ vi.mock('@/services/pinakes/pinakes', () => ({
     resolveCard: vi.fn(),
     fetchCardById: vi.fn(),
     seedCardByUri: vi.fn(),
+    search: vi.fn(),
+    getCachedSearch: vi.fn(),
   },
 }));
 
@@ -27,6 +30,20 @@ const MALFORMED_CREDITS = asInvalid<TPinakesResourceDetail['credits']>([
 ]);
 
 describe('PinakesApplication', () => {
+  it('reads the facets of a first page already read with the parameters its read used, without a request', async () => {
+    const query = getResourceServicesQuery(['music.amazon.com', 'open.spotify.com']);
+    const facets = { host: [{ host: 'music.amazon.com', site: 'Amazon Music', count: 1 }] };
+    vi.mocked(PinakesService.search).mockResolvedValue({ items: [], reach_truncated: false, facets });
+    vi.mocked(PinakesService.getCachedSearch).mockReturnValue({ items: [], reach_truncated: false, facets });
+
+    await PinakesApplication.searchResources(query, { limit: 1, cursor: undefined, facets: true });
+    expect(PinakesApplication.getCachedSearchFacets(query, 1)).toBe(facets);
+    expect(PinakesService.getCachedSearch).toHaveBeenCalledWith(vi.mocked(PinakesService.search).mock.calls[0][0]);
+
+    vi.mocked(PinakesService.getCachedSearch).mockReturnValue(undefined);
+    expect(PinakesApplication.getCachedSearchFacets(query, 1)).toBeUndefined();
+  });
+
   it('returns the card the service reads', async () => {
     vi.mocked(PinakesService.fetchCardByUri).mockResolvedValue(videoFixture);
 

@@ -37,6 +37,8 @@ export enum CONTENT {
   LINKS = 'links',
   FILES = 'files',
   LOCKS = 'locks',
+  /** External resources (the links people tag), searched in Pinakes (Nexus as a fallback): no post kind. */
+  RESOURCES = 'resources',
 }
 
 // Home types
@@ -46,6 +48,8 @@ export type ReachType = (typeof REACH)[keyof typeof REACH];
 /** A reach as the filter UI selects it — a stored reach or the Tagged-as sentinel. */
 export type ReachFilterValue = ReachType | typeof TAGGED_AS_FILTER_KEY;
 export type ContentType = (typeof CONTENT)[keyof typeof CONTENT];
+/** A content filter over posts: every one but External resources, which lists no posts. */
+export type PostContentType = Exclude<ContentType, CONTENT.RESOURCES>;
 
 export interface HomeState {
   layout: LayoutType;

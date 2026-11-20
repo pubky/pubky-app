@@ -202,6 +202,20 @@ describe('PostAttachmentsGenericFiles', () => {
       expect(screen.queryByText('config.xml')).not.toBeInTheDocument();
       expect(screen.queryByText('binary.bin')).not.toBeInTheDocument();
     });
+
+    it('renders a file of any type with allTypes, a file shown on its own', () => {
+      const genericFiles = [
+        createMockFile({ type: 'text/plain', name: 'notes.txt', urls: { main: 'https://example.com/notes' } }),
+        createMockFile({ type: 'application/zip', name: 'archive.zip' }),
+        createMockFile({ name: 'report.pdf' }),
+      ];
+      render(<PostAttachmentsGenericFiles genericFiles={genericFiles} allTypes />);
+
+      expect(screen.getByText('notes.txt')).toBeInTheDocument();
+      expect(screen.getByText('archive.zip')).toBeInTheDocument();
+      expect(screen.getByText('report.pdf')).toBeInTheDocument();
+      expect(screen.getAllByTestId('link')[0]).toHaveAttribute('href', 'https://example.com/notes');
+    });
   });
 
   describe('Icons', () => {

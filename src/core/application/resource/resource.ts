@@ -1,5 +1,8 @@
 import { NexusResourceService } from '@/services/nexus/resource/resource';
-import type { TResourceCounts } from '@/services/nexus/resource/resource.types';
+import type { TResourceCounts, TResourceStreamParams } from '@/services/nexus/resource/resource.types';
+
+/** One page of the resource stream: its links in order, and whether the stream ended there. */
+export type TResourceStreamPage = { uris: string[]; reachedEnd: boolean };
 
 /**
  * External resources (links of any scheme) as Nexus indexes them: what it counts on a link. The
@@ -21,5 +24,14 @@ export class ResourceApplication {
   /** The counts already read for the link, without a request; `undefined` when none was read. */
   static getCachedCounts(uri: string): TResourceCounts | null | undefined {
     return NexusResourceService.getCachedCounts(uri);
+  }
+
+  /**
+   * A page of the external resources people tagged (with `tags`, any of them), the latest tagged
+   * first, as their links. Not stored: a resource is no post, and each card reads its own tags.
+   */
+  static async fetchStream(params: TResourceStreamParams): Promise<TResourceStreamPage> {
+    const views = await NexusResourceService.fetchStream(params);
+    return { uris: views.map((view) => view.details.uri), reachedEnd: views.length < params.limit };
   }
 }

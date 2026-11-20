@@ -1,3 +1,4 @@
+import { getPubkyAppTarget } from '@/libs/pubkyApp/pubkyAppTarget';
 import { isPubkyIdentifier } from '@/libs/utils/utils';
 
 export const ROOT_ROUTES = '/';
@@ -104,11 +105,26 @@ export enum RESOURCE_ROUTES {
 
 /**
  * Builds the URL of an external resource's page (`/resource?uri=…`), the link encoded as a query
- * value, so any URI (`https:`, `isbn:`, `geo:`, …) round-trips unchanged.
+ * value, so any URI (`https:`, `isbn:`, `geo:`, …) round-trips unchanged. A pubky.app post or profile
+ * is no external resource: its URI gives its own page (`getPubkyAppPageRoute`). A pubky.app file keeps
+ * the resource page, which shows it as a file with its tags.
  */
 export function getResourceRoute(uri: string): string {
+  const ownPage = getPubkyAppPageRoute(uri);
+  if (ownPage) return ownPage;
   const params = new URLSearchParams({ uri });
   return `${RESOURCE_ROUTES.RESOURCE}?${params.toString()}`;
+}
+
+/**
+ * The app's own page for a pubky.app post (`/post/<author>/<id>`) or user (`/profile/<key>`), in
+ * either spelling (`getPubkyAppTarget`); `null` for any other URI, a pubky.app file included.
+ */
+export function getPubkyAppPageRoute(uri: string): string | null {
+  const target = getPubkyAppTarget(uri);
+  if (target?.kind === 'post') return `${POST_ROUTES.POST}/${target.authorId}/${target.postId}`;
+  if (target?.kind === 'user') return `${APP_ROUTES.PROFILE}/${target.userId}`;
+  return null;
 }
 
 export enum COPYRIGHT_ROUTES {

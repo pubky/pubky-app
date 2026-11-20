@@ -1,12 +1,14 @@
 'use client';
 
-import { Key, Link, Megaphone, MegaphoneOff, UserRoundMinus, UserRoundPlus } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Key, Link, Megaphone, MegaphoneOff, TextSearch, UserRoundMinus, UserRoundPlus } from 'lucide-react';
 import { PROFILE_ROUTES } from '@/app/routes';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useIsFollowing } from '@/hooks/useIsFollowing/useIsFollowing';
 import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import { useMuteUser } from '@/hooks/useMuteUser/useMuteUser';
+import { getResourceSearchUrl } from '@/hooks/useResourceSearchFilters/useResourceSearchFilters';
 import { useShareUrl } from '@/hooks/useShareUrl/useShareUrl';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { isAppError } from '@/libs/error/error.utils';
@@ -31,6 +33,7 @@ export function useProfileMenuActions(userId: string, active = true): UseProfile
   const { toggleFollow, isLoading: isFollowLoading, isUserLoading } = useFollowUser(active);
   const { toggleMute, isLoading: isMuteLoading, isUserLoading: isMuteUserLoading } = useMuteUser(active);
   const { isMuted } = useMutedUsers();
+  const router = useRouter();
   const { copyToClipboard: copyPubky } = useCopyToClipboard({
     successTitle: 'Pubky copied to clipboard',
   });
@@ -78,6 +81,14 @@ export function useProfileMenuActions(userId: string, active = true): UseProfile
       // useShareUrl reports its own success/failure toasts and never throws.
       await copyLink(profileUrl);
     },
+  });
+
+  // The external resources this user shared, in the search with every resource filter
+  menuItems.push({
+    id: PROFILE_MENU_ACTION_IDS.SHARED_LINKS,
+    label: `Links shared by ${username}`,
+    icon: TextSearch,
+    onClick: () => router.push(getResourceSearchUrl({ author: userId })),
   });
 
   // Mute/Unmute

@@ -53,8 +53,9 @@ vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
 }));
 
 const mockRouterReplace = vi.fn();
+const mockRouterPush = vi.fn();
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ replace: mockRouterReplace, push: vi.fn(), back: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => ({ replace: mockRouterReplace, push: mockRouterPush, back: vi.fn(), refresh: vi.fn() }),
 }));
 
 const mockDeleteState = vi.hoisted(() => ({
@@ -1053,5 +1054,32 @@ describe('CollectionHero - mobile layout preference', () => {
     fireEvent.pointerDown(screen.getByRole('button', { name: 'Layout: Cards' }), { button: 0, ctrlKey: false });
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Cards' }));
     expect(onLayoutChange).not.toHaveBeenCalled();
+  });
+
+  describe('CTA — search its links', () => {
+    it('opens the search of the links a collection holds, for owner and visitor alike', () => {
+      setPostDetails(
+        JSON.stringify({
+          name: 'Links',
+          description: null,
+          items: ['https://open.spotify.com/track/1', 'pubky://a/b'],
+        }),
+      );
+      const { unmount } = renderHero();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Search the links in this collection' }));
+      const uri = `pubky://${AUTHOR_PUBKY}/pub/social/v1/posts/${POST_ID}`;
+      expect(mockRouterPush).toHaveBeenCalledWith(`/search?in=${encodeURIComponent(uri)}`);
+      unmount();
+
+      setAuthStore(AUTHOR_PUBKY);
+      renderHero();
+      expect(screen.getByRole('button', { name: 'Search the links in this collection' })).toBeInTheDocument();
+    });
+
+    it('is not offered for a collection of posts only', () => {
+      renderHero();
+      expect(screen.queryByRole('button', { name: 'Search the links in this collection' })).not.toBeInTheDocument();
+    });
   });
 });

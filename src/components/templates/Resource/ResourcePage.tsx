@@ -6,6 +6,7 @@ import { MOBILE_FAB_CLEARANCE_CLASS } from '@/config/layoutClasses';
 import { isPinakesConfigured } from '@/config/pinakes';
 import { usePinakesCard } from '@/hooks/usePinakesCard/usePinakesCard';
 import { useResourceReplies } from '@/hooks/useResourceReplies/useResourceReplies';
+import { isPubkyAppAddress } from '@/libs/pubkyApp/pubkyAppTarget';
 import { getResourceTarget } from '@/molecules/ResourceCard/ResourceCard.utils';
 import { PostPageLayout } from '@/organisms/PostPageShell/PostPageLayout';
 import { ResourceDetails } from '@/organisms/ResourceDetails/ResourceDetails';
@@ -27,7 +28,9 @@ interface ResourcePageProps {
  *
  * A link Pinakes does not know is sent to be read when its page opens (`POST /v1/resolve`): the page
  * shows the card's skeleton and the thread meanwhile, the card once Pinakes has read it, and the link
- * itself with its footer once Pinakes refused or gave up.
+ * itself with its footer once Pinakes refused or gave up. A pubky.app file's page shows the file
+ * (`ResourceFileCard`), with no read of Pinakes; a pubky.app post or profile never gets here (the
+ * route sends it to its own page).
  */
 export function ResourcePage({ uri }: ResourcePageProps) {
   // A failed read is not cached: a new attempt remounts the read and asks again.
@@ -39,8 +42,10 @@ export function ResourcePage({ uri }: ResourcePageProps) {
 /** One read of the link's card, for the body and the sidebar cards alike. */
 function ResourcePageRead({ uri, onRetry }: ResourcePageProps & { onRetry: () => void }) {
   // A link Pinakes does not know yet is read on opening its page (`resolve`); a pending card is read
-  // again until it settles (`recheck`).
-  const read = usePinakesCard(uri, { resolve: true, recheck: true });
+  // again until it settles (`recheck`). Nothing in pubky.app's own trees is read from Pinakes, which
+  // reads none of it: a file's page shows the file (`ResourceDetails`).
+  const isPubkyApp = uri !== null && isPubkyAppAddress(uri);
+  const read = usePinakesCard(isPubkyApp ? null : uri, { resolve: true, recheck: true });
   const card = read.data;
   useResourceTitle(card?.name);
   // One read of the replies for the thread under the card and the Participants panel.

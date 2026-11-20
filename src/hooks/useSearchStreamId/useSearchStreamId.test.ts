@@ -51,6 +51,20 @@ describe('useSearchStreamId', () => {
     );
   });
 
+  it('gives no post stream for External resources, in tag or full-text search', () => {
+    mockGet.mockReturnValue('music');
+    useHomeStore.setState({ content: CONTENT.RESOURCES });
+    const { result, rerender } = renderHook(() => useSearchStreamId());
+    expect(result.current).toBeUndefined();
+    mockQueryParam.value = 'music';
+    rerender();
+    expect(result.current).toBeUndefined();
+    // The Collections section still reads its own post stream
+    expect(renderHook(() => useSearchStreamId(CONTENT.COLLECTIONS)).result.current).toBe(
+      'content_search:q~music:collection',
+    );
+  });
+
   describe('when no tags in URL', () => {
     it('should return undefined when tags param is null', () => {
       mockGet.mockReturnValue(null);

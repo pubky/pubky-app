@@ -1,5 +1,6 @@
 import type { Pubky } from '@/models/models.types';
 import type { NexusTag, NexusTagWire } from '@/services/nexus/nexus.types';
+import type { RESOURCE_STREAM_SORTING } from '@/services/nexus/resource/resource.constants';
 
 export type TResourceByUriParams = {
   /** The link exactly as written: Nexus matches the raw URI. */
@@ -85,3 +86,28 @@ export type TResourceRepliesParams = {
 
 /** The same answer as Nexus serves it: `/v1` tags carry no `relationship` (`TagNormalizer.fromNexus`). */
 export type NexusResourceTagsWire = Omit<NexusResourceTags, 'tags'> & { tags: NexusTagWire[] };
+
+/**
+ * `GET /v1/stream/resources`: the external resources people tagged, the latest tagged first. Only
+ * the members Nexus applies: it ignores `reach`, `kind`, `domain_tags`, `source` and `q` (a `q`
+ * alone answers the unfiltered stream), so none of them can be sent.
+ */
+export type TResourceStreamQuery = {
+  /** 1–5 labels joined by `,`: a resource tagged with any of them. Omitted for every resource. */
+  tags?: string;
+  /** The one order the route serves, by the latest tag (it refuses `total_engagement`). */
+  sorting: typeof RESOURCE_STREAM_SORTING;
+  skip: number;
+  /** 1–100. */
+  limit: number;
+  /** Marks the viewer's own tags; omitted signed out. */
+  viewer_id?: Pubky;
+};
+
+export type TResourceStreamParams = {
+  /** Tag labels, at most `RESOURCE_STREAM_MAX_TAGS`; empty for every resource. */
+  tags: readonly string[];
+  viewerId?: Pubky | null;
+  skip: number;
+  limit: number;
+};

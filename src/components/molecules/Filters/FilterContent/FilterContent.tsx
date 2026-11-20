@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { CirclePlay, Download, Image, Layers, Library, Link, Lock, Newspaper, StickyNote } from 'lucide-react';
+import { CirclePlay, Download, Globe, Image, Layers, Library, Link, Lock, Newspaper, StickyNote } from 'lucide-react';
 import { CONTENT, type ContentType } from '@/stores/home/home.types';
 import { FilterRadioGroup } from '../FilterRadioGroup/FilterRadioGroup';
 import { BaseFilterProps } from '../Filters.types';
@@ -73,6 +73,13 @@ export function FilterContent({
         icon: Link,
         disabled: isDisabled(CONTENT.LINKS),
         dataCy: 'links-content-toggle',
+      },
+      {
+        key: CONTENT.RESOURCES,
+        label: 'External resources',
+        icon: Globe,
+        disabled: isDisabled(CONTENT.RESOURCES),
+        dataCy: 'resources-content-toggle',
       },
       {
         key: CONTENT.FILES,

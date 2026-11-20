@@ -11,7 +11,9 @@ import { isPinakesConfigured } from '@/config/pinakes';
 import { useOtherLinkTags } from '@/hooks/useOtherLinkTags/useOtherLinkTags';
 import { usePinakesGroup } from '@/hooks/usePinakesGroup/usePinakesGroup';
 import type { UsePinakesQueryResult } from '@/hooks/usePinakesQuery/usePinakesQuery.types';
+import { usePubkyAppFile } from '@/hooks/usePubkyAppFile/usePubkyAppFile';
 import type { UseResourceRepliesResult } from '@/hooks/useResourceReplies/useResourceReplies';
+import { getPubkyAppTarget } from '@/libs/pubkyApp/pubkyAppTarget';
 import { IllustratedEmptyState } from '@/molecules/IllustratedEmptyState/IllustratedEmptyState';
 import { parseUrlForLinkEmbed } from '@/molecules/PostLinkEmbeds/PostLinkEmbeds.utils';
 import {
@@ -28,6 +30,8 @@ import {
   isWritableResourceUri,
   playsInCard,
 } from '@/molecules/ResourceCard/ResourceCard.utils';
+import { ResourceFileCard } from '@/molecules/ResourceCard/ResourceFileCard';
+import { FILE_TAGS_LABEL, FILE_TYPE_LABEL } from '@/molecules/ResourceCard/ResourceFileCard.utils';
 import { ResourceLinkCard } from '@/molecules/ResourceCard/ResourceLinkCard';
 import { ResourceCardSkeleton } from '@/molecules/ResourceCardSkeleton/ResourceCardSkeleton';
 import { PlayOnPill } from '@/molecules/ResourcePlayer/ResourcePlayerControls';
@@ -67,9 +71,11 @@ interface ResourceDetailsProps {
  * and so does a reply or a post being written in the page's Reply and Post about this composers.
  */
 export function ResourceDetails(props: ResourceDetailsProps) {
+  // A pubky.app file's page is the file's: "File" where a post's page names its author.
+  const isFile = props.uri !== null && getPubkyAppTarget(props.uri)?.kind === 'file';
   return (
     <>
-      <PageHeading />
+      <PageHeading label={isFile ? FILE_TYPE_LABEL : 'External resource'} />
       <ResourceBody {...props} />
     </>
   );
@@ -97,12 +103,18 @@ function ResourceBody({ uri, read, onRetry, replies }: ResourceDetailsProps) {
     );
   }
   const { data: card, isLoading, isError } = read;
+  const pubkyApp = getPubkyAppTarget(uri);
 
   // The thread is on the acted-on link: the card's canonical one, else the page's; none on the
   // card's first read.
   let threadUri: string | null = uri;
   let body: React.ReactNode;
-  if (isPinakesConfigured() && isLoading) {
+  if (pubkyApp?.kind === 'file') {
+    // The app's own file: never read from Pinakes.
+    body = (
+      <ResourceFile uri={uri} fileUri={pubkyApp.uri} ownerId={pubkyApp.ownerId} replies={replies} dialogs={dialogs} />
+    );
+  } else if (isPinakesConfigured() && isLoading) {
     threadUri = null;
     body = <ResourceLoading uri={uri} replies={replies} dialogs={dialogs} />;
   } else if (!isPinakesConfigured()) {
@@ -326,6 +338,48 @@ function ResourceUnknown({ uri, replies, dialogs }: LinkActionsProps) {
   );
 }
 
+/**
+ * A pubky.app file (`getPubkyAppTarget`), large, as the file itself (`ResourceFileCard`), closed by
+ * a resource's footer on its URI: Nexus keeps the file's tags as a resource's. A Pubky object takes
+ * no reply (the footer's Reply is off) and has no web link to post about or copy. While its details
+ * are read, the card's skeleton holds the place with the footer; a file Nexus does not know shows
+ * "File" as its title, with its owner and the footer.
+ */
+function ResourceFile({
+  uri,
+  fileUri,
+  ownerId,
+  replies,
+  dialogs,
+}: LinkActionsProps & { fileUri: string; ownerId: string }) {
+  const { file, isLoading } = usePubkyAppFile(fileUri);
+  const actions = (
+    <ResourceActions
+      uri={uri}
+      postUri={null}
+      tagsLabel={FILE_TAGS_LABEL}
+      linkUrl={null}
+      title={file?.name || null}
+      size="large"
+      replyCount={replies.replyCount}
+      onReplySubmitted={replies.addReply}
+      {...dialogs}
+    />
+  );
+  if (isLoading) {
+    return (
+      <Container as="section" data-testid="resource-loading" aria-busy="true" aria-label="Loading file">
+        <ResourceCardSkeleton withActions size="large" actions={actions} />
+      </Container>
+    );
+  }
+  return (
+    <Container overrideDefaults data-testid="resource-file" className="min-w-0">
+      <ResourceFileCard uri={uri} ownerId={ownerId} file={file} size="large" actions={actions} />
+    </Container>
+  );
+}
+
 /** Open the page's composers (`ResourceActions` `onReply`, `onPost`). */
 interface PageDialogs {
   onReply: (uri: string) => void;
@@ -377,13 +431,14 @@ function ResourceEmptyState(props: Omit<React.ComponentProps<typeof IllustratedE
 
 /**
  * The page's heading, in every state, where a post's page says "Post by <name>" (`PostPageHeader`),
- * in its size and weight. The card's title is the next heading.
+ * in its size and weight: "External resource", or "File" on a pubky.app file's. The card's title
+ * is the next heading.
  */
-function PageHeading() {
+function PageHeading({ label }: { label: string }) {
   return (
     <PageHeader data-testid="resource-page-header" className="pt-0 pb-3">
       <Typography as="h1" overrideDefaults className="truncate text-2xl leading-8 font-light text-muted-foreground">
-        External resource
+        {label}
       </Typography>
     </PageHeader>
   );

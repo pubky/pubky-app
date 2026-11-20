@@ -39,6 +39,55 @@ describe('useSearchCriteria', () => {
     });
   });
 
+  describe('a link with a username or password', () => {
+    it.each([
+      'https://alice@example.invalid',
+      'https://alice:secret@x.invalid',
+      'https://a%40b:c@x.invalid',
+      'https://alice:secret@example.invalid/a/longer/path',
+      'see https://a:b@x.invalid',
+    ])('searches nothing for %s and says why', (query) => {
+      mockQueryParam.value = query;
+      const { result } = renderHook(() => useSearchCriteria());
+      expect(result.current).toEqual({
+        mode: 'invalid',
+        message: 'Search cannot hold a link with a username or password',
+        query,
+      });
+    });
+
+    it('keeps a link with @ in its path a post search', () => {
+      mockQueryParam.value = 'https://x.invalid/@alice';
+      const { result } = renderHook(() => useSearchCriteria());
+      expect(result.current).toEqual({ mode: 'content', query: 'https://x.invalid/@alice' });
+    });
+  });
+
+  describe('resource mode', () => {
+    it('takes a link no post search takes as a search of external resources', () => {
+      mockQueryParam.value = 'https://open.spotify.com/track/69kOkLUCkxIZYexIgSG8rq';
+      const { result } = renderHook(() => useSearchCriteria());
+      expect(result.current).toEqual({
+        mode: 'resource',
+        query: 'https://open.spotify.com/track/69kOkLUCkxIZYexIgSG8rq',
+        input: { kind: 'url', url: 'https://open.spotify.com/track/69kOkLUCkxIZYexIgSG8rq' },
+      });
+    });
+
+    it('takes a long identifier the same way, and leaves a short one a post search', () => {
+      mockQueryParam.value = 'doi:10.1038/nature14539-and-a-long-suffix';
+      expect(renderHook(() => useSearchCriteria()).result.current).toMatchObject({
+        mode: 'resource',
+        input: { kind: 'key', key: 'doi:10.1038/nature14539-and-a-long-suffix' },
+      });
+      mockQueryParam.value = 'isbn:9780262033848';
+      expect(renderHook(() => useSearchCriteria()).result.current).toEqual({
+        mode: 'content',
+        query: 'isbn:9780262033848',
+      });
+    });
+  });
+
   describe('invalid mode', () => {
     it('returns invalid mode with a message when q is too short', () => {
       mockQueryParam.value = 'b';

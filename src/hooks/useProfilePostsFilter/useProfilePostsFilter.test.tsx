@@ -39,6 +39,35 @@ describe('useProfilePostsFilter', () => {
     expect(result.current.activeQuery).toBe('bitcoin');
   });
 
+  it.each(['https://alice:secret@x.invalid', 'https://alice@x.invalid', 'see https://a%40b:c@x.invalid'])(
+    'never filters by %s, a link with a username or password, and says why',
+    (value) => {
+      const { result } = renderHook(() => useProfilePostsFilter());
+
+      act(() => {
+        result.current.onInputChange(value);
+      });
+      act(() => {
+        vi.advanceTimersByTime(PROFILE_POSTS_FILTER_DEBOUNCE_MS);
+      });
+      expect(result.current.activeQuery).toBeNull();
+      expect(result.current.validationMessage).toBe('Search cannot hold a link with a username or password');
+    },
+  );
+
+  it('still filters by a link with @ in its path', () => {
+    const { result } = renderHook(() => useProfilePostsFilter());
+
+    act(() => {
+      result.current.onInputChange('https://x.invalid/@alice');
+    });
+    act(() => {
+      vi.advanceTimersByTime(PROFILE_POSTS_FILTER_DEBOUNCE_MS);
+    });
+    expect(result.current.activeQuery).toBe('https://x.invalid/@alice');
+    expect(result.current.validationMessage).toBeNull();
+  });
+
   it('restarts the debounce on every keystroke (only the final value applies)', () => {
     const { result } = renderHook(() => useProfilePostsFilter());
 

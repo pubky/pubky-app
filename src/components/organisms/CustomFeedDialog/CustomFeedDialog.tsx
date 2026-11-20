@@ -8,39 +8,52 @@ import {
   Columns3,
   Download,
   Flame,
+  Globe,
   Grid2X2,
   Image,
   Layers,
   LayoutDashboard,
+  LayoutGrid,
   Library,
   Link,
   Newspaper,
   Rows2,
   Rows4,
+  Shapes,
   SquareAsterisk,
   StickyNote,
   Trash2,
 } from 'lucide-react';
-import type { KnownFeedLayout, KnownFeedReach, KnownFeedSort, KnownPostKind } from 'pubky-social-specs';
+import { type KnownFeedLayout, type KnownFeedReach, type KnownFeedSort, type KnownPostKind } from 'pubky-social-specs';
 import { Controller, useWatch } from 'react-hook-form';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/atoms/Dialog/Dialog';
 import { DynamicLucideIcon } from '@/atoms/DynamicLucideIcon/DynamicLucideIcon';
+import { FilterList } from '@/atoms/Filter/Filter';
 import { Input } from '@/atoms/Input/Input';
 import { Label } from '@/atoms/Label/Label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/atoms/Select/Select';
 import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '@/atoms/Tooltip/Tooltip';
 import { Typography } from '@/atoms/Typography/Typography';
 import { TAGGED_AS_FILTER_KEY } from '@/config/feed';
+import { ResourceController } from '@/controllers/resource/resource';
 import { useControlledState } from '@/hooks/useControlledState/useControlledState';
 import { useCustomFeedForm } from '@/hooks/useCustomFeedForm/useCustomFeedForm';
 import {
   CUSTOM_FEED_CONTENT_ALL,
+  CUSTOM_FEED_CONTENT_RESOURCES,
   CUSTOM_FEED_FORM_FIELDS,
+  CUSTOM_FEED_RESOURCE_TYPES_ALL,
   type CustomFeedFormContent,
   type CustomFeedFormReach,
+  getCustomFeedResourceReaches,
 } from '@/hooks/useCustomFeedForm/useCustomFeedForm.types';
+import {
+  keepFeedResourceFilters,
+  removeFeedResourceFilter,
+} from '@/hooks/useCustomResourceFeed/useCustomResourceFeed.utils';
+import { useResourceSearch } from '@/hooks/useResourceSearch/useResourceSearch';
 import { getMaxStreamTags } from '@/libs/runtime-config/runtime-config';
 import { canonicalizeTagLabel } from '@/libs/utils/utils';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
@@ -48,9 +61,18 @@ import { REACH_FILTER_META } from '@/molecules/Filters/FilterReach/FilterReach';
 import { PostTag } from '@/molecules/PostTag/PostTag';
 import { TagInput } from '@/molecules/TagInput/TagInput';
 import { IconPickerDialog } from '@/organisms/IconPickerDialog/IconPickerDialog';
+import { KIND_ICONS } from '@/organisms/SearchResources/SearchResourceFilters';
+import { RemovableRow } from '@/organisms/SearchResources/SearchResourceKindFilters';
+import {
+  getResourceFeedTypeOptions,
+  getResourceServicesQuery,
+  getResourceTypesLabel,
+  withKnownHostNames,
+} from '@/pipes/resource/resource.search';
 import { type ReachFilterValue } from '@/stores/home/home.types';
 import { HOME_PROFILE_TAGS_MAX_SELECTED } from '@/stores/home/home.types';
 import { pubkyReachToHomeReach } from '@/utils/pubky-app-spec-feed-mappers';
+import { getFeedResourceFilterRows } from './CustomFeedDialog.utils';
 
 interface CustomFeedDialogSharedProps {
   /** Trigger element; omit when the dialog is driven via `open`/`onOpenChange`. */
@@ -84,6 +106,9 @@ const LAYOUT_HINT = 'Cards also applies on mobile. Other layouts use a single co
 
 const REACH_OPTION_VALUES: CustomFeedFormReach[] = ['wot', TAGGED_AS_FILTER_KEY, 'following', 'friends', 'me', 'all'];
 
+/** Every kind and sub-kind a feed of external resources can list. */
+const RESOURCE_TYPE_OPTIONS = getResourceFeedTypeOptions();
+
 export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
   const { mode, children } = props;
   const { value: open, setValue: setOpen } = useControlledState<boolean>({
@@ -103,8 +128,32 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
   const content = useWatch({ control, name: CUSTOM_FEED_FORM_FIELDS.CONTENT });
   const reach = useWatch({ control, name: CUSTOM_FEED_FORM_FIELDS.REACH });
   const domainTags = useWatch({ control, name: CUSTOM_FEED_FORM_FIELDS.DOMAIN_TAGS }) ?? [];
+  const resourceFilters = useWatch({ control, name: CUSTOM_FEED_FORM_FIELDS.RESOURCE_FILTERS }) ?? null;
 
   const isTaggedAsReach = reach === TAGGED_AS_FILTER_KEY;
+  const isResources = content === CUSTOM_FEED_CONTENT_RESOURCES;
+  // The saved services' names, as the Service filter shows them: Pinakes names each host's service
+  const savedHosts = resourceFilters?.host ? resourceFilters.host.split(',') : [];
+  const servicesQuery = open && isResources && savedHosts.length > 0 ? getResourceServicesQuery(savedHosts) : null;
+  const { hostFacets: readFacets, loading: isNamingHosts } = useResourceSearch(servicesQuery, {
+    limit: 1,
+    facets: true,
+  });
+  // While they are read, the names an earlier read of them left in the cache: the Edit dialog opens anew each time
+  const hostFacets =
+    readFacets ??
+    (isNamingHosts && servicesQuery ? (ResourceController.getCachedHostFacets(servicesQuery, 1) ?? null) : null);
+  // The names read so far: a service named once stays named while the names are read again, and after a
+  // read that does not list it
+  const [knownHosts, setKnownHosts] = useState({ facets: hostFacets, names: hostFacets ?? [] });
+  if (hostFacets && hostFacets !== knownHosts.facets) {
+    setKnownHosts({ facets: hostFacets, names: withKnownHostNames(hostFacets, knownHosts.names, savedHosts) });
+  }
+  const namingFacets = hostFacets
+    ? withKnownHostNames(hostFacets, knownHosts.names, savedHosts)
+    : isNamingHosts
+      ? knownHosts.names
+      : null;
   const isAtProfileTagLimit = domainTags.length >= HOME_PROFILE_TAGS_MAX_SELECTED;
 
   // Reach options derive from the shared REACH_FILTER_META so every surface
@@ -201,10 +250,18 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
       label: 'Files',
       icon: Download,
     },
+    {
+      value: CUSTOM_FEED_CONTENT_RESOURCES,
+      label: 'External resources',
+      icon: Globe,
+    },
   ];
   const contentFilters =
     layout === 'visual'
-      ? allContentFilters.filter((filter) => isVisualCustomFeedContentSupported(filter.value))
+      ? allContentFilters.filter(
+          // A stored Visual feed of external resources keeps showing what it is
+          (filter) => isVisualCustomFeedContentSupported(filter.value) || (isResources && filter.value === content),
+        )
       : allContentFilters;
 
   // A feed authored elsewhere can hold a reach this dialog has no option for
@@ -220,6 +277,9 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
   useEffect(() => {
     if (layout !== 'visual') return;
     if (isVisualCustomFeedContentSupported(content)) return;
+    // A feed of external resources stays one, and keeps a Visual layout another client stored: the
+    // layout is part of its id, and its cards show in one column there.
+    if (content === CUSTOM_FEED_CONTENT_RESOURCES) return;
     form.setValue(CUSTOM_FEED_FORM_FIELDS.CONTENT, CUSTOM_FEED_CONTENT_ALL, { shouldValidate: true });
   }, [content, layout, form]);
 
@@ -246,6 +306,35 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
       form.setValue(CUSTOM_FEED_FORM_FIELDS.DOMAIN_TAGS, [], { shouldValidate: true });
     }
   };
+
+  // External resources are searched in the network reaches, with no profile tags: choosing them
+  // moves a Me or Tagged-as reach (and My network where Pinakes serves none) to All, and the dialog
+  // does not list those.
+  const handleContentChange = (value: string, onChange: (next: CustomFeedFormContent) => void) => {
+    onChange(
+      value === CUSTOM_FEED_CONTENT_ALL || value === CUSTOM_FEED_CONTENT_RESOURCES ? value : (value as KnownPostKind),
+    );
+    if (value !== CUSTOM_FEED_CONTENT_RESOURCES) return;
+    if (!getCustomFeedResourceReaches().includes(reach)) {
+      form.setValue(CUSTOM_FEED_FORM_FIELDS.REACH, 'all', { shouldValidate: true, shouldDirty: true });
+    }
+    form.setValue(CUSTOM_FEED_FORM_FIELDS.DOMAIN_TAGS, [], { shouldValidate: true });
+  };
+
+  // A feed of external resources is searched in All, Following, Friends or My network (where Pinakes
+  // serves it), with no profile tags: a reach it has no counterpart for (one another client stored)
+  // reads as All, as in the feed's own filters, and stored profile tags are dropped, as choosing
+  // External resources does
+  const hasDomainTags = domainTags.length > 0;
+  useEffect(() => {
+    if (!isResources) return;
+    if (!getCustomFeedResourceReaches().includes(reach)) {
+      form.setValue(CUSTOM_FEED_FORM_FIELDS.REACH, 'all', { shouldValidate: true, shouldDirty: true });
+    }
+    if (hasDomainTags) {
+      form.setValue(CUSTOM_FEED_FORM_FIELDS.DOMAIN_TAGS, [], { shouldValidate: true, shouldDirty: true });
+    }
+  }, [isResources, reach, hasDomainTags, form]);
 
   const handleDomainTagAdd = (tag: string) => {
     // The fold the feed stores (ASCII letters only), so the label shown is the one the filter will hold.
@@ -379,11 +468,15 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
                         {UNSUPPORTED_OPTION_LABEL}
                       </SelectItem>
                     )}
-                    {reachFilters.map((r) => (
-                      <SelectItem key={r.value} value={String(r.value)} data-cy="custom-feed-select-option">
-                        <r.icon /> {r.label}
-                      </SelectItem>
-                    ))}
+                    {reachFilters
+                      // A feed of external resources lists the reaches Pinakes searches in (All,
+                      // Following, Friends, and My network where it serves it)
+                      .filter((r) => !isResources || getCustomFeedResourceReaches().includes(r.value))
+                      .map((r) => (
+                        <SelectItem key={r.value} value={String(r.value)} data-cy="custom-feed-select-option">
+                          <r.icon /> {r.label}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               )}
@@ -472,11 +565,14 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
                   </SelectTrigger>
 
                   <SelectContent data-cy="custom-feed-select-options">
-                    {layoutFilters.map((r) => (
-                      <SelectItem key={r.value} value={String(r.value)} data-cy="custom-feed-select-option">
-                        <r.icon /> {r.label}
-                      </SelectItem>
-                    ))}
+                    {layoutFilters
+                      // Resource cards have no Visual tiles: not listed, unless the feed already holds it
+                      .filter((r) => !isResources || r.value !== 'visual' || r.value === field.value)
+                      .map((r) => (
+                        <SelectItem key={r.value} value={String(r.value)} data-cy="custom-feed-select-option">
+                          <r.icon /> {r.label}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               )}
@@ -492,7 +588,7 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
               render={({ field }) => (
                 <Select
                   value={String(field.value)}
-                  onValueChange={(v) => field.onChange(v === CUSTOM_FEED_CONTENT_ALL ? v : (v as KnownPostKind))}
+                  onValueChange={(v) => handleContentChange(v, field.onChange)}
                   disabled={loading}
                   data-testid="content-select"
                 >
@@ -516,13 +612,107 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
               )}
             />
           </Container>
+
+          {isResources && (
+            <Container overrideDefaults className="flex flex-col gap-y-2" data-testid="resource-type-section">
+              <Label className="text-xs tracking-wide text-muted-foreground uppercase">{'Type'}</Label>
+
+              <Controller
+                name={CUSTOM_FEED_FORM_FIELDS.RESOURCE_TYPES}
+                control={control}
+                render={({ field }) => {
+                  const value = String(field.value);
+                  // Types another client saved that no option here stands for stay as they are
+                  const isOther =
+                    value !== CUSTOM_FEED_RESOURCE_TYPES_ALL &&
+                    !RESOURCE_TYPE_OPTIONS.some((option) => option.value === value);
+                  // Filters of a kind's own (When, Where, a Service…) go with a Type of another kind
+                  const handleTypeChange = (next: string) => {
+                    const toTypes = (option: string) =>
+                      option === CUSTOM_FEED_RESOURCE_TYPES_ALL ? null : option.split(',');
+                    form.setValue(
+                      CUSTOM_FEED_FORM_FIELDS.RESOURCE_FILTERS,
+                      keepFeedResourceFilters(resourceFilters, toTypes(value), toTypes(next)),
+                      { shouldValidate: true, shouldDirty: true },
+                    );
+                    field.onChange(next);
+                  };
+                  return (
+                    <Select
+                      value={value}
+                      onValueChange={handleTypeChange}
+                      disabled={loading}
+                      data-testid="resource-type-select"
+                    >
+                      <SelectTrigger className="w-full sm:w-fit" data-cy="custom-feed-resource-type-select">
+                        <SelectValue placeholder={'Select a type'} />
+                      </SelectTrigger>
+
+                      <SelectContent data-cy="custom-feed-select-options">
+                        <SelectItem value={CUSTOM_FEED_RESOURCE_TYPES_ALL} data-cy="custom-feed-select-option">
+                          <LayoutGrid /> {'All types'}
+                        </SelectItem>
+                        {isOther && (
+                          <SelectItem value={value} data-cy="custom-feed-select-option">
+                            <Shapes /> {getResourceTypesLabel(value.split(','))}
+                          </SelectItem>
+                        )}
+                        {RESOURCE_TYPE_OPTIONS.map((option) => {
+                          // Its kind's icon, as the Kind filter shows it
+                          const Icon = KIND_ICONS[option.kindId] ?? Shapes;
+                          return (
+                            <SelectItem
+                              key={option.value}
+                              value={option.value}
+                              className={option.isSubKind ? 'pl-6' : undefined}
+                              data-cy="custom-feed-select-option"
+                            >
+                              <Icon /> {option.label}
+                              {option.isSubKind && <span className="sr-only">{`, in ${option.kind}`}</span>}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  );
+                }}
+              />
+            </Container>
+          )}
+
+          {isResources && resourceFilters && (
+            // The saved search filters, one row each as the feed's filter panel has them: pressing one removes it
+            <Container overrideDefaults className="flex flex-col gap-y-2" data-testid="resource-filters-section">
+              <Label className="text-xs tracking-wide text-muted-foreground uppercase">{'Filters'}</Label>
+              <FilterList data-testid="resource-filter-rows">
+                {getFeedResourceFilterRows(resourceFilters, namingFacets, isNamingHosts).map((row) => (
+                  <RemovableRow
+                    key={row.name}
+                    icon={row.icon}
+                    label={row.label}
+                    isLoading={row.isLoading}
+                    onRemove={() =>
+                      form.setValue(
+                        CUSTOM_FEED_FORM_FIELDS.RESOURCE_FILTERS,
+                        removeFeedResourceFilter(resourceFilters, row.name),
+                        { shouldValidate: true, shouldDirty: true },
+                      )
+                    }
+                    testId={`resource-filter-row-${row.name}`}
+                  />
+                ))}
+              </FilterList>
+            </Container>
+          )}
         </Container>
 
         <Container className="gap-y-2">
-          <Label className="text-xs tracking-wide text-muted-foreground uppercase">{'Post Tags'}</Label>
+          <Label className="text-xs tracking-wide text-muted-foreground uppercase">
+            {isResources ? 'Tags' : 'Post Tags'}
+          </Label>
 
           <Typography overrideDefaults className="text-base leading-6 font-medium text-secondary-foreground">
-            {'Filter by what posts are about.'}
+            {isResources ? 'Filter by what external resources are tagged with.' : 'Filter by what posts are about.'}
           </Typography>
 
           <Controller
@@ -563,7 +753,7 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
           />
         </Container>
 
-        {(isTaggedAsReach || domainTags.length > 0) && (
+        {!isResources && (isTaggedAsReach || domainTags.length > 0) && (
           <Container className="gap-y-2" data-testid="profile-tags-section">
             <Label className="text-xs tracking-wide text-muted-foreground uppercase">{'Profile Tags'}</Label>
 

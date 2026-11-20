@@ -399,8 +399,11 @@ describe('PinakesService.fetchCardByUri with credentials', () => {
     'https://:secret@example.invalid/a',
     'https://alice%40home:s%3Acret@example.invalid/a',
     'not a link',
+    'https://example.invalid/?u=https://alice:secret@other.invalid/',
+    'https://outer.invalid/https://a&b:secret@example.invalid',
   ])('never sends %s, a link with a username or password or one that does not parse', async (uri) => {
     await expect(PinakesService.fetchCardByUri(uri)).resolves.toBeNull();
+    await expect(PinakesService.resolveCard(uri)).resolves.toBeNull();
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
@@ -410,6 +413,9 @@ describe('PinakesService.fetchCardByUri with credentials', () => {
     'isbn:9780140328721',
     'geo:52.5,13.4',
     'doi:10.1038/nature12373',
+    'btc:block/00000000000000000000a1b2c3d4e5f60718293a4b5c6d7e8f9012345678ab',
+    'pubky://yjn8k7ww4sc4hskkmbcsep6b1xje8g4f8j3azpdqnwhhqckt7kso/pub/example/a',
+    'https://twitter.com/intent/tweet?url=https://example.invalid&text=hi%20@bob',
   ])('still reads %s', async (uri) => {
     mockFetch.mockResolvedValue(capturedResponse('by-uri.video'));
 
@@ -459,6 +465,70 @@ describe('PinakesService.fetchRelated', () => {
 
     await expect(PinakesService.fetchRelated(videoFixture.id, 5)).resolves.toEqual([]);
     expect(mockFetch).not.toHaveBeenCalled();
+  });
+});
+
+describe('PinakesService.search', () => {
+  const PAGE: TPinakesSearchResponse = {
+    items: [],
+    cursor: 'next',
+    reach_truncated: false,
+    facets: {
+      type: [{ type: 'MusicRecording', type_path: ['Thing', 'CreativeWork', 'MusicRecording'], count: 55 }],
+      tags: [{ label: 'track', count: 29 }],
+    },
+  };
+
+  it('asks for one page with exactly the parameters it is given', async () => {
+    mockFetch.mockResolvedValue(new Response(JSON.stringify(PAGE), { status: 200 }));
+
+    await expect(
+      PinakesService.search({ tags: 'music', sort: 'activity', facet: 'type,tags', limit: '10' }),
+    ).resolves.toEqual(PAGE);
+
+    const url = requestedUrl();
+    expect(url.pathname).toBe('/v1/search');
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      tags: 'music',
+      sort: 'activity',
+      facet: 'type,tags',
+      limit: '10',
+    });
+  });
+
+  it('gives a page already read from the cache without a request, and nothing for one not read', async () => {
+    mockFetch.mockImplementation(async () => new Response(JSON.stringify(PAGE), { status: 200 }));
+    expect(PinakesService.getCachedSearch({ tags: 'jazz', limit: '10' })).toBeUndefined();
+
+    await PinakesService.search({ tags: 'jazz', limit: '10' });
+    mockFetch.mockClear();
+    expect(PinakesService.getCachedSearch({ tags: 'jazz', limit: '10' })).toEqual(PAGE);
+    expect(PinakesService.getCachedSearch({ tags: 'jazz', limit: '20' })).toBeUndefined();
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it('answers a page asked again from the cache, and nothing without Pinakes or its search', async () => {
+    mockFetch.mockImplementation(async () => new Response(JSON.stringify(PAGE), { status: 200 }));
+    await PinakesService.search({ tags: 'jazz', limit: '10' });
+    await PinakesService.search({ tags: 'jazz', limit: '10' });
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+
+    mockFetch.mockResolvedValue(new Response(null, { status: 404 }));
+    await expect(PinakesService.search({ tags: 'nothing', limit: '10' })).resolves.toBeNull();
+
+    mocks.pinakesUrl = undefined;
+    mockFetch.mockClear();
+    await expect(PinakesService.search({ tags: 'music', limit: '10' })).resolves.toBeNull();
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it('fails as an AppError with the status when Pinakes refuses the query, without asking again', async () => {
+    mockFetch.mockResolvedValue(new Response('{"error":"invalid cursor"}', { status: 400 }));
+
+    const error = await PinakesService.search({ cursor: 'garbage', limit: '10' }).catch((e: unknown) => e);
+
+    expect(error).toMatchObject({ context: expect.objectContaining({ statusCode: 400 }) });
+    expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 });
 

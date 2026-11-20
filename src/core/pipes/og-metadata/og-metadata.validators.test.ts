@@ -38,6 +38,21 @@ describe('OgMetadataValidators', () => {
       });
     });
 
+    describe('credentials', () => {
+      it.each([
+        'https://alice@example.com/a',
+        'https://alice:secret@example.com/a',
+        'https://:secret@example.com/a',
+        'https://ali\tce:secret@example.com/a',
+      ])('should return failure for %s, a URL with a username or password', async (url) => {
+        await expect(OgMetadataValidators.validateSafe(url)).resolves.toEqual({
+          ok: false,
+          message: 'Invalid URL. A username or password is not allowed.',
+          statusCode: HttpStatusCode.BAD_REQUEST,
+        });
+      });
+    });
+
     describe('invalid protocol', () => {
       it('should return failure for file:// protocol', async () => {
         await expect(OgMetadataValidators.validateSafe('file:///etc/passwd')).resolves.toMatchObject({

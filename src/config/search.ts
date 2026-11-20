@@ -4,6 +4,9 @@
  */
 export const SEARCH_PEOPLE_PREVIEW_COUNT = 4;
 
+/** Resources shown in the collapsed `/search` External resources preview; "See all" pages the rest in. */
+export const SEARCH_RESOURCES_PREVIEW_COUNT = 4;
+
 /** Users fetched per `search/users/by_tags` page for the `/search` People section. */
 export const SEARCH_PEOPLE_PAGE_SIZE = 20;
 

@@ -30,7 +30,7 @@ export function parsePostReference(value: string): ParsedPostReference | null {
  * The v1 reference of the post, or null when the key or the id is not one the data model spells
  * (a URL still being typed or pasted). Runs on every keystroke, so nothing it refuses may throw.
  */
-function buildPostUriOrNull(pubky: Pubky, id: string): string | null {
+export function buildPostUriOrNull(pubky: Pubky, id: string): string | null {
   try {
     return buildUri(parseOwner(pubky), 'post', parsePostId(id));
   } catch (error) {

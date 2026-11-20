@@ -3,7 +3,7 @@
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
 import type { UseEntityTaggersResult } from '@/hooks/useEntityTaggers/useEntityTaggers';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { matchVrtFrameScreenshot, preloadImages, renderForVRT } from '@/test-utils/vrt';
 import { formatStableRelative } from '@/test-utils/vrt.clock';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
@@ -107,6 +107,96 @@ const fixtures = vi.hoisted(async () => {
 const navigation = vi.hoisted(() => ({
   searchParams: new URLSearchParams(),
 }));
+
+// The resource search's answer: `null` keeps it settled with no matches (every case but the
+// External resources one, whose baselines need its rows, kinds and services).
+const resourceSearch = vi.hoisted(() => ({
+  result: null as Record<string, unknown> | null,
+}));
+
+// The External resources case: MusicBrainz picked under Music, its cards read from these fixtures.
+// MusicBrainz has no player, so no row loads a service's frame.
+const externalResources = vi.hoisted(() => {
+  const card = (id: string, path: string, type: string, name: string, description: string) => ({
+    id,
+    uri: `https://musicbrainz.org/${path}`,
+    status: 'ok',
+    type,
+    type_path: ['Thing', 'CreativeWork', type],
+    name,
+    description,
+    image: null,
+    site: 'MusicBrainz',
+    also_on: [],
+    open_in: [],
+    refs: [],
+    collections: 0,
+    aliases: [],
+    keys: [],
+  });
+  const cards = [
+    card(
+      '0000000000000000000000000000000a',
+      'recording/7d1c4e2a-3b5f-4a6e-9c8d-1e2f3a4b5c6d',
+      'MusicRecording',
+      'Signals From the Field',
+      'A recording on the open music encyclopedia.',
+    ),
+    card(
+      '0000000000000000000000000000000b',
+      'release-group/2a3b4c5d-6e7f-4a8b-9c0d-1e2f3a4b5c6e',
+      'MusicAlbum',
+      'Golden Hour Sessions',
+      'An album of field recordings and slow synths.',
+    ),
+    card(
+      '0000000000000000000000000000000c',
+      'artist/3b4c5d6e-7f8a-4b9c-8d0e-1f2a3b4c5d6f',
+      'MusicGroup',
+      'The Visual Desk',
+      'A group from the local scene.',
+    ),
+  ];
+  const typeFacet = (type: string, path: string[], count: number) => ({
+    type,
+    type_path: ['Thing', ...path, type],
+    count,
+  });
+  return {
+    cards,
+    tags: [
+      { label: 'music', taggers: [], taggers_count: 4, relationship: false },
+      { label: 'ambient', taggers: [], taggers_count: 2, relationship: false },
+    ],
+    search: {
+      uris: cards.map(({ uri }) => uri),
+      // Kind counts (Music, Videos & film, Events, Books) and Music's sub-kinds
+      typeFacets: [
+        typeFacet('MusicRecording', ['CreativeWork'], 48),
+        typeFacet('MusicAlbum', ['CreativeWork', 'MusicPlaylist'], 21),
+        typeFacet('MusicGroup', ['Organization', 'PerformingGroup'], 9),
+        typeFacet('VideoObject', ['CreativeWork', 'MediaObject'], 14),
+        typeFacet('MusicEvent', ['Event'], 7),
+        typeFacet('Book', ['CreativeWork'], 3),
+      ],
+      relatedTags: [],
+      hostFacets: [
+        { host: 'musicbrainz.org', site: 'MusicBrainz', count: 32 },
+        { host: 'open.spotify.com', site: 'Spotify', count: 12 },
+        { host: 'www.deezer.com', site: 'Deezer', count: 10 },
+        { host: 'tycho.bandcamp.com', site: 'Bandcamp', count: 6 },
+      ],
+      categoryFacets: null,
+      source: 'pinakes',
+      unavailable: false,
+      reachTruncated: false,
+      loading: false,
+      loadingMore: false,
+      error: null,
+      hasMore: false,
+    },
+  };
+});
 
 // Forces the search suggestions panel open with a typed query for profile results.
 // Empty/tagged leave these defaults so the dropdown stays closed.
@@ -585,6 +675,107 @@ vi.mock('@/hooks/useContentSearchTags/useContentSearchTags', () => ({
   }),
 }));
 
+// External resources section: the resource search is settled with no matches, so the section
+// renders nothing and these baselines keep People, Collections and Posts only. Left to the real
+// search it shows skeletons for its debounce and request, a race with the capture.
+vi.mock('@/hooks/useResourceSearch/useResourceSearch', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useResourceSearch/useResourceSearch')>();
+  const settled: ReturnType<typeof actual.useResourceSearch> = {
+    uris: [],
+    typeFacets: null,
+    relatedTags: [],
+    hostFacets: null,
+    categoryFacets: null,
+    source: 'pinakes',
+    unavailable: false,
+    reachTruncated: false,
+    loading: false,
+    loadingMore: false,
+    error: null,
+    hasMore: false,
+    loadMore: async () => {},
+    retry: () => {},
+  };
+  return { ...actual, useResourceSearch: () => resourceSearch.result ?? settled };
+});
+
+// The rows read their cards only where Pinakes is configured; every other case keeps the
+// deployment's value, so its baselines are unchanged.
+vi.mock('@/config/pinakes', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/config/pinakes')>();
+  return { ...actual, isPinakesConfigured: () => resourceSearch.result !== null || actual.isPinakesConfigured() };
+});
+
+// External resources rows: each card from the fixtures, never from Pinakes or Nexus.
+vi.mock('@/hooks/usePinakesCard/usePinakesCard', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/usePinakesCard/usePinakesCard')>();
+  const cache = new Map<string, unknown>();
+  return {
+    ...actual,
+    usePinakesCard: (uri: string | null | undefined) => {
+      const key = uri ?? '';
+      if (!cache.has(key)) {
+        const data = externalResources.cards.find((card) => card.uri === uri) ?? null;
+        cache.set(key, { data, isLoading: false, isFetching: false, isError: false, error: null });
+      }
+      return cache.get(key);
+    },
+  };
+});
+
+vi.mock('@/hooks/useResourceTags/useResourceTags', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useResourceTags/useResourceTags')>();
+  const result = {
+    tags: externalResources.tags,
+    isLoading: false,
+    isAtReadLimit: false,
+    isError: false,
+    addTag: async () => ({ success: true }),
+    toggleTag: async () => ({ success: true }),
+  };
+  return { ...actual, useResourceTags: () => result };
+});
+
+vi.mock('@/hooks/useResourceCounts/useResourceCounts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useResourceCounts/useResourceCounts')>();
+  const counts = { resourceId: 'vrt-resource', replies: 0, embeds: 0, collections: 0 };
+  return { ...actual, useResourceCounts: () => counts };
+});
+
+// The cards lack images: no link preview is read for them. Every other case keeps the real hook.
+vi.mock('@/hooks/useOgMetadata/useOgMetadata', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useOgMetadata/useOgMetadata')>();
+  const result = { metadata: null, isLoading: false, error: null };
+  return {
+    ...actual,
+    useOgMetadata: (url: string | null) => (resourceSearch.result ? result : actual.useOgMetadata(url)),
+  };
+});
+
+// Service icons from local images, never the services' own favicons (the External resources case;
+// every other one keeps the real lookup).
+vi.mock('@/molecules/ResourceCard/ResourceSourceIcon.utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/molecules/ResourceCard/ResourceSourceIcon.utils')>();
+  const [note, signals, desk, goldenHour] = await Promise.all([
+    import('@/test/vrt/images/vrt-visual-note.webp?url'),
+    import('@/test/vrt/images/vrt-visual-signals.webp?url'),
+    import('@/test/vrt/images/vrt-visual-desk.webp?url'),
+    import('@/test/vrt/images/vrt-visual-golden-hour.webp?url'),
+  ]);
+  const icons: Record<string, string> = {
+    'musicbrainz.org': note.default,
+    'open.spotify.com': signals.default,
+    'deezer.com': desk.default,
+    'tycho.bandcamp.com': goldenHour.default,
+  };
+  return {
+    ...actual,
+    getFaviconOverride: (host: string | null) =>
+      resourceSearch.result ? (host ? (icons[host] ?? null) : null) : actual.getFaviconOverride(host),
+    getFaviconUrls: (value: string | null | undefined) => (resourceSearch.result ? [] : actual.getFaviconUrls(value)),
+  };
+});
+
 // When the field is focused with a query, return fixture users (by_name / by_id path).
 vi.mock('@/hooks/useSearchAutocomplete/useSearchAutocomplete', async () => {
   const f = await fixtures;
@@ -649,6 +840,7 @@ beforeEach(() => {
   useSearchStore.getState().reset();
   setSearchTags([]);
   resetSearchInputUi();
+  resourceSearch.result = null;
 });
 
 describe('Search reach — visual regression', () => {
@@ -812,5 +1004,65 @@ describe('Cards layout — search', () => {
     } finally {
       state.layout = previousLayout;
     }
+  });
+});
+
+// The External resources tab, as `/search?tags=music&kind=music&service=musicbrainz.org` opens it:
+// the panel's Kind (counts), Type (Music's sub-kinds), Service (icons, MusicBrainz picked) and Sort,
+// and the tab's rows from the card fixtures.
+describe('Search (External resources) — visual regression', () => {
+  let restoreContent = () => {};
+
+  beforeEach(async () => {
+    const { useHomeStore } = await import('@/stores/home/home.store');
+    const { CONTENT } = await import('@/stores/home/home.types');
+    const state = useHomeStore.getState();
+    const previousContent = state.content;
+    // The URL's resource filters open the tab (`useResourceFiltersTab`); the store is a fixed mock here
+    state.content = CONTENT.RESOURCES;
+    restoreContent = () => {
+      state.content = previousContent;
+    };
+    navigation.searchParams = new URLSearchParams('tags=music&kind=music&service=musicbrainz.org');
+    resourceSearch.result = { ...externalResources.search, loadMore: async () => {}, retry: () => {} };
+  });
+  afterEach(() => restoreContent());
+
+  /**
+   * Scrolls the filter panel on screen (the sidebar, or the drawer over the hidden one) so Kind, with
+   * its title, is at its top: the panel is taller than the screen.
+   */
+  function scrollPanelToKind() {
+    const kind = [...document.querySelectorAll<HTMLElement>('[data-testid="filter-resource-kind-radiogroup"]')]
+      .find((group) => group.offsetParent !== null)!
+      .closest<HTMLElement>('[data-slot="filter-root"]')!;
+    const panel = kind.closest<HTMLElement>('.overflow-y-auto')!;
+    panel.scrollTop += kind.getBoundingClientRect().top - panel.getBoundingClientRect().top;
+  }
+
+  it('renders the filters and rows at desktop viewport', async () => {
+    const screen = await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_DESKTOP });
+    await expect.element(screen.getByText('Signals From the Field')).toBeVisible();
+    await expect
+      .element(screen.getByRole('button', { name: 'MusicBrainz, 32 links' }))
+      .toHaveAttribute('aria-pressed', 'true');
+    scrollPanelToKind();
+    await expect.element(screen.getByTestId('filter-resource-sort-radiogroup')).toBeVisible();
+    await matchVrtFrameScreenshot('search-resources-desktop');
+  });
+
+  it('renders the filters in the mobile drawer', async () => {
+    const screen = await renderForVRT(<SearchWithLayout />, { viewport: VRT_VIEWPORT_MOBILE });
+    await expect.element(screen.getByText('Signals From the Field')).toBeVisible();
+    await page
+      .elementLocator(document.querySelector<HTMLButtonElement>('button:has(.lucide-sliders-horizontal)')!)
+      .click();
+    // The drawer's panel: the sidebar's is in the page too, hidden on a phone
+    await expect
+      .element(page.getByRole('button', { name: 'MusicBrainz, 32 links' }).last())
+      .toHaveAttribute('aria-pressed', 'true');
+    scrollPanelToKind();
+    await expect.element(page.getByTestId('filter-resource-sort-radiogroup').last()).toBeVisible();
+    await matchVrtFrameScreenshot('search-resources-drawer-mobile');
   });
 });

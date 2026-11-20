@@ -19,6 +19,7 @@ const {
   mockUseMutedUsers,
   mockUseCopyToClipboard,
   mockUseShareUrl,
+  mockPush,
 } = vi.hoisted(() => ({
   mockIsAppError: vi.fn(),
   mockUseTranslations: vi.fn(),
@@ -29,6 +30,11 @@ const {
   mockUseMutedUsers: vi.fn(),
   mockUseCopyToClipboard: vi.fn(),
   mockUseShareUrl: vi.fn(),
+  mockPush: vi.fn(),
+}));
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: mockPush }),
 }));
 
 // Mock Hooks
@@ -520,8 +526,22 @@ describe('useProfileMenuActions', () => {
         PROFILE_MENU_ACTION_IDS.FOLLOW,
         PROFILE_MENU_ACTION_IDS.COPY_PUBKY,
         PROFILE_MENU_ACTION_IDS.COPY_LINK,
+        PROFILE_MENU_ACTION_IDS.SHARED_LINKS,
         PROFILE_MENU_ACTION_IDS.MUTE,
       ]);
+    });
+  });
+
+  describe('Links shared action', () => {
+    it('opens the search of the links the user shared', async () => {
+      const { result } = renderHook(() => useProfileMenuActions(mockUserId));
+
+      const item = result.current.menuItems.find((entry) => entry.id === PROFILE_MENU_ACTION_IDS.SHARED_LINKS);
+      expect(item?.label).toBe('Links shared by Test User');
+      await act(async () => {
+        await item?.onClick();
+      });
+      expect(mockPush).toHaveBeenCalledWith(`/search?by=${mockUserId}`);
     });
   });
 });

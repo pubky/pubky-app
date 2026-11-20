@@ -1,5 +1,9 @@
 import { buildNexusUrl, buildUrlWithQuery } from '@/services/nexus/nexus.utils';
-import type { TResourceByIdsParams, TResourceByUriParams } from '@/services/nexus/resource/resource.types';
+import type {
+  TResourceByIdsParams,
+  TResourceByUriParams,
+  TResourceStreamQuery,
+} from '@/services/nexus/resource/resource.types';
 
 type TResourceRepliesQuery = {
   viewer_id?: string;
@@ -24,6 +28,8 @@ export const resourceApi = {
     url: buildUrlWithQuery({ baseRoute: 'stream/resources/by_ids', params }),
     body: viewer_id ? { uris, viewer_id } : { uris },
   }),
+  /** A page of the external resources people tagged, the latest tagged first. */
+  stream: (params: TResourceStreamQuery) => buildUrlWithQuery({ baseRoute: 'stream/resources', params }),
   /**
    * The live posts whose `parent` is the resource, newest first (`/v1`, a Nexus with external
    * references; others answer 404). No attachment metadata: `/v1` serves none.

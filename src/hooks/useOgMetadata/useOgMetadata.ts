@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { hasCredentialLink } from '@/pipes/resource/resource.search';
 
 export interface OgMetadata {
   url: string;
@@ -41,7 +42,8 @@ export function useOgMetadata(url: string | null) {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    if (!url) {
+    // A link that carries credentials (`user:password@`) is never sent to be read.
+    if (!url || hasCredentialLink(url)) {
       setMetadata(null);
       setIsLoading(false);
       return;

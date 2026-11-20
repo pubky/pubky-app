@@ -534,6 +534,30 @@ describe('SearchInput', () => {
       expect(setFocus).toHaveBeenCalledWith(false);
     });
 
+    it('searches external resources for a link too long for a post search', () => {
+      const setFocus = vi.fn();
+      const link = 'https://open.spotify.com/track/69kOkLUCkxIZYexIgSG8rq';
+      vi.mocked(useSearchInput).mockReturnValue({
+        inputValue: link,
+        isFocused: true,
+        containerRef: { current: null },
+        inputRef: { current: null },
+        handleInputChange: vi.fn(),
+        handleKeyDown: vi.fn(),
+        handleFocus: vi.fn(),
+        clearInputValue: vi.fn(),
+        setInputValue: vi.fn(),
+        setFocus,
+      });
+
+      render(<SearchInput />);
+      fireEvent.click(screen.getByRole('button', { name: 'Show all results' }));
+
+      expect(vi.mocked(toast)).not.toHaveBeenCalled();
+      expect(mockPush).toHaveBeenCalledWith(`/search?q=${encodeURIComponent(link)}`);
+      expect(setFocus).toHaveBeenCalledWith(false);
+    });
+
     it('keeps invalid full-text input open and reports the Nexus constraint', () => {
       const clearInputValue = vi.fn();
       const setFocus = vi.fn();
@@ -623,6 +647,35 @@ describe('SearchInput', () => {
       expect(setInputValue).toHaveBeenLastCalledWith('');
       expect(mockPush).not.toHaveBeenCalled();
       expect(setFocus).toHaveBeenCalledWith(false);
+    });
+
+    it('deletes a search of filters alone (the links a user shared) via the X action', () => {
+      const setFocus = vi.fn();
+      mockPathname.mockReturnValue('/search');
+      window.history.replaceState(null, '', '/search?by=hkdrfoddu3rmeucj1mazu4aeg11nxj7uaxybnmots5o9s5hd3t6y');
+      vi.mocked(useSearchCriteria).mockReturnValue({ mode: 'none' });
+      vi.mocked(useSearchInput).mockReturnValue({
+        inputValue: '',
+        isFocused: true,
+        containerRef: { current: null },
+        inputRef: { current: null },
+        handleInputChange: vi.fn(),
+        handleKeyDown: vi.fn(),
+        handleFocus: vi.fn(),
+        clearInputValue: vi.fn(),
+        setInputValue: vi.fn(),
+        setFocus,
+      });
+
+      try {
+        render(<SearchInput />);
+        fireEvent.click(screen.getByRole('button', { name: 'Clear and close search' }));
+
+        expect(mockPush).toHaveBeenCalledWith('/search');
+      } finally {
+        window.history.replaceState(null, '', '/');
+        mockPathname.mockImplementation(() => '/home');
+      }
     });
 
     it('deletes the active search from the bar via the X action', () => {

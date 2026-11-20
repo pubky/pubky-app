@@ -36,6 +36,7 @@ export class OgMetadataValidators {
 
     const failure =
       this.validateProtocolSafe(parsed) ??
+      this.validateNoCredentialsSafe(parsed) ??
       (await this.validateHostnameSafe(parsed)) ??
       this.validateNotOnionSafe(parsed);
     if (failure) return failure;
@@ -49,6 +50,16 @@ export class OgMetadataValidators {
   private static validateProtocolSafe(parsed: URL): TOgMetadataValidationFailure | null {
     if (!['http:', 'https:'].includes(parsed.protocol)) {
       return validationFailure('Invalid protocol. Only HTTP and HTTPS are allowed.');
+    }
+    return null;
+  }
+
+  /**
+   * Validates that the URL carries no username or password: a preview is never read with them.
+   */
+  private static validateNoCredentialsSafe(parsed: URL): TOgMetadataValidationFailure | null {
+    if (parsed.username || parsed.password) {
+      return validationFailure('Invalid URL. A username or password is not allowed.');
     }
     return null;
   }

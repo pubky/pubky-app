@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { type ReactNode, useEffect } from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
@@ -60,6 +60,38 @@ const mockUsePostDetails = vi.hoisted(() =>
 );
 vi.mock('@/hooks/usePostDetails/usePostDetails', () => ({
   usePostDetails: mockUsePostDetails,
+}));
+
+// A custom resources feed waits for its saved filters to be in the URL (`useSeedCustomResourceFeed`)
+const mockSeedCustomResourceFeed = vi.hoisted(() => vi.fn());
+const customResourceFeed = vi.hoisted(() => ({ isReady: true }));
+vi.mock('@/hooks/useCustomResourceFeed/useCustomResourceFeed', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/hooks/useCustomResourceFeed/useCustomResourceFeed')>()),
+  useSeedCustomResourceFeed: mockSeedCustomResourceFeed,
+  useCustomResourceFeed: () => ({ feed: null, isReady: customResourceFeed.isReady }),
+}));
+// Whether the configured Pinakes serves My network (`wot_2`)
+const reachSet = vi.hoisted(() => ({ served: false }));
+vi.mock('@/config/pinakes', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/config/pinakes')>()),
+  isPinakesReachSetServed: () => reachSet.served,
+}));
+beforeEach(() => {
+  reachSet.served = false;
+});
+vi.mock('../ResourceTimelineFeed/ResourceTimelineFeed', () => ({
+  ResourceTimelineFeed: ({ layout, children }: { layout: string; children?: React.ReactNode }) => (
+    <div data-testid="resource-timeline-feed" data-layout={layout}>
+      {children}
+    </div>
+  ),
+}));
+vi.mock('@/organisms/SearchResources/SearchResourceResults', () => ({
+  SearchResourceResults: ({ layout, feed, children }: { layout: string; feed?: unknown; children?: ReactNode }) => (
+    <div data-testid="search-resource-results" data-layout={layout} data-feed={feed ? JSON.stringify(feed) : undefined}>
+      {children}
+    </div>
+  ),
 }));
 
 // Mock dependencies
@@ -421,6 +453,156 @@ describe('TimelineFeed', () => {
       expect(screen.getByTestId('loading-more')).toHaveTextContent('false');
       expect(screen.getByTestId('error')).toHaveTextContent('none');
       expect(screen.getByTestId('has-more')).toHaveTextContent('true');
+    });
+  });
+
+  describe('External resources', () => {
+    afterEach(() => {
+      useAuthStore.setState({ currentUserPubky: null });
+      useHomeStore.setState({ taggedAsActive: false, profileTags: [] });
+    });
+
+    it('renders the resource feed for Home with the filter panel’s filters, every resource and the composer, and no post stream', () => {
+      useHomeStore.setState({ content: CONTENT.RESOURCES });
+      mockUseStreamIdFromFilters.mockReturnValue(undefined);
+
+      render(
+        <TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME}>
+          <div data-testid="composer" />
+        </TimelineFeed>,
+      );
+
+      // The same list as Search's External resources tab, on the Home feed's search
+      const feed = screen.getByTestId('search-resource-results');
+      expect(feed).toHaveAttribute('data-layout', 'columns');
+      expect(JSON.parse(feed.dataset.feed ?? 'null')).toEqual({ tags: [], reach: 'all', sort: 'timeline' });
+      expect(feed).toContainElement(screen.getByTestId('composer'));
+      expect(screen.queryByTestId('timeline-posts')).not.toBeInTheDocument();
+      expect(mockUseStreamPagination).not.toHaveBeenCalled();
+    });
+
+    it('keeps Links a feed of link posts', () => {
+      useHomeStore.setState({ content: CONTENT.LINKS });
+      mockUseStreamIdFromFilters.mockReturnValue(PostStreamTypes.TIMELINE_ALL_LINK);
+
+      render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME} />);
+
+      expect(mockUseStreamIdFromFilters).toHaveBeenCalledWith(CONTENT.LINKS);
+      expect(screen.getByTestId('timeline-posts')).toBeInTheDocument();
+      expect(screen.queryByTestId('resource-timeline-feed')).not.toBeInTheDocument();
+      expect(mockUseStreamPagination).toHaveBeenCalledWith({ streamId: PostStreamTypes.TIMELINE_ALL_LINK });
+    });
+
+    it('runs a custom feed of external resources as Search’s list with the panel’s filters, once its saved ones are in the URL', () => {
+      const feed = {
+        id: 'resource-feed',
+        name: 'Music',
+        tags: ['music', 'video'],
+        domain_tags: [],
+        reach: 'following',
+        sort: 'popularity',
+        content: null,
+        target: 'resources',
+        resource_types: ['MusicRecording'],
+        resource_filters: { host: 'open.spotify.com' },
+        layout: 'cards',
+        created_at: 0,
+        updated_at: 0,
+      } as const;
+      mockUseCustomFeed.mockReturnValue({
+        ...feed,
+        tags: [...feed.tags],
+        domain_tags: [],
+        resource_types: ['MusicRecording'],
+      });
+      mockUseCustomStreamId.mockReturnValue(undefined);
+      mockUseFeedLayoutResolution.mockReturnValue({
+        requestedLayout: 'cards',
+        effectiveLayout: 'cards',
+        isCardsActive: true,
+        isVisualRequested: false,
+        isVisualActive: false,
+        isPhoneViewport: false,
+      });
+      customResourceFeed.isReady = false;
+
+      const { rerender } = render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.CUSTOM} />);
+
+      // Nothing is searched until the saved filters are in the URL
+      expect(mockSeedCustomResourceFeed).toHaveBeenCalledWith(expect.objectContaining({ id: 'resource-feed' }));
+      expect(screen.getByTestId('resource-timeline-feed')).toBeInTheDocument();
+      expect(screen.queryByTestId('search-resource-results')).not.toBeInTheDocument();
+
+      customResourceFeed.isReady = true;
+      rerender(<TimelineFeed variant={TIMELINE_FEED_VARIANT.CUSTOM} />);
+      const list = screen.getByTestId('search-resource-results');
+      expect(list).toHaveAttribute('data-layout', 'cards');
+      expect(JSON.parse(list.dataset.feed ?? 'null')).toEqual({
+        tags: ['music', 'video'],
+        reach: 'following',
+        sort: 'popularity',
+        subKinds: ['MusicRecording'],
+      });
+      expect(mockUseStreamPagination).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      [false, 'network'],
+      // Tagged as over My network: the filter shows All
+      [true, 'all'],
+    ])('searches Home in My network (Tagged as: %s) in %s', (taggedAsActive, expected) => {
+      useAuthStore.setState({ currentUserPubky: 'viewer' as Pubky });
+      useHomeStore.setState({
+        content: CONTENT.RESOURCES,
+        reach: REACH.NETWORK,
+        taggedAsActive,
+        profileTags: taggedAsActive ? ['dev'] : [],
+      });
+      mockUseStreamIdFromFilters.mockReturnValue(undefined);
+
+      render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.HOME} />);
+
+      expect(JSON.parse(screen.getByTestId('search-resource-results').dataset.feed ?? 'null')).toMatchObject({
+        reach: expected,
+      });
+    });
+
+    it.each([
+      ['following', ['dev'], 'following'],
+      ['wot', [], 'wot'],
+      // Tagged as: the resource search has none
+      ['wot', ['dev'], 'all'],
+    ] as const)('searches a resources feed of reach %s with profile tags %j in %s', (reach, domainTags, expected) => {
+      customResourceFeed.isReady = true;
+      mockUseCustomFeed.mockReturnValue({
+        id: 'resource-feed',
+        name: 'Music',
+        tags: ['music'],
+        domain_tags: [...domainTags],
+        reach,
+        sort: 'recent',
+        content: null,
+        target: 'resources',
+        layout: 'columns',
+        created_at: 0,
+        updated_at: 0,
+      });
+      mockUseCustomStreamId.mockReturnValue(undefined);
+
+      render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.CUSTOM} />);
+
+      expect(JSON.parse(screen.getByTestId('search-resource-results').dataset.feed ?? 'null')).toMatchObject({
+        reach: expected,
+      });
+    });
+
+    it('renders the External resources tab for Search, with no post stream', () => {
+      useHomeStore.setState({ content: CONTENT.RESOURCES });
+
+      render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.SEARCH} />);
+
+      expect(screen.getByTestId('search-resource-results')).toHaveAttribute('data-layout', 'columns');
+      expect(mockUseStreamPagination).not.toHaveBeenCalled();
     });
   });
 

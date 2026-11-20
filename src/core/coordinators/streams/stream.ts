@@ -21,7 +21,7 @@ import { StreamSorting } from '@/services/nexus/nexus.types';
 import { breakDownStreamId } from '@/services/nexus/stream/posts/postStream.utils';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useHomeStore } from '@/stores/home/home.store';
-import { getHomeStreamIdFromFilters } from '@/stores/home/home.utils';
+import { getHomeStreamIdFromFilters, isPostContent } from '@/stores/home/home.utils';
 
 /**
  * StreamCoordinator
@@ -51,7 +51,8 @@ export class StreamCoordinator extends Coordinator<StreamCoordinatorConfig, Stre
   };
 
   // Feed stream resolution cache (async Dexie lookup resolved once, then cached)
-  private feedStreamCache: { feedId: string; streamId: PostStreamId } | null = null;
+  /** The post stream of the feed last resolved; `null` for a feed of external resources, which is not polled. */
+  private feedStreamCache: { feedId: string; streamId: PostStreamId | null } | null = null;
   private pendingFeedResolution = false;
 
   /**
@@ -414,6 +415,17 @@ export class StreamCoordinator extends Coordinator<StreamCoordinatorConfig, Stre
     }
   }
 
+  /** Home's External resources, or a resolved feed of external resources: no post stream, by design. */
+  private listsNoPosts(): boolean {
+    const route = this.state.currentRoute;
+    if (route === APP_ROUTES.HOME) {
+      const { content, hasHydrated } = useHomeStore.getState();
+      return hasHydrated && !isPostContent(content);
+    }
+    const feedId = this.extractFeedId(route);
+    return feedId !== null && this.feedStreamCache?.feedId === feedId && this.feedStreamCache.streamId === null;
+  }
+
   // ============================================================================
   // Protected API
   // ============================================================================
@@ -487,8 +499,9 @@ export class StreamCoordinator extends Coordinator<StreamCoordinatorConfig, Stre
     // Must be able to determine stream ID
     if (!this.streamState.currentStreamId) {
       // Suppress warning during expected transient state: feed route async resolution
-      // is in flight and will re-trigger evaluation once complete.
-      if (!this.pendingFeedResolution) {
+      // is in flight and will re-trigger evaluation once complete. A list of external
+      // resources has no post stream, so there is nothing to poll there either.
+      if (!this.pendingFeedResolution && !this.listsNoPosts()) {
         Logger.warn('Cannot poll: invalid stream ID');
       }
       return false;

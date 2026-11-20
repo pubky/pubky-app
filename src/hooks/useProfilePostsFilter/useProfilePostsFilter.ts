@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { debounce } from 'lodash-es';
 import { validateContentSearchQuery } from '@/libs/search/contentSearch';
+import { hasCredentialLink } from '@/pipes/resource/resource.search';
 import { PROFILE_POSTS_FILTER_DEBOUNCE_MS } from './useProfilePostsFilter.constants';
 import type { UseProfilePostsFilterResult } from './useProfilePostsFilter.types';
 
@@ -24,6 +25,12 @@ export function useProfilePostsFilter(): UseProfilePostsFilterResult {
 
   const debouncedApplyRef = useRef(
     debounce((rawValue: string) => {
+      // A link that carries credentials (`user:password@`) is never sent as a post search
+      if (hasCredentialLink(rawValue)) {
+        setActiveQuery(null);
+        setValidationMessage('Search cannot hold a link with a username or password');
+        return;
+      }
       const validation = validateContentSearchQuery(rawValue);
       if (validation.isValid) {
         setActiveQuery(validation.query);

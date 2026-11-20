@@ -13,6 +13,8 @@ export interface FilterListItem<T = string> {
   icon: React.ComponentType<{ className?: string }>;
   disabled?: boolean;
   dataCy?: string;
+  /** How many results the option has, shown after its label. */
+  count?: number;
 }
 
 /**

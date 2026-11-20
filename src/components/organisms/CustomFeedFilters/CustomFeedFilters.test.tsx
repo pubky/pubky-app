@@ -5,9 +5,42 @@ import { CustomFeedFilters } from './CustomFeedFilters';
 
 // Mock hooks
 const mockUseCustomFeed = vi.fn();
+
+// Whether the configured Pinakes serves My network (`wot_2`)
+const reachSet = vi.hoisted(() => ({ served: false }));
+vi.mock('@/config/pinakes', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/config/pinakes')>()),
+  isPinakesReachSetServed: () => reachSet.served,
+}));
+beforeEach(() => {
+  reachSet.served = false;
+});
 vi.mock('@/hooks/useCustomFeed/useCustomFeed', () => ({
   useCustomFeed: () => mockUseCustomFeed(),
 }));
+// Whether a resources feed's saved filters are in the URL yet (`useSeedCustomResourceFeed`)
+const seeded = vi.hoisted(() => ({ ready: false }));
+vi.mock('@/hooks/useCustomResourceFeed/useCustomResourceFeed', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useCustomResourceFeed/useCustomResourceFeed')>();
+  return {
+    ...actual,
+    useCustomResourceFeed: () => {
+      const feed = mockUseCustomFeed();
+      return {
+        feed: feed?.target === 'resources' ? actual.toCustomResourceFeedSearch(feed) : null,
+        isReady: seeded.ready,
+      };
+    },
+  };
+});
+vi.mock('@/organisms/SearchResources/SearchResourceFilters', () => ({
+  SearchResourceFilters: ({ feed }: { feed: unknown }) => (
+    <div data-testid="search-resource-filters" data-feed={JSON.stringify(feed)} />
+  ),
+}));
+beforeEach(() => {
+  seeded.ready = false;
+});
 
 // Mock atoms
 vi.mock('@/atoms/Container/Container', () => {
@@ -69,15 +102,18 @@ vi.mock('@/molecules/Filters/FilterLayout/FilterLayout', () => {
       selectedTab,
       defaultSelectedTab,
       disabled,
+      showVisual,
       showCards,
     }: {
       selectedTab?: string;
       defaultSelectedTab?: string;
       disabled?: boolean;
+      showVisual?: boolean;
       showCards?: boolean;
     }) => (
       <div
         data-testid="filter-layout"
+        data-show-visual={showVisual}
         data-selected-tab={selectedTab ?? ''}
         data-default-selected-tab={defaultSelectedTab ?? ''}
         data-disabled={disabled}
@@ -97,14 +133,17 @@ vi.mock('@/molecules/Filters/FilterReach/FilterReach', () => {
       defaultSelectedTab,
       disabled,
       showTaggedAs,
+      hiddenTabs,
     }: {
       selectedTab?: string;
       defaultSelectedTab?: string;
       disabled?: boolean;
       showTaggedAs?: boolean;
+      hiddenTabs?: readonly string[];
     }) => (
       <div
         data-testid="filter-reach"
+        data-hidden-tabs={(hiddenTabs ?? []).join(',')}
         data-selected-tab={selectedTab ?? ''}
         data-default-selected-tab={defaultSelectedTab ?? ''}
         data-disabled={disabled}
@@ -380,5 +419,96 @@ describe('CustomFeedFilters', () => {
     render(<CustomFeedFilters variant="sidebar" />);
 
     expect(screen.getByTestId('filter-sort')).toHaveAttribute('data-selected-tab', 'timeline');
+  });
+
+  describe('a feed of external resources', () => {
+    const resourceFeed = (reach: string) => ({
+      id: 'resource-feed',
+      name: 'Music',
+      tags: ['music'],
+      domain_tags: [],
+      reach,
+      sort: 'recent',
+      content: null,
+      target: 'resources',
+      layout: 'columns',
+      created_at: 0,
+      updated_at: 0,
+    });
+
+    it('shows External resources as its content and its tags as plain tags', () => {
+      mockUseCustomFeed.mockReturnValue(resourceFeed('following'));
+      render(<CustomFeedFilters variant="sidebar" />);
+
+      expect(screen.getAllByTestId('filter-content')[0]).toHaveAttribute('data-selected-tab', 'resources');
+      expect(screen.getByText('Filter on Tags')).toBeInTheDocument();
+      // The reaches and the layout it has no counterpart for are not listed, with no note
+      expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-hidden-tabs', 'network,tagged_as,me');
+      expect(screen.getAllByTestId('filter-layout')[0]).toHaveAttribute('data-show-visual', 'false');
+    });
+
+    it('shows a My network feed as My network where Pinakes serves it, Tagged as as All', () => {
+      reachSet.served = true;
+      mockUseCustomFeed.mockReturnValue(resourceFeed('wot'));
+      const { unmount } = render(<CustomFeedFilters variant="sidebar" />);
+      expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'network');
+      expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-hidden-tabs', 'tagged_as,me');
+      unmount();
+
+      mockUseCustomFeed.mockReturnValue({ ...resourceFeed('wot'), domain_tags: ['bitcoiner'] });
+      render(<CustomFeedFilters variant="sidebar" />);
+      expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'all');
+    });
+
+    it('lists every reach and layout for a feed of posts', () => {
+      mockUseCustomFeed.mockReturnValue(createMockFeed());
+      render(<CustomFeedFilters variant="sidebar" />);
+
+      expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-hidden-tabs', '');
+      expect(screen.getAllByTestId('filter-layout')[0]).toHaveAttribute('data-show-visual', 'true');
+    });
+
+    it('gives Search’s resource filters in place of Sort once the feed’s saved filters are in the URL', () => {
+      mockUseCustomFeed.mockReturnValue({
+        ...resourceFeed('following'),
+        resource_types: ['MusicAlbum', 'MusicRecording'],
+      });
+      const { rerender } = render(<CustomFeedFilters variant="sidebar" />);
+      expect(screen.queryByTestId('search-resource-filters')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('filter-sort')).not.toBeInTheDocument();
+
+      seeded.ready = true;
+      rerender(<CustomFeedFilters variant="sidebar" />);
+      expect(JSON.parse(screen.getByTestId('search-resource-filters').dataset.feed ?? 'null')).toEqual({
+        tags: ['music'],
+        reach: 'following',
+        sort: 'recent',
+        // Searched as saved, never widened to the whole kind
+        subKinds: ['MusicAlbum', 'MusicRecording'],
+      });
+      // The types are the panel's Kind and Type, so no row of their own
+      expect(screen.queryByTestId('custom-feed-resource-types')).not.toBeInTheDocument();
+    });
+
+    it('shows types of several kinds, which the Kind filter cannot hold, as a read-only row', () => {
+      seeded.ready = true;
+      mockUseCustomFeed.mockReturnValue({ ...resourceFeed('all'), resource_types: ['Book', 'Event'] });
+      render(<CustomFeedFilters variant="sidebar" />);
+
+      expect(screen.getByTestId('custom-feed-resource-types')).toHaveTextContent('Book, Event');
+      // A plain value, not a tag
+      expect(screen.queryByTestId('readonly-tag-Book')).not.toBeInTheDocument();
+      expect(JSON.parse(screen.getByTestId('search-resource-filters').dataset.feed ?? 'null')).toMatchObject({
+        types: ['Book', 'Event'],
+      });
+    });
+
+    it('shows All, with no note, for a stored reach the resource search has none for', () => {
+      mockUseCustomFeed.mockReturnValue(resourceFeed('followers'));
+      render(<CustomFeedFilters variant="sidebar" />);
+
+      expect(screen.getByTestId('filter-reach')).toHaveAttribute('data-selected-tab', 'all');
+      expect(screen.queryByText(/Not applied/)).not.toBeInTheDocument();
+    });
   });
 });

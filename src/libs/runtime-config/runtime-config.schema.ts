@@ -204,6 +204,7 @@ export const APP_RUNTIME_DEFAULTS = {
   email: 'hello@pubky.com',
   appStoreUrl: 'https://apps.apple.com/app/pubky-ring/id6739356756',
   playStoreUrl: 'https://play.google.com/store/apps/details?id=to.pubky.ring&pcampaignid=web_share',
+  pinakesReachSet: false,
 } as const;
 
 /**
@@ -333,6 +334,11 @@ export const runtimeConfigValueSchema = networkConfigValueSchema.extend({
   e2eLocksStubUrl: urlValue.optional(),
   /** Pinakes origin that reads external links into typed resource cards. Absent = no cards and no request. */
   pinakesUrl: urlValue.optional(),
+  /**
+   * The Pinakes at `pinakesUrl` answers the `wot_2` reach (its Nexus serves reach sets), so external
+   * resources are searched in My network too. Off by default: such a Pinakes answers `wot_2` with 501.
+   */
+  pinakesReachSet: z.boolean().default(APP_RUNTIME_DEFAULTS.pinakesReachSet),
 });
 
 const lenientRuntimeConfigValueSchema = runtimeConfigValueSchema.extend({
@@ -366,6 +372,7 @@ export const runtimeEnvInputSchema = z
     regionModes: optionalTrimmedString,
     e2eLocksStubUrl: optionalUrlFromString,
     pinakesUrl: optionalUrlFromString,
+    pinakesReachSet: optionalBooleanFromString,
     pulseClientKey: optionalTrimmedString,
     pulseEndpoint: optionalUrlFromString,
     sentryDsn: optionalTrimmedString,
@@ -465,6 +472,7 @@ export const runtimeEnvInputSchemaWithDefaults = z
     regionModes: optionalTrimmedString,
     e2eLocksStubUrl: optionalUrlFromString,
     pinakesUrl: optionalUrlFromString,
+    pinakesReachSet: optionalBooleanFromString,
     pulseClientKey: optionalTrimmedString,
     pulseEndpoint: optionalUrlFromString,
     sentryDsn: optionalTrimmedString,
@@ -557,6 +565,7 @@ export const PUBKY_RUNTIME_ENV_NAMES: Record<keyof RuntimeConfig, string> = {
   regionModes: 'PUBKY_RUNTIME_REGION_MODES',
   e2eLocksStubUrl: 'PUBKY_RUNTIME_E2E_LOCKS_STUB_URL',
   pinakesUrl: 'PUBKY_RUNTIME_PINAKES_URL',
+  pinakesReachSet: 'PUBKY_RUNTIME_PINAKES_REACH_SET',
   pulseClientKey: 'PUBKY_RUNTIME_PULSE_CLIENT_KEY',
   pulseEndpoint: 'PUBKY_RUNTIME_PULSE_ENDPOINT',
   sentryDsn: 'PUBKY_RUNTIME_SENTRY_DSN',

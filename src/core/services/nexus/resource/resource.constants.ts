@@ -30,3 +30,9 @@ export const RESOURCE_BY_URI_READS_AT_ONCE = 6;
 
 /** How long a tag read (`by_ids` or `by-uri`) may take before it fails as a timeout (ms). */
 export const RESOURCE_READ_TIMEOUT_MS = 10_000;
+
+/** The one sorting `GET /v1/stream/resources` serves: the latest tagged first. */
+export const RESOURCE_STREAM_SORTING = 'timeline';
+
+/** Tags one `GET /v1/stream/resources` request filters by (the route refuses more). */
+export const RESOURCE_STREAM_MAX_TAGS = 5;

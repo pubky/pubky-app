@@ -1,11 +1,13 @@
 import { withNormalizedCredits } from '@/pipes/pinakes/pinakes.credits';
 import { getRecheckDelay, isUnsettledCard } from '@/pipes/pinakes/pinakes.recheck';
+import { buildResourceSearchParams, type TResourceQuery } from '@/pipes/resource/resource.search';
 import { PinakesService } from '@/services/pinakes/pinakes';
 import type {
   TPinakesCard,
   TPinakesEpisodePage,
   TPinakesGroupDetail,
   TPinakesResourceDetail,
+  TPinakesSearchResponse,
 } from '@/services/pinakes/pinakes.types';
 
 /**
@@ -41,6 +43,23 @@ export class PinakesApplication {
     const normalized = withNormalizedCredits(card);
     if (!isUnsettledCard(normalized)) PinakesService.seedCardByUri(uri, normalized);
     return normalized;
+  }
+
+  /**
+   * One page of a resource search, its rows with their credits validated; `null` when Pinakes is not
+   * configured or does not serve search.
+   */
+  static async searchResources(
+    query: TResourceQuery,
+    { fresh, ...options }: { limit: number; cursor?: string | null; facets?: boolean; fresh?: boolean },
+  ): Promise<TPinakesSearchResponse | null> {
+    const page = await PinakesService.search(buildResourceSearchParams(query, options), { fresh });
+    return page ? { ...page, items: page.items.map(withNormalizedCredits) } : null;
+  }
+
+  /** The facets of a search's first page already read with `facets`, without a request; `undefined` when none was read. */
+  static getCachedSearchFacets(query: TResourceQuery, limit: number): TPinakesSearchResponse['facets'] | undefined {
+    return PinakesService.getCachedSearch(buildResourceSearchParams(query, { limit, facets: true }))?.facets;
   }
 
   /** What the people who tagged the resource also referenced. */

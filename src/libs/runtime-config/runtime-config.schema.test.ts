@@ -208,6 +208,12 @@ describe('runtimeEnvInputSchema', () => {
     expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, pinakesUrl: 'not-a-url' })).toThrow();
   });
 
+  it('reads whether Pinakes serves My network (PUBKY_RUNTIME_PINAKES_REACH_SET), off unless set', () => {
+    expect(runtimeEnvInputSchema.parse(VALID_ENV_INPUT).pinakesReachSet).toBe(false);
+    expect(runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, pinakesReachSet: 'true' }).pinakesReachSet).toBe(true);
+    expect(runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, pinakesReachSet: 'false' }).pinakesReachSet).toBe(false);
+  });
+
   describe('region modes (PUBKY_RUNTIME_REGION_MODES)', () => {
     it('is unset by default, and blank counts as unset', () => {
       expect(runtimeEnvInputSchema.parse(VALID_ENV_INPUT).regionModes).toBeUndefined();

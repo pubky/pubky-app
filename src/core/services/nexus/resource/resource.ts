@@ -1,4 +1,6 @@
 import { QueryObserver } from '@tanstack/react-query';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
 import { httpResponseToError, safeFetch } from '@/libs/error/error.http';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
@@ -20,6 +22,8 @@ import {
   RESOURCE_BY_IDS_MAX,
   RESOURCE_BY_URI_READS_AT_ONCE,
   RESOURCE_READ_TIMEOUT_MS,
+  RESOURCE_STREAM_MAX_TAGS,
+  RESOURCE_STREAM_SORTING,
   RESOURCE_TAG_UNCONFIRMED_MS,
   RESOURCE_TAGS_LIMIT,
   RESOURCE_URI_MAX_BYTES,
@@ -31,6 +35,7 @@ import type {
   NexusResourceViewWire,
   TResourceCounts,
   TResourceRepliesParams,
+  TResourceStreamParams,
 } from '@/services/nexus/resource/resource.types';
 
 const OPERATION = NEXUS_RESOURCE_TAGS_OPERATION;
@@ -273,6 +278,33 @@ export class NexusResourceService {
     // Always a fresh page: the list is read once per page view and on "show all".
     const posts = await queryNexus<NexusPostWire[]>({ url, force: true, notFoundRetries: 0 });
     return mapNexusResponse(posts, (post) => PostNormalizer.fromNexus(post));
+  }
+
+  /**
+   * A page of the external resources people tagged, the latest tagged first; with `tags`, those
+   * tagged with any of them. Only what the route applies is sent (see `TResourceStreamQuery`).
+   *
+   * @throws AppError when Nexus fails or refuses the query, or for more tags than the route takes
+   *   (never fewer silently: that would be another filter)
+   */
+  static async fetchStream({ tags, viewerId, skip, limit }: TResourceStreamParams): Promise<NexusResourceView[]> {
+    if (tags.length > RESOURCE_STREAM_MAX_TAGS) {
+      throw Err.validation(
+        ValidationErrorCode.INVALID_INPUT,
+        `External resources can be filtered by at most ${RESOURCE_STREAM_MAX_TAGS} tags`,
+        { service: ErrorService.Nexus, operation: 'fetchResourceStream', context: { tagCount: tags.length } },
+      );
+    }
+    const url = resourceApi.stream({
+      tags: tags.length > 0 ? tags.join(',') : undefined,
+      sorting: RESOURCE_STREAM_SORTING,
+      skip,
+      limit,
+      viewer_id: viewerId ?? undefined,
+    });
+    // Always a fresh page, as the replies: a feed is read page by page as it scrolls.
+    const views = await queryNexus<NexusResourceViewWire[]>({ url, force: true });
+    return mapNexusResponse(views, fromNexusView);
   }
 
   /**

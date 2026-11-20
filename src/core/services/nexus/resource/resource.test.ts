@@ -920,3 +920,86 @@ describe('NexusResourceService batched tag reads (POST /v1/stream/resources/by_i
     }
   });
 });
+
+describe('NexusResourceService resource stream (GET /v1/stream/resources)', () => {
+  const fetchSpy = vi.spyOn(globalThis, 'fetch');
+  const VIEW = { details: BY_URI_RESPONSE.resource, tags: BY_URI_RESPONSE.tags, taggers_count: 2 };
+
+  beforeEach(() => {
+    nexusQueryClient.clear();
+    fetchSpy.mockReset();
+  });
+
+  afterEach(() => {
+    nexusQueryClient.clear();
+  });
+
+  it('reads a page by tags, the latest tagged first, with only the members the route applies', async () => {
+    fetchSpy.mockResolvedValue(jsonResponse([VIEW]));
+
+    await expect(
+      NexusResourceService.fetchStream({ tags: ['music', 'video'], viewerId: VIEWER, skip: 10, limit: 10 }),
+    ).resolves.toEqual([VIEW]);
+
+    const url = new URL(String(fetchSpy.mock.calls[0][0]));
+    expect(url.pathname).toBe('/v1/stream/resources');
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      tags: 'music,video',
+      sorting: 'timeline',
+      skip: '10',
+      limit: '10',
+      viewer_id: VIEWER,
+    });
+    // Nexus ignores these on the resource stream (a `q` alone answers every resource): never sent
+    for (const ignored of ['reach', 'q', 'kind', 'domain_tags', 'source', 'user_id', 'observer_id']) {
+      expect(url.searchParams.has(ignored)).toBe(false);
+    }
+  });
+
+  it('marks the viewer’s tags from `tag_uri` in /v1 stream views, which carry no `relationship`', async () => {
+    const v1View = {
+      ...VIEW,
+      tags: [
+        { label: 'travel', taggers: [VIEWER], taggers_count: 2, tag_uri: `pubky://${VIEWER}/pub/social/v1/tags/T1` },
+      ],
+    };
+    fetchSpy.mockResolvedValue(jsonResponse([v1View]));
+
+    const [view] = await NexusResourceService.fetchStream({ tags: [], viewerId: VIEWER, skip: 0, limit: 10 });
+
+    expect(view.tags[0]).toMatchObject({ label: 'travel', relationship: true });
+  });
+
+  it('reads every resource without tags, and no viewer signed out', async () => {
+    fetchSpy.mockResolvedValue(jsonResponse([]));
+
+    await expect(NexusResourceService.fetchStream({ tags: [], viewerId: null, skip: 0, limit: 10 })).resolves.toEqual(
+      [],
+    );
+    expect(fetchSpy.mock.calls[0][0]).toBe(`${getNexusUrl()}/v1/stream/resources?sorting=timeline&skip=0&limit=10`);
+  });
+
+  it('reads each page again rather than from the cache', async () => {
+    fetchSpy.mockImplementation(async () => jsonResponse([VIEW]));
+
+    await NexusResourceService.fetchStream({ tags: ['music'], skip: 0, limit: 10 });
+    await NexusResourceService.fetchStream({ tags: ['music'], skip: 0, limit: 10 });
+
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it('refuses more tags than the route takes instead of dropping some', async () => {
+    await expect(
+      NexusResourceService.fetchStream({ tags: ['a', 'b', 'c', 'd', 'e', 'f'], skip: 0, limit: 10 }),
+    ).rejects.toBeInstanceOf(AppError);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('fails as an AppError when Nexus refuses the query', async () => {
+    fetchSpy.mockResolvedValue(new Response('unknown variant', { status: 400 }));
+
+    await expect(NexusResourceService.fetchStream({ tags: ['music'], skip: 0, limit: 10 })).rejects.toBeInstanceOf(
+      AppError,
+    );
+  });
+});
