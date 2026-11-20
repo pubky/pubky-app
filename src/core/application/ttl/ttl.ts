@@ -85,9 +85,9 @@ export class TtlApplication {
       postCount: postBatch.length,
     });
 
-    // Do not publish a fresh post/TTL until its attachment metadata is durable.
-    // A failed file write leaves the existing batch eligible for the next tick.
-    await FileApplication.persistFiles(postBatch.flatMap((post) => post.attachments_metadata ?? []));
+    // Do not publish a fresh post/TTL until its 0.x attachment metadata is durable (one request per
+    // batch). A failed file write leaves the existing batch eligible for the next tick.
+    await FileApplication.fetchFilesForPosts(postBatch);
     if (params.isCurrent && !params.isCurrent()) return;
     // The refresh guard keeps rows edited locally since the fetch started (or
     // not yet re-indexed by Nexus) from being clobbered; see persistPosts.

@@ -330,6 +330,27 @@ describe('PostArticle', () => {
       expect(container.querySelector('[data-slot="skeleton"]')).toBeInTheDocument();
       expect(screen.queryByTestId('cover-image')).not.toBeInTheDocument();
     });
+
+    // The envelope cover and the slot-0 rule are the hook's now (`usePostArticle.test.tsx`,
+    // "Envelope cover and the slot-0 rule"): the card only hands it the session's own cover entry.
+    it('hands the cover this session published to the cover rule, as its own entry', () => {
+      const sessionCover: AttachmentConstructed = {
+        type: 'image/png',
+        name: 'cover.png',
+        urls: { main: 'blob:http://localhost/session-cover' },
+      };
+
+      render(<PostArticle {...defaultProps} localAttachments={[mockLocalImageAttachment]} localCover={sessionCover} />);
+
+      expect(mockUsePostArticle).toHaveBeenCalledWith({
+        content: defaultProps.content,
+        attachments: defaultProps.attachments,
+        localAttachments: [mockLocalImageAttachment],
+        pendingAttachments: [],
+        localCover: sessionCover,
+        coverImageVariant: FileVariant.FEED,
+      });
+    });
   });
 
   describe('Cover Image Styling', () => {

@@ -1,4 +1,14 @@
+import type { NexusApiVersion } from '@/config/nexus';
 import { HttpMethod } from '@/libs/http/http.types';
+
+/**
+ * Options for building a Nexus API URL.
+ * @see buildNexusUrl in nexus.utils.ts
+ */
+export type TBuildNexusUrlOptions = {
+  /** The API version the route is served under; defaults to `NEXUS_API_VERSION`. */
+  version?: NexusApiVersion;
+};
 
 /**
  * Parameters for building a Nexus URL with query string.

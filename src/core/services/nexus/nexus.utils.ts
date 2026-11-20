@@ -1,10 +1,11 @@
-import { getCdnUrl, getNexusUrl } from '@/config/nexus';
+import { getCdnUrl, getNexusUrl, getV1CdnUrl, NEXUS_API_VERSION } from '@/config/nexus';
 import { httpResponseToError, safeFetch } from '@/libs/error/error.http';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod, JSON_HEADERS } from '@/libs/http/http.types';
 import { parseResponseOrThrow } from '@/libs/http/response.utils';
 import { nexusQueryClient, nexusRetryPolicy } from './nexus.query-client';
 import type {
+  TBuildNexusUrlOptions,
   TBuildUrlWithQueryParams,
   TCreateFetchOptionsParams,
   TFetchNexusParams,
@@ -13,12 +14,20 @@ import type {
 
 const FETCH_NEXUS_OPERATION = 'fetchNexus';
 
-export function buildNexusUrl(endpoint: string): string {
-  return `${getNexusUrl()}/${endpoint}`;
+/**
+ * Builds a Nexus API URL: `{nexus}/{version}/{endpoint}`, with `endpoint` spelled without a version.
+ * Every call uses `NEXUS_API_VERSION`; the one documented `/v0` call passes its version explicitly.
+ */
+export function buildNexusUrl(endpoint: string, { version = NEXUS_API_VERSION }: TBuildNexusUrlOptions = {}): string {
+  return `${getNexusUrl()}/${version}/${endpoint}`;
 }
 
 export function buildCdnUrl(endpoint: string): string {
   return `${getCdnUrl()}/${endpoint}`;
+}
+
+export function buildV1CdnUrl(endpoint: string): string {
+  return `${getV1CdnUrl()}/${endpoint}`;
 }
 
 /**
@@ -100,7 +109,7 @@ export async function fetchNexus<T>({ url, method = HttpMethod.GET, body = null 
   return parseResponseOrThrow<T>(response, ErrorService.Nexus, FETCH_NEXUS_OPERATION, url);
 }
 
-/** Like fetchNexus but for endpoints that return no body (e.g. PUT v0/ingest); throws on non-ok. */
+/** Like fetchNexus but for endpoints that return no body (e.g. PUT ingest/{id}); throws on non-ok. */
 export async function fetchNexusNoContent({ url, method }: Pick<TFetchNexusParams, 'url' | 'method'>): Promise<void> {
   const response = await safeFetch(url, createFetchOptions({ method }), ErrorService.Nexus, FETCH_NEXUS_OPERATION);
   if (!response.ok) {
@@ -118,6 +127,22 @@ export function getNexusResponseStartedAt(response: object): number | undefined 
 /** Carries a start time onto a response assembled from several Nexus responses. */
 export function markNexusResponseStartedAt(response: object, startedAt: number): void {
   responseStartedAt.set(response, startedAt);
+}
+
+/**
+ * Carries the start time of `response` onto `derived`, the same response as the read boundary
+ * mapped it (local post kinds, derived tag `relationship`), and returns `derived`. A response
+ * without a stamp leaves `derived` without one.
+ */
+export function carryNexusResponseStartedAt<T extends object>(response: object, derived: T): T {
+  const startedAt = responseStartedAt.get(response);
+  if (startedAt !== undefined) responseStartedAt.set(derived, startedAt);
+  return derived;
+}
+
+/** Maps every item of a Nexus list response through the read boundary, keeping the response's start time. */
+export function mapNexusResponse<T, U>(response: T[], map: (item: T) => U): U[] {
+  return carryNexusResponseStartedAt(response, response.map(map));
 }
 
 /**

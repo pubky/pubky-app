@@ -25,14 +25,18 @@ export class AuthCoordinator {
     void AuthController.restorePersistedSession().catch((error) => this.onRestoreError?.(error));
   };
 
+  private retryCleanup = () => {
+    void AuthController.retireLegacyCookieSessions();
+    void AuthController.retrySessionRetirement();
+    void AuthController.retryShopCleanup();
+  };
+
   private onAuthChange = () => {
     const state = useAuthStore.getState();
     if (!state.hasHydrated) return;
     if (!this.retiredLegacy) {
       this.retiredLegacy = true;
-      void AuthController.retireLegacyCookieSessions();
-      void AuthController.retrySessionRetirement();
-      void AuthController.retryShopCleanup();
+      this.retryCleanup();
     }
     if (!state.session && state.sessionReference && state.restoreStatus === 'idle' && !state.isLoggingOut)
       this.restore();
@@ -45,31 +49,46 @@ export class AuthCoordinator {
 
   private recover = () => {
     const state = useAuthStore.getState();
-    if (
-      document.visibilityState !== 'hidden' &&
-      state.hasHydrated &&
-      !state.isLoggingOut &&
-      state.restoreStatus === 'temporary-error' &&
-      Date.now() >= this.nextRecoveryAt
-    )
-      this.restore();
+    if (document.visibilityState === 'hidden' || !state.hasHydrated || state.isLoggingOut) return;
+    if (Date.now() < this.nextRecoveryAt) return;
+    if (state.restoreStatus === 'temporary-error') this.restore();
+    else if (state.restoreStatus === 'social-migration') this.retryMigration();
   };
 
-  private online = () => {
+  /** A migration run blocked on an unreachable homeserver retries when the tab or the network comes back. */
+  private retryMigration = () => {
+    this.nextRecoveryAt = Date.now() + AUTO_RECOVERY_COOLDOWN_MS;
+    AuthController.retrySocialMigration();
+  };
+
+  private canRetryOnline(): boolean {
     const state = useAuthStore.getState();
-    if (!state.hasHydrated || state.isLoggingOut) return;
-    if (Date.now() < this.nextOnlineCleanupAt) return;
+    if (!state.hasHydrated || state.isLoggingOut || Date.now() < this.nextOnlineCleanupAt) return false;
     this.nextOnlineCleanupAt = Date.now() + AUTO_RECOVERY_COOLDOWN_MS;
-    if (state.restoreStatus === 'temporary-error') {
+    return true;
+  }
+
+  /** A hydrated guest with outstanding cleanup only needs the startup and network-return retries. */
+  watchGuestCleanup(): () => void {
+    this.retryCleanup();
+    const onOnline = () => {
+      if (this.canRetryOnline()) this.retryCleanup();
+    };
+    window.addEventListener('online', onOnline);
+    return () => window.removeEventListener('online', onOnline);
+  }
+
+  private online = () => {
+    if (!this.canRetryOnline()) return;
+    const { restoreStatus } = useAuthStore.getState();
+    if (restoreStatus === 'temporary-error' || restoreStatus === 'social-migration') {
       // A real network return gets an immediate retry, even during the focus cooldown.
       // Recovery owns metadata validation and cleanup; don't read corrupt metadata three times.
       this.nextRecoveryAt = 0;
       this.recover();
       return;
     }
-    void AuthController.retireLegacyCookieSessions();
-    void AuthController.retrySessionRetirement();
-    void AuthController.retryShopCleanup();
+    this.retryCleanup();
   };
 
   private sessionRemoved = (event: Event) => {

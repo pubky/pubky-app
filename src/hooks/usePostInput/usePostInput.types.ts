@@ -94,9 +94,10 @@ export interface UsePostInputReturn {
     getMediaName: (uri: string) => string | null;
   };
   /**
-   * True while the file rows of an edited article's inline attachments are still resolving, for a
-   * bounded time. The editor imports markdown once, so it waits: a video it cannot yet tell from an
-   * image would mount as a broken picture. Always false outside article edits.
+   * True while the file rows of an edited article's inline attachments (and, for a 0.x article, of
+   * its slot 0, whose row says whether it is the cover) are still resolving, for a bounded time. The
+   * editor imports markdown once, so it waits: a video it cannot yet tell from an image would mount
+   * as a broken picture. Always false outside article edits.
    */
   isEditInlineMediaLoading: boolean;
   serializeArticleForLock: UsePostReturn['serializeArticleForLock'];

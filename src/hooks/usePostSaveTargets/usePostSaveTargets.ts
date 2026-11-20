@@ -1,7 +1,6 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { postUriBuilder } from 'pubky-app-specs';
 import { DEFAULT_COLLECTION_LAYOUT } from '@/config/collections';
 import { PostController } from '@/controllers/post/post';
 import {
@@ -15,6 +14,7 @@ import { isAppError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
 import { parseCompositeId } from '@/models/models.utils';
 import { toast } from '@/molecules/Toaster/toast';
+import { postReferenceSpellings } from '@/pipes/post/post.reference';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
 export type PostSaveCollectionTarget = {
@@ -102,11 +102,13 @@ export function usePostSaveTargets(postId: string, options: UsePostSaveTargetsOp
   const [isCreatingCollection, setIsCreatingCollection] = useState(false);
 
   const { pubky, id } = parseCompositeId(postId);
-  const postUri = postUriBuilder(pubky, id);
+  // A collection may spell the post either way (an item added before its author migrated keeps
+  // the 0.x spelling); a new collection curates it by its v1 reference.
+  const postUris = postReferenceSpellings(pubky, id);
 
   const saveTargets: PostSaveCollectionTarget[] = collections.map((collection) => {
     const id = collection.details.id;
-    const isSaved = (collection.content.items ?? []).includes(postUri);
+    const isSaved = (collection.content.items ?? []).some((item) => postUris.includes(item));
     return {
       id,
       name: collection.content.name,
@@ -178,7 +180,7 @@ export function usePostSaveTargets(postId: string, options: UsePostSaveTargetsOp
       await PostController.commitCreateCollection({
         authorId: currentUserPubky,
         name,
-        items: [postUri],
+        items: [postUris[0]],
         layout: DEFAULT_COLLECTION_LAYOUT,
       });
       toast({

@@ -248,12 +248,17 @@ const defaultProps = {
   isBlurred: false,
 };
 
-const createMockLocalFilesStore = (posts: Record<string, AttachmentConstructed[] | undefined> = {}) => ({
+const createMockLocalFilesStore = (
+  posts: Record<string, AttachmentConstructed[] | undefined> = {},
+  articleCovers: Record<string, AttachmentConstructed | undefined> = {},
+) => ({
   profile: null,
   posts,
+  articleCovers,
   collections: {},
   setProfile: vi.fn(),
   setPostAttachments: vi.fn(),
+  setArticleCover: vi.fn(),
   setCollectionCover: vi.fn(),
   reset: vi.fn(),
 });
@@ -413,6 +418,28 @@ describe('PostArticleDetail', () => {
     });
   });
 
+  it('takes the local cover from the cover entry alone, never from the inline entries', () => {
+    const attachments = ['pubky://user123/pub/pubky.app/files/clip'];
+    const inline = [{ type: 'video/mp4', name: 'clip.mp4', urls: { main: 'blob:clip' } }];
+    const cover = { type: 'image/png', name: 'cover.png', urls: { main: 'blob:cover' } };
+    mockUseLocalFilesStore.mockImplementation((selector) =>
+      selector(createMockLocalFilesStore({ [defaultProps.postId]: inline }, { [defaultProps.postId]: cover })),
+    );
+
+    const { rerender } = render(<PostArticleDetail {...defaultProps} attachments={attachments} />);
+    expect(mockUsePostArticle).toHaveBeenLastCalledWith(
+      expect.objectContaining({ localAttachments: inline, localCover: cover }),
+    );
+
+    // Inline entries are handed to the hook as the slots and say nothing about the cover entry: without
+    // one, the hook alone decides (this article has no envelope cover and a video at slot 0, so none)
+    mockUseLocalFilesStore.mockImplementation((selector) =>
+      selector(createMockLocalFilesStore({ [defaultProps.postId]: inline })),
+    );
+    rerender(<PostArticleDetail {...defaultProps} attachments={attachments} />);
+    expect(mockUsePostArticle).toHaveBeenLastCalledWith(expect.objectContaining({ localCover: undefined }));
+  });
+
   it("hands the post's same-session files to the cover rule", () => {
     const attachments = ['pubky://user123/pub/pubky.app/files/cover'];
     const stored = [{ type: 'image/png', name: 'cover.png', urls: { main: 'blob:cover' } }];
@@ -456,6 +483,30 @@ describe('PostArticleDetail', () => {
     });
     render(<PostArticleDetail {...defaultProps} attachments={attachments} />);
     expect(mockUseAttachmentsMetadata).toHaveBeenLastCalledWith({ fileUris: [attachments[0]] });
+  });
+
+  it("reads a migrated article's body media through its shifted slots (A')", () => {
+    // rc.1 promoted slot 0 into `cover_image` without renumbering the body: `attachment:1` now names
+    // the file at `attachments[0]`
+    const attachments = ['pubky://user123/pub/pubky.app/files/clip'];
+    const body = 'Text with ![a](attachment:1)';
+    const content = JSON.stringify({
+      title: 'Test Article Title',
+      body,
+      cover_image: 'pubky://user123/pub/pubky.app/files/cover',
+    });
+    mockUsePostArticle.mockReturnValue({
+      title: 'Test Article Title',
+      body,
+      coverImage: null,
+      isCoverPending: false,
+      isCoverLoading: false,
+    });
+
+    render(<PostArticleDetail {...defaultProps} content={content} attachments={attachments} />);
+
+    expect(mockUseAttachmentsMetadata).toHaveBeenLastCalledWith({ fileUris: [attachments[0]] });
+    expect(postTextProps.articleMedia).toEqual(expect.objectContaining({ attachments: ['', attachments[0]] }));
   });
 
   it('reports the metadata read as unsettled while the inline rows are loading', () => {
@@ -700,19 +751,25 @@ describe('PostArticleDetail', () => {
     const unlockedProps = { ...defaultProps, unlocked: { media, pendingAttachments, isOwnLock: false } };
 
     it("reads the article's media from the viewer's copy, never from the post's own local files", () => {
-      // A lock post's same-session files are its teaser's
+      // A lock post's same-session files, its cover entry included, are its teaser's
       mockUseLocalFilesStore.mockImplementation((selector) =>
         selector(
-          createMockLocalFilesStore({
-            [defaultProps.postId]: [{ type: 'image/png', name: 'teaser.png', urls: { main: 'blob:teaser' } }],
-          }),
+          createMockLocalFilesStore(
+            { [defaultProps.postId]: [{ type: 'image/png', name: 'teaser.png', urls: { main: 'blob:teaser' } }] },
+            { [defaultProps.postId]: { type: 'image/png', name: 'teaser-cover.png', urls: { main: 'blob:tc' } } },
+          ),
         ),
       );
 
       render(<PostArticleDetail {...unlockedProps} />);
 
       expect(mockUsePostArticle).toHaveBeenLastCalledWith(
-        expect.objectContaining({ attachments: null, localAttachments: media, pendingAttachments }),
+        expect.objectContaining({
+          attachments: null,
+          localAttachments: media,
+          pendingAttachments,
+          localCover: undefined,
+        }),
       );
       expect(postTextProps.articleMedia).toEqual({ localAttachments: media, pendingAttachments });
     });

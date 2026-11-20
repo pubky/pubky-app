@@ -9,16 +9,17 @@ import { AuthController } from '@/controllers/auth/auth';
 import { FileController } from '@/controllers/file/file';
 import { ProfileController } from '@/controllers/profile/profile';
 import type { TCommitUpdateDetailsParams } from '@/controllers/profile/profile.types';
+import { SocialMigrationController } from '@/controllers/social-migration/social-migration';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { AppError } from '@/libs/error/error';
-import { isAuthError, requiresLogin } from '@/libs/error/error.utils';
+import { isAuthError, isValidationError, requiresLogin } from '@/libs/error/error.utils';
 import { getImageUploadSizeLimitToastMessage } from '@/libs/image/imageUploadSizeLimit';
 import { Logger } from '@/libs/logger/logger';
 import { normalizeProfileLinkUrl } from '@/libs/profile/profileLinks';
-import { safeExternalUrlSchema } from '@/libs/utils/safeExternalUrl';
 import { generateRandomUsername, isReservedUserName } from '@/libs/utils/utils';
 import { toast } from '@/molecules/Toaster/toast';
-import { type UiUserSchema, UserValidator } from '@/pipes/user/user.validator';
+import type { TFileAttachmentResult } from '@/pipes/file/file.types';
+import { profileLinkUrlSchema, type UiUserSchema, UserValidator } from '@/pipes/user/user.validator';
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import {
@@ -53,6 +54,13 @@ function getProfileFormLinks(userDetails: NexusUserDetails): ProfileLink[] {
     url: link.url,
   }));
   return formattedLinks.length > 0 ? formattedLinks : DEFAULT_LINKS;
+}
+
+/** The index of the link a v1 profile refusal names (`links[n].url`), or null for any other member. */
+function getRefusedLinkIndex(error: AppError): number | null {
+  const field = error.context?.field;
+  const match = typeof field === 'string' ? /^links\[(\d+)\]\.url$/.exec(field) : null;
+  return match ? Number(match[1]) : null;
 }
 
 function areProfileLinksEqual(left: ProfileLink[], right: ProfileLink[]): boolean {
@@ -121,6 +129,7 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
 
   // Edit mode specific state
   const [avatarChanged, setAvatarChanged] = useState(false);
+  const [migrationNoticeAcknowledged, setMigrationNoticeAcknowledged] = useState(false);
 
   // Crop dialog state
   const [cropDialogOpen, setCropDialogOpen] = useState(false);
@@ -158,6 +167,20 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
       setIsLoading(false);
     }
   }, [mode, userDetails, pubky]);
+
+  // The account update's one-shot note on values it could not carry over (D17), on the settings
+  // page only (not the onboarding revisit). Read from this browser's record once the form has
+  // loaded, so the server render never reads storage.
+  const hasMigrationNotice = mode === 'edit' && !editRedirectTo;
+  const migrationNotice =
+    hasMigrationNotice && pubky && !isLoading && !migrationNoticeAcknowledged
+      ? SocialMigrationController.getPendingProfileNotice(pubky)
+      : null;
+
+  const handleDismissMigrationNotice = () => {
+    if (pubky) SocialMigrationController.acknowledgeProfileNotice(pubky);
+    setMigrationNoticeAcknowledged(true);
+  };
 
   const isEditProfileDirty =
     mode === 'edit' &&
@@ -199,7 +222,7 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
         setLinkUrlErrors((prev) => ({ ...prev, [index]: null }));
       } else {
         // Validate what we would store: a bare X handle is rewritten to its profile URL first.
-        const res = safeExternalUrlSchema.safeParse(normalizeProfileLinkUrl(links[index]?.label ?? '', value));
+        const res = profileLinkUrlSchema.safeParse(normalizeProfileLinkUrl(links[index]?.label ?? '', value));
         setLinkUrlErrors((prev) => ({
           ...prev,
           [index]: res.success ? null : (res.error.issues[0]?.message ?? 'Invalid URL'),
@@ -360,19 +383,16 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
       }
 
       // Handle avatar upload
-      let image: string | null = null;
+      let avatarAttachment: TFileAttachmentResult | null = null;
       // Edit mode sends only what changed; everything else keeps its published value
       const changes: TCommitUpdateDetailsParams['changes'] =
         mode === 'edit' ? getProfileChanges(user, links, userDetails) : {};
 
       if (mode === 'create') {
+        // Nexus ignores a new user's file uploads until their first profile is indexed, and for good:
+        // the bytes go after the profile. Hashing names the URI the first profile already carries.
         if (avatarFile) {
-          setSubmitText(PROFILE_SUBMIT_TEXT.uploadingAvatar);
-          image = await FileController.commitCreate({ file: avatarFile, pubky });
-          if (!image) {
-            setSubmitText(PROFILE_SUBMIT_TEXT.tryAgain);
-            return;
-          }
+          avatarAttachment = await FileController.toFileAttachment({ file: avatarFile, pubky });
         }
       } else if (avatarChanged) {
         if (avatarFile) {
@@ -391,7 +411,11 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
       setSubmitText(PROFILE_SUBMIT_TEXT.savingProfile);
 
       if (mode === 'create') {
-        await ProfileController.commitCreate({ profile: user, image, pubky });
+        await ProfileController.commitCreate({ profile: user, image: avatarAttachment?.media.url ?? null, pubky });
+        if (avatarAttachment) {
+          setSubmitText(PROFILE_SUBMIT_TEXT.uploadingAvatar);
+          await FileController.commitCreateAttachment({ fileAttachment: avatarAttachment });
+        }
         // Store a NEW blob URL globally so all avatar components show the new avatar instantly
         // We create a separate blob URL so the form's cleanup can safely revoke its own
         if (avatarFile) {
@@ -405,6 +429,11 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
         });
       } else {
         await ProfileController.commitUpdate({ pubky, changes });
+        // A saved profile is the user's answer to the account update's note
+        if (hasMigrationNotice) {
+          SocialMigrationController.acknowledgeProfileNotice(pubky);
+          setMigrationNoticeAcknowledged(true);
+        }
         // Update local avatar store: set NEW blob URL if new avatar, clear if deleted
         // We create a separate blob URL so the form's cleanup can safely revoke its own
         if (avatarChanged) {
@@ -456,6 +485,23 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
           });
           return;
         }
+
+        // The data model refused a link the form let through (`UserNormalizer.to` and
+        // `ProfileApplication` name the member in `context.field`): show it on that link, as the
+        // submit gate does, instead of a toast that cannot say which field to fix. The model saw
+        // the rows with a URL only, so its index counts those. A refusal that names no loaded row
+        // (the stored list is longer than the form's) falls through to the toast: an error on a
+        // row the form does not show would block the submit with nothing to fix.
+        const refusedLink = isValidationError(error) ? getRefusedLinkIndex(error) : null;
+        const row =
+          refusedLink === null
+            ? undefined
+            : links.flatMap((link, index) => (link.url.trim().length > 0 ? [index] : []))[refusedLink];
+        if (row !== undefined) {
+          setLinkUrlErrors((prev) => ({ ...prev, [row]: 'Invalid URL' }));
+          setSubmitText(idleSubmitText);
+          return;
+        }
       }
 
       setSubmitText(PROFILE_SUBMIT_TEXT.tryAgain);
@@ -479,6 +525,7 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
     editRedirectTo,
     idleSubmitText,
     isEditProfileDirty,
+    hasMigrationNotice,
     setShowWelcomeDialog,
     router,
   ]);
@@ -514,6 +561,7 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
       isSaving: isSaving || isNavigating,
       isLoading,
       submitText,
+      migrationNotice,
     },
     errors: {
       nameError,
@@ -540,6 +588,7 @@ export function useProfileForm(props: UseProfileFormProps): UseProfileFormReturn
       handleCropComplete,
       handleSubmit,
       handleCancel,
+      handleDismissMigrationNotice,
       validateLinkUrl,
       validateName,
     },

@@ -1,13 +1,13 @@
 import { Logger } from '@/libs/logger/logger';
 import { CompositeIdDomain, type Pubky } from '@/models/models.types';
-import { buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
+import { buildCompositeIdFromPubkyUri, mediaFilenameFromUri, parseCompositeId } from '@/models/models.utils';
 import { filesApi } from '@/services/nexus/file/file.api';
 import { FileVariant } from '@/services/nexus/file/file.types';
 
 /**
  * Resolves a post attachment reference into an absolute CDN URL. Only
- * `pubky://<user>/pub/pubky.app/files/<fileId>` URIs are accepted — they resolve
- * to our own CDN. Anything else (including absolute `http(s)` URLs) is rejected,
+ * homeserver media URIs (`pubky://<user>/pub/social/v1/files/<hash>.<ext>`, or
+ * a 0.x `files/<fileId>`) are accepted — they resolve to our own CDN. Anything else (including absolute `http(s)` URLs) is rejected,
  * so a server-side consumer can never be pointed at an arbitrary/internal host
  * (SSRF). In practice every post attachment is a homeserver file URI, so this
  * reflects reality rather than restricting it.
@@ -35,7 +35,7 @@ export function resolvePostAttachmentUrl(
     });
     if (!compositeId) return null;
     const { pubky, id } = parseCompositeId(compositeId);
-    return filesApi.getFileUrl({ pubky, file_id: id, variant });
+    return filesApi.getFileUrl({ pubky, file_id: mediaFilenameFromUri(trimmed) ?? id, variant });
   } catch (error) {
     Logger.warn('[postAttachmentUrl] Failed to resolve attachment pubky URI', { uri: trimmed, error });
     return null;

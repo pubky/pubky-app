@@ -19,6 +19,7 @@ import {
   buildDiscoverCollectionsStreamId,
   buildPostCollectionsStreamId,
   buildPostReplyStreamId,
+  buildWotDomainStreamId,
   type PostStreamId,
   PostStreamTypes,
 } from '@/models/stream/post/postStream.types';
@@ -35,15 +36,7 @@ import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import { postStreamDirtyRegistry } from '@/services/local/stream/posts/postStreamDirtyRegistry';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import { LocalTagCacheService } from '@/services/local/tag/tag-cache';
-import {
-  type NexusFileDetails,
-  type NexusFileUrls,
-  type NexusPost,
-  type NexusPostsKeyStream,
-  type NexusPostWithAttachmentMetadata,
-  type NexusUser,
-  StreamSorting,
-} from '@/services/nexus/nexus.types';
+import { type NexusPost, type NexusPostsKeyStream, type NexusUser, StreamSorting } from '@/services/nexus/nexus.types';
 import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
 import { StreamKind, StreamOrder, StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 import { NexusUserStreamService } from '@/services/nexus/stream/users/userStream';
@@ -55,6 +48,9 @@ describe('PostStreamApplication', () => {
   const streamId = PostStreamTypes.TIMELINE_ALL_ALL as PostStreamId;
   const DEFAULT_AUTHOR = 'user-1';
   const BASE_TIMESTAMP = 1000000;
+  // A Tagged-as feed whose only domain tag is the user label `bookmarks`: a Nexus stream, not the
+  // local-only bookmarks stream `timeline:bookmarks:all` (ADR-0028).
+  const taggedAsBookmarksStreamId = buildWotDomainStreamId(StreamSorting.TIMELINE, 2, 'all', ['bookmarks'], ['rust']);
 
   // ============================================================================
   // Test Helpers
@@ -65,7 +61,7 @@ describe('PostStreamApplication', () => {
     author: string = DEFAULT_AUTHOR,
     timestamp: number = BASE_TIMESTAMP,
     overrides?: Partial<NexusPost>,
-  ): NexusPostWithAttachmentMetadata => ({
+  ): NexusPost => ({
     details: {
       id: postId,
       content: `Post ${postId} content`,
@@ -99,7 +95,7 @@ describe('PostStreamApplication', () => {
     startIndex: number = 1,
     author: string = DEFAULT_AUTHOR,
     startTimestamp: number = BASE_TIMESTAMP,
-  ): NexusPostWithAttachmentMetadata[] => {
+  ): NexusPost[] => {
     return Array.from({ length: count }, (_, i) => {
       const postId = `post-${startIndex + i}`;
       return createMockNexusPost(postId, author, startTimestamp + i);
@@ -206,7 +202,7 @@ describe('PostStreamApplication', () => {
 
   const setupDefaultMocks = () => ({
     persistPosts: vi.spyOn(LocalStreamPostsService, 'persistPosts').mockResolvedValue(undefined),
-    persistFiles: vi.spyOn(FileApplication, 'persistFiles').mockResolvedValue(undefined),
+    fetchFilesForPosts: vi.spyOn(FileApplication, 'fetchFilesForPosts').mockResolvedValue(undefined),
     getUserDetails: vi.spyOn(UserDetailsModel, 'findByIdsPreserveOrder'),
     getUserRelationships: vi
       .spyOn(UserRelationshipsModel, 'findByIds')
@@ -418,20 +414,6 @@ describe('PostStreamApplication', () => {
       });
 
       expect(result).toEqual([livePostId, deletedPostId]);
-    });
-
-    it('removes deleted posts from the collection-kind bookmark stream (FollowedCollections seed)', async () => {
-      const livePostId = `${DEFAULT_AUTHOR}:live-post`;
-      const deletedPostId = `${DEFAULT_AUTHOR}:deleted-post`;
-      await createPostDetailWithKind(livePostId, 'collection');
-      await createDeletedPostDetail(deletedPostId);
-
-      const result = await PostStreamApplication.filterStreamPosts({
-        streamId: PostStreamTypes.TIMELINE_BOOKMARKS_COLLECTION,
-        postIds: [livePostId, deletedPostId],
-      });
-
-      expect(result).toEqual([livePostId]);
     });
 
     it('keeps deleted posts in single-collection item streams', async () => {
@@ -731,100 +713,99 @@ describe('PostStreamApplication', () => {
       expect(result.nextCursor).toBeUndefined();
     });
 
-    it('returns the bookmark-time resume cursor on a full cache hit for legacy bookmark rows', async () => {
-      // A row without a persisted Nexus cursor seeds its seam once from the tail entry's
-      // bookmark time (#2100), never from a post's indexed_at.
+    describe('bookmarks stream (local only)', () => {
       const bookmarkStreamId = PostStreamTypes.TIMELINE_BOOKMARKS_ALL as PostStreamId;
       const postIds = Array.from({ length: 12 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
-      await PostStreamModel.create(bookmarkStreamId, postIds);
-      for (let i = 0; i < postIds.length; i++) {
-        // Created long ago, bookmarked recently.
-        await createPostDetailWithTimestamp(postIds[i], BASE_TIMESTAMP + i);
-        await BookmarkModel.create({ id: postIds[i], created_at: BASE_TIMESTAMP + 5000 + i });
-      }
+      const slice = (params: { limit: number; lastPostId?: string; streamHead?: number }) =>
+        PostStreamApplication.getOrFetchStreamSlice({
+          streamId: bookmarkStreamId,
+          streamHead: 0,
+          streamTail: 0,
+          viewerId: 'user-viewer' as Pubky,
+          ...params,
+        });
 
-      const result = await PostStreamApplication.getOrFetchStreamSlice({
-        streamId: bookmarkStreamId,
-        limit: 10,
-        streamHead: 0,
-        streamTail: 0,
-        viewerId: 'user-viewer' as Pubky,
+      it('pages the row the homeserver listing wrote and never asks Nexus for it', async () => {
+        const fetch = vi.spyOn(NexusPostStreamService, 'fetch');
+        await PostStreamModel.create(bookmarkStreamId, postIds);
+        // Old posts, bookmarked recently: the row order is bookmark order, kept as it is.
+        for (let i = 0; i < postIds.length; i++) await createPostDetailWithTimestamp(postIds[i], BASE_TIMESTAMP - i);
+
+        const first = await slice({ limit: 10 });
+        const second = await slice({ limit: 10, lastPostId: first.lastRawPostId });
+
+        expect(first).toMatchObject({ nextPageIds: postIds.slice(0, 10), cacheMissPostIds: [], reachedEnd: false });
+        expect(first.nextCursor).toBeUndefined();
+        expect(second).toMatchObject({ nextPageIds: postIds.slice(10), reachedEnd: true });
+        expect(fetch).not.toHaveBeenCalled();
       });
 
-      expect(result.nextPageIds).toHaveLength(10);
-      // The row tail (post-12) → its bookmark time, NOT its post indexed_at (BASE + 11).
-      expect(result.nextCursor).toBe(BASE_TIMESTAMP + 5000 + 11);
+      it('reports the bookmarked posts not cached yet for the caller to hydrate', async () => {
+        await PostStreamModel.create(bookmarkStreamId, postIds.slice(0, 3));
+        await createPostDetailWithTimestamp(postIds[1], BASE_TIMESTAMP);
+
+        const result = await slice({ limit: 10 });
+
+        expect(result.nextPageIds).toEqual(postIds.slice(0, 3));
+        expect(result.cacheMissPostIds).toEqual([postIds[0], postIds[2]]);
+        expect(result.reachedEnd).toBe(true);
+      });
+
+      it('drops collections from the page but still hydrates them, for Followed Collections', async () => {
+        const collectionId = `${DEFAULT_AUTHOR}:coll-1`;
+        await PostStreamModel.create(bookmarkStreamId, [collectionId, postIds[0], postIds[1]]);
+        await createPostDetailWithKind(collectionId, 'collection');
+
+        const result = await slice({ limit: 10 });
+
+        expect(result.nextPageIds).toEqual([postIds[0], postIds[1]]);
+        expect(result.cacheMissPostIds).toEqual([postIds[0], postIds[1]]);
+      });
+
+      it('resolves no Nexus resume cursor: the stream has no seam', async () => {
+        await PostStreamModel.create(bookmarkStreamId, postIds);
+        const readDetails = vi.spyOn(PostDetailsModel, 'findById');
+
+        await expect(PostStreamApplication.getCachedLastPostTimestamp({ streamId: bookmarkStreamId })).resolves.toBe(0);
+        expect(readDetails).not.toHaveBeenCalled();
+      });
+
+      it('ends at once without a row (no bookmarks listed yet)', async () => {
+        const fetch = vi.spyOn(NexusPostStreamService, 'fetch');
+
+        await expect(slice({ limit: 10 })).resolves.toMatchObject({ nextPageIds: [], reachedEnd: true });
+        expect(fetch).not.toHaveBeenCalled();
+      });
+
+      it('answers a head poll with nothing', async () => {
+        const fetch = vi.spyOn(NexusPostStreamService, 'fetch');
+        await PostStreamModel.create(bookmarkStreamId, postIds);
+
+        await expect(slice({ limit: 10, streamHead: BASE_TIMESTAMP })).resolves.toMatchObject({
+          nextPageIds: [],
+          cacheMissPostIds: [],
+          reachedEnd: true,
+        });
+        expect(fetch).not.toHaveBeenCalled();
+        expect(await UnreadPostStreamModel.findById(bookmarkStreamId)).toBeNull();
+      });
     });
 
-    it('prefers the persisted Nexus cursor over bookmark time on a full cache hit', async () => {
-      const bookmarkStreamId = PostStreamTypes.TIMELINE_BOOKMARKS_ALL as PostStreamId;
-      const postIds = Array.from({ length: 12 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
-      for (let i = 0; i < postIds.length; i++) {
-        await createPostDetailWithTimestamp(postIds[i], BASE_TIMESTAMP + i);
-        await BookmarkModel.create({ id: postIds[i], created_at: BASE_TIMESTAMP + 5000 + i });
-      }
-      await LocalStreamPostsService.persistNewStreamChunk({
-        streamId: bookmarkStreamId,
-        stream: postIds,
-        tailCursor: BASE_TIMESTAMP + 7777,
-      });
+    it("a Tagged-as feed whose only domain tag is 'bookmarks' still pages Nexus", async () => {
+      const page = createMockNexusPostsKeyStream(3);
+      const fetch = vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(page);
 
       const result = await PostStreamApplication.getOrFetchStreamSlice({
-        streamId: bookmarkStreamId,
+        streamId: taggedAsBookmarksStreamId,
         limit: 10,
         streamHead: 0,
         streamTail: 0,
         viewerId: 'user-viewer' as Pubky,
       });
 
-      expect(result.nextCursor).toBe(BASE_TIMESTAMP + 7777);
-    });
-
-    it('overflow early-return on a bookmark stream resumes by the raw backend position', async () => {
-      // The queue's buffered path must not synthesize a cursor from a served post: filtering
-      // (collections are dropped from the :all bookmarks feed) makes the queue over-fetch
-      // and buffer the surplus; a later smaller-limit call is then served entirely from
-      // that buffer and resumes where the raw scan stopped (the row's resume cursor).
-      const bookmarkStreamId = PostStreamTypes.TIMELINE_BOOKMARKS_ALL as PostStreamId;
-      const collectionIds = Array.from({ length: 10 }, (_, i) => `${DEFAULT_AUTHOR}:coll-${i + 1}`);
-      const postIds = Array.from({ length: 30 }, (_, i) => `${DEFAULT_AUTHOR}:post-${i + 1}`);
-      await PostStreamModel.create(bookmarkStreamId, [...collectionIds, ...postIds]);
-      for (const id of collectionIds) {
-        await createPostDetailWithKind(id, 'collection');
-        await BookmarkModel.create({ id, created_at: BASE_TIMESTAMP + 4000 });
-      }
-      for (let i = 0; i < postIds.length; i++) {
-        // Created long ago, bookmarked recently.
-        await createPostDetailWithTimestamp(postIds[i], BASE_TIMESTAMP + i);
-        await BookmarkModel.create({ id: postIds[i], created_at: BASE_TIMESTAMP + 5000 + i });
-      }
-
-      // First page: the collection filter empties part of the first cache chunk, so the
-      // queue pulls a second chunk and buffers the surplus regular posts.
-      const result1 = await PostStreamApplication.getOrFetchStreamSlice({
-        streamId: bookmarkStreamId,
-        limit: 20,
-        streamHead: 0,
-        streamTail: 0,
-        viewerId: 'user-viewer' as Pubky,
-      });
-      expect(result1.nextPageIds).toEqual(postIds.slice(0, 20));
-
-      // Second page with a smaller limit is served entirely from the overflow buffer
-      // (the early-return path — no fetch happens).
-      const result2 = await PostStreamApplication.getOrFetchStreamSlice({
-        streamId: bookmarkStreamId,
-        limit: 10,
-        streamHead: 0,
-        streamTail: result1.nextCursor!,
-        lastPostId: result1.nextPageIds[result1.nextPageIds.length - 1],
-        viewerId: 'user-viewer' as Pubky,
-      });
-      expect(result2.nextPageIds).toEqual(postIds.slice(20, 30));
-      // The scan stopped at the legacy row's seam — the tail's bookmark time (BASE + 5000 +
-      // 29), never post-30's created-at (BASE + 29) — and the buffered round keeps it.
-      expect(result2.nextCursor).toBe(result1.nextCursor);
-      expect(result2.nextCursor).toBe(BASE_TIMESTAMP + 5000 + 29);
+      expect(fetch).toHaveBeenCalledTimes(1);
+      expect(result.nextPageIds).toEqual(page.post_keys);
+      expect(result.nextCursor).toBe(page.last_post_score);
     });
 
     it('should fetch from Nexus when cache is empty', async () => {
@@ -1538,67 +1519,6 @@ describe('PostStreamApplication', () => {
     });
   });
 
-  describe('getCachedLastPostTimestamp — bookmark streams', () => {
-    // Bookmark streams are ordered by bookmark time, so a legacy row (no persisted Nexus
-    // cursor) seeds from the bookmark's `created_at`, not the post's `indexed_at`.
-    const bookmarkStreamId = PostStreamTypes.TIMELINE_BOOKMARKS_ALL as PostStreamId;
-
-    it('prefers the persisted Nexus cursor over bookmark time', async () => {
-      const postOne = `${DEFAULT_AUTHOR}:post-1`;
-      await createPostDetailWithTimestamp(postOne, BASE_TIMESTAMP);
-      await BookmarkModel.create({ id: postOne, created_at: BASE_TIMESTAMP + 5000 });
-      await LocalStreamPostsService.persistNewStreamChunk({
-        streamId: bookmarkStreamId,
-        stream: [postOne],
-        tailCursor: BASE_TIMESTAMP + 4200,
-      });
-
-      const result = await PostStreamApplication.getCachedLastPostTimestamp({ streamId: bookmarkStreamId });
-
-      expect(result).toBe(BASE_TIMESTAMP + 4200);
-    });
-
-    it('uses the bookmark time (created_at), not the post indexed_at', async () => {
-      const postOne = `${DEFAULT_AUTHOR}:post-1`;
-      const postTwo = `${DEFAULT_AUTHOR}:post-2`;
-      await PostStreamModel.create(bookmarkStreamId, [postOne, postTwo]);
-      // Both posts created long ago, but bookmarked recently (and in a different order).
-      await createPostDetailWithTimestamp(postOne, BASE_TIMESTAMP);
-      await createPostDetailWithTimestamp(postTwo, BASE_TIMESTAMP + 1);
-      await BookmarkModel.create({ id: postOne, created_at: BASE_TIMESTAMP + 5000 });
-      await BookmarkModel.create({ id: postTwo, created_at: BASE_TIMESTAMP + 4000 });
-
-      const result = await PostStreamApplication.getCachedLastPostTimestamp({ streamId: bookmarkStreamId });
-
-      // Last entry is post-2 → its bookmark time, NOT its post indexed_at (BASE + 1).
-      expect(result).toBe(BASE_TIMESTAMP + 4000);
-    });
-
-    it('falls back to the post indexed_at when the bookmark row is missing', async () => {
-      const postOne = `${DEFAULT_AUTHOR}:post-1`;
-      await PostStreamModel.create(bookmarkStreamId, [postOne]);
-      await createPostDetailWithTimestamp(postOne, BASE_TIMESTAMP + 7);
-      // No bookmark row written for postOne.
-
-      const result = await PostStreamApplication.getCachedLastPostTimestamp({ streamId: bookmarkStreamId });
-
-      expect(result).toBe(BASE_TIMESTAMP + 7);
-    });
-
-    it('iterates backwards to the most recent resolvable bookmark cursor', async () => {
-      const postOne = `${DEFAULT_AUTHOR}:post-1`;
-      const postTwo = `${DEFAULT_AUTHOR}:post-2`;
-      await PostStreamModel.create(bookmarkStreamId, [postOne, postTwo]);
-      // post-2 has neither a bookmark row nor post details → skip back to post-1.
-      await createPostDetailWithTimestamp(postOne, BASE_TIMESTAMP);
-      await BookmarkModel.create({ id: postOne, created_at: BASE_TIMESTAMP + 9000 });
-
-      const result = await PostStreamApplication.getCachedLastPostTimestamp({ streamId: bookmarkStreamId });
-
-      expect(result).toBe(BASE_TIMESTAMP + 9000);
-    });
-  });
-
   describe.each(['missing', 'original'] as const)('%s post attachment hydration', (source) => {
     const postId = 'user-1:post-1';
     const hydrate = (isCurrent?: () => boolean) =>
@@ -1614,33 +1534,17 @@ describe('PostStreamApplication', () => {
       vi.spyOn(LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValue([postId]);
       vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue(createMockNexusPosts(1));
       vi.spyOn(LocalStreamPostsService, 'persistPosts').mockResolvedValue(undefined);
-      vi.spyOn(FileApplication, 'persistFiles').mockResolvedValue(undefined);
+      vi.spyOn(FileApplication, 'fetchFilesForPosts').mockResolvedValue(undefined);
       vi.spyOn(UserDetailsModel, 'findByIdsPreserveOrder').mockResolvedValue([createMockNexusUser().details]);
     });
 
-    it('passes all inline attachment metadata to file persistence, including mixed batches', async () => {
-      const file = (id: string): NexusFileDetails => ({
-        id,
-        name: id,
-        src: '',
-        content_type: 'image/png',
-        size: 100,
-        created_at: 0,
-        indexed_at: 0,
-        metadata: {},
-        owner_id: 'user-1',
-        uri: `pubky://user-1/pub/pubky.app/files/${id}`,
-        urls: { main: '', feed: '', small: '' },
-      });
-      const attachments = [file('first'), file('second'), file('third')];
+    it('fetches the batch file metadata in one call before the posts are persisted', async () => {
       const posts = createMockNexusPosts(3);
-      posts[0].attachments_metadata = attachments.slice(0, 2);
-      posts[2].attachments_metadata = attachments.slice(2);
       vi.mocked(NexusPostStreamService.fetchByIds).mockResolvedValue(posts);
 
       await hydrate();
 
-      expect(FileApplication.persistFiles).toHaveBeenCalledWith(attachments);
+      expect(FileApplication.fetchFilesForPosts).toHaveBeenCalledExactlyOnceWith(posts);
       expect(LocalStreamPostsService.persistPosts).toHaveBeenCalledWith({
         posts,
         tagGuard: expect.objectContaining({ revisions: new Map([[postId, null]]) }),
@@ -1648,7 +1552,7 @@ describe('PostStreamApplication', () => {
     });
 
     it('leaves post details and TTL unpublished after a file write failure, allowing retry', async () => {
-      vi.mocked(FileApplication.persistFiles).mockRejectedValueOnce(
+      vi.mocked(FileApplication.fetchFilesForPosts).mockRejectedValueOnce(
         Err.database(DatabaseErrorCode.WRITE_FAILED, 'File storage unavailable', {
           service: ErrorService.Local,
           operation: 'createMany',
@@ -1663,17 +1567,17 @@ describe('PostStreamApplication', () => {
 
       await hydrate();
 
-      expect(FileApplication.persistFiles).toHaveBeenCalledTimes(2);
+      expect(FileApplication.fetchFilesForPosts).toHaveBeenCalledTimes(2);
       expect(LocalStreamPostsService.persistPosts).toHaveBeenCalledOnce();
       expect(UserDetailsModel.findByIdsPreserveOrder).toHaveBeenCalledOnce();
     });
 
     it('does not publish posts while attachment persistence is pending or after the session changes', async () => {
       const files = Promise.withResolvers<void>();
-      vi.mocked(FileApplication.persistFiles).mockReturnValueOnce(files.promise);
+      vi.mocked(FileApplication.fetchFilesForPosts).mockReturnValueOnce(files.promise);
       let current = true;
       const hydration = hydrate(() => current);
-      await vi.waitFor(() => expect(FileApplication.persistFiles).toHaveBeenCalledOnce());
+      await vi.waitFor(() => expect(FileApplication.fetchFilesForPosts).toHaveBeenCalledOnce());
       expect(LocalStreamPostsService.persistPosts).not.toHaveBeenCalled();
 
       current = false;
@@ -1709,7 +1613,7 @@ describe('PostStreamApplication', () => {
         posts: mockNexusPosts,
         tagGuard: expect.objectContaining({ revisions: expect.any(Map) }),
       });
-      expect(mocks.persistFiles).toHaveBeenCalledWith([]);
+      expect(mocks.fetchFilesForPosts).toHaveBeenCalledWith(mockNexusPosts);
       expect(hydrated).toBe(true);
     });
 
@@ -1974,40 +1878,11 @@ describe('PostStreamApplication', () => {
 
     it('should handle error gracefully when file persistence fails', async () => {
       const { cacheMissPostIds, mockNexusPosts } = createTestData(1);
-      const mockAttachments: NexusFileDetails[] = [
-        {
-          id: 'file-1',
-          name: 'file-1',
-          src: '',
-          content_type: 'image/png',
-          size: 100,
-          created_at: 0,
-          indexed_at: 0,
-          metadata: {},
-          owner_id: 'user-1',
-          uri: 'pubky://user-1/pub/pubky.app/files/file-1',
-          urls: {} as NexusFileUrls,
-        },
-        {
-          id: 'file-2',
-          name: 'file-2',
-          src: '',
-          content_type: 'image/png',
-          size: 200,
-          created_at: 0,
-          indexed_at: 0,
-          metadata: {},
-          owner_id: 'user-1',
-          uri: 'pubky://user-1/pub/pubky.app/files/file-2',
-          urls: {} as NexusFileUrls,
-        },
-      ];
-
-      mockNexusPosts[0].attachments_metadata = mockAttachments;
+      mockNexusPosts[0].details.attachments = ['pubky://user-1/pub/pubky.app/files/file-1'];
       const fetchPostsByIdsSpy = vi.spyOn(NexusPostStreamService, 'fetchByIds').mockResolvedValue(mockNexusPosts);
       const persistPostsSpy = vi.spyOn(LocalStreamPostsService, 'persistPosts').mockResolvedValue(undefined);
-      const persistFilesSpy = vi
-        .spyOn(FileApplication, 'persistFiles')
+      const fetchFilesSpy = vi
+        .spyOn(FileApplication, 'fetchFilesForPosts')
         .mockRejectedValue(new Error('Failed to persist files'));
 
       const getUserDetailsSpy = vi.spyOn(UserDetailsModel, 'findByIdsPreserveOrder');
@@ -2018,7 +1893,7 @@ describe('PostStreamApplication', () => {
         viewerId,
       });
 
-      expect(persistFilesSpy).toHaveBeenCalledWith(mockAttachments);
+      expect(fetchFilesSpy).toHaveBeenCalledWith(mockNexusPosts);
       expect(persistPostsSpy).not.toHaveBeenCalled();
       expect(fetchPostsByIdsSpy).toHaveBeenCalledTimes(1);
       expect(getUserDetailsSpy).not.toHaveBeenCalled();
@@ -2432,42 +2307,21 @@ describe('PostStreamApplication', () => {
       expect(unreadStream).toBeNull();
     });
 
-    it('keeps a bookmark cache fresh by bookmark time, even when the bookmarked post is old', async () => {
+    it('never clears the bookmarks stream: it is the only copy of the bookmark order', async () => {
       const bookmarkStreamId = PostStreamTypes.TIMELINE_BOOKMARKS_ALL as PostStreamId;
       const now = BASE_TIMESTAMP + getStreamCacheMaxAgeMs() + 10;
-      const oldPostIndexedAt = now - getStreamCacheMaxAgeMs() - 1000; // stale by post age
-      const recentBookmarkAt = now - getStreamCacheMaxAgeMs() + 1; // fresh by bookmark time
       vi.spyOn(Date, 'now').mockReturnValue(now);
+      const oldPost = `${DEFAULT_AUTHOR}:post-old`;
+      const uncachedPost = `${DEFAULT_AUTHOR}:post-uncached`;
+      await createPostDetailWithTimestamp(oldPost, now - getStreamCacheMaxAgeMs() - 1000);
 
-      const headPostId = `${DEFAULT_AUTHOR}:post-old`;
-      await PostStreamModel.create(bookmarkStreamId, [headPostId]);
-      await createPostDetailWithTimestamp(headPostId, oldPostIndexedAt);
-      await BookmarkModel.create({ id: headPostId, created_at: recentBookmarkAt });
-
-      await PostStreamApplication.prepareStreamForInitialLoad({ streamId: bookmarkStreamId });
-
-      // Cache preserved: staleness is judged on bookmark time (fresh), not the post age.
-      const postStream = await PostStreamModel.findById(bookmarkStreamId);
-      expect(postStream?.stream).toEqual([headPostId]);
-    });
-
-    it('clears a bookmark cache when the most recent bookmark is older than max age', async () => {
-      const bookmarkStreamId = PostStreamTypes.TIMELINE_BOOKMARKS_ALL as PostStreamId;
-      const now = BASE_TIMESTAMP + getStreamCacheMaxAgeMs() + 10;
-      const staleBookmarkAt = now - getStreamCacheMaxAgeMs() - 1;
-      vi.spyOn(Date, 'now').mockReturnValue(now);
-
-      const headPostId = `${DEFAULT_AUTHOR}:post-recent`;
-      await PostStreamModel.create(bookmarkStreamId, [headPostId]);
-      // Post itself is fresh by post time, but it was bookmarked long ago.
-      await createPostDetailWithTimestamp(headPostId, now);
-      await BookmarkModel.create({ id: headPostId, created_at: staleBookmarkAt });
-
-      await PostStreamApplication.prepareStreamForInitialLoad({ streamId: bookmarkStreamId });
-
-      // Cache cleared: bookmark time governs staleness, not the post's recency.
-      const postStream = await PostStreamModel.findById(bookmarkStreamId);
-      expect(postStream).toBeNull();
+      // A head stale by post age, then a head without details: both would rebuild any other row.
+      for (const head of [oldPost, uncachedPost]) {
+        await PostStreamModel.create(bookmarkStreamId, [head]);
+        await PostStreamApplication.prepareStreamForInitialLoad({ streamId: bookmarkStreamId });
+        expect((await PostStreamModel.findById(bookmarkStreamId))?.stream).toEqual([head]);
+        await PostStreamModel.table.clear();
+      }
     });
 
     it('should clear unread stream when unread cache is stale and main is fresh', async () => {
@@ -2968,14 +2822,8 @@ describe('PostStreamApplication', () => {
 
     it('does not filter bookmark stream posts from muted authors', async () => {
       await setupMutedUsers(['author-2'] as Pubky[]);
-
-      const mockNexusPostsKeyStream: NexusPostsKeyStream = {
-        post_keys: ['author-1:post-1', 'author-2:post-2', 'author-3:post-3'],
-        last_post_score: BASE_TIMESTAMP + 2,
-      };
-      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue(mockNexusPostsKeyStream);
-
       const bookmarksStreamId = PostStreamTypes.TIMELINE_BOOKMARKS_ALL as PostStreamId;
+      await PostStreamModel.create(bookmarksStreamId, ['author-1:post-1', 'author-2:post-2', 'author-3:post-3']);
 
       const result = await PostStreamApplication.getOrFetchStreamSlice({
         streamId: bookmarksStreamId,
@@ -2986,6 +2834,24 @@ describe('PostStreamApplication', () => {
       });
 
       expect(result.nextPageIds).toEqual(['author-1:post-1', 'author-2:post-2', 'author-3:post-3']);
+    });
+
+    it("filters muted authors out of a Tagged-as feed whose only domain tag is 'bookmarks'", async () => {
+      await setupMutedUsers(['author-2'] as Pubky[]);
+      vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue({
+        post_keys: ['author-1:post-1', 'author-2:post-2', 'author-3:post-3'],
+        last_post_score: BASE_TIMESTAMP + 2,
+      });
+
+      const result = await PostStreamApplication.getOrFetchStreamSlice({
+        streamId: taggedAsBookmarksStreamId,
+        limit: 10,
+        streamHead: 0,
+        streamTail: 0,
+        viewerId,
+      });
+
+      expect(result.nextPageIds).toEqual(['author-1:post-1', 'author-3:post-3']);
     });
 
     it('does not filter author profile stream posts from muted authors', async () => {

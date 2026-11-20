@@ -10,8 +10,11 @@ import {
   PASSPORT_POPUP_NAME_PREFIX,
   PASSPORT_POPUP_WIDTH,
 } from '@/config/passport';
-import { AuthController } from '@/controllers/auth/auth';
-import { isAuthApprovalMismatchError, isAuthFlowCanceledError } from '@/libs/error/auth-flow-canceled';
+import {
+  isAuthApprovalCapabilityError,
+  isAuthApprovalMismatchError,
+  isAuthFlowCanceledError,
+} from '@/libs/error/auth-flow-canceled';
 import { isAppError, isWrongEnvironmentHomeserverError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
 import {
@@ -25,6 +28,7 @@ import {
 import type { PassportOutcome } from '@/libs/passport/passport.types';
 import { getShopReauthorizationIdentity } from '@/libs/shop-embed/sign-in';
 import { toast } from '@/molecules/Toaster/toast';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import type {
   PassportAttemptResult,
   PassportFailureReason,
@@ -92,6 +96,7 @@ export function usePassportAuth(options: UsePassportAuthOptions = {}): UsePasspo
   const isMountedRef = useRef(true);
   const activeAttemptRef = useRef<PassportAttempt | null>(null);
   const onAttemptSettledRef = useRef(options.onAttemptSettled);
+  const abandonPreflightRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     onAttemptSettledRef.current = options.onAttemptSettled;
@@ -99,10 +104,11 @@ export function usePassportAuth(options: UsePassportAuthOptions = {}): UsePasspo
 
   useEffect(() => {
     isMountedRef.current = true;
-    // The attempt deliberately survives unmount: session initialization mutates global stores
-    // and must complete even if the page re-renders while the popup is open.
     return () => {
       isMountedRef.current = false;
+      // A newer page can offer Ring immediately. An older click still waiting for its
+      // dependencies must never start a grant there. Existing relay/SDK work keeps its owner.
+      abandonPreflightRef.current?.();
     };
   }, []);
 
@@ -112,6 +118,15 @@ export function usePassportAuth(options: UsePassportAuthOptions = {}): UsePasspo
     if (attempt.phase === 'settled' || !isCurrent(attempt)) return;
     attempt.phase = 'settled';
     attempt.stopAuthorizationTimers();
+    attempt.stopMessageListener();
+    try {
+      if (!attempt.popup.closed) attempt.popup.close();
+    } catch {
+      // Closing a cross-origin popup is best effort.
+    }
+    abandonPreflightRef.current = null;
+    activeAttemptRef.current = null;
+    if (isMountedRef.current) setIsPending(false);
     onAttemptSettledRef.current?.({ attemptId: attempt.id, result });
   };
 
@@ -198,8 +213,19 @@ export function usePassportAuth(options: UsePassportAuthOptions = {}): UsePasspo
     };
 
     try {
+      const entryUrl = window.location.href;
+      abandonPreflightRef.current = () => settle(attempt, 'superseded');
+      const identity = getShopReauthorizationIdentity();
+      const generation = useAuthStore.getState().generation;
+      const [{ AuthController }] = await Promise.all([import('@/controllers/auth/auth'), options.prepare?.()]);
+      if (attempt.phase !== 'authorizing' || !isCurrent(attempt)) return;
+      if (useAuthStore.getState().generation !== generation || window.location.href !== entryUrl) {
+        settle(attempt, 'superseded');
+        return;
+      }
+      abandonPreflightRef.current = null;
       const { authorizationUrl, awaitApproval, cancelAuthFlow } = await AuthController.getPassportAuthUrl({
-        ...getShopReauthorizationIdentity(),
+        ...identity,
         xCallback: buildPassportCallbacks(appOrigin, attempt.id),
       });
 
@@ -235,9 +261,11 @@ export function usePassportAuth(options: UsePassportAuthOptions = {}): UsePasspo
           variant: 'error',
           description: isWrongEnvironment
             ? 'This account is linked to a different homeserver. Use a staging account on this site.'
-            : isAuthApprovalMismatchError(error)
-              ? 'Approve with the account you are signed in with.'
-              : 'Sign in failed. Try again.',
+            : isAuthApprovalCapabilityError(error)
+              ? 'Authorization failed. Approve every requested permission and try again.'
+              : isAuthApprovalMismatchError(error)
+                ? 'Approve with the account you are signed in with.'
+                : 'Sign in failed. Try again.',
         });
         settle(attempt, 'failed');
         return;
@@ -254,18 +282,6 @@ export function usePassportAuth(options: UsePassportAuthOptions = {}): UsePasspo
       // App errors were already logged and captured by their Err.* factory.
       if (!isAppError(error)) Logger.error('Passport authorization failed:', error);
       fail(attempt, 'flow-error');
-    } finally {
-      attempt.stopAuthorizationTimers();
-      attempt.stopMessageListener();
-      try {
-        if (!attempt.popup.closed) attempt.popup.close();
-      } catch {
-        // Closing a cross-origin popup is best effort.
-      }
-      if (isCurrent(attempt)) {
-        activeAttemptRef.current = null;
-        if (isMountedRef.current) setIsPending(false);
-      }
     }
   };
 
@@ -295,6 +311,18 @@ export function usePassportAuth(options: UsePassportAuthOptions = {}): UsePasspo
       toast({ variant: 'error', description: failureToastCopy('popup-blocked') });
       onAttemptSettledRef.current?.({ attemptId, result: 'popup-blocked' });
       return;
+    }
+
+    try {
+      const doc = popup.document;
+      doc.documentElement.lang = 'en';
+      doc.title = 'Opening Passport…';
+      const status = doc.createElement('p');
+      status.setAttribute('role', 'status');
+      status.textContent = doc.title;
+      doc.body.append(status);
+    } catch {
+      // A browser can restrict access to the popup document while still allowing navigation.
     }
 
     const attempt: PassportAttempt = {

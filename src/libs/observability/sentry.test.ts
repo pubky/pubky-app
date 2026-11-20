@@ -302,7 +302,7 @@ describe('captureAppError filtering', () => {
       const error = createCapturedAppError({
         code: ClientErrorCode.NOT_FOUND,
         statusCode: HttpStatusCode.NOT_FOUND,
-        endpoint: `https://nexus.pubky.app/v0/post/${TEST_PUBKY}/003544WKXXGQG/tags?skip_tags=0&limit_tags=3`,
+        endpoint: `https://nexus.pubky.app/v1/post/${TEST_PUBKY}/003544WKXXGQG/tags?skip_tags=0&limit_tags=3`,
       });
 
       captureAppError(error);
@@ -317,7 +317,7 @@ describe('captureAppError filtering', () => {
       const error = createCapturedAppError({
         code: ClientErrorCode.NOT_FOUND,
         statusCode: HttpStatusCode.NOT_FOUND,
-        endpoint: `https://nexus.pubky.app/v0/post/${TEST_PUBKY}/003544WKXXGQG`,
+        endpoint: `https://nexus.pubky.app/v1/post/${TEST_PUBKY}/003544WKXXGQG`,
       });
 
       captureAppError(error);
@@ -332,7 +332,7 @@ describe('captureAppError filtering', () => {
       const error = createCapturedAppError({
         code: ClientErrorCode.BAD_REQUEST,
         statusCode: HttpStatusCode.BAD_REQUEST,
-        endpoint: `https://nexus.pubky.app/v0/post/${TEST_PUBKY}/003544WKXXGQG/tags?skip_tags=-1`,
+        endpoint: `https://nexus.pubky.app/v1/post/${TEST_PUBKY}/003544WKXXGQG/tags?skip_tags=-1`,
       });
 
       captureAppError(error);
@@ -346,7 +346,7 @@ describe('captureAppError filtering', () => {
     const error = createCapturedAppError({
       code: ClientErrorCode.NOT_FOUND,
       statusCode: HttpStatusCode.NOT_FOUND,
-      endpoint: `https://nexus.pubky.app/v0/post/${TEST_PUBKY}/003544WKXXGQG/tags`,
+      endpoint: `https://nexus.pubky.app/v1/post/${TEST_PUBKY}/003544WKXXGQG/tags`,
       service: ErrorService.Homeserver,
     });
 
@@ -357,7 +357,7 @@ describe('captureAppError filtering', () => {
     const error = createCapturedAppError({
       code: ClientErrorCode.NOT_FOUND,
       statusCode: HttpStatusCode.NOT_FOUND,
-      endpoint: `https://nexus.pubky.app/v0/post/${TEST_PUBKY}/003544WKXXGQG/tags`,
+      endpoint: `https://nexus.pubky.app/v1/post/${TEST_PUBKY}/003544WKXXGQG/tags`,
       operation: 'fetchNexusWithExpectedStatus',
     });
 
@@ -439,7 +439,7 @@ describe('expected-error drop rules (pipeline-verified)', () => {
     expect(shouldDropAppErrorFromSentry(error)).toBe(false);
   });
 
-  const nexusHotUrl = 'https://nexus.pubky.app/v0/hot';
+  const nexusHotUrl = 'https://nexus.pubky.app/v1/hot';
   const rateLimitedResponse = () =>
     new Response(null, { status: HttpStatusCode.TOO_MANY_REQUESTS, statusText: 'Too Many Requests' });
 

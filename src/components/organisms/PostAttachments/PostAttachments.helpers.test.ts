@@ -36,6 +36,15 @@ describe('splitAttachmentsByMediaType', () => {
     mockGetFileUrl.mockImplementation(({ fileId, variant }) => `${fileId}/${variant}`);
   });
 
+  it("hands the URL builder each file's URI, which a v1 route takes the filename from", () => {
+    const uri = 'pubky://owner/pub/social/v1/files/HASH.png';
+
+    splitAttachmentsByMediaType([{ ...meta('owner:HASH', 'image/png'), uri }]);
+
+    expect(mockGetFileUrl).toHaveBeenCalledWith({ fileId: 'owner:HASH', uri, variant: FileVariant.MAIN });
+    expect(mockGetFileUrl).toHaveBeenCalledWith({ fileId: 'owner:HASH', uri, variant: FileVariant.FEED });
+  });
+
   it('sets a feed url only for images, not videos', () => {
     const { imagesAndVideos } = splitAttachmentsByMediaType([meta('img', 'image/png'), meta('vid', 'video/mp4')]);
 
