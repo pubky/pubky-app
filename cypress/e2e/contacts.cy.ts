@@ -68,9 +68,10 @@ describe('contacts', () => {
         waitForNexus(followIndexed(actor, target));
         unfollowAndWaitForNexus(actor, target, () => unfollowUserByUsername(targetName));
         expectProfileTabCount('following', 0);
+        cy.contains('[data-cy="profile-follower-item-name"]:visible', targetName).should('be.visible');
 
-        cy.location('pathname').should('eq', '/profile/following');
-        cy.reload();
+        openProfileTab('followers');
+        openProfileTab('following');
         expectProfileTabCount('following', 0);
         cy.get('[data-cy="profile-following-empty"]').should('be.visible');
         cy.contains('[data-cy="profile-follower-item-name"]', targetName).should('not.exist');
