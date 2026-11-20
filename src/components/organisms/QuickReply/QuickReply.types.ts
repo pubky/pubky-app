@@ -4,13 +4,19 @@ import type { AutocompleteUserData } from '@/hooks/useUserDetailsFromIds/useUser
 import type { NexusUserDetails } from '@/services/nexus/nexus.types';
 import type { PostHeaderProps } from '../PostHeader/PostHeader.types';
 
-export interface QuickReplyProps {
-  parentPostId: string;
+/**
+ * What the quick reply answers: a post (`parentPostId`), or an external resource (`parentUri`, its
+ * URI as written: the reply's `parent`).
+ */
+export type QuickReplyTarget =
+  { parentPostId: string; parentUri?: never } | { parentUri: string; parentPostId?: never };
+
+export type QuickReplyProps = QuickReplyTarget & {
   /** Thread connector variant - defaults to LAST for terminal thread positions */
   connectorVariant?: typeof POST_THREAD_CONNECTOR_VARIANTS.LAST | typeof POST_THREAD_CONNECTOR_VARIANTS.REGULAR;
   /** Callback when reply is successfully submitted */
   onReplySubmitted?: (replyId: string) => void;
-}
+};
 
 /** Props shared by the layout-specific QuickReply content subcomponents. */
 export interface QuickReplyContentProps {

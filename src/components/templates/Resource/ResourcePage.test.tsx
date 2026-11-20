@@ -4,11 +4,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MOBILE_FAB_CLEARANCE_CLASS } from '@/config/layoutClasses';
 import { usePinakesCard } from '@/hooks/usePinakesCard/usePinakesCard';
 import type { UsePinakesQueryResult } from '@/hooks/usePinakesQuery/usePinakesQuery.types';
+import { getActionUri } from '@/organisms/ResourceDetails/ResourceDetails.utils';
 import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
 import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { ResourcePage } from './ResourcePage';
 
-const mocks = vi.hoisted(() => ({ PostPageLayout: vi.fn(), fetchCardByUri: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  PostPageLayout: vi.fn(),
+  fetchCardByUri: vi.fn(),
+  repliesUri: undefined as string | null | undefined,
+}));
 
 vi.mock('@/config/pinakes', () => ({ isPinakesConfigured: () => true }));
 vi.mock('@/controllers/pinakes/pinakes', () => ({ PinakesController: { fetchCardByUri: mocks.fetchCardByUri } }));
@@ -56,9 +61,34 @@ vi.mock('@/organisms/ResourceDetails/ResourceDetails', () => ({
     </div>
   ),
 }));
+vi.mock('@/hooks/useResourceReplies/useResourceReplies', () => ({
+  useResourceReplies: (uri: string | null) => {
+    mocks.repliesUri = uri;
+    return { replyIds: uri ? ['replier:1'] : [] };
+  },
+}));
 vi.mock('@/organisms/ResourceDetails/ResourceSidebar', () => ({
-  ResourceSidebar: ({ card }: { card: TPinakesResourceDetail | null | undefined }) =>
-    card ? <div data-testid="resource-sidebar-stub">{card.id}</div> : null,
+  ResourceSidebar: ({
+    card,
+    uri,
+    replyIds,
+    showFeedback,
+  }: {
+    card: TPinakesResourceDetail | null | undefined;
+    uri?: string | null;
+    replyIds?: string[];
+    showFeedback?: boolean;
+  }) =>
+    card || uri ? (
+      <div
+        data-testid="resource-sidebar-stub"
+        data-people={uri ?? ''}
+        data-replies={(replyIds ?? []).join(' ')}
+        data-feedback={String(Boolean(showFeedback))}
+      >
+        {card?.id ?? ''}
+      </div>
+    ) : null,
 }));
 
 const VIDEO: TPinakesResourceDetail = videoFixture;
@@ -81,7 +111,17 @@ describe('ResourcePage', () => {
     expect(within(screen.getByTestId('right-sidebar')).getByTestId('resource-sidebar-stub')).toHaveTextContent(
       VIDEO.id,
     );
-    expect(within(screen.getByTestId('right-drawer')).getByTestId('resource-sidebar-stub')).toBeInTheDocument();
+    const drawer = within(screen.getByTestId('right-drawer')).getByTestId('resource-sidebar-stub');
+    // Participants follow the page's link; the Feedback card only in the right column, as on a post's page.
+    expect(within(screen.getByTestId('right-sidebar')).getByTestId('resource-sidebar-stub')).toHaveAttribute(
+      'data-feedback',
+      'true',
+    );
+    // One read of the thread, on the acted-on link, for the body and the Participants.
+    expect(mocks.repliesUri).toBe(getActionUri(VIDEO, VIDEO.uri));
+    expect(drawer).toHaveAttribute('data-people', getActionUri(VIDEO, VIDEO.uri));
+    expect(drawer).toHaveAttribute('data-replies', 'replier:1');
+    expect(drawer).toHaveAttribute('data-feedback', 'false');
   });
 
   it('shows the sidebar cards after the card below `lg`, not behind the mobile header’s button', () => {
@@ -98,17 +138,30 @@ describe('ResourcePage', () => {
     );
   });
 
-  it.each([
-    ['while the card is read', { data: undefined, isLoading: true, isError: false }],
-    ['when there is no card', { data: null, isLoading: false, isError: false }],
-    ['when the read failed', { data: null, isLoading: false, isError: true }],
-  ])('keeps the right column empty and has no drawer or cards after the card %s', (_, result) => {
-    mockCard.mockReturnValue(result);
+  it('keeps the right column empty and reads no thread while the card is read', () => {
+    mockCard.mockReturnValue({ data: undefined, isLoading: true, isError: false });
     render(<ResourcePage uri={VIDEO.uri} />);
 
     expect(screen.getByTestId('right-sidebar')).toBeEmptyDOMElement();
     expect(mocks.PostPageLayout).toHaveBeenLastCalledWith(expect.objectContaining({ rightDrawerContent: null }));
     expect(screen.queryByTestId('resource-sidebar-inline')).not.toBeInTheDocument();
+    expect(mocks.repliesUri).toBeNull();
+  });
+
+  it.each([
+    ['when there is no card', { data: null, isLoading: false, isError: false }],
+    ['when the read failed', { data: null, isLoading: false, isError: true }],
+  ])('shows only the people sections, on the page’s link, %s', (_, result) => {
+    mockCard.mockReturnValue(result);
+    render(<ResourcePage uri={VIDEO.uri} />);
+
+    const right = within(screen.getByTestId('right-sidebar')).getByTestId('resource-sidebar-stub');
+    expect(right).toHaveTextContent('');
+    expect(right).toHaveAttribute('data-people', VIDEO.uri);
+    // Also below `lg`, where the drawer has no button.
+    expect(
+      within(screen.getByTestId('resource-sidebar-inline')).getByTestId('resource-sidebar-stub'),
+    ).toHaveTextContent('');
     expect(screen.getByTestId('resource-details-stub')).toBeInTheDocument();
   });
 
@@ -139,7 +192,7 @@ describe('ResourcePage', () => {
     render(<ResourcePage uri={VIDEO.uri} />);
 
     const retry = await screen.findByRole('button', { name: 'Try again' });
-    expect(screen.queryByTestId('resource-sidebar-stub')).not.toBeInTheDocument();
+    expect(screen.queryByText(VIDEO.id)).not.toBeInTheDocument();
 
     await act(async () => fireEvent.click(retry));
 

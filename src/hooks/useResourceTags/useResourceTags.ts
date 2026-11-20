@@ -7,7 +7,7 @@ import { canonicalizeTagLabel } from '@/libs/utils/utils';
 import { showTagWriteErrorToast } from '@/molecules/TaggedItem/TaggedItem.utils';
 import { withResourceViewerTag } from '@/pipes/tag/tag.resource';
 import type { NexusTag } from '@/services/nexus/nexus.types';
-import { RESOURCE_TAGS_LIMIT } from '@/services/nexus/resource/resource.constants';
+import { RESOURCE_TAG_REREADS_MS, RESOURCE_TAGS_LIMIT } from '@/services/nexus/resource/resource.constants';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { TResourceTagWriteResult, UseResourceTagsOptions, UseResourceTagsResult } from './useResourceTags.types';
 
@@ -41,6 +41,41 @@ export function useResourceTags(
   const key = uri ? `${uri}\n${viewerId ?? ''}` : '';
   const [settled, setSettled] = useState<TSettled | null>(null);
   const pending = useRef(new Set<string>());
+  const [reread, setReread] = useState<{ key: string; round: number; writtenAt: number } | null>(null);
+
+  // After a write, read the link again once Nexus has had time to index it. The answer reaches this
+  // card, and every other card of the link, through the subscription; the viewer's writes Nexus does
+  // not show yet stay in it until the last read.
+  const currentReread = reread?.key === key && uri ? reread : null;
+  useEffect(() => {
+    if (!currentReread || !uri) return;
+    const { round, writtenAt } = currentReread;
+    const isLast = round === RESOURCE_TAG_REREADS_MS.length - 1;
+    const delay = Math.max(0, writtenAt + RESOURCE_TAG_REREADS_MS[round] - Date.now());
+    let cancelled = false;
+    const next = () => {
+      if (!cancelled && !isLast) setReread({ key, round: round + 1, writtenAt });
+    };
+    const timer = setTimeout(() => {
+      TagController.fetchResourceTags({ uri, viewerId, fresh: true }).then(
+        (tags) => {
+          if (cancelled) return;
+          // A write of this card's in flight keeps its optimistic state; the chain goes on regardless,
+          // so the writes before it still get their last read.
+          if (pending.current.size === 0) {
+            setSettled((state) => (state?.key === key ? { ...state, tags } : state));
+          }
+          if (TagController.hasUnconfirmedResourceTags({ uri, viewerId })) next();
+        },
+        // The service reported the failure through Err.*: the state shown stays, and the next round runs.
+        next,
+      );
+    }, delay);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [currentReread, uri, viewerId, key]);
 
   useEffect(() => {
     if (!uri || !enabled) return;
@@ -110,6 +145,7 @@ export function useResourceTags(
         } else {
           await TagController.commitDeleteResource({ taggerId, uri, label, tagUri });
         }
+        setReread({ key, round: 0, writtenAt: Date.now() });
         return { success: true };
       } catch (error) {
         update(label, taggerId, !isAdded, tagUri);

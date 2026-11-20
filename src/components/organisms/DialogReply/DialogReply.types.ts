@@ -1,6 +1,8 @@
 interface DialogReplyBaseProps {
   open: boolean;
   onOpenChangeAction: (open: boolean) => void;
+  /** Called with the new reply's id once it is written, before the dialog closes. */
+  onReplySubmitted?: (replyId: string) => void;
 }
 
 /**

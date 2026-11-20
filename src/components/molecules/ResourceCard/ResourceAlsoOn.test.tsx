@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { getResourceRoute } from '@/app/routes';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/atoms/DropdownMenu/DropdownMenu';
 import { MENU_VARIANT } from '@/config/ui';
 import articleFixture from '@/services/pinakes/fixtures/by-uri.article.json';
@@ -52,17 +53,19 @@ describe('ResourceAlsoOn', () => {
         .getAllByTestId('resource-also-on-row')
         .map((row) => row.textContent),
     ).toEqual(['TIDAL', 'Apple Music', 'YouTube', 'MusicBrainz', 'Deezer', 'Spotify']);
-    expect(screen.getByRole('menuitem', { name: 'Spotify' })).toHaveAttribute('href', VIDEO.also_on[6].uri);
+    expect(screen.getByRole('menuitem', { name: 'Spotify' })).toHaveAttribute(
+      'href',
+      getResourceRoute(VIDEO.also_on[6].uri),
+    );
   });
 
-  it('links every web entry out in a new tab, with its site’s favicon', () => {
+  it('opens every entry’s page on Pubky in the same tab, with its site’s favicon', () => {
     renderAlsoOn(VIDEO.also_on);
 
     const tidal = screen.getByRole('menuitem', { name: 'TIDAL' });
     expect(tidal.tagName).toBe('A');
-    expect(tidal).toHaveAttribute('href', 'https://tidal.com/track/490851477');
-    expect(tidal).toHaveAttribute('target', '_blank');
-    expect(tidal).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(tidal).toHaveAttribute('href', getResourceRoute('https://tidal.com/track/490851477'));
+    expect(tidal).not.toHaveAttribute('target');
     expect(within(tidal).getByTestId('resource-source-favicon')).toHaveAttribute(
       'src',
       'https://tidal.com/favicon.ico',
@@ -84,7 +87,7 @@ describe('ResourceAlsoOn', () => {
     renderAlsoOn(articleFixture.also_on);
 
     const britannica = screen.getByRole('menuitem', { name: 'Britannica, Found via wikidata' });
-    expect(britannica).toHaveAttribute('href', 'https://www.britannica.com/topic/Bitcoin');
+    expect(britannica).toHaveAttribute('href', getResourceRoute('https://www.britannica.com/topic/Bitcoin'));
     expect(britannica.textContent).toBe('Britannica');
     // Every row was found via Wikidata; the Wikipedias are one row.
     expect(rows()).toHaveLength(3);
@@ -98,18 +101,18 @@ describe('ResourceAlsoOn', () => {
     renderAlsoOn(unreachableFixture.also_on);
 
     const archived = screen.getByRole('menuitem', { name: /^Wayback Machine, Archived .*2018 · found via wayback$/ });
-    expect(archived).toHaveAttribute('href', unreachableFixture.also_on[0].uri);
+    expect(archived).toHaveAttribute('href', getResourceRoute(unreachableFixture.also_on[0].uri));
     expect(archived.textContent).toBe('Wayback Machine');
   });
 
-  it('lists a URI that is not a web link as text with its identifier icon', () => {
+  it('opens the page of a URI that is not a web link too, shown with its identifier icon', () => {
     renderAlsoOn([{ uri: 'isbn:9780140328721' }, { uri: 'javascript:alert(1)', site: 'Script' }]);
 
     const [isbn, script] = rows();
+    expect(isbn).toHaveAttribute('href', getResourceRoute('isbn:9780140328721'));
+    // Never the URI itself: the page shows it as text.
+    expect(script).toHaveAttribute('href', getResourceRoute('javascript:alert(1)'));
     for (const row of [isbn, script]) {
-      expect(row.tagName).not.toBe('A');
-      expect(row.querySelector('a')).toBeNull();
-      expect(row).toHaveAttribute('aria-disabled', 'true');
       expect(row.querySelector('[data-testid="resource-source-favicon"]')).toBeNull();
     }
     expect(isbn).toHaveTextContent('9780140328721');
@@ -117,12 +120,20 @@ describe('ResourceAlsoOn', () => {
     expect(script).toHaveTextContent('Script');
   });
 
+  it('lists a Pubky object as text: it has no external resource page', () => {
+    const uri = 'pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/pubky.app/posts/0034A0X7NJ52G';
+    renderAlsoOn([{ uri, site: 'Pubky' }]);
+
+    const [row] = rows();
+    expect(row.querySelector('a')).toBeNull();
+    expect(row).toHaveAttribute('aria-disabled', 'true');
+  });
+
   it('shows the identifier of a non-web entry named by its service', () => {
     renderAlsoOn(natureArticleFixture.also_on);
 
     const doi = rows()[0];
-    expect(doi).toHaveAttribute('aria-disabled', 'true');
-    expect(doi.querySelector('a')).toBeNull();
+    expect(doi).toHaveAttribute('href', getResourceRoute(natureArticleFixture.also_on[0].uri));
     expect(doi.textContent).toBe('DOI 10.1038/nature12373');
     expect(doi.querySelector('svg')).toHaveClass('lucide-file-text');
   });
@@ -154,8 +165,8 @@ describe('ResourceAlsoOn', () => {
       renderAlsoOn(placeFixture.also_on);
 
       expect(wikipedia()).toHaveAccessibleName('Wikipedia (de), Found via wikidata');
-      expect(wikipedia()).toHaveAttribute('href', 'https://de.wikipedia.org/wiki/Berlin');
-      expect(wikipedia()).toHaveAttribute('target', '_blank');
+      expect(wikipedia()).toHaveAttribute('href', getResourceRoute('https://de.wikipedia.org/wiki/Berlin'));
+      expect(wikipedia()).not.toHaveAttribute('target');
     });
 
     it('unfolds the languages in the menu as radio items named in their own language', () => {
@@ -198,7 +209,7 @@ describe('ResourceAlsoOn', () => {
       expect(screen.queryByRole('group', { name: 'Wikipedia language' })).not.toBeInTheDocument();
       expect(languagesTrigger()).toHaveAttribute('aria-expanded', 'false');
       expect(languagesTrigger()).toHaveFocus();
-      expect(wikipedia()).toHaveAttribute('href', 'https://fr.wikipedia.org/wiki/Berlin');
+      expect(wikipedia()).toHaveAttribute('href', getResourceRoute('https://fr.wikipedia.org/wiki/Berlin'));
       expect(wikipedia()).toHaveAccessibleName('Wikipedia (fr), Found via wikidata');
     });
 
@@ -212,7 +223,7 @@ describe('ResourceAlsoOn', () => {
       fireEvent.keyDown(polish, { key: 'Enter' });
 
       expect(languagesTrigger()).toHaveFocus();
-      expect(wikipedia()).toHaveAttribute('href', 'https://pl.wikipedia.org/wiki/Berlin');
+      expect(wikipedia()).toHaveAttribute('href', getResourceRoute('https://pl.wikipedia.org/wiki/Berlin'));
     });
 
     it('opens the list on the checked language, focused and scrolled into the menu’s view', () => {
@@ -242,7 +253,7 @@ describe('ResourceAlsoOn', () => {
       expect(rows()).toHaveLength(2);
       expect(screen.getByRole('menuitem', { name: /^Wikivoyage / })).toHaveAttribute(
         'href',
-        'https://de.wikivoyage.org/wiki/Berlin',
+        getResourceRoute('https://de.wikivoyage.org/wiki/Berlin'),
       );
       fireEvent.click(screen.getByRole('menuitem', { name: 'Change Wikivoyage language' }));
 
@@ -279,8 +290,8 @@ describe('ResourceAlsoOn', () => {
           .map((row) => row.textContent),
       ).toEqual(['Open Library', 'Amazon', 'Goodreads', 'Internet Archive', 'LibraryThing']);
       const amazon = within(group).getByRole('link', { name: 'Amazon, Found via isbn' });
-      expect(amazon).toHaveAttribute('href', 'https://www.amazon.com/dp/0140328726');
-      expect(amazon).toHaveAttribute('target', '_blank');
+      expect(amazon).toHaveAttribute('href', getResourceRoute('https://www.amazon.com/dp/0140328726'));
+      expect(amazon).not.toHaveAttribute('target');
       expect(within(amazon).getByTestId('resource-source-favicon')).toBeInTheDocument();
 
       fireEvent.click(amazon);
@@ -288,14 +299,20 @@ describe('ResourceAlsoOn', () => {
       expect(closeMenu).toHaveBeenCalledTimes(1);
     });
 
-    it('lists a URI that is not a web link as text', () => {
+    it('opens the page of a URI that is not a web link too', () => {
       renderSheet([{ uri: 'isbn:9780140328721' }]);
 
       const [isbn] = rows();
-      expect(isbn.tagName).not.toBe('A');
-      expect(isbn.querySelector('a')).toBeNull();
-      expect(isbn).not.toHaveAttribute('aria-disabled');
+      expect(isbn).toHaveAttribute('href', getResourceRoute('isbn:9780140328721'));
       expect(isbn).toHaveTextContent('9780140328721');
+    });
+
+    it('lists a Pubky object as plain text', () => {
+      renderSheet([{ uri: 'pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/pubky.app/profile.json' }]);
+
+      const [row] = rows();
+      expect(row.tagName).not.toBe('A');
+      expect(row.querySelector('a')).toBeNull();
     });
 
     it('unfolds the languages by touch as a radio group and picks one without closing the sheet', () => {
@@ -321,7 +338,7 @@ describe('ResourceAlsoOn', () => {
       expect(screen.queryByRole('radiogroup')).not.toBeInTheDocument();
       expect(toggle).toHaveAttribute('aria-expanded', 'false');
       expect(toggle).toHaveFocus();
-      expect(wikipedia()).toHaveAttribute('href', 'https://fr.wikipedia.org/wiki/Berlin');
+      expect(wikipedia()).toHaveAttribute('href', getResourceRoute('https://fr.wikipedia.org/wiki/Berlin'));
       expect(closeMenu).not.toHaveBeenCalled();
     });
 

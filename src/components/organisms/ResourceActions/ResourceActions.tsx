@@ -5,9 +5,11 @@ import { MessageCircle, Tag } from 'lucide-react';
 import { Container } from '@/atoms/Container/Container';
 import type { TMergedTag } from '@/hooks/useOtherLinkTags/useOtherLinkTags.types';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { useResourceCounts } from '@/hooks/useResourceCounts/useResourceCounts';
 import { useResourceTags } from '@/hooks/useResourceTags/useResourceTags';
 import { isExternalParentUri } from '@/libs/post/externalParent';
 import { cn } from '@/libs/utils/utils';
+import { useResourceSurface } from '@/molecules/ResourceCard/ResourceSurfaceContext';
 import { DialogReply } from '@/organisms/DialogReply/DialogReply';
 import { PostActionButton } from '@/organisms/PostActionsBar/PostActionButton';
 import { type ResourceExtraMenuContent, ResourceMoreMenu } from './ResourceMoreMenu';
@@ -26,8 +28,12 @@ interface ResourceActionsProps {
    * resource has none (the button is disabled). Defaults to `uri`.
    */
   postUri?: string | null;
-  /** How many public collections hold the link (Pinakes); absent for a link Pinakes has no card for. */
+  /** How many public collections hold the link (Pinakes), when Nexus does not count them. */
   collectionsCount?: number | null;
+  /** The page thread's reply count (`useResourceReplies`); else Nexus' count read with the tags. */
+  replyCount?: number;
+  /** Called with a reply's id once the Reply dialog wrote it: the page's thread shows it at once. */
+  onReplySubmitted?: (replyId: string) => void;
   /** Names what is tagged ("Tags on this video"): the tag list's name and the Tags button's tooltip. */
   tagsLabel: string;
   /** The link's web address (`getResourceLinks().linkUrl`) for the ⋯ menu; `null` for a non-web URI. */
@@ -50,20 +56,17 @@ interface ResourceActionsProps {
 }
 
 /**
- * What closes an external resource card, in a post or atop its page: the post's own footer. The
- * tags and "+" on the left; on the right, in the post's order and in its buttons: Tags (how many
- * tags, showing all of them and the tag input, a second click shows a few again), Reply (the post's
- * reply dialog: a post whose `parent` is the resource's URI), Post about this (the repost button),
- * Save (bookmark and collections, with the public collections count) and ⋯; a card with a player
- * has "Play on <service>" (`playOn`) on a line above. Like the post's, the tags show only a few until
- * expanded, and from md the buttons keep their one row beside them while the tags wrap. On a phone
- * the buttons go under the tags.
- * The pills use `surface="muted"` (`bg-card` pills) on a card inside a post, and the post's own
- * pills on the page's large card.
+ * What closes an external resource card, in a post or atop its page: the post's own footer. The tags
+ * and "+" on the left; on the right, in the post's order and in its buttons: Tags, Reply (a post
+ * whose `parent` is the resource's URI), Post about this, Save and ⋯; a card with a player has
+ * "Play on <service>" (`playOn`) on a line above. Like the post's, the tags show only a few until
+ * expanded; on a phone the buttons go under the tags. The pills are the post's own on the post
+ * card's surface (the large card, `ResourceSurfaceProvider` `card`: a collection's item, a card in a
+ * quoted post), else `surface="muted"` (`bg-card` pills) on a card inside a post.
  *
- * Only real counts show: the tag labels Nexus returned (`20+` when it returned as many as it is
- * asked for) and the public collections from Pinakes. Nexus counts neither the replies to a link nor
- * the posts that embed it, so Reply and Post about this have no number.
+ * Counts show as a post's do, 0 included: the tag labels Nexus returned (`20+` at the read limit),
+ * the replies and embeds Nexus counts (read with the tags), the public collections, else Pinakes'
+ * count. No number while they are read or when the configured Nexus does not serve that count.
  *
  * On the resource page, the tags on the same thing's other links join the tag list (`otherTagList`).
  *
@@ -81,12 +84,21 @@ export function ResourceActions({
   otherTagList,
   playOn,
   size = 'default',
+  replyCount,
+  onReplySubmitted,
 }: ResourceActionsProps) {
   const { requireAuth } = useRequireAuth();
   // Once read, the tags stay while the card scrolls out of view.
   const [hasBeenOnScreen, setHasBeenOnScreen] = useState(isOnScreen);
   if (isOnScreen && !hasBeenOnScreen) setHasBeenOnScreen(true);
   const resourceTags = useResourceTags(uri, { enabled: hasBeenOnScreen });
+  // Read with the tags (one answer): no request of its own.
+  const counts = useResourceCounts(uri);
+  // 0 for a link Nexus has no record of; no number while read or for a count Nexus does not serve.
+  const countOf = (key: 'replies' | 'embeds') => (counts === null ? 0 : counts?.[key]);
+  const replies = replyCount ?? countOf('replies');
+  const embeds = countOf('embeds');
+  const collections = counts?.collections ?? collectionsCount;
   const [isTagsExpanded, setIsTagsExpanded] = useState(false);
   const [isAddingTag, setIsAddingTag] = useState(false);
   const [isReplying, setIsReplying] = useState(false);
@@ -95,7 +107,8 @@ export function ResourceActions({
   const tagCountText = tagCount === undefined ? undefined : `${tagCount}${resourceTags.isAtReadLimit ? '+' : ''}`;
   const tagsButtonLabel = tagCountText === undefined ? tagsLabel : `${tagsLabel} (${tagCountText})`;
   const isLarge = size === 'large';
-  const surface = isLarge ? 'default' : 'muted';
+  const onCard = useResourceSurface() === 'card';
+  const surface = isLarge || onCard ? 'default' : 'muted';
   // A reply's `parent` must be a URI the app writes (a web link or a known identifier scheme).
   const canReply = isExternalParentUri(uri);
   const replyLabel = canReply ? REPLY_LABEL : CANNOT_REPLY_LABEL;
@@ -172,14 +185,19 @@ export function ResourceActions({
           <PostActionButton
             icon={MessageCircle}
             surface={surface}
-            ariaLabel={replyLabel}
+            count={canReply ? replies : undefined}
+            ariaLabel={
+              canReply && replies !== undefined
+                ? `${replyLabel} (${replies} ${replies === 1 ? 'reply' : 'replies'})`
+                : replyLabel
+            }
             title={replyLabel}
             disabled={!canReply}
             onClick={() => requireAuth(() => setIsReplying(true))}
             data-testid="resource-reply-button"
           />
-          <ResourcePostButton uri={postUri} surface={surface} />
-          <ResourceSavePicker uri={uri} collectionsCount={collectionsCount} surface={surface} />
+          <ResourcePostButton uri={postUri} count={embeds} surface={surface} />
+          <ResourceSavePicker uri={uri} collectionsCount={collections} surface={surface} />
           <ResourceMoreMenu
             uri={uri}
             linkUrl={linkUrl}
@@ -189,7 +207,14 @@ export function ResourceActions({
           />
         </Container>
       </Container>
-      {isReplying && <DialogReply resourceUri={uri} open={isReplying} onOpenChangeAction={setIsReplying} />}
+      {isReplying && (
+        <DialogReply
+          resourceUri={uri}
+          open={isReplying}
+          onOpenChangeAction={setIsReplying}
+          onReplySubmitted={onReplySubmitted}
+        />
+      )}
     </Container>
   );
 }

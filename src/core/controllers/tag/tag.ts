@@ -56,10 +56,16 @@ export class TagController {
    *
    * @param params.uri - The link exactly as written
    * @param params.viewerId - The viewer, so their own tags are marked; null when signed out
+   * @param params.fresh - Ask Nexus again even when a fresh answer is cached (after a tag write)
    * @returns The link's tags, `[]` when nobody tagged it
    */
-  static fetchResourceTags({ uri, viewerId }: TFetchResourceTagsParams) {
-    return TagApplication.fetchResourceTags({ uri, viewerId });
+  static fetchResourceTags({ uri, viewerId, fresh }: TFetchResourceTagsParams & { fresh?: boolean }) {
+    return TagApplication.fetchResourceTags({ uri, viewerId, ...(fresh ? { fresh } : {}) });
+  }
+
+  /** Whether a tag write of the viewer's on the link is still missing from Nexus' answers. */
+  static hasUnconfirmedResourceTags({ uri, viewerId }: TFetchResourceTagsParams) {
+    return TagApplication.hasUnconfirmedResourceTags({ uri, viewerId });
   }
 
   /**
@@ -71,6 +77,14 @@ export class TagController {
    */
   static subscribeResourceTags({ uri, viewerId }: TFetchResourceTagsParams, listener: (tags: NexusTag[]) => void) {
     return TagApplication.subscribeResourceTags({ uri, viewerId }, listener);
+  }
+
+  /**
+   * The tags on an external resource another reader of the link already brought in; nothing is
+   * fetched. `undefined` when the link was not read for this viewer.
+   */
+  static getCachedResourceTags({ uri, viewerId }: TFetchResourceTagsParams) {
+    return TagApplication.getCachedResourceTags({ uri, viewerId });
   }
 
   /**
@@ -96,13 +110,17 @@ export class TagController {
    * Remove the viewer's tag from an external resource. The file is the one Nexus reports
    * (`tag_uri`, which may live in another app's folder) when it is the viewer's own; otherwise the
    * tag this app writes, whose id hashes the link and the label, so building it again names it.
+   * When Nexus reports another file than the one this app writes for the link as written, both go:
+   * one person may hold a file per spelling Nexus folds into one resource, and Nexus names one.
    */
   static async commitDeleteResource({ taggerId, uri, label, tagUri }: TDeleteResourceTagParams) {
     const built = TagNormalizer.to(uri, label, taggerId);
+    const reported = TagNormalizer.toOwnTagUri(tagUri, taggerId);
 
     await TagApplication.commitDeleteResource(
       {
-        tagUri: TagNormalizer.toOwnTagUri(tagUri, taggerId) ?? built.url,
+        tagUri: reported ?? built.url,
+        ...(reported && reported !== built.url ? { alsoTagUri: built.url } : {}),
         isCurrent: captureViewerSession(),
         canWrite: captureSessionWriteAccess(),
       },

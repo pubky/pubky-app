@@ -21,6 +21,26 @@ describe('BookmarkApplication, external resources', () => {
     vi.spyOn(LocalBookmarkService, 'persist').mockResolvedValue(undefined);
   });
 
+  it('lists the bookmarked links from the listing, reading only the overflow form for its link', async () => {
+    const long = `https://example.com/${'a'.repeat(300)}`;
+    const overflow = buildBookmark(fakeOwner(1), long);
+    const post = buildBookmark(fakeOwner(1), `pubky://${fakeOwner(2)}/pub/social/v1/posts/0035V9A20WSE4`);
+    vi.spyOn(HomeserverService, 'listAll').mockResolvedValue([BUILT.url, post.url, overflow.url, BUILT.url]);
+    const getBytes = vi.spyOn(HomeserverService, 'getBytes').mockResolvedValue(overflow.body);
+
+    await expect(BookmarkApplication.fetchResourceBookmarks(fakeOwner(1))).resolves.toEqual([URI, long]);
+    expect(getBytes).toHaveBeenCalledTimes(1);
+    expect(getBytes).toHaveBeenCalledWith(overflow.url);
+  });
+
+  it('leaves out an overflow bookmark whose read fails', async () => {
+    const overflow = buildBookmark(fakeOwner(1), `https://example.com/${'b'.repeat(300)}`);
+    vi.spyOn(HomeserverService, 'listAll').mockResolvedValue([overflow.url, BUILT.url]);
+    vi.spyOn(HomeserverService, 'getBytes').mockRejectedValue(new Error('offline'));
+
+    await expect(BookmarkApplication.fetchResourceBookmarks(fakeOwner(1))).resolves.toEqual([URI]);
+  });
+
   it('reads the state from the homeserver file', async () => {
     const exists = vi.spyOn(HomeserverService, 'exists').mockResolvedValue(false);
 

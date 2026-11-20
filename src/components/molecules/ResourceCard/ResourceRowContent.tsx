@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { ResourceSourceIcon } from './ResourceSourceIcon';
 
 interface ResourceRowContentProps {
@@ -6,13 +7,15 @@ interface ResourceRowContentProps {
   name: string;
   /** A second line under the name, or `null` for none. */
   note: string | null;
+  /** A last line under the name and note (the counts of an Also on row on the resource page). */
+  counts?: ReactNode;
 }
 
 /**
  * A row of the resource page's lists, styled as a compact participant (`UserListItem`): the icon in
- * an avatar-sized circle, the name in bold, the note in small capitals.
+ * an avatar-sized circle, the name in bold, the note in small capitals, then any counts.
  */
-export function ResourceRowContent({ uri, name, note }: ResourceRowContentProps) {
+export function ResourceRowContent({ uri, name, note, counts }: ResourceRowContentProps) {
   return (
     <>
       <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted">
@@ -29,6 +32,7 @@ export function ResourceRowContent({ uri, name, note }: ResourceRowContentProps)
             </span>
           </>
         )}
+        {counts && <> {counts}</>}
       </span>
     </>
   );

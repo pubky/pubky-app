@@ -4,6 +4,8 @@ import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { usePostReplyRepostDialogs } from '@/hooks/usePostReplyRepostDialogs/usePostReplyRepostDialogs';
 import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
 import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
+import { ResourceSurfaceProvider, useResourceSurface } from '@/molecules/ResourceCard/ResourceSurfaceContext';
+import { PostContentBase } from '@/organisms/PostContentBase/PostContentBase';
 import { PostPreviewCard } from './PostPreviewCard';
 
 // Mock hooks
@@ -142,6 +144,7 @@ vi.mock('@/organisms/PostInlineTagsActions/PostInlineTagsActions', () => ({
       data-surface={surface}
       data-class-name={className}
       data-actions-class-name={actionsClassName}
+      data-resource-surface={useResourceSurface()}
     >
       <button type="button" data-testid="footer-reply" onClick={onReplyClick}>
         Reply
@@ -233,6 +236,11 @@ const collectionPost = {
   postDetails: { id: COLLECTION_COMPOSITE_ID, kind: 'collection' } as never,
   isLoading: false,
 };
+
+/** Reads the resource surface where it renders (a resource card there would stand on it). */
+const ResourceSurfaceProbe = ({ testId }: { testId: string }) => (
+  <span data-testid={testId} data-resource-surface={useResourceSurface()} />
+);
 
 describe('PostPreviewCard', () => {
   beforeEach(() => {
@@ -400,6 +408,25 @@ describe('PostPreviewCard', () => {
 
       expect(mockNavigateToPost).not.toHaveBeenCalled();
       expect(onOuterPostClick).not.toHaveBeenCalled();
+    });
+
+    it('opens its footer and dialogs on the default resource surface, its content stays on the caller’s', () => {
+      vi.mocked(PostContentBase).mockImplementationOnce(() => <ResourceSurfaceProbe testId="content-surface" />);
+      vi.mocked(usePostReplyRepostDialogs).mockReturnValueOnce({
+        openReplyDialog: mockOpenReplyDialog,
+        openRepostDialog: mockOpenRepostDialog,
+        dialogs: <ResourceSurfaceProbe testId="dialogs-surface" />,
+      });
+
+      render(
+        <ResourceSurfaceProvider surface="card">
+          <PostPreviewCard postId="test-post-123" />
+        </ResourceSurfaceProvider>,
+      );
+
+      expect(screen.getByTestId('content-surface')).toHaveAttribute('data-resource-surface', 'card');
+      expect(screen.getByTestId('post-inline-tags-actions')).toHaveAttribute('data-resource-surface', 'embed');
+      expect(screen.getByTestId('dialogs-surface')).toHaveAttribute('data-resource-surface', 'embed');
     });
 
     it('shows no footer and no dialogs when the post around it already acts on this post', () => {

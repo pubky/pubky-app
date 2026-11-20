@@ -16,7 +16,7 @@ import { cn } from '@/libs/utils/utils';
 import type { TPinakesAlsoOn } from '@/services/pinakes/pinakes.types';
 import { groupAlsoOn } from './ResourceAlsoOn.utils';
 import { ResourceAlsoOnLanguages } from './ResourceAlsoOnLanguages';
-import { getAlsoOnIdentifier, getAlsoOnName, getAlsoOnNote, getHttpUrl } from './ResourceCard.utils';
+import { getAlsoOnIdentifier, getAlsoOnName, getAlsoOnNote, getAlsoOnRoute, getHttpUrl } from './ResourceCard.utils';
 import { ResourceSourceIcon } from './ResourceSourceIcon';
 
 const LABEL_CLASS_NAME = 'text-xs font-medium tracking-wide text-muted-foreground uppercase';
@@ -36,7 +36,8 @@ interface ResourceAlsoOnProps {
 /**
  * The last section of a resource card's ⋯ menu: a separator, an "Also on" label, then one row per
  * service in the post menu's style; a service in several languages is one row with a language
- * switcher (`ResourceAlsoOnLanguages`). A row's note is in its accessible name only.
+ * switcher (`ResourceAlsoOnLanguages`). A row opens that link's page on Pubky, not the service; a
+ * Pubky object is listed as text. A row's note is in its accessible name only.
  */
 export function ResourceAlsoOn({ alsoOn, variant, closeMenu }: ResourceAlsoOnProps) {
   const labelId = useId();
@@ -93,12 +94,13 @@ interface AlsoOnRowProps {
 }
 
 function AlsoOnRow({ entry, variant, onFollow }: AlsoOnRowProps) {
-  const href = getHttpUrl(entry.uri);
+  const isWebLink = getHttpUrl(entry.uri) !== null;
+  const href = getAlsoOnRoute(entry.uri);
   const name = getAlsoOnName(entry);
-  const note = href ? getAlsoOnNote(entry) : null;
+  const note = isWebLink ? getAlsoOnNote(entry) : null;
   // The note follows the visible name, so the row is still found by what it shows.
   const label = note ? `${name}, ${note}` : undefined;
-  // A non-web URI (`isbn:`, `doi:`) has nowhere to open: its identifier follows the name.
+  // A non-web URI (`isbn:`, `pubky://`) is told by its identifier, after the name.
   const identifier = getAlsoOnIdentifier(entry);
   const content: ReactNode = (
     <>

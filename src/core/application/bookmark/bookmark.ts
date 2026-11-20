@@ -189,11 +189,60 @@ export class BookmarkApplication {
   }
 
   /**
+   * The external resources (links that are no Pubky object) the user bookmarked, read from the
+   * homeserver listing of their private bookmarks. They have no local row (see
+   * `fetchResourceBookmarked`); the listing spells each target, and a file in the overflow form is
+   * read for it. A file whose read fails is left out.
+   *
+   * @returns The bookmarked links as written, each once, in the listing's order
+   */
+  static async fetchResourceBookmarks(pubky: Pubky): Promise<string[]> {
+    const baseDirectory = `${listPrefix(pubky, 'private')}bookmarks/`;
+    // Bounded like `fetchBookmarks`: a homeserver read that never answers fails the read, not the surface waiting.
+    const urls = await awaitBounded(HomeserverService.listAll({ baseDirectory }), {
+      operation: 'fetchResourceBookmarks',
+      context: { baseDirectory },
+    });
+    const targets: (string | null)[] = [];
+    const overflow: string[] = [];
+    for (const url of urls) {
+      const target = BookmarkNormalizer.resourceOfListing(url);
+      if (target === undefined) continue;
+      if (target === null) overflow.push(url);
+      targets.push(target);
+    }
+    const stored = new Map<string, string | undefined>();
+    for (let index = 0; index < overflow.length; index += this.FETCH_BOOKMARKS_BATCH_SIZE) {
+      const batch = overflow.slice(index, index + this.FETCH_BOOKMARKS_BATCH_SIZE);
+      // Each GET bounded on its own: a file whose read stalls is left out like one whose read fails.
+      const results = await Promise.allSettled(
+        batch.map(async (url) =>
+          BookmarkNormalizer.resourceOfStored(
+            url,
+            await awaitBounded(HomeserverService.getBytes(url), {
+              operation: 'fetchResourceBookmarks',
+              context: { url },
+            }),
+          ),
+        ),
+      );
+      results.forEach((result, batchIndex) => {
+        if (result.status === 'fulfilled') stored.set(batch[batchIndex], result.value);
+        else Logger.warn('Skipping a bookmark whose target could not be read', { error: result.reason });
+      });
+    }
+    let overflowIndex = 0;
+    const uris = targets.map((target) => (target === null ? stored.get(overflow[overflowIndex++]) : target));
+    return [...new Set(uris.filter((uri): uri is string => uri !== undefined))];
+  }
+
+  /**
    * Replaces the local bookmarks with the homeserver's: LISTs the private bookmarks directory,
    * reads the bookmark time of every file not already stored locally (the listing carries none,
    * and the bookmarks feed is ordered by it), then reconciles the `bookmarks` table and the
-   * bookmarks stream in one transaction. A bookmark whose read fails is kept as made now. Files
-   * that bookmark no post (a web page, a profile, a post version) are skipped with a warning.
+   * bookmarks stream in one transaction. A bookmark whose read fails is kept as made now.
+   * Bookmarked links are `fetchResourceBookmarks`' and skipped quietly; other files that bookmark
+   * no post (a profile, a post version) are skipped with a warning.
    * The whole run holds `bookmarkSyncLock` `exclusive`; the wait for the LIST and for each GET batch is
    * bounded by `HOMESERVER_SYNC_READ_TIMEOUT_MS` (`awaitBounded`), after which the run fails like a failed LIST.
    *
@@ -215,7 +264,10 @@ export class BookmarkApplication {
 
     const listings = urls.flatMap((url) => {
       const listing = BookmarkNormalizer.fromListing(url);
-      if (!listing) Logger.warn('Skipping a file in the bookmarks directory that bookmarks no post', { url });
+      // A bookmarked link (external resource) is listed by `fetchResourceBookmarks`, not here.
+      if (!listing && BookmarkNormalizer.resourceOfListing(url) === undefined) {
+        Logger.warn('Skipping a file in the bookmarks directory that bookmarks no post', { url });
+      }
       return listing ? [listing] : [];
     });
 

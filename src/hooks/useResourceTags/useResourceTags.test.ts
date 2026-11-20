@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TagController } from '@/controllers/tag/tag';
 import { showTagWriteErrorToast } from '@/molecules/TaggedItem/TaggedItem.utils';
 import type { NexusTag } from '@/services/nexus/nexus.types';
-import { RESOURCE_TAGS_LIMIT } from '@/services/nexus/resource/resource.constants';
+import { RESOURCE_TAG_REREADS_MS, RESOURCE_TAGS_LIMIT } from '@/services/nexus/resource/resource.constants';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useResourceTags } from './useResourceTags';
 
@@ -20,6 +20,7 @@ vi.mock('@/controllers/tag/tag', () => ({
     subscribeResourceTags: vi.fn(),
     commitCreateResource: vi.fn(),
     commitDeleteResource: vi.fn(),
+    hasUnconfirmedResourceTags: vi.fn(),
   },
 }));
 vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
@@ -47,6 +48,7 @@ describe('useResourceTags', () => {
     });
     vi.mocked(TagController.commitCreateResource).mockResolvedValue({ label: 'travel', tagUri: 'pubky://new' });
     vi.mocked(TagController.commitDeleteResource).mockResolvedValue(undefined);
+    vi.mocked(TagController.hasUnconfirmedResourceTags).mockReturnValue(false);
   });
 
   it('reads the link’s tags for the viewer', async () => {
@@ -250,5 +252,106 @@ describe('useResourceTags', () => {
     });
     expect(TagController.commitCreateResource).not.toHaveBeenCalled();
     expect(result.current.tags).toEqual(TAGS);
+  });
+
+  it('reads again while Nexus does not show the write, and shows Nexus’ answer after the last read', async () => {
+    const { result } = renderHook(() => useResourceTags(URI));
+    await waitFor(() => expect(result.current.tags).toEqual(TAGS));
+    vi.useFakeTimers();
+    try {
+      await act(async () => {
+        await result.current.addTag('travel');
+      });
+      expect(result.current.tags.map((tag) => tag.label)).toContain('travel');
+      expect(TagController.fetchResourceTags).toHaveBeenCalledTimes(1);
+
+      // Not indexed at the first read: the shared answer keeps the write (the service merges it).
+      const kept = [
+        ...TAGS,
+        { label: 'travel', taggers: [VIEWER], taggers_count: 1, relationship: true, tag_uri: 'x' },
+      ];
+      vi.mocked(TagController.hasUnconfirmedResourceTags).mockReturnValue(true);
+      vi.mocked(TagController.fetchResourceTags).mockResolvedValueOnce(kept);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(RESOURCE_TAG_REREADS_MS[0]);
+      });
+      expect(TagController.fetchResourceTags).toHaveBeenLastCalledWith({ uri: URI, viewerId: VIEWER, fresh: true });
+      expect(result.current.tags.map((tag) => tag.label)).toEqual(['berlin', 'city', 'travel']);
+
+      // Nor at the last: the service has dropped the write by then, and Nexus' answer is shown as it is.
+      vi.mocked(TagController.fetchResourceTags).mockResolvedValueOnce(TAGS);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(RESOURCE_TAG_REREADS_MS[1] - RESOURCE_TAG_REREADS_MS[0]);
+      });
+      expect(TagController.fetchResourceTags).toHaveBeenCalledTimes(3);
+      expect(TagController.fetchResourceTags).toHaveBeenLastCalledWith({ uri: URI, viewerId: VIEWER, fresh: true });
+      expect(result.current.tags.map((tag) => tag.label)).toEqual(['berlin', 'city']);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('stops reading again once Nexus shows the write', async () => {
+    const { result } = renderHook(() => useResourceTags(URI));
+    await waitFor(() => expect(result.current.tags).toEqual(TAGS));
+    vi.useFakeTimers();
+    try {
+      await act(async () => {
+        await result.current.addTag('travel');
+      });
+      const indexed = [
+        ...TAGS,
+        { label: 'travel', taggers: [VIEWER], taggers_count: 1, relationship: true, tag_uri: 'pubky://new' },
+      ];
+      vi.mocked(TagController.fetchResourceTags).mockResolvedValue(indexed);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(RESOURCE_TAG_REREADS_MS[1]);
+      });
+
+      expect(TagController.fetchResourceTags).toHaveBeenCalledTimes(2);
+      expect(result.current.tags).toEqual(indexed);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('still gives a write its last read when a second write is in flight at a re-read and fails', async () => {
+    const { result } = renderHook(() => useResourceTags(URI));
+    await waitFor(() => expect(result.current.tags).toEqual(TAGS));
+    vi.useFakeTimers();
+    try {
+      await act(async () => {
+        await result.current.addTag('travel');
+      });
+      vi.mocked(TagController.hasUnconfirmedResourceTags).mockReturnValue(true);
+      let failSecond: (error: Error) => void = () => {};
+      vi.mocked(TagController.commitCreateResource).mockReturnValueOnce(
+        new Promise((_resolve, reject) => {
+          failSecond = reject;
+        }),
+      );
+      let second: Promise<unknown> = Promise.resolve();
+      act(() => {
+        second = result.current.addTag('food');
+      });
+
+      // The first re-read comes back while the second write is in flight.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(RESOURCE_TAG_REREADS_MS[0]);
+      });
+      expect(TagController.fetchResourceTags).toHaveBeenCalledTimes(2);
+      await act(async () => {
+        failSecond(new Error('refused'));
+        await second;
+      });
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(RESOURCE_TAG_REREADS_MS[1] - RESOURCE_TAG_REREADS_MS[0]);
+      });
+      // The last read still runs.
+      expect(TagController.fetchResourceTags).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

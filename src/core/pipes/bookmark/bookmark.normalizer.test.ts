@@ -88,6 +88,30 @@ describe('BookmarkNormalizer', () => {
     });
   });
 
+  describe('resourceOfListing / resourceOfStored', () => {
+    it('reads a bookmarked link from its filename', () => {
+      const { url } = buildBookmark(owner, 'https://www.openstreetmap.org/node/240109189');
+
+      expect(BookmarkNormalizer.resourceOfListing(url)).toBe('https://www.openstreetmap.org/node/240109189');
+    });
+
+    it('needs the stored object for the overflow form, and reads the link from it', () => {
+      const long = `https://example.com/${'a'.repeat(300)}`;
+      const { url, body } = buildBookmark(owner, long);
+
+      expect(BookmarkNormalizer.resourceOfListing(url)).toBeNull();
+      expect(BookmarkNormalizer.resourceOfStored(url, body)).toBe(long);
+    });
+
+    it.each([
+      ['a post', () => BookmarkNormalizer.to(post, owner).url],
+      ['a profile', () => buildBookmark(owner, buildUri(author, 'user')).url],
+      ['another kind of file', () => buildUri(owner, 'mute', author)],
+    ])('names no link for a file that bookmarks %s', (_, url) => {
+      expect(BookmarkNormalizer.resourceOfListing(url())).toBeUndefined();
+    });
+  });
+
   describe('fromStored', () => {
     it('reads the post and the bookmark time in milliseconds', () => {
       const { url, body } = BookmarkNormalizer.to(post, owner);

@@ -1,8 +1,12 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRepostInfo } from '@/hooks/useRepostInfo/useRepostInfo';
+import { PostPreviewCard } from '@/molecules/PostPreviewCard/PostPreviewCard';
+import { ResourceCardFrame } from '@/molecules/ResourceCard/ResourceCardFrame';
+import { ResourceCardSkeleton } from '@/molecules/ResourceCardSkeleton/ResourceCardSkeleton';
+import { PostContentBase } from '../PostContentBase/PostContentBase';
 import { PostContent } from './PostContent';
 
 // Mock hooks used by PostContent
@@ -157,6 +161,52 @@ describe('PostContent', () => {
     expect(screen.getByTestId('post-content-base')).toHaveAttribute('data-post-id', 'plain-repost-123');
     // PostPreviewCard should also be rendered for reposts
     expect(screen.getByTestId('post-preview-card')).toBeInTheDocument();
+  });
+
+  it('stands a resource inside the repost preview on the post card’s surface, one in the post itself on the embed surface', () => {
+    mockUseRepostInfo.mockReturnValue({
+      isRepost: true,
+      repostAuthorId: 'author',
+      isReply: false,
+      isCurrentUserRepost: false,
+      originalPostId: 'orig-post',
+      embedUrl: null,
+      isLoading: false,
+      hasError: false,
+    });
+    const resource = () => (
+      <>
+        <ResourceCardFrame clickThroughUrl={null}>Resource</ResourceCardFrame>
+        <ResourceCardSkeleton withActions />
+      </>
+    );
+    vi.mocked(PostContentBase).mockImplementationOnce(() => <div data-testid="post-content-base">{resource()}</div>);
+    vi.mocked(PostPreviewCard).mockImplementationOnce(({ className }) => (
+      <div data-testid="post-preview-card" className={className}>
+        {resource()}
+      </div>
+    ));
+
+    render(<PostContent postId="quote-123" />);
+
+    const quote = within(screen.getByTestId('post-preview-card'));
+    expect(screen.getByTestId('post-preview-card')).toHaveClass('bg-embed');
+    for (const frame of [quote.getByRole('article'), quote.getByTestId('resource-card-skeleton')]) {
+      expect(frame).toHaveClass('bg-card', 'text-card-foreground', 'shadow-sm');
+      expect(frame).not.toHaveClass('bg-embed');
+    }
+    for (const pill of Array.from(quote.getByTestId('resource-card-skeleton-actions').lastElementChild!.children)) {
+      expect(pill).not.toHaveClass('bg-card');
+    }
+
+    const post = within(screen.getByTestId('post-content-base'));
+    for (const frame of [post.getByRole('article'), post.getByTestId('resource-card-skeleton')]) {
+      expect(frame).toHaveClass('bg-embed');
+      expect(frame).not.toHaveClass('bg-card');
+    }
+    for (const pill of Array.from(post.getByTestId('resource-card-skeleton-actions').lastElementChild!.children)) {
+      expect(pill).toHaveClass('bg-card');
+    }
   });
 
   it('gives a quote’s preview its own tags and actions: the quote’s footer acts on the quote', () => {

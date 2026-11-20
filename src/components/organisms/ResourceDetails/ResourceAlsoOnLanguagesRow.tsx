@@ -1,6 +1,8 @@
 'use client';
 
+import { getResourceRoute } from '@/app/routes';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/atoms/Select/Select';
+import { useResourceRowCounts } from '@/hooks/useResourceRowCounts/useResourceRowCounts';
 import {
   getAlsoOnEditionNote,
   getLanguageName,
@@ -21,20 +23,25 @@ interface ResourceAlsoOnLanguagesRowProps {
 }
 
 /**
- * One service in several languages: a row linking to the edition in the viewer's language (else
- * English, else the first), with a `Select` of the languages that changes where the row links.
+ * One service in several languages: a row opening the Pubky page of the edition in the viewer's
+ * language (else English, else the first), with a `Select` of the languages that changes where the
+ * row and its ↗ link.
  */
 export function ResourceAlsoOnLanguagesRow({ name, editions, testId }: ResourceAlsoOnLanguagesRowProps) {
   const { edition, setLang } = useAlsoOnEdition(editions);
+  // The chosen edition's counts, as its row opens it.
+  const counts = useResourceRowCounts(edition.entry.uri);
 
   return (
     <ResourceListRow
       uri={edition.entry.uri}
-      // `groupAlsoOn` groups web links only: `getHttpUrl` keeps any other URI from becoming a link.
-      href={getHttpUrl(edition.entry.uri)}
+      // The chosen edition's page on Pubky, as every Also on row opens.
+      href={getResourceRoute(edition.entry.uri)}
+      externalHref={getHttpUrl(edition.entry.uri)}
       name={name}
       note={getAlsoOnEditionNote(edition)}
       source={getAlsoOnSource(edition.entry)}
+      counts={counts}
       testId={testId}
       trailing={
         <Select value={edition.lang} onValueChange={setLang}>

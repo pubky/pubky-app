@@ -11,6 +11,7 @@ import { CollectionHero } from '@/organisms/Collections/CollectionHero/Collectio
 import { CollectionHiddenItemsNotice } from '@/organisms/Collections/CollectionHiddenItemsNotice/CollectionHiddenItemsNotice';
 import { CollectionItemsEmpty } from '@/organisms/Collections/CollectionItemsEmpty/CollectionItemsEmpty';
 import { CollectionReorderGrid } from '@/organisms/Collections/CollectionReorderGrid/CollectionReorderGrid';
+import { CollectionResourceItems } from '@/organisms/Collections/CollectionResourceItems/CollectionResourceItems';
 import { DialogAddContent } from '@/organisms/Collections/DialogAddContent/DialogAddContent';
 import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutContext';
 import { TimelineFeed } from '@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed';
@@ -107,6 +108,9 @@ export function CollectionItems({ authorPubky, postId, postDetails, pullToRefres
   }
 
   const isConfirmedEmpty = postDetails != null && (collection?.items?.length ?? 0) === 0;
+  // Nexus' collection stream lists the posts only: the external resources come from the envelope.
+  const resourceUris = (collection?.items ?? []).filter((uri) => !uri.startsWith('pubky:'));
+  const resourceItems = <CollectionResourceItems uris={resourceUris} layout={viewerLayout} />;
   const emptyState = <CollectionItemsEmpty />;
   const isListLayout = viewerLayout === COLLECTION_LAYOUT.LIST;
   const isVisualLayout = viewerLayout === COLLECTION_LAYOUT.VISUAL;
@@ -125,13 +129,20 @@ export function CollectionItems({ authorPubky, postId, postDetails, pullToRefres
     );
   }
 
+  // A collection of external resources only has no post to show, which is not empty: its feed shows
+  // nothing for no posts (not even the feed's own "No posts found").
+  const hasOnlyResources = resourceUris.length > 0 && resourceUris.length === (collection?.items?.length ?? 0);
+  const feedEmptyState = hasOnlyResources ? <></> : emptyState;
+
   return (
     <TimelineFeed
       variant={TIMELINE_FEED_VARIANT.COLLECTION}
       requestedLayout={requestedLayout}
-      emptyState={emptyState}
+      emptyState={feedEmptyState}
       pullToRefreshContainerRef={pullToRefreshContainerRef}
-      visualHiddenItemsNotice={<CollectionHiddenItemsNotice />}
+      // With external resources, Visual hides them and `CollectionResourceItems` shows the notice: one
+      // notice, not a second one for the hidden posts.
+      visualHiddenItemsNotice={resourceUris.length > 0 ? undefined : <CollectionHiddenItemsNotice />}
       trailingSlot={
         isOwn ? (
           <DialogAddContent
@@ -142,7 +153,10 @@ export function CollectionItems({ authorPubky, postId, postDetails, pullToRefres
         ) : undefined
       }
     >
-      <Container overrideDefaults>{hero}</Container>
+      <Container overrideDefaults className="flex flex-col gap-6">
+        {hero}
+        {resourceItems}
+      </Container>
     </TimelineFeed>
   );
 }

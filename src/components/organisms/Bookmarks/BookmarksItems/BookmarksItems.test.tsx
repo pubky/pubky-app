@@ -1,7 +1,15 @@
 import { render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BookmarksItems } from './BookmarksItems';
+
+const mocks = vi.hoisted(() => ({ links: undefined as string[] | undefined }));
+
+vi.mock('@/hooks/useResourceBookmarks/useResourceBookmarks', () => ({ useResourceBookmarks: () => mocks.links }));
+vi.mock('@/organisms/Collections/CollectionResourceItems/CollectionResourceItems', () => ({
+  CollectionResourceItems: ({ uris }: { uris: string[] }) =>
+    uris.length > 0 ? <div data-testid="resource-items-stub" data-uris={uris.join(' ')} /> : null,
+}));
 
 vi.mock('@/organisms/Collections/DialogAddContent/DialogAddContent', () => ({
   DialogAddContent: ({ dataCy, triggerVariant }: { dataCy?: string; triggerVariant?: string }) => (
@@ -37,6 +45,28 @@ vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed', () => ({
 }));
 
 describe('BookmarksItems', () => {
+  beforeEach(() => {
+    mocks.links = [];
+  });
+
+  it('shows no empty state while the bookmarked links are listed', () => {
+    mocks.links = undefined;
+    render(<BookmarksItems header={<div />} />);
+
+    expect(screen.queryByTestId('bookmarks-items-empty')).not.toBeInTheDocument();
+  });
+
+  it('shows the bookmarked links as a collection shows its links, and no empty state for them', () => {
+    mocks.links = ['https://www.openstreetmap.org/node/240109189'];
+    render(<BookmarksItems header={<div data-testid="bookmarks-header">header</div>} />);
+
+    expect(screen.getByTestId('resource-items-stub')).toHaveAttribute(
+      'data-uris',
+      'https://www.openstreetmap.org/node/240109189',
+    );
+    expect(screen.queryByTestId('bookmarks-items-empty')).not.toBeInTheDocument();
+  });
+
   it('renders the BOOKMARKS TimelineFeed with the header inside the feed context scope', () => {
     render(<BookmarksItems header={<div data-testid="bookmarks-header">header</div>} />);
 

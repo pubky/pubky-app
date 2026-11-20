@@ -53,6 +53,9 @@ import { LocalStreamPostsService } from '@/services/local/stream/posts/posts';
 import { postStreamDirtyRegistry } from '@/services/local/stream/posts/postStreamDirtyRegistry';
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import { LocalTagCacheService } from '@/services/local/tag/tag-cache';
+import { carryNexusResponseStartedAt } from '@/services/nexus/nexus.utils';
+import { NexusResourceService } from '@/services/nexus/resource/resource';
+import type { TResourceRepliesParams } from '@/services/nexus/resource/resource.types';
 import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
 import { StreamKind, StreamOrder, StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 import { breakDownStreamId, createPostStreamParams } from '@/services/nexus/stream/posts/postStream.utils';
@@ -759,6 +762,65 @@ export class PostStreamApplication {
       Logger.warn('Failed to fetch missing posts from Nexus', { cacheMissPostIds, viewerId, error });
       return false;
     }
+  }
+
+  /**
+   * A page of the live posts replying to an external resource, stored like any fetched post. A reply
+   * with attachments is read again by id (`fetchMissingPostsFromNexus`), which stores its files'
+   * metadata first: the reply list does not carry them.
+   *
+   * @returns The replies' composite ids, newest first (those that could not be stored left out), how
+   *   many Nexus sent (the next page's `skip`), and whether the list ended with this page; `null`
+   *   when the viewer changed meanwhile (the page is not theirs)
+   * @throws AppError when Nexus fails or does not serve the route
+   */
+  static async fetchResourceReplies({
+    resourceId,
+    viewerId,
+    skip,
+    limit,
+    isCurrent,
+  }: TResourceRepliesParams & { limit: number; isCurrent?: () => boolean }): Promise<{
+    replyIds: string[];
+    fetched: number;
+    reachedEnd: boolean;
+  } | null> {
+    const posts = await NexusResourceService.fetchReplies({ resourceId, viewerId, skip, limit });
+    const idOf = (post: (typeof posts)[number]) =>
+      buildCompositeId({ pubky: post.details.author, id: post.details.id });
+    const isStale = () => isCurrent !== undefined && !isCurrent();
+    if (isStale()) return null;
+    const withFiles = posts.filter((post) => (post.details.attachments?.length ?? 0) > 0);
+    // The page's Nexus stamp goes with it, so the tag cache rows it writes carry it (`persistPosts`).
+    const plain = carryNexusResponseStartedAt(
+      posts,
+      posts.filter((post) => !withFiles.includes(post)),
+    );
+    if (plain.length > 0) {
+      const revisions = await LocalTagCacheService.captureRevisions('post', plain.map(idOf));
+      if (isStale()) return null;
+      await LocalStreamPostsService.persistPosts({ posts: plain, tagGuard: { revisions, isCurrent, viewerId } });
+      await this.fetchMissingPostAuthors({ posts: plain, viewerId, isCurrent });
+      const repostedUris = plain
+        .map((post) => post.relationships.reposted)
+        .filter((uri): uri is string => uri !== null);
+      await this.fetchOriginalPostsByUris({ repostedUris, viewerId, isCurrent });
+    }
+    // A reply with files is listed once it and its files are stored: one the read by id did not
+    // store (it failed, or the reply is gone) is left out.
+    let missing: string[] = [];
+    if (withFiles.length > 0) {
+      const ids = withFiles.map(idOf);
+      await this.fetchMissingPostsFromNexus({ cacheMissPostIds: ids, viewerId, isCurrent });
+      if (isStale()) return null;
+      missing = await this.getNotPersistedPostsInCache(ids);
+    }
+    if (isStale()) return null;
+    return {
+      replyIds: posts.map(idOf).filter((id) => !missing.includes(id)),
+      fetched: posts.length,
+      reachedEnd: posts.length < limit,
+    };
   }
 
   /**

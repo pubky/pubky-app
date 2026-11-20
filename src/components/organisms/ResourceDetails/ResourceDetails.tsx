@@ -10,6 +10,7 @@ import { isPinakesConfigured } from '@/config/pinakes';
 import { useOtherLinkTags } from '@/hooks/useOtherLinkTags/useOtherLinkTags';
 import { usePinakesGroup } from '@/hooks/usePinakesGroup/usePinakesGroup';
 import type { UsePinakesQueryResult } from '@/hooks/usePinakesQuery/usePinakesQuery.types';
+import type { UseResourceRepliesResult } from '@/hooks/useResourceReplies/useResourceReplies';
 import { IllustratedEmptyState } from '@/molecules/IllustratedEmptyState/IllustratedEmptyState';
 import { ResourceCard } from '@/molecules/ResourceCard/ResourceCard';
 import { getHttpUrl, getResourceLinks, getResourceTagsLabel } from '@/molecules/ResourceCard/ResourceCard.utils';
@@ -17,7 +18,9 @@ import { ResourceCardSkeleton } from '@/molecules/ResourceCardSkeleton/ResourceC
 import { useCardPlayer } from '@/molecules/ResourcePlayer/useCardPlayer';
 import { ResourceActions } from '@/organisms/ResourceActions/ResourceActions';
 import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
+import { getActionUri } from './ResourceDetails.utils';
 import { getOtherLinks, getOwnLinkUris, mergeOtherLinkTags } from './ResourceOtherTags.utils';
+import { ResourceReplies } from './ResourceReplies';
 
 const EMPTY_STATE_IMAGE = '/images/post-not-found-empty-state.webp';
 
@@ -28,6 +31,8 @@ interface ResourceDetailsProps {
   read: UsePinakesQueryResult<TPinakesResourceDetail>;
   /** Reads the card again (the page remounts its read: a failed read is not cached). */
   onRetry: () => void;
+  /** The page's read of the link's replies (`useResourceReplies`), shared with Participants. */
+  replies: UseResourceRepliesResult;
 }
 
 /**
@@ -44,7 +49,7 @@ export function ResourceDetails(props: ResourceDetailsProps) {
   );
 }
 
-function ResourceBody({ uri, read, onRetry }: ResourceDetailsProps) {
+function ResourceBody({ uri, read, onRetry, replies }: ResourceDetailsProps) {
   if (!uri) {
     return (
       <ResourceEmptyState
@@ -57,14 +62,18 @@ function ResourceBody({ uri, read, onRetry }: ResourceDetailsProps) {
   }
   if (!isPinakesConfigured()) {
     return (
-      <ResourceEmptyState
-        icon={Link2Off}
-        title="External resource details are not available"
-        subtitle="This app does not read external resources from Pinakes."
-        dataCy="resource-not-configured"
-      >
-        <PlainLink uri={uri} />
-      </ResourceEmptyState>
+      <>
+        <ResourceEmptyState
+          icon={Link2Off}
+          title="External resource details are not available"
+          subtitle="This app does not read external resources from Pinakes."
+          dataCy="resource-not-configured"
+        >
+          <PlainLink uri={uri} />
+        </ResourceEmptyState>
+        {/* The replies come from Nexus: they show without Pinakes too. */}
+        <ResourceReplies uri={uri} replies={replies} />
+      </>
     );
   }
 
@@ -79,42 +88,43 @@ function ResourceBody({ uri, read, onRetry }: ResourceDetailsProps) {
   }
   if (isError) {
     return (
-      <ResourceEmptyState
-        icon={CircleAlert}
-        title="This external resource could not be loaded"
-        subtitle="Pinakes could not be reached. Try again in a moment."
-        dataCy="resource-error"
-      >
-        <Container overrideDefaults className="flex flex-col items-center gap-3">
-          <Button type="button" variant={ButtonVariant.SECONDARY} onClick={onRetry} data-testid="resource-retry">
-            <RotateCw className="size-4 shrink-0" />
-            Try again
-          </Button>
-          <PlainLink uri={uri} />
-        </Container>
-      </ResourceEmptyState>
+      <>
+        <ResourceEmptyState
+          icon={CircleAlert}
+          title="This external resource could not be loaded"
+          subtitle="Pinakes could not be reached. Try again in a moment."
+          dataCy="resource-error"
+        >
+          <Container overrideDefaults className="flex flex-col items-center gap-3">
+            <Button type="button" variant={ButtonVariant.SECONDARY} onClick={onRetry} data-testid="resource-retry">
+              <RotateCw className="size-4 shrink-0" />
+              Try again
+            </Button>
+            <PlainLink uri={uri} />
+          </Container>
+        </ResourceEmptyState>
+        <ResourceReplies uri={uri} replies={replies} />
+      </>
     );
   }
-  if (!card) {
-    return (
-      <ResourceEmptyState
-        icon={Link2Off}
-        title="Pinakes doesn't know this link yet"
-        subtitle="Nobody has shared it on Pubky yet, or it has not been read."
-        dataCy="resource-not-found"
-      >
-        <PlainLink uri={uri} />
-      </ResourceEmptyState>
-    );
-  }
-  return <ResourceKnown card={card} uri={uri} />;
+  if (!card) return <ResourceUnknown uri={uri} replies={replies} />;
+  return <ResourceKnown card={card} uri={uri} replies={replies} />;
 }
 
 /**
- * The card, large, closed by a post's footer. The other links' tags are read once the group is read
- * (so the chips do not reorder when it arrives), for the tag bar's one list.
+ * The card, large, closed by a post's footer, then the thread of the posts replying to the acted-on
+ * link (`ResourceReplies`). The other links' tags are read once the group is read (so the chips do
+ * not reorder when it arrives), for the tag bar's one list.
  */
-function ResourceKnown({ card, uri }: { card: TPinakesResourceDetail; uri: string }) {
+function ResourceKnown({
+  card,
+  uri,
+  replies,
+}: {
+  card: TPinakesResourceDetail;
+  uri: string;
+  replies: UseResourceRepliesResult;
+}) {
   const actionUri = getActionUri(card, uri);
   const { data: group, isLoading: isGroupLoading } = usePinakesGroup(card.group?.id);
   const otherLinks =
@@ -133,24 +143,41 @@ function ResourceKnown({ card, uri }: { card: TPinakesResourceDetail; uri: strin
       otherTagList={otherTags}
       playOn={playOn}
       size="large"
+      replyCount={replies.replyCount}
+      onReplySubmitted={replies.addReply}
     />
   );
   return (
-    <Container overrideDefaults data-testid="resource-details" className="min-w-0">
-      <ResourceCard card={card} size="large" actions={actions} renderBody={renderBody} />
-    </Container>
+    <>
+      <Container overrideDefaults data-testid="resource-details" className="min-w-0">
+        <ResourceCard card={card} size="large" actions={actions} renderBody={renderBody} />
+      </Container>
+      <ResourceReplies uri={actionUri} replies={replies} />
+    </>
   );
 }
 
 /**
- * The link the card's tags, bookmark and collections are on: one people wrote (`refs`), as a post's
- * card acts on, since Nexus has no tags on a canonical `uri` nobody wrote. The page's link when it is
- * a ref, else `uri` when it is, else the most referenced; `uri` only for a card with no refs.
+ * A link Pinakes has no card for: says so and links out to it, then the posts replying to it, which
+ * may exist for a link Pinakes has not read (the empty state then does not say nobody shared it).
  */
-function getActionUri(card: TPinakesResourceDetail, pageUri: string): string {
-  if (card.refs.includes(pageUri)) return pageUri;
-  if (card.refs.includes(card.uri)) return card.uri;
-  return card.refs[0] ?? card.uri;
+function ResourceUnknown({ uri, replies }: { uri: string; replies: UseResourceRepliesResult }) {
+  const hasReplies = (replies.replyCount ?? 0) > 0;
+  return (
+    <>
+      <ResourceEmptyState
+        icon={Link2Off}
+        title="Pinakes doesn't know this link yet"
+        subtitle={
+          hasReplies ? 'It has not been read yet.' : 'Nobody has shared it on Pubky yet, or it has not been read.'
+        }
+        dataCy="resource-not-found"
+      >
+        <PlainLink uri={uri} />
+      </ResourceEmptyState>
+      <ResourceReplies uri={uri} replies={replies} />
+    </>
+  );
 }
 
 /**

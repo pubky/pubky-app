@@ -6,8 +6,10 @@ import { PostThreadSpacer } from '@/atoms/PostThreadSpacer/PostThreadSpacer';
 import { usePostListKeyboard } from '@/hooks/usePostListKeyboard/usePostListKeyboard';
 import { usePostNavigation } from '@/hooks/usePostNavigation/usePostNavigation';
 import { useThreadReplies } from '@/hooks/useThreadReplies/useThreadReplies';
+import type { UseThreadRepliesResult } from '@/hooks/useThreadReplies/useThreadReplies.types';
 import { ShowMoreReplies } from '@/molecules/ShowMoreReplies/ShowMoreReplies';
 import { QuickReply } from '../QuickReply/QuickReply';
+import type { QuickReplyTarget } from '../QuickReply/QuickReply.types';
 import { ReplyWithNested } from '../ReplyWithNested/ReplyWithNested';
 
 interface ThreadTreeProps {
@@ -32,7 +34,26 @@ interface ThreadTreeProps {
  * remount the composer and discard what the user had typed.
  */
 export function ThreadTree({ postId, showQuickReply = true }: ThreadTreeProps) {
-  const { replyIds, hasMore, totalCount, isExpandingAll, expandAll } = useThreadReplies(postId);
+  const replies = useThreadReplies(postId);
+  return <ThreadTreeView replies={replies} quickReply={showQuickReply ? { parentPostId: postId } : null} />;
+}
+
+interface ThreadTreeViewProps {
+  /** The Level 1 replies to show, oldest first, with the "+N more replies" state. */
+  replies: Pick<UseThreadRepliesResult, 'replyIds' | 'hasMore' | 'totalCount' | 'isExpandingAll' | 'expandAll'>;
+  /** What the QuickReply above the replies answers; `null` shows no composer. */
+  quickReply: QuickReplyTarget | null;
+  /** Called with the new reply's id once the QuickReply wrote it. */
+  onReplySubmitted?: (replyId: string) => void;
+}
+
+/**
+ * The thread's markup for any list of replies: the post page's (`ThreadTree`) and an external
+ * resource page's, whose replies are posts whose `parent` is the resource's URI.
+ */
+export function ThreadTreeView({ replies, quickReply, onReplySubmitted }: ThreadTreeViewProps) {
+  const { replyIds, hasMore, totalCount, isExpandingAll, expandAll } = replies;
+  const showQuickReply = quickReply !== null;
   const { handlePostKeyDown } = usePostNavigation();
   const { setCardRef, onListKeyDown } = usePostListKeyboard({
     // Include ShowMoreReplies (data-post-list-card="true") in j/k navigation.
@@ -57,11 +78,12 @@ export function ThreadTree({ postId, showQuickReply = true }: ThreadTreeProps) {
       onKeyDown={hasReplies ? onListKeyDown : undefined}
     >
       {/* Quick reply directly below the parent post */}
-      {showQuickReply && (
+      {quickReply && (
         <>
           <PostThreadSpacer />
           <QuickReply
-            parentPostId={postId}
+            {...quickReply}
+            onReplySubmitted={onReplySubmitted}
             connectorVariant={hasReplies ? POST_THREAD_CONNECTOR_VARIANTS.REGULAR : POST_THREAD_CONNECTOR_VARIANTS.LAST}
           />
         </>

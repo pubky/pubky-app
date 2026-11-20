@@ -19,6 +19,10 @@ export interface SidebarSectionProps {
   onFooterClick?: () => void;
   /** Test ID for footer button */
   footerTestId?: string;
+  /** The footer button shows and hides more of the section (`aria-expanded`); absent for a link-like action. */
+  footerExpanded?: boolean;
+  /** The id of what the footer button shows and hides (`aria-controls`). */
+  footerControls?: string;
   /** data-cy for footer button (Cypress E2E) */
   footerDataCy?: string;
   /** Custom className */

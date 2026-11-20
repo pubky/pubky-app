@@ -311,8 +311,12 @@ describe('BookmarkApplication', () => {
       expect(homeserver.spies.getBytes).toHaveBeenCalledWith(overflow.url);
       expect(homeserver.spies.getBytes).not.toHaveBeenCalledWith(web.url);
       expect(warn).toHaveBeenCalledWith('Skipping a stored bookmark that bookmarks no post', { url: overflow.url });
-      expect(warn).toHaveBeenCalledWith('Skipping a file in the bookmarks directory that bookmarks no post', {
+      // A bookmarked link is `fetchResourceBookmarks`' to list: skipped here without a warning.
+      expect(warn).not.toHaveBeenCalledWith('Skipping a file in the bookmarks directory that bookmarks no post', {
         url: web.url,
+      });
+      expect(warn).toHaveBeenCalledWith('Skipping a file in the bookmarks directory that bookmarks no post', {
+        url: profile.url,
       });
     });
 

@@ -1,5 +1,5 @@
 import { createRef, type ReactNode, type RefObject } from 'react';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { COLLECTION_LAYOUT, type CollectionLayout } from '@/config/collections';
@@ -83,6 +83,13 @@ vi.mock('@/organisms/Collections/CollectionHero/CollectionHero', () => ({
   },
 }));
 
+vi.mock('@/organisms/Collections/CollectionResourceItems/CollectionResourceItems', () => ({
+  CollectionResourceItems: ({ uris, layout }: { uris: string[]; layout: CollectionLayout }) =>
+    uris.length > 0 ? (
+      <div data-testid="collection-resource-items-stub" data-uris={uris.join(' ')} data-layout={layout} />
+    ) : null,
+}));
+
 vi.mock('@/organisms/Collections/DialogAddContent/DialogAddContent', () => ({
   DialogAddContent: ({ dataCy, triggerVariant }: { dataCy?: string; triggerVariant?: string }) => (
     <div data-testid="add-content-dialog" data-cy={dataCy} data-trigger-variant={triggerVariant ?? 'hero'} />
@@ -108,7 +115,13 @@ vi.mock('@/organisms/Timeline/Feed/TimelineFeed/TimelineFeed', () => ({
       requestedLayout,
       visualHiddenItemsNotice,
     } = props;
-    mockTimelineFeedProps({ pullToRefreshContainerRef, trailingSlot, requestedLayout, visualHiddenItemsNotice });
+    mockTimelineFeedProps({
+      pullToRefreshContainerRef,
+      trailingSlot,
+      requestedLayout,
+      visualHiddenItemsNotice,
+      emptyState,
+    });
 
     return (
       <div
@@ -199,6 +212,47 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 
 describe('CollectionItems', () => {
+  describe('external resources', () => {
+    const LINK = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+    const MIXED = JSON.stringify({
+      name: 'Mixed',
+      items: ['pubky://author/pub/pubky.app/posts/a', { uri: LINK, note: 'classic' }],
+    });
+
+    it('shows the collection’s external resources as cards under the hero, in the feed', () => {
+      renderCollectionItems({ postDetails: buildPostDetails(MIXED) });
+
+      const feed = screen.getByTestId('timeline-feed');
+      const cards = within(feed).getByTestId('collection-resource-items-stub');
+      expect(cards).toHaveAttribute('data-uris', LINK);
+      // The posts still come from the stream, which keeps its empty state.
+      expect(feed).toHaveAttribute('data-has-empty-state', 'true');
+    });
+
+    it('is not empty with external resources only: the feed shows nothing for no posts', () => {
+      renderCollectionItems({ postDetails: buildPostDetails(JSON.stringify({ name: 'Links', items: [LINK] })) });
+
+      expect(screen.getByTestId('collection-resource-items-stub')).toHaveAttribute('data-uris', LINK);
+      const { emptyState } = mockTimelineFeedProps.mock.lastCall![0] as { emptyState: ReactNode };
+      // Not the collection's empty copy, and not the feed's own "No posts found" (which `null` gets).
+      expect(emptyState).not.toBeNull();
+      const { container } = render(<>{emptyState}</>);
+      expect(container).toBeEmptyDOMElement();
+    });
+
+    it('leaves the hidden-items notice to the resource items, so a mixed Visual collection shows one', () => {
+      renderCollectionItems({ postDetails: buildPostDetails(MIXED) });
+
+      expect(screen.getByTestId('timeline-feed')).toHaveAttribute('data-has-visual-hidden-items-notice', 'false');
+    });
+
+    it('shows no resource cards for a collection of posts only', () => {
+      renderCollectionItems();
+
+      expect(screen.queryByTestId('collection-resource-items-stub')).not.toBeInTheDocument();
+    });
+  });
+
   it('renders the COLLECTION TimelineFeed for a non-empty envelope with the hero inside the feed', () => {
     renderCollectionItems();
 
