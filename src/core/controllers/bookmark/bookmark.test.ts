@@ -357,6 +357,40 @@ describe('BookmarkController', () => {
         expect(await PostDetailsModel.table.count()).toBe(0);
       });
 
+      it('rejects when the local read of the missing ids fails, and the next call starts a fresh pass', async () => {
+        await bookmarkAll([postAt(1), postAt(2)]);
+        vi.spyOn(BookmarkApplication, 'getAllWithPostDetails').mockRejectedValueOnce(new Error('idb'));
+
+        await expect(BookmarkController.fetchMissingPosts()).rejects.toThrow('idb');
+        expect(byIds).not.toHaveBeenCalled();
+
+        // The rejected pass released its slot: this call is not handed the same rejection.
+        await BookmarkController.fetchMissingPosts();
+        expect(byIds).toHaveBeenCalledTimes(1);
+        expect(requestedIds(0)).toEqual([postAt(1), postAt(2)]);
+      });
+
+      it('rejects for the callers of the first pass when the rerun cannot read the missing ids', async () => {
+        await bookmarkAll([postAt(1)]);
+        useAuthStore.setState({ currentUserPubky: testData.userPubky, session: null });
+        const read = vi.spyOn(BookmarkApplication, 'getAllWithPostDetails');
+        byIds.mockImplementationOnce(async ({ post_ids }) => {
+          // The restore lands with the answer, and the local read of the rerun fails.
+          signIn();
+          read.mockRejectedValueOnce(new Error('idb'));
+          return post_ids.map((id) => served(id));
+        });
+
+        await expect(BookmarkController.fetchMissingPosts()).rejects.toThrow('idb');
+        expect(byIds).toHaveBeenCalledTimes(1);
+
+        // Neither pass is left in the slot.
+        byIds.mockResolvedValue([served(postAt(1))]);
+        await BookmarkController.fetchMissingPosts();
+        expect(byIds).toHaveBeenCalledTimes(2);
+        expect(await PostDetailsModel.table.count()).toBe(1);
+      });
+
       it('reads and fetches nothing for a guest', async () => {
         await bookmarkAll([postAt(1)]);
         useAuthStore.setState({ currentUserPubky: null, session: null });
