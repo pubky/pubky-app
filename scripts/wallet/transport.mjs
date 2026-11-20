@@ -99,8 +99,12 @@ export function connectionGrant(settings, now = Date.now()) {
 }
 
 export function grantResponse(settings, token, expiresAt) {
+  const target = settings.electrumTarget;
+  const fastStart = settings.deploymentHost && settings.network === 'mainnet' &&
+    target?.tls === true && target.host === 'bitkit.to' && target.port === 9999;
   return {
     network: settings.network,
+    ...(fastStart && { fastElectrumStart: true }),
     // The browser's socket factory sends all peer bytes to the fixed WebSocket.
     // Give its TCP-shaped parser the selected Lightning key without invoking native Iroh in the browser.
     primaryUri: settings.peer?.endpointId

@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import type { createStartupScan } from './startup-scan.mjs';
 
 const fixture = vi.hoisted(() => {
   const files = new Map<string, Uint8Array>();
@@ -9,7 +10,12 @@ const fixture = vi.hoisted(() => {
     list: (prefix: string) => [...files.keys()].filter((path) => path.startsWith(prefix)),
     close: vi.fn(),
   };
-  const store = { markActive: vi.fn(), markClosed: vi.fn(), close: vi.fn() };
+  const store = {
+    markPayment: vi.fn(() => 0),
+    restorePaymentMarker: vi.fn(),
+    clearPayment: vi.fn(),
+    close: vi.fn(),
+  };
   const engine = { request: vi.fn(), setAppBackgrounded: vi.fn(), close: vi.fn() };
   return {
     files,
@@ -21,7 +27,10 @@ const fixture = vi.hoisted(() => {
     sockets: { socketFactory: vi.fn(), prepareElectrum: vi.fn(), preparePeer: vi.fn(), close: vi.fn() },
     compile: vi.fn(async () => ({})),
     createRuntime: vi.fn(
-      async (_options: { onDiagnostic: (event: { phase: string; message: string }) => void }) => engine,
+      async (_options: {
+        onDiagnostic: (event: { phase: string; message: string }) => void;
+        nodeOptions?: ReturnType<typeof createStartupScan>['nodeOptions'];
+      }) => engine,
     ),
   };
 });
@@ -98,6 +107,29 @@ async function freshWorker() {
   vi.resetModules();
   await import('./worker.mjs');
 }
+
+it('marks confirmed sends before allowing submission and preserves an unknown outcome across fresh opens', async () => {
+  expect(fixture.store.markPayment).not.toHaveBeenCalled();
+  expect((await request('begin-send')).error).toBeUndefined();
+  expect(fixture.store.markPayment).toHaveBeenCalledOnce();
+  expect((await request('begin-send')).error?.code).toBe('WALLET_BUSY');
+  expect((await request('acknowledge-payment')).error?.code).toBe('WALLET_BUSY');
+  await request('finish-send', 'uncertain');
+  expect(fixture.store.restorePaymentMarker).not.toHaveBeenCalled();
+  await freshWorker();
+  await request('open', 'correct password');
+  fixture.store.markPayment.mockReturnValueOnce(2);
+  await request('begin-send');
+  await request('finish-send', 'completed');
+  expect(fixture.store.restorePaymentMarker).toHaveBeenCalledWith(2);
+  await request('acknowledge-payment');
+  expect(fixture.store.clearPayment).toHaveBeenCalledOnce();
+  for (const status of ['completed', 'pending', 'failed']) {
+    await request('begin-send');
+    await request('finish-send', status);
+  }
+  expect(fixture.store.restorePaymentMarker.mock.calls).toEqual([[2], [0], [0], [0]]);
+});
 
 it('prepares SQL and a fixed relay ticket without unlocking, then reuses both during open', async () => {
   await freshWorker();
@@ -342,4 +374,38 @@ it('opens a valid wallet when the optional preview is corrupt, out of date range
   } finally {
     read.mockRestore();
   }
+});
+
+it('only completes an accelerated startup after an incomplete scan recovers at the original cadence', async () => {
+  const mainnet = { ...grant, network: 'mainnet', fastElectrumStart: true };
+  fixture.files.set(
+    '/wallet/registry.json',
+    new TextEncoder().encode(JSON.stringify({ record: { id: walletId, network: 'mainnet' } })),
+  );
+  fixture.files.delete('/pubky/deployment.json');
+  await freshWorker();
+  fetchGrant.mockResolvedValueOnce(Response.json(mainnet));
+  expect((await request('open', 'vault password')).error).toBeUndefined();
+  const { nodeOptions, onDiagnostic } = fixture.createRuntime.mock.lastCall![0];
+  const wallet = {
+    electrum: { batchLimit: 20, batchDelay: 50 },
+    gapLimitOptions: { lookAhead: 20, lookBehind: 20, lookAheadChange: 20, lookBehindChange: 20 },
+    transactions: {},
+    utxos: [],
+    isRefreshing: true,
+    refreshFailed: false,
+  };
+  nodeOptions!.extensions[0].attach({ wallet, generation: 1 });
+  expect(wallet.electrum.batchDelay).toBe(15);
+  onDiagnostic({ phase: 'engine-perf', message: 'initial-sync 3000ms' });
+  expect(wallet.electrum.batchDelay).toBe(50);
+  const start = { method: 'POST', path: '/api/wallets/' + walletId + '/start' };
+  const refresh = { method: 'POST', path: '/wallets/' + walletId + '/api/wallet/refresh', body: {} };
+  expect((await request('request', start)).error?.code).toBe('WALLET_SYNC_INCOMPLETE');
+  expect(fixture.engine.request.mock.lastCall).toEqual([refresh]);
+  fixture.engine.request.mockResolvedValueOnce({ status: 'running' }).mockImplementationOnce(async () => {
+    wallet.isRefreshing = false;
+  });
+  expect((await request('request', start)).result).toEqual({ status: 'running' });
+  expect(fixture.engine.request.mock.lastCall).toEqual([refresh]);
 });

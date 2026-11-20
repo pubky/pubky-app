@@ -29,6 +29,8 @@ const wallet = vi.hoisted(() => ({
   prepareDrain: vi.fn(),
   cancelDrain: vi.fn(),
   send: vi.fn(),
+  acknowledgePayment: vi.fn(),
+  activityIncludesChannelSends: vi.fn(),
   quoteReceive: vi.fn(),
   newBitcoinAddress: vi.fn(),
   receive: vi.fn(),
@@ -60,6 +62,9 @@ vi.mock('@/services/wallet/session', () => ({
       wallet.unlocked = onUnlocked;
     }
     rememberBalance = wallet.rememberBalance;
+    send = wallet.send;
+    acknowledgePayment = wallet.acknowledgePayment;
+    activityIncludesChannelSends = wallet.activityIncludesChannelSends;
     client = wallet;
     inspect = wallet.inspect;
     ringBinding = wallet.ringBinding;
@@ -100,6 +105,8 @@ beforeEach(() => {
     electrum: { host: 'electrum.relay', port: 50001, tls: false },
   });
   wallet.close.mockResolvedValue(undefined);
+  wallet.activityIncludesChannelSends.mockResolvedValue(true);
+  wallet.acknowledgePayment.mockResolvedValue(undefined);
   wallet.startWallet.mockResolvedValue(undefined);
   wallet.rememberBalance.mockResolvedValue(undefined);
   wallet.listWallets.mockResolvedValue([record]);
@@ -502,22 +509,65 @@ describe('Pubky wallet', () => {
     },
   );
 
-  it('preserves the interrupted-session notice and the recovery portion of the pending balance', async () => {
+  it('opens a healthy or idle legacy session without a shutdown warning and preserves recovery details', async () => {
     wallet.inspect.mockResolvedValue({ exists: true, interrupted: true });
     wallet.snapshot.mockResolvedValue({
+      wallet: record,
       balance: { totalSats: 2500, availableSats: 2000, pendingSats: 500, pending: { erroredSats: 500 } },
       primary: { connected: true, setup: 'ready' },
       activity: [],
       notes: ['Some receive requests are still being checked. Their last known status is shown.'],
     });
     render(<Wallet />);
-    const warning = 'The wallet stopped unexpectedly. Check Activity before retrying a payment.';
-    expect(await screen.findByText(warning)).toBeVisible();
     await unlock();
-    expect(screen.getByText(warning)).toBeVisible();
+    expect(screen.queryByText(/stopped unexpectedly|Check the previous payment/)).toBeNull();
     expect(await screen.findByText('₿500 need recovery attention before they can be spent.')).toBeVisible();
     expect(screen.getByText(/Some receive requests are still being checked/)).toBeVisible();
+    await waitFor(() => expect(wallet.acknowledgePayment).toHaveBeenCalledWith('legacy'));
   });
+
+  it('keeps the review reminder when composite payment history is incomplete', async () => {
+    wallet.inspect.mockResolvedValue({ exists: true, interrupted: true, paymentNeedsReview: true });
+    wallet.snapshot.mockResolvedValue({
+      wallet: record,
+      balance: { totalSats: 0, availableSats: 0, pendingSats: 0 },
+      primary: { connected: true },
+      activity: [],
+    });
+    wallet.activityIncludesChannelSends.mockResolvedValueOnce(false);
+    render(<Wallet />);
+    await unlock();
+    expect(await screen.findByText('Refresh the wallet to check all payment records.')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'I checked Activity' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh wallet' }));
+    expect(await screen.findByRole('button', { name: 'I checked Activity' })).toBeVisible();
+    expect(wallet.acknowledgePayment).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { paymentNeedsReview: true, rows: [] },
+    { paymentNeedsReview: false, rows: [{ id: 'send', kind: 'sent', status: 'uncertain', timestamp: 1 }] },
+  ])(
+    'shows a relevant payment warning after unlock and permits review with verified Activity',
+    async ({ paymentNeedsReview, rows }) => {
+      wallet.inspect.mockResolvedValue({ exists: true, interrupted: true, paymentNeedsReview });
+      wallet.snapshot.mockResolvedValue({
+        wallet: record,
+        primary: { connected: true },
+        balance: { totalSats: 0, pendingSats: 0, availableSats: 0 },
+        activity: rows.map((row) => ({ ...row, title: 'Outgoing payment', amountSats: 5 })),
+      });
+      render(<Wallet />);
+      await screen.findByLabelText('Password', { exact: true });
+      expect(screen.queryByText(/Check the previous payment/)).toBeNull();
+      await unlock();
+      expect(await screen.findByText(/Check the previous payment/)).toBeVisible();
+      fireEvent.click(screen.getByRole('button', { name: 'I checked Activity' }));
+      await waitFor(() => expect(screen.queryByText(/Check the previous payment/)).toBeNull());
+      expect(wallet.acknowledgePayment).toHaveBeenCalledOnce();
+      if (rows.length) expect(screen.getByText('Outgoing payment')).toBeVisible();
+    },
+  );
 
   it('discards a late unlock when the active account changes', async () => {
     let finish!: () => void;

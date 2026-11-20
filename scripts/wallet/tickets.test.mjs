@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { relayToken } from './bridge.mjs';
 import { issueTicket, ticketCache, validTicket } from './tickets.mjs';
-import { connectionSettings, lifetimeMs } from './transport.mjs';
+import { connectionSettings, grantResponse, lifetimeMs } from './transport.mjs';
 
 const env = {
   VERCEL: '1',
@@ -13,6 +13,21 @@ const env = {
   WALLET_APP_ORIGIN: 'https://wallet.example',
   WALLET_RELAY_ORIGIN: 'wss://wallet.example',
 };
+
+test('a short startup scan cadence is advertised only for the tested hosted mainnet TLS endpoint', () => {
+  const expected = { ...env, WALLET_NETWORK: 'mainnet', WALLET_ELECTRUM: 'tls://bitkit.to:9999' };
+  for (const [change, enabled] of [
+    [{}, true],
+    [{ WALLET_ELECTRUM: 'tcp://bitkit.to:9999' }, false],
+    [{ WALLET_ELECTRUM: 'tls://bitkit.to:50002' }, false],
+    [{ WALLET_ELECTRUM: 'tls://other.example:9999' }, false],
+    [{ WALLET_NETWORK: 'regtest' }, false],
+    [{ VERCEL: undefined, WALLET_RELAY_SECRET: 'a'.repeat(64) }, false],
+  ]) {
+    const grant = grantResponse(connectionSettings({ ...expected, ...change }), 't', 1);
+    assert.equal(grant.fastElectrumStart === true, enabled);
+  }
+});
 
 function cacheHandle(entries) {
   return {

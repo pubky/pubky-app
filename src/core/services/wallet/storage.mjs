@@ -90,7 +90,11 @@ export async function inspectFiles(account) {
     if (!exists && (await Promise.all(['first', 'second'].map(fileSize))).some(Boolean)) {
       throw failure('Wallet initialization was interrupted. The stored data has been preserved.');
     }
-    return { exists, ...((await fileSize('active')) ? { interrupted: true } : {}) };
+    const marker = await fileSize('active');
+    // Older builds marked every open wallet with one byte. Two bytes identify
+    // a confirmed send whose result has not been acknowledged by the client.
+    if (marker > 1) return { exists, interrupted: true, paymentNeedsReview: true };
+    return { exists, ...(marker ? { interrupted: true } : {}) };
   } catch (error) {
     throw storageError(error);
   } finally {
@@ -130,9 +134,17 @@ export async function openFiles(account) {
     }
     return {
       read: () => sealed,
-      interrupted: () => active.getSize() !== 0,
-      markActive: () => write(active, Uint8Array.of(1), 0),
-      markClosed: () => flushAtLength(active, 0),
+      markPayment() {
+        const previous = active.getSize();
+        write(active, Uint8Array.of(1, 1), 0);
+        return previous;
+      },
+      restorePaymentMarker(previous) {
+        if (previous < 2) flushAtLength(active, previous);
+      },
+      clearPayment(legacyOnly) {
+        if (!legacyOnly || active.getSize() === 1) flushAtLength(active, 0);
+      },
       commit(bytes) {
         if (bytes.length > MAX_BYTES) throw failure('This wallet exceeds the browser storage limit.');
         const end = pos + DIGEST_BYTES;

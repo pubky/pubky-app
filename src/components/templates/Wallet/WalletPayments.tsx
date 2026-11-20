@@ -72,11 +72,12 @@ function AmountField({
 
 export function WalletSend({
   client,
+  sendPayment,
   network,
   recipient,
   task,
   refresh,
-}: PaymentProps & { network: Network; recipient?: string }) {
+}: PaymentProps & { sendPayment: (review: SendReview) => Promise<SendResult>; network: Network; recipient?: string }) {
   const [request, setRequest] = useState(recipient || '');
   const [maximum, setMaximum] = useState<WalletMaximum | null>(null);
   const [drainOffer, setDrainOffer] = useState<WalletDrainAvailable | null>(null);
@@ -115,7 +116,7 @@ export function WalletSend({
     if (!review) return;
     const payment = review.payment;
     try {
-      setResult(await client.send(payment));
+      setResult(await sendPayment(payment));
     } catch (err) {
       if (err instanceof Error && 'code' in err && err.code === 'QUOTE_EXPIRED') {
         setExpired(true);

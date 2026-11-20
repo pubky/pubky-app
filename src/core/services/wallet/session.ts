@@ -4,6 +4,8 @@ import {
   EmbeddedWalletClient,
   type Network,
   parsePayment,
+  type SendResult,
+  type SendReview,
   WalletError,
 } from '@beignet/wallet-core';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -123,7 +125,7 @@ export class WalletSession {
   async inspect() {
     await pendingClosures.get(this.account)?.catch(() => {});
     this.onVisibility();
-    return this.call<{ exists: boolean; interrupted?: boolean }>('inspect');
+    return this.call<{ exists: boolean; interrupted?: boolean; paymentNeedsReview?: boolean }>('inspect');
   }
 
   async open(password: string) {
@@ -154,6 +156,63 @@ export class WalletSession {
     if (!this.ownsAccount() || this.client.connection.walletId !== walletId) throw locked();
     this.assertRingDevice?.();
     await this.call('remember-balance', { walletId, network, totalSats });
+  }
+
+  async send(review: SendReview): Promise<SendResult> {
+    if (!this.ownsAccount()) throw locked();
+    this.assertRingDevice?.();
+    await this.call('begin-send');
+    let status: SendResult['status'] = 'uncertain';
+    try {
+      if (!this.ownsAccount() || this.closing) {
+        status = 'failed';
+        throw locked();
+      }
+      const result = await this.client.send(review);
+      status = result.status;
+      return result;
+    } catch (error) {
+      if (error instanceof WalletError && ['INVALID_REVIEW', 'REVIEW_CHANGED', 'QUOTE_EXPIRED'].includes(error.code)) {
+        status = 'failed';
+      }
+      throw error;
+    } finally {
+      // Losing the worker here leaves the marker for the next unlock. Preserve
+      // the payment's actual outcome even if clearing its marker fails.
+      await this.call('finish-send', status).catch(() => {});
+    }
+  }
+
+  async activityIncludesChannelSends(rows: Activity[]): Promise<boolean> {
+    const id = this.client.connection.walletId;
+    if (!id || !this.ownsAccount()) throw locked();
+    // The snapshot requires the payment, transaction and submission journals.
+    // Its optional composite channel-send list can fall back to an empty list.
+    const sends = await this.call<{ kind: string; id: string; stage: string }[]>('request', {
+      method: 'GET',
+      path: `/wallets/${id}/api/channel-send/list`,
+    });
+    return (
+      Array.isArray(sends) &&
+      sends.every(
+        (send) =>
+          send &&
+          (send.kind === 'single' ||
+            (send.kind === 'composite' &&
+              typeof send.id === 'string' &&
+              send.id.length > 0 &&
+              typeof send.stage === 'string' &&
+              rows.some(
+                (row) => row.kind === 'sent' && row.channelSend?.id === send.id && row.channelSend.stage === send.stage,
+              ))),
+      )
+    );
+  }
+
+  async acknowledgePayment(kind: 'legacy' | 'payment'): Promise<void> {
+    if (!this.ownsAccount()) throw locked();
+    this.assertRingDevice?.();
+    await this.call('acknowledge-payment', kind);
   }
 
   ringDeviceId(): Promise<string> {

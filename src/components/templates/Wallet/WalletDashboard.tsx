@@ -30,6 +30,8 @@ export function WalletDashboard({
   session,
   walletId,
   ringBacked,
+  interrupted,
+  onPaymentReviewed,
   lastBalance,
   network,
   recipient,
@@ -39,6 +41,8 @@ export function WalletDashboard({
   session: WalletSession;
   walletId: string;
   ringBacked: boolean;
+  interrupted: 'legacy' | 'payment' | null;
+  onPaymentReviewed: () => void;
   lastBalance: LastWalletBalance | null;
   network: Network;
   recipient?: string;
@@ -54,7 +58,13 @@ export function WalletDashboard({
   const snapshot = useQuery(
     {
       queryKey: ['wallet', walletId],
-      queryFn: () => session.client.snapshot(),
+      queryFn: async () => {
+        const live = await session.client.snapshot();
+        const activityChecked = interrupted
+          ? await session.activityIncludesChannelSends(live.activity).catch(() => false)
+          : false;
+        return { ...live, activityChecked };
+      },
       refetchInterval: 15_000,
     },
     queries,
@@ -62,6 +72,21 @@ export function WalletDashboard({
   const data = snapshot.data;
   const verifiedTotal =
     data?.wallet?.id === walletId && data.wallet.network === network ? data.balance.totalSats : undefined;
+  const needsPaymentReview =
+    interrupted === 'payment' ||
+    (interrupted === 'legacy' &&
+      verifiedTotal !== undefined &&
+      data?.activity.some((row) => row.kind === 'sent' && (row.status === 'pending' || row.status === 'uncertain')));
+  const canAcknowledge =
+    verifiedTotal !== undefined && data?.activityChecked && snapshot.isSuccess && !snapshot.isFetching;
+  useEffect(() => {
+    if (interrupted === 'legacy' && canAcknowledge && !needsPaymentReview) {
+      void session
+        .acknowledgePayment('legacy')
+        .then(onPaymentReviewed)
+        .catch(() => {});
+    }
+  }, [interrupted, canAcknowledge, needsPaymentReview, session, onPaymentReviewed]);
   useEffect(() => {
     if (verifiedTotal !== undefined)
       void session.rememberBalance(walletId, network, verifiedTotal).catch(() => undefined);
@@ -195,7 +220,14 @@ export function WalletDashboard({
         )}
       </Card>
       {view === 'send' && (
-        <WalletSend client={session.client} network={network} recipient={recipient} task={task} refresh={refresh} />
+        <WalletSend
+          client={session.client}
+          sendPayment={(review) => session.send(review)}
+          network={network}
+          recipient={recipient}
+          task={task}
+          refresh={refresh}
+        />
       )}
       {view === 'receive' && (
         <WalletReceive
@@ -240,6 +272,33 @@ export function WalletDashboard({
         </WalletPanel>
       )}
       <WalletPanel title="Activity" icon={ActivityIcon}>
+        {needsPaymentReview && (
+          <div role="status" className="grid gap-2 rounded-xl border border-border p-3 text-sm">
+            <p>
+              Check the previous payment before sending it again. If its outcome is unclear, confirm with the recipient.
+            </p>
+            {canAcknowledge && interrupted && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="justify-self-start"
+                disabled={task.busy}
+                onClick={() =>
+                  task.run(async () => {
+                    await session.acknowledgePayment(interrupted);
+                    onPaymentReviewed();
+                  })
+                }
+              >
+                I checked Activity
+              </Button>
+            )}
+            {snapshot.isSuccess && !snapshot.isFetching && !data?.activityChecked && (
+              <p>Refresh the wallet to check all payment records.</p>
+            )}
+          </div>
+        )}
         {!data ? (
           <p className="text-sm text-muted-foreground">
             {snapshot.isPending ? 'Loading activity…' : 'Activity unavailable.'}

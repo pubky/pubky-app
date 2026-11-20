@@ -48,6 +48,8 @@ The hosted wallet uses Bitcoin mainnet with Chicory mobile’s Iroh primary and 
 
 On a return visit, the visible password screen prepares two short-lived Electrum connections for the network check and the wallet scan. They carry their first Bitcoin requests after unlock and, for Ring wallets, the device check. After verifying the network and opening the node, the wallet prepares the Lightning connection while scanning Bitcoin. Payment review uses the live wallet.
 
+For a returning wallet with a small history on the hosted mainnet Electrum server, the initial scan sends its usual 20-entry batches closer together. It checks the same addresses, unspent outputs and fees. An unfinished scan retries at the server’s normal pace before the wallet opens for payments.
+
 Locks delivers a purchase request privately to the reader’s registered Paykit wallet. Bitkit accepts the request and the Lock Server verifies its settlement before issuing access to the post. On a deployment where the wallet and Locks use the same Bitcoin network, the purchase dialog can look up the reader’s own public Bitkit address, quote a top-up and send it after confirmation. The reader then confirms the purchase in Bitkit. Set `WALLET_LOCKS_NETWORK` to the Bitcoin network used by the deployment’s Paykit Server. The hosted staging instance sets it to `regtest`, so readers use regtest Bitkit for locked posts and their mainnet wallet stays out of that checkout.
 
 ## Storage and recovery
@@ -61,6 +63,8 @@ A private registration in `/priv/app.pubky/v1/wallet/<network>/device.json` reco
 **Independent recovery.** The Bitcoin seed belongs to this wallet, independently of the Pubky Ring identity. The worker encrypts the seed, wallet database, live channel state and last verified total under the wallet password in browser-private files. On a return visit, the wallet can show that total and its timestamp as soon as the password unlocks local storage. Current balance and payment controls follow device access checks and Bitcoin and Lightning startup. An exclusive handle prevents two tabs from operating the same vault. Locking, signing out, or leaving the wallet closes that session. Returning to the same account unlocks the saved vault.
 
 Clearing site data removes the local vault. Write down the recovery words before funding. Seed recovery restores derived keys. Recovering open channels also depends on up-to-date channel recovery data and the recovery peer. Close the original wallet before restoring it elsewhere. A browser may suspend background pages.
+
+If the browser closes during a confirmed send or loses its result, the next unlock shows a reminder in **Activity**. Check the payment and confirm with the recipient if its outcome is unclear. **I checked Activity** dismisses the reminder. The payment record and its status stay in Activity.
 
 The portable engine is built from Beignet 0.43.6. [Pinned sources and reproducible build](../vendor/README.md)
 

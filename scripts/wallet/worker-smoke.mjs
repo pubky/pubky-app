@@ -151,12 +151,12 @@ try {
   }, created.id);
   assert.equal(phraseRecovered, true);
   await page.evaluate(() => window.walletCall('close'));
-  // Abrupt tab/worker shutdown must be distinguished from a clean close.
+  // Reloading an idle wallet does not leave a payment in doubt.
   await setup(page, owner);
   await page.evaluate((password) => window.walletCall('open', password), password);
   await page.evaluate(() => window.interruptWallet());
   await setup(page, owner);
-  assert.deepEqual(await page.evaluate(() => window.walletCall('inspect')), { exists: true, interrupted: true });
+  assert.deepEqual(await page.evaluate(() => window.walletCall('inspect')), { exists: true });
   available = true;
   settings.network = 'testnet';
   await setup(page, owner);
@@ -171,8 +171,52 @@ try {
   }, created.id);
   assert.equal(recoveryOnly, true);
   await page.evaluate(() => window.walletCall('close'));
+  settings.network = 'regtest';
+  await setup(page, owner);
+  await page.evaluate((password) => window.walletCall('open', password), password);
+  // Simulate termination at the durable send boundary without broadcasting.
+  await page.evaluate(() => window.walletCall('begin-send'));
+  await page.evaluate(() => window.interruptWallet());
+  const review = { exists: true, interrupted: true, paymentNeedsReview: true };
+  await setup(page, owner);
+  assert.deepEqual(await page.evaluate(() => window.walletCall('inspect')), review);
+  await page.evaluate((password) => window.walletCall('open', password), password);
+  await page.evaluate(() => window.walletCall('close'));
+  await setup(page, owner);
+  assert.deepEqual(await page.evaluate(() => window.walletCall('inspect')), review);
+  await page.evaluate((password) => window.walletCall('open', password), password);
+  await page.evaluate(() => window.walletCall('acknowledge-payment'));
+  await page.evaluate(() => window.interruptWallet());
+  await setup(page, owner);
+  assert.deepEqual(await page.evaluate(() => window.walletCall('inspect')), { exists: true });
+  await page.evaluate(() => window.walletCall('close'));
+  // A previous release marked every running wallet. Keep that distinction
+  // if the upgraded browser locks again before loading Activity.
+  await page.evaluate(async (account) => {
+    const root = await navigator.storage.getDirectory();
+    const directory = await root.getDirectoryHandle('pubky-wallet-v1-' + account);
+    const active = await directory.getFileHandle('active');
+    const file = await active.createWritable();
+    await file.write(Uint8Array.of(1));
+    await file.close();
+  }, owner);
+  await setup(page, owner);
+  await page.evaluate((password) => window.walletCall('open', password), password);
+  await page.evaluate(() => window.walletCall('begin-send'));
+  await page.evaluate(() => window.walletCall('finish-send', 'completed'));
+  await page.evaluate(() => window.walletCall('close'));
+  await setup(page, owner);
+  assert.deepEqual(await page.evaluate(() => window.walletCall('inspect')), { exists: true, interrupted: true });
+  await page.evaluate((password) => window.walletCall('open', password), password);
+  await page.evaluate(() => window.walletCall('begin-send'));
+  await page.evaluate(() => window.walletCall('finish-send', 'uncertain'));
+  await page.evaluate(() => window.walletCall('acknowledge-payment', 'legacy'));
+  await page.evaluate(() => window.walletCall('close'));
+  await setup(page, owner);
+  assert.deepEqual(await page.evaluate(() => window.walletCall('inspect')), review);
+  await page.evaluate(() => window.walletCall('close'));
   console.info(
-    'Passed browser regtest wallet creation, address generation, cross-tab lease, account isolation, password check, offline reopen and recovery after relay reconfiguration.',
+    'Passed browser regtest wallet creation, cross-tab lease, offline recovery, idle reload, interrupted-send review and legacy marker migration.',
   );
 } finally {
   await browser?.close();

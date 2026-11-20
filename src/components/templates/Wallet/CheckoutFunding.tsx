@@ -268,7 +268,7 @@ function FundingTransfer({
     const tracking = { id: review.id, network };
     onState({ ...tracking, status: 'submitting' });
     try {
-      const result = await session.client.send(review);
+      const result = await session.send(review);
       onState({ ...tracking, status: result.status, txid: result.txid, channelSendId: result.channelSend?.id });
     } catch {
       onState({ ...tracking, status: 'uncertain' });

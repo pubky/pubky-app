@@ -117,6 +117,10 @@ test('inspection uses only metadata and leaves full validation and repair to unl
   await assert.rejects(inspectFiles(account), { code: 'WALLET_IN_USE' });
   locked = false;
   assert.deepEqual(await inspectFiles(account), { exists: true, interrupted: true });
+  sizes.active = 0;
+  assert.deepEqual(await inspectFiles(account), { exists: true });
+  sizes.active = 2;
+  assert.deepEqual(await inspectFiles(account), { exists: true, interrupted: true, paymentNeedsReview: true });
   assert.deepEqual(reads, []);
   assert.equal(requests.includes(true), false);
   assert.equal(locked, false);

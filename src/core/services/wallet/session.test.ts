@@ -1,3 +1,4 @@
+import { type SendReview, WalletError } from '@beignet/wallet-core';
 import { afterEach, expect, it, vi } from 'vitest';
 import { WalletSession } from './session';
 
@@ -13,6 +14,52 @@ const auth = vi.hoisted(() => ({
 vi.mock('@/stores/auth/auth.store', () => ({ useAuthStore: { getState: () => auth } }));
 
 afterEach(() => vi.unstubAllGlobals());
+
+it('waits for the durable send marker and clears it only for known outcomes', async () => {
+  const operations: unknown[] = [];
+  let accept!: () => void;
+  const write = new Promise<void>((resolve) => {
+    accept = resolve;
+  });
+  class TestWorker {
+    onmessage?: (event: { data: unknown }) => void;
+    async postMessage(request: Request & { payload?: unknown }) {
+      operations.push([request.operation, request.payload]);
+      if (request.operation === 'begin-send') await write;
+      this.onmessage?.({ data: { id: request.id, result: null } });
+    }
+    terminate() {}
+  }
+  vi.stubGlobal('Worker', TestWorker);
+  const session = new WalletSession(auth.currentUserPubky);
+  const review: SendReview = {
+    id: 'a',
+    destination: 'test',
+    description: '',
+    amountSats: 1,
+    feeSats: 0,
+    feeLabel: 'Fee',
+    totalSats: 1,
+    route: 'lightning',
+    expiresAt: Date.now() + 60000,
+    warnings: [],
+  };
+  const result = { id: 'a', status: 'completed' as const, amountSats: 1, feeSats: 0, message: 'Sent' };
+  const send = vi.spyOn(session.client, 'send').mockResolvedValueOnce(result);
+  const payment = session.send(review);
+  expect(operations).toEqual([['begin-send', undefined]]);
+  expect(send).not.toHaveBeenCalled();
+  accept();
+  expect(await payment).toEqual(result);
+  expect(operations.at(-1)).toEqual(['finish-send', 'completed']);
+  send.mockRejectedValueOnce(new Error('lost result'));
+  await expect(session.send(review)).rejects.toThrow('lost result');
+  expect(operations.at(-1)).toEqual(['finish-send', 'uncertain']);
+  send.mockRejectedValueOnce(new WalletError('expired', 'QUOTE_EXPIRED'));
+  await expect(session.send(review)).rejects.toThrow('expired');
+  expect(operations.at(-1)).toEqual(['finish-send', 'failed']);
+  await session.close();
+});
 
 it('fences a failed worker and verifies the stored state before reopening the same account', async () => {
   const workers: TestWorker[] = [];

@@ -2,6 +2,7 @@ import { createPortableRuntime } from '@beignet/portable-engine';
 import { createSqlJsDatabaseFactory } from '@beignet/portable-engine/sqljs';
 import { lastBalance, rememberBalance } from './balance.mjs';
 import { provisionRingWallet, ringBinding, ringDeviceId } from './ring.mjs';
+import { createStartupScan } from './startup-scan.mjs';
 import { createStartupSockets } from './startup-sockets.mjs';
 import { inspectFiles, openFiles, unlockVolume } from './storage.mjs';
 
@@ -23,12 +24,16 @@ let renewTimer;
 let background = false;
 let grantAbort;
 let openingGrant;
+let startupScan;
 let transport;
 let compiledDatabase;
 let connectionIssue;
 let activeGrant;
 let ringOperation;
 let activeRequests = 0;
+// An unreviewed earlier payment survives a later successful send.
+let sending = false;
+let previousPaymentMarker = 0;
 const busy = () => Object.assign(new Error('Another wallet operation is running.'), { code: 'WALLET_BUSY' });
 
 async function connection() {
@@ -177,13 +182,16 @@ async function open(account, password, onUnlocked) {
     if (relay && existing && !background) relay.prepareElectrum();
     const databaseFactory = await prepareDatabase();
     rejectIfClosing();
-    store.markActive();
+    const fastStart = existing && grant?.network === 'mainnet' && grant.fastElectrumStart === true;
+    startupScan = fastStart ? createStartupScan() : undefined;
     engine = await createPortableRuntime({
+      nodeOptions: startupScan?.nodeOptions,
       databaseFactory,
       volume,
       electrum: defaults.electrum,
       socketFactory: relay?.socketFactory ?? offline,
       onDiagnostic({ phase, message }) {
+        if (phase === 'engine-perf' && message.startsWith('initial-sync ')) startupScan?.restoreCadence();
         // Beignet emits this mark after checking genesis and creating the node.
         // Open the peer transport while its Bitcoin scan runs. Beignet owns BOLT8.
         const createdNode = phase === 'engine-perf' && message.startsWith('create ');
@@ -220,12 +228,11 @@ async function close() {
   openingGrant = undefined;
   discardIdleSockets();
   // The engine releases its realm claim even when stop fails. A second
-  // engine.close() could then succeed without a shutdown. Leave the active
-  // marker and OPFS lease intact until this worker has been terminated.
+  // engine.close() could then succeed without a shutdown. Keep the vault
+  // lease and any pending payment marker until this worker is terminated.
   try {
     if (shutdownFailed) throw new Error();
     await engine?.close();
-    activeStore?.markClosed();
   } catch {
     shutdownFailed = true;
     throw Object.assign(new Error('Wallet shutdown was interrupted. Reopen and check Activity.'), {
@@ -233,6 +240,7 @@ async function close() {
     });
   }
   activeStore = undefined;
+  startupScan = undefined;
   engine = undefined;
   volume?.close();
   volume = undefined;
@@ -290,6 +298,24 @@ async function handle({ id, operation, account, payload, notifyUnlocked }) {
   }
   if (!engine || account !== owner) throw new Error('Unlock this wallet first.');
   if (ringOperation) throw busy();
+  if (operation === 'begin-send') {
+    if (connectionIssue) throw configurationError();
+    if (sending) throw busy();
+    previousPaymentMarker = activeStore.markPayment();
+    sending = true;
+    return;
+  }
+  if (operation === 'finish-send') {
+    if (!sending) throw new Error('No wallet payment is being submitted.');
+    sending = false;
+    if (['completed', 'pending', 'failed'].includes(payload)) activeStore.restorePaymentMarker(previousPaymentMarker);
+    return;
+  }
+  if (operation === 'acknowledge-payment') {
+    if (sending) throw busy();
+    activeStore.clearPayment(payload === 'legacy');
+    return;
+  }
   if (operation === 'remember-balance') return rememberBalance(volume, payload);
   if (operation === 'ring-binding') return ringBinding(volume);
   if (operation === 'ring-device') return ringDeviceId(volume);
@@ -344,6 +370,15 @@ async function handle({ id, operation, account, payload, notifyUnlocked }) {
     activeRequests++;
     try {
       const result = await engine.request(payload);
+      if (startupScan && payload.method === 'POST') {
+        const start = /^\/api\/wallets\/([0-9a-f]{32})\/start$/.exec(payload.path);
+        if (start) {
+          await startupScan.confirm(() => {
+            rejectIfClosing();
+            return engine.request({ method: 'POST', path: `/wallets/${start[1]}/api/wallet/refresh`, body: {} });
+          });
+        }
+      }
       if (bound && result && typeof result === 'object' && 'mnemonic' in result) {
         throw Object.assign(new Error('Use Ring to recover this wallet.'), { code: 'WALLET_RING_BINDING' });
       }

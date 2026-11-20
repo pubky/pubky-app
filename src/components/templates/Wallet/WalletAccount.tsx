@@ -47,7 +47,7 @@ export function WalletAccount({
   const [lastBalance, setLastBalance] = useState<LastWalletBalance | null>(null);
   const [checkingDevice, setCheckingDevice] = useState(false);
   const [notice, setNotice] = useState('');
-  const [interrupted, setInterrupted] = useState(false);
+  const [interrupted, setInterrupted] = useState<'legacy' | 'payment' | null>(null);
   const task = useWalletTask();
   useEffect(() => {
     if (window.top !== window.self) {
@@ -70,7 +70,7 @@ export function WalletAccount({
     void session.inspect().then(
       (result) => {
         if (live.current !== session) return;
-        setInterrupted('interrupted' in result && result.interrupted === true);
+        setInterrupted(result.paymentNeedsReview ? 'payment' : result.interrupted ? 'legacy' : null);
         setStage({ kind: 'password', exists: result.exists });
       },
       (err: unknown) => {
@@ -198,11 +198,6 @@ export function WalletAccount({
   }
   return (
     <>
-      {interrupted && (
-        <p role="status" className="rounded-xl border border-border p-4 text-sm">
-          The wallet stopped unexpectedly. Check Activity before retrying a payment.
-        </p>
-      )}
       {task.error && (
         <p role="alert" className="rounded-xl border border-destructive/50 p-4 text-sm text-foreground">
           {task.error}
@@ -357,13 +352,26 @@ export function WalletAccount({
       )}
       {stage.kind === 'ready' &&
         (renderReady ? (
-          renderReady({ session: stage.session, network: stage.network, task })
+          <>
+            {interrupted === 'payment' && (
+              <p role="status" className="rounded-xl border border-border p-4 text-sm">
+                A previous payment still needs review. Check{' '}
+                <a className="underline" href={APP_ROUTES.WALLET}>
+                  Activity in Pubky Wallet
+                </a>{' '}
+                before sending it again.
+              </p>
+            )}
+            {renderReady({ session: stage.session, network: stage.network, task })}
+          </>
         ) : (
           <WalletDashboard
             key={JSON.stringify([stage.id, recipient])}
             session={stage.session}
             walletId={stage.id}
             ringBacked={ringBacked}
+            interrupted={interrupted}
+            onPaymentReviewed={() => setInterrupted(null)}
             lastBalance={
               lastBalance?.walletId === stage.id && lastBalance.network === stage.network ? lastBalance : null
             }

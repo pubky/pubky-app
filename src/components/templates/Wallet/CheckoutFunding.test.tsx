@@ -35,7 +35,7 @@ vi.mock('./WalletAccount', () => ({
         {renderReady({
           network: mocks.unlockNetwork,
           task,
-          session: { client: { prepareSend: mocks.prepareSend, send: mocks.send, snapshot: mocks.snapshot } },
+          session: { send: mocks.send, client: { prepareSend: mocks.prepareSend, snapshot: mocks.snapshot } },
         })}
       </>
     );
