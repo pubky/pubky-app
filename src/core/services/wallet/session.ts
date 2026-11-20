@@ -21,6 +21,7 @@ export class WalletSession {
   private counter = 0;
   private closing = false;
   private closeAttempt?: Promise<void>;
+  private assertRingDevice?: () => void;
   private pending = new Map<number, { resolve(value: unknown): void; reject(error: Error): void }>();
 
   constructor(private readonly account: string) {
@@ -52,14 +53,27 @@ export class WalletSession {
     void this.call('visibility', document.hidden).catch(() => {});
   };
 
-  private call<T>(operation: string, payload?: unknown): Promise<T> {
+  /** The UI installs the verified homeserver lease before starting its Ring-bound wallet. */
+  guardRingDevice(assertActive: () => void) {
+    this.assertRingDevice = assertActive;
+  }
+
+  private call<T>(operation: string, payload?: unknown, transfer: Transferable[] = []): Promise<T> {
     const worker = this.worker;
     if (!worker || (this.closing && operation !== 'close')) return Promise.reject(locked());
     const id = ++this.counter;
     return new Promise((resolve, reject) => {
       this.pending.set(id, { resolve: (value) => resolve(value as T), reject });
       try {
-        worker.postMessage({ id, operation, account: this.account, payload });
+        if (this.assertRingDevice && (operation === 'ring-wallet' || operation === 'request')) {
+          const input = payload as { method?: string; path?: string };
+          const discovery =
+            operation === 'request' &&
+            (input.method ?? 'GET') === 'GET' &&
+            (input.path === '/api/wallets' || input.path === '/api/config');
+          if (!discovery) this.assertRingDevice();
+        }
+        worker.postMessage({ id, operation, account: this.account, payload }, transfer);
       } catch (error) {
         this.pending.delete(id);
         reject(error);
@@ -94,6 +108,34 @@ export class WalletSession {
       throw new WalletError('The wallet could not verify its receive address.', 'INVALID_ADDRESS');
     }
     return address;
+  }
+
+  ringDeviceId(): Promise<string> {
+    return this.call('ring-device');
+  }
+
+  ringBinding(): Promise<{ deviceId: string; network: Network } | null> {
+    return this.call('ring-binding');
+  }
+
+  /** Consumes the SDK's scoped key. Transfer a dedicated buffer so a WASM-backed view cannot detach other keys. */
+  async createRingWallet(
+    key: Uint8Array,
+    network: Network,
+    mode: 'create' | 'restore',
+  ): Promise<{ id: string; network: Network }> {
+    if (!(key instanceof Uint8Array) || key.length !== 32) {
+      if (key instanceof Uint8Array) key.fill(0);
+      throw new WalletError('Ring returned an invalid wallet key.', 'WALLET_RING_KEY');
+    }
+    const owned = new Uint8Array(key);
+    key.fill(0);
+    const result = this.call<{ id: string; network: Network }>('ring-wallet', { key: owned, network, mode }, [
+      owned.buffer,
+    ]);
+    // A successful transfer detaches the sender. Closed workers and failed postMessage calls keep ownership.
+    if (owned.byteLength) owned.fill(0);
+    return result;
   }
 
   close(): Promise<void> {

@@ -10,14 +10,17 @@ import { Input } from '@/atoms/Input/Input';
 import { Label } from '@/atoms/Label/Label';
 import { Spinner } from '@/atoms/Spinner/Spinner';
 import { Textarea } from '@/atoms/Textarea/Textarea';
+import { acquireRingDevice } from '@/services/wallet/ring-enrollment';
 import { WalletSession } from '@/services/wallet/session';
 import { WalletDashboard } from './WalletDashboard';
 import { RecoveryWords, useWalletTask, WalletPanel, type WalletTask } from './WalletPanel';
+import { type RingSetupMode,WalletRingSetup } from './WalletRingSetup';
 
 type Stage =
   | { kind: 'checking' | 'unavailable' | 'framed' }
   | { kind: 'password'; exists: boolean }
   | { kind: 'empty'; defaults: CreateWalletInput; network: Network }
+  | { kind: 'ring'; defaults: CreateWalletInput; network: Network; session: WalletSession }
   | { kind: 'backup'; id: string; network: Network; phrase: string }
   | { kind: 'start'; id: string; network: Network }
   | { kind: 'ready'; id: string; network: Network; session: WalletSession };
@@ -36,6 +39,8 @@ export function WalletAccount({
   renderReady?: (wallet: UnlockedWallet) => ReactNode;
 }) {
   const live = useRef<WalletSession | null>(null);
+  const lease = useRef<Awaited<ReturnType<typeof acquireRingDevice>> | null>(null);
+  const [ringBacked, setRingBacked] = useState(false);
   const [stage, setStage] = useState<Stage>({ kind: 'checking' });
   const [notice, setNotice] = useState('');
   const [interrupted, setInterrupted] = useState(false);
@@ -68,14 +73,56 @@ export function WalletAccount({
     );
     return () => {
       live.current = null;
-      void session.close().catch(() => undefined);
+      const held = lease.current;
+      lease.current = null;
+      void session
+        .close()
+        .then(() => held?.release())
+        .catch(() => undefined);
     };
   }, [account]);
 
+  async function holdDevice(
+    session: WalletSession,
+    network: Network,
+    deviceId: string,
+    intent: RingSetupMode | 'open',
+  ) {
+    if (live.current !== session) throw new Error('Reopen your wallet to continue.');
+    if (lease.current) {
+      lease.current.assertActive();
+      return lease.current;
+    }
+    const held = await acquireRingDevice(account, network, deviceId, intent, () => {
+      if (live.current !== session) return;
+      live.current = null;
+      setNotice(
+        'The wallet locked because it could not keep exclusive access to this Ring wallet. Reopen it to reconnect.',
+      );
+      setStage({ kind: 'unavailable' });
+      return session.close();
+    });
+    if (live.current !== session) {
+      await held.release();
+      throw new Error('Reopen your wallet to continue.');
+    }
+    held.assertActive();
+    session.guardRingDevice(held.assertActive);
+    lease.current = held;
+    return held;
+  }
   async function start(session: WalletSession, id: string, network: Network) {
     if (live.current !== session) return;
     session.client.selectWallet(id);
     setStage({ kind: 'start', id, network });
+    const binding = await session.ringBinding();
+    if (live.current !== session) return;
+    setRingBacked(Boolean(binding));
+    if (binding) {
+      if (binding.network !== network) throw new Error('The Ring wallet and this Bitcoin network do not match.');
+      await holdDevice(session, network, binding.deviceId, 'open');
+      if (live.current !== session) return;
+    }
     await session.client.startWallet();
     if (live.current === session) setStage({ kind: 'ready', id, network, session });
   }
@@ -101,7 +148,12 @@ export function WalletAccount({
     }
     if (live.current !== session) return;
     if (records.length) await openExisting(session, records);
-    else setStage({ kind: 'empty', defaults, network: defaults.network });
+    else {
+      const binding = await session.ringBinding();
+      if (live.current !== session) return;
+      if (binding) setStage({ kind: 'ring', defaults, network: defaults.network, session });
+      else setStage({ kind: 'empty', defaults, network: defaults.network });
+    }
   }
   async function create(mnemonic?: string) {
     const session = live.current;
@@ -169,7 +221,38 @@ export function WalletAccount({
         <PasswordForm exists={stage.exists} busy={task.busy} submit={(password) => task.run(() => unlock(password))} />
       )}
       {stage.kind === 'empty' && (
-        <CreateForm network={stage.network} busy={task.busy} submit={(words) => task.run(() => create(words))} />
+        <CreateForm
+          network={stage.network}
+          busy={task.busy}
+          submit={(words) => task.run(() => create(words))}
+          useRing={() => {
+            if (live.current) setStage({ ...stage, kind: 'ring', session: live.current });
+          }}
+        />
+      )}
+      {stage.kind === 'ring' && (
+        <WalletRingSetup
+          account={account}
+          network={stage.network}
+          session={stage.session}
+          onCancel={() => {
+            void stage.session
+              .close()
+              .then(reset)
+              .catch(() => setNotice('Reopen the wallet to continue.'));
+          }}
+          onKey={async (key, assertCurrent, mode, deviceId) => {
+            const session = stage.session;
+            assertCurrent();
+            const held = await holdDevice(session, stage.network, deviceId, mode);
+            assertCurrent();
+            if (live.current !== session) throw new Error('Reopen your wallet to continue.');
+            const created = await session.createRingWallet(key, stage.network, held.mode);
+            if (live.current !== session) return;
+            setRingBacked(true);
+            await task.run(() => start(session, created.id, created.network));
+          }}
+        />
       )}
       {stage.kind === 'backup' && (
         <WalletPanel title="Back up your wallet" icon={KeyRound}>
@@ -202,20 +285,22 @@ export function WalletAccount({
               >
                 Retry connection
               </Button>
-              <Button
-                variant="outline"
-                onClick={() =>
-                  task.run(async () => {
-                    const session = live.current;
-                    if (!session) return;
-                    const phrase = await session.client.getRecoveryPhrase();
-                    if (live.current === session)
-                      setStage({ kind: 'backup', id: stage.id, network: stage.network, phrase });
-                  })
-                }
-              >
-                Back up wallet
-              </Button>
+              {!ringBacked && (
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    task.run(async () => {
+                      const session = live.current;
+                      if (!session) return;
+                      const phrase = await session.client.getRecoveryPhrase();
+                      if (live.current === session)
+                        setStage({ kind: 'backup', id: stage.id, network: stage.network, phrase });
+                    })
+                  }
+                >
+                  Back up wallet
+                </Button>
+              )}
             </div>
           )}
         </WalletPanel>
@@ -228,6 +313,7 @@ export function WalletAccount({
             key={JSON.stringify([stage.id, recipient])}
             session={stage.session}
             walletId={stage.id}
+            ringBacked={ringBacked}
             network={stage.network}
             recipient={recipient}
             task={task}
@@ -268,7 +354,7 @@ function PasswordForm({
       <p className="text-muted-foreground">
         {exists
           ? 'Enter your wallet password to unlock it on this device.'
-          : 'Choose a password to encrypt your wallet on this device. You can then create a wallet or restore one from its recovery phrase.'}
+          : 'Choose a password to encrypt your wallet on this device. Next, choose recovery with Pubky Ring or a separate recovery phrase.'}
       </p>
       <form
         className="grid gap-4"
@@ -317,6 +403,7 @@ function PasswordForm({
 }
 
 function CreateForm({
+  useRing,
   network,
   busy,
   submit,
@@ -324,6 +411,7 @@ function CreateForm({
   network: Network;
   busy: boolean;
   submit: (words?: string) => Promise<void>;
+  useRing: () => void;
 }) {
   const [restore, setRestore] = useState(false);
   const [phrase, setPhrase] = useState('');
@@ -356,13 +444,18 @@ function CreateForm({
           </p>
         </div>
       )}
+      {!restore && (
+        <Button variant="brand" className="self-start" disabled={busy} onClick={useRing}>
+          <KeyRound /> Use Pubky Ring
+        </Button>
+      )}
       <div className="flex flex-wrap gap-2">
         <Button
-          variant="brand"
+          variant={restore ? 'brand' : 'outline'}
           disabled={busy || (restore && (!phrase.trim() || !closed))}
           onClick={() => void submit(restore ? phrase.trim() : undefined)}
         >
-          {busy ? 'Preparing wallet…' : restore ? 'Restore wallet' : 'Create wallet'}
+          {busy ? 'Preparing wallet…' : restore ? 'Restore wallet' : 'Create with recovery phrase'}
         </Button>
         <Button
           variant="outline"

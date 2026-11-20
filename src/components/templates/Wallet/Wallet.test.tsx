@@ -8,6 +8,12 @@ const wallet = vi.hoisted(() => ({
   account: 'account-one',
   exists: true,
   inspect: vi.fn(),
+  ringBinding: vi.fn(),
+  ringDeviceId: vi.fn(),
+  createRingWallet: vi.fn(),
+  guardRingDevice: vi.fn(),
+  ringEnrollment: vi.fn(),
+  acquireRingDevice: vi.fn(),
   open: vi.fn(),
   close: vi.fn(),
   listWallets: vi.fn(),
@@ -28,6 +34,15 @@ const wallet = vi.hoisted(() => ({
   resolveRecipient: vi.fn(),
 }));
 
+vi.mock('@/services/wallet/ring-enrollment', () => ({
+  ringEnrollment: wallet.ringEnrollment,
+  acquireRingDevice: wallet.acquireRingDevice,
+}));
+vi.mock('./WalletKeyApproval', () => ({
+  WalletKeyApproval: ({ onKey }: { onKey: (key: Uint8Array, assertCurrent: () => void) => Promise<void> }) => (
+    <button onClick={() => void onKey(new Uint8Array(32), () => {})}>Approve in test Ring</button>
+  ),
+}));
 vi.mock('@/libs/wallet/resolveRecipient', () => ({ resolveRecipient: wallet.resolveRecipient }));
 vi.mock('@/organisms/ContentLayout/ContentLayout', () => ({
   ContentLayout: ({ children }: { children: ReactNode }) => <>{children}</>,
@@ -40,6 +55,10 @@ vi.mock('@/services/wallet/session', () => ({
   WalletSession: class {
     client = wallet;
     inspect = wallet.inspect;
+    ringBinding = wallet.ringBinding;
+    ringDeviceId = wallet.ringDeviceId;
+    createRingWallet = wallet.createRingWallet;
+    guardRingDevice = wallet.guardRingDevice;
     newBitcoinAddress = wallet.newBitcoinAddress;
     open = wallet.open;
     close = wallet.close;
@@ -65,6 +84,7 @@ beforeEach(() => {
   vi.resetAllMocks();
   wallet.account = 'account-one';
   wallet.exists = true;
+  wallet.ringBinding.mockResolvedValue(null);
   wallet.inspect.mockImplementation(async () => ({ exists: wallet.exists }));
   wallet.open.mockResolvedValue({
     network: 'regtest',
@@ -135,7 +155,7 @@ describe('Pubky wallet', () => {
     expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled();
     fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'example password' } });
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Create wallet' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Create with recovery phrase' }));
     expect(await screen.findByText('word12')).toBeInTheDocument();
     expect(wallet.createWallet).toHaveBeenCalledTimes(1);
     expect(wallet.startWallet).not.toHaveBeenCalled();
@@ -143,6 +163,43 @@ describe('Pubky wallet', () => {
     expect(await screen.findByText('Total balance')).toBeInTheDocument();
     expect(screen.queryByText('word12')).not.toBeInTheDocument();
   });
+
+  it.each([
+    ['new', 'Create with Ring', 'create'],
+    ['other-device', 'Recover with Ring', 'restore'],
+  ] as const)(
+    'opens a %s Ring wallet after explicit approval without a recovery phrase',
+    async (state, button, mode) => {
+      wallet.exists = false;
+      wallet.listWallets.mockResolvedValue([]);
+      wallet.ringEnrollment.mockResolvedValue(state);
+      wallet.ringDeviceId.mockResolvedValue('local-device');
+      const held = { mode, assertActive: vi.fn(), release: vi.fn() };
+      wallet.acquireRingDevice.mockResolvedValue(held);
+      wallet.createRingWallet.mockImplementation(async () => {
+        wallet.ringBinding.mockResolvedValue({ deviceId: 'local-device', network: 'regtest' });
+        return record;
+      });
+      render(<Wallet />);
+      fireEvent.change(await screen.findByLabelText('New wallet password'), { target: { value: 'example password' } });
+      fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'example password' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+      fireEvent.click(await screen.findByRole('button', { name: 'Use Pubky Ring' }));
+      expect(await screen.findByRole('button', { name: button })).toBeDisabled();
+      if (mode === 'restore') expect(screen.queryByRole('button', { name: 'Create with Ring' })).toBeNull();
+      fireEvent.click(screen.getByRole('checkbox'));
+      fireEvent.click(screen.getByRole('button', { name: button }));
+      expect(wallet.createRingWallet).not.toHaveBeenCalled();
+      fireEvent.click(await screen.findByRole('button', { name: 'Approve in test Ring' }));
+      expect(await screen.findByText('Total balance')).toBeVisible();
+      expect(wallet.createRingWallet).toHaveBeenCalledWith(expect.any(Uint8Array), 'regtest', mode);
+      expect(wallet.guardRingDevice).toHaveBeenCalledWith(held.assertActive);
+      expect(wallet.createWallet).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole('button', { name: 'Back up wallet' }));
+      expect(await screen.findByText('Pubky Ring recovery')).toBeVisible();
+      expect(wallet.getRecoveryPhrase).not.toHaveBeenCalled();
+    },
+  );
 
   it('requires a separate confirmation of the recipient, fee and network quote, and sends once', async () => {
     render(<Wallet recipient="pubkyreceiver" />);
@@ -314,6 +371,55 @@ describe('Pubky wallet', () => {
     await waitFor(() => expect(wallet.getReceiveStatus).toHaveBeenCalledWith(request));
     fireEvent.click(screen.getByRole('button', { name: 'Unified request' }));
     expect(screen.getByLabelText('Payment request')).toHaveValue(request.uri);
+  });
+
+  it('updates authoritative balance and Activity when an invoice settles after leaving Receive', async () => {
+    const receipt = { phase: 'completed', receivedSats: 1000, confirmedSats: 1000, pendingSats: 0 };
+    wallet.quoteReceive.mockResolvedValue({ id: 'invoice', amountSats: 1000, netSats: 980, feeSats: 20, warnings: [] });
+    wallet.receive.mockResolvedValue({
+      id: 'invoice',
+      amountSats: 1000,
+      uri: 'bitcoin:test',
+      bolt11: 'lnbcrt1test',
+      expiresAt: Date.now() + 60000,
+      warnings: [],
+    });
+    let paid = false;
+    let paidSnapshots = 0;
+    wallet.getReceiveStatus.mockImplementation(async () => (paid ? receipt : { phase: 'waiting', receivedSats: 0 }));
+    wallet.snapshot.mockImplementation(async () => {
+      if (paid) paidSnapshots++;
+      const credited = paidSnapshots >= 2;
+      return {
+        balance: { totalSats: credited ? 5980 : 5000, availableSats: credited ? 5980 : 5000, pendingSats: 0 },
+        primary: { connected: true },
+        activity: credited
+          ? [
+              {
+                id: 'invoice',
+                kind: 'received',
+                status: 'completed',
+                title: 'Lunch payment',
+                timestamp: Date.now(),
+                amountSats: 1000,
+              },
+            ]
+          : [],
+      };
+    });
+    render(<Wallet />);
+    await unlock();
+    fireEvent.click(screen.getByRole('button', { name: 'Receive' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Review request' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Create request' }));
+    await screen.findByText('Waiting for payment');
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+    paid = true;
+    expect(await screen.findByText('Lunch payment', {}, { timeout: 4500 })).toBeVisible();
+    expect(screen.getByRole('group', { name: '₿5,980' })).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Receive' }));
+    expect(await screen.findByText('Payment received')).toBeVisible();
+    expect(screen.queryByLabelText('Lightning invoice')).toBeNull();
   });
 
   it.each([

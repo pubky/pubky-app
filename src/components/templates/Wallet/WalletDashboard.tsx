@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { Activity, Network } from '@beignet/wallet-core';
+import type { Activity, Network, ReceiveRequest } from '@beignet/wallet-core';
 import { QueryClient, useQuery } from '@tanstack/react-query';
 import {
   Activity as ActivityIcon,
@@ -18,14 +18,17 @@ import { Card } from '@/atoms/Card/Card';
 import { Spinner } from '@/atoms/Spinner/Spinner';
 import { bitcoinAmount, lightningAmount, walletMessage } from '@/libs/wallet/amount';
 import type { WalletSession } from '@/services/wallet/session';
+import { useReceiveTracker } from './useReceiveTracker';
 import { RecoveryWords, WalletPanel, type WalletTask } from './WalletPanel';
 import { WalletReceive, WalletSend } from './WalletPayments';
+import { WalletBalance } from './WalletReceipt';
 
 type View = 'overview' | 'send' | 'receive' | 'backup';
 
 export function WalletDashboard({
   session,
   walletId,
+  ringBacked,
   network,
   recipient,
   lock,
@@ -33,6 +36,7 @@ export function WalletDashboard({
 }: {
   session: WalletSession;
   walletId: string;
+  ringBacked: boolean;
   network: Network;
   recipient?: string;
   lock: () => void;
@@ -42,6 +46,8 @@ export function WalletDashboard({
   const [phrase, setPhrase] = useState('');
   // Discard wallet balances, invoice details and request status with the unlocked screen.
   const [queries] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } }));
+  const [request, setRequest] = useState<ReceiveRequest | null>(null);
+  const tracking = useReceiveTracker(session.client, queries, walletId, request);
   const snapshot = useQuery(
     {
       queryKey: ['wallet', walletId],
@@ -56,8 +62,7 @@ export function WalletDashboard({
     : 0;
   const notes = new Set(data?.notes ?? []);
   const needsRecovery = data?.balance.pending?.erroredSats ?? 0;
-  if (needsRecovery > 0)
-    notes.add(`${needsRecovery.toLocaleString('en-US')} sats need recovery attention before they can be spent.`);
+  if (needsRecovery > 0) notes.add(`${bitcoinAmount(needsRecovery)} need recovery attention before they can be spent.`);
   const refresh = () => {
     void snapshot.refetch();
   };
@@ -82,7 +87,7 @@ export function WalletDashboard({
           <p className="text-sm text-muted-foreground">Total balance</p>
           {data ? (
             <p className="mt-1 text-4xl font-bold tracking-tight tabular-nums sm:text-6xl">
-              {bitcoinAmount(data.balance.totalSats)}
+              <WalletBalance amount={data.balance.totalSats} />
             </p>
           ) : snapshot.isPending ? (
             <Spinner size="sm" aria-label="Loading balance" />
@@ -185,12 +190,23 @@ export function WalletDashboard({
         <WalletReceive
           client={session.client}
           task={task}
-          queries={queries}
+          request={request}
+          setRequest={setRequest}
+          receipt={tracking.receipt}
+          unavailable={tracking.unavailable}
           refresh={refresh}
           newBitcoinAddress={() => session.newBitcoinAddress(network)}
         />
       )}
-      {view === 'backup' && (
+      {view === 'backup' && ringBacked && (
+        <WalletPanel title="Pubky Ring recovery" icon={KeyRound}>
+          <p className="text-sm text-muted-foreground">
+            Back up your Pubky identity in Ring. To recover on another device, close this wallet, sign in with the same
+            Pubky and choose Use Pubky Ring. Lightning recovery also needs current channel data from the recovery peer.
+          </p>
+        </WalletPanel>
+      )}
+      {view === 'backup' && !ringBacked && (
         <WalletPanel title="Recovery phrase" icon={KeyRound}>
           {phrase ? (
             <RecoveryWords phrase={phrase} />

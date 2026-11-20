@@ -4,8 +4,10 @@ import { IDBFactory } from 'fake-indexeddb';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { APP_CAPABILITIES, getAuthClientId } from '@/config/auth';
 import { getDefaultHttpRelay } from '@/config/network';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { createTestWebLocks } from '@/test-utils/web-locks';
 import { type GrantFlowRequest, GrantFlowService } from './grant-flow';
+import { startWalletKeyApproval } from './wallet-identity';
 
 // Public signed routing fixtures: zero-seed user -> one-seed homeserver -> legacy-cookie.test.
 // These are the same synthetic identities used in session-store.contract.test.ts, not live accounts.
@@ -68,6 +70,12 @@ function createRelayFixture() {
     }
     const packet = routingPackets[new URL(request.url).pathname.slice(1)];
     if (packet) return response(request.url, Buffer.from(packet, 'base64'));
+    if (new URL(request.url).host === 'legacy-cookie.test' && request.method === 'GET') {
+      return Object.defineProperty(new Response(null, { status: 404 }), 'url', { value: request.url });
+    }
+    if (request.url === 'https://legacy-cookie.test/auth/grant/session' && request.method === 'DELETE') {
+      return response(request.url, null);
+    }
     expect(request.method).toBe('POST');
     expect(request.url).toBe('https://legacy-cookie.test/auth/grant/session');
     const body: { grant: string; pop: string } = await request.json();
@@ -228,3 +236,50 @@ describe('pending grant recovery after page storage is lost (real SDK)', () => {
     }
   }, 10_000);
 });
+
+it('reproduces the same wallet key across independent signed approvals using the real SDK', async () => {
+  const relay = createRelayFixture();
+  vi.stubGlobal('fetch', vi.fn(relay.fetch));
+  const sdk = new Pubky();
+  const signer = sdk.signer(Keypair.fromSecret(new Uint8Array(32)));
+  const social = {
+    get info() {
+      return { publicKey: PublicKey.from(USER), free() {} };
+    },
+  } as import('@synonymdev/pubky').Session;
+  const digests: string[] = [];
+  try {
+    for (const network of ['mainnet', 'mainnet', 'regtest'] as const) {
+      // A signed-in account and a clean auth store on each simulated device.
+      useAuthStore.setState({
+        session: social,
+        currentUserPubky: USER,
+        generation: crypto.randomUUID(),
+        isLoggingOut: false,
+        needsAccountSync: false,
+      });
+      vi.stubGlobal('indexedDB', new IDBFactory());
+      sessionStorage.clear();
+      const approval = startWalletKeyApproval(USER, network, new AbortController().signal, async (key) => {
+        const hash = await crypto.subtle.digest('SHA-256', new Uint8Array(key));
+        digests.push(Buffer.from(hash).toString('hex'));
+      });
+      const url = new URL(approval.authorizationUrl);
+      expect(url.searchParams.get('af')).toBe('v1');
+      expect(url.searchParams.get('caps')).toBe('/priv/pubky-wallet/v1/' + network + '/wallet-key:e');
+      await Promise.all([signer.approveAuthRequest(approval.authorizationUrl), approval.result]);
+      expect(sessionStorage.length).toBe(0);
+      expect(await indexedDB.databases()).toEqual([]);
+      expect(useAuthStore.getState().session).toBe(social);
+    }
+    expect(digests).toHaveLength(3);
+    expect(digests[0]).toBe(digests[1]);
+    expect(digests[0]).not.toBe(digests[2]);
+    expect(
+      relay.requests.filter(({ method, url }) => method === 'DELETE' && url.includes('/auth/grant/session')),
+    ).toHaveLength(3);
+  } finally {
+    signer.free();
+    useAuthStore.getState().reset();
+  }
+}, 12_000);

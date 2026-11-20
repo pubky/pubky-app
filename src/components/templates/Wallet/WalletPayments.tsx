@@ -6,13 +6,14 @@ import type {
   Network,
   ReceiveQuote,
   ReceiveRequest,
+  ReceiveStatus,
   SendResult,
   SendReview,
   WalletClientInterface,
 } from '@beignet/wallet-core';
 import { buildBip21, parseSats, WalletError } from '@beignet/wallet-core';
-import { type QueryClient, useQuery } from '@tanstack/react-query';
 import { ArrowDownLeft, ArrowUpRight, Copy, Zap } from 'lucide-react';
+import { motion, useReducedMotion } from 'motion/react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Button } from '@/atoms/Button/Button';
 import { Input } from '@/atoms/Input/Input';
@@ -28,6 +29,7 @@ import {
   type WalletMaximum,
 } from '@/libs/wallet/sendPayment';
 import { Detail, WalletPanel, type WalletTask, Warnings } from './WalletPanel';
+import { WalletReceipt } from './WalletReceipt';
 import { WalletScanner } from './WalletScanner';
 
 type PaymentProps = { client: WalletClientInterface; task: WalletTask; refresh: () => void };
@@ -358,15 +360,23 @@ export function WalletReceive({
   client,
   task,
   refresh,
-  queries,
+  request,
+  setRequest,
+  receipt,
+  unavailable,
   newBitcoinAddress,
-}: PaymentProps & { queries: QueryClient; newBitcoinAddress: () => Promise<string> }) {
+}: PaymentProps & {
+  request: ReceiveRequest | null;
+  setRequest: (request: ReceiveRequest | null) => void;
+  receipt: ReceiveStatus | undefined;
+  unavailable: boolean;
+  newBitcoinAddress: () => Promise<string>;
+}) {
   const [deposit, setDeposit] = useState<{ address: string; uri: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [quote, setQuote] = useState<ReceiveQuote | null>(null);
-  const [request, setRequest] = useState<ReceiveRequest | null>(null);
   async function issue() {
     if (!quote) return;
     try {
@@ -422,9 +432,9 @@ export function WalletReceive({
         <RequestCode
           key={request.id}
           request={request}
-          client={client}
           task={task}
-          queries={queries}
+          receipt={receipt}
+          unavailable={unavailable}
           reset={() => {
             setRequest(null);
             task.clearError();
@@ -506,17 +516,18 @@ export function WalletReceive({
 
 function RequestCode({
   request,
-  client,
+  receipt,
   task,
-  queries,
+  unavailable,
   reset,
 }: {
   request: ReceiveRequest;
-  client: WalletClientInterface;
+  receipt: ReceiveStatus | undefined;
   task: WalletTask;
-  queries: QueryClient;
+  unavailable: boolean;
   reset: () => void;
 }) {
+  const reduced = useReducedMotion();
   const [unified, setUnified] = useState(!request.bolt11);
   const [copied, setCopied] = useState(false);
   const [expired, setExpired] = useState(() => request.expiresAt <= Date.now());
@@ -524,93 +535,104 @@ function RequestCode({
     const timer = window.setTimeout(() => setExpired(true), Math.max(0, request.expiresAt - Date.now()));
     return () => window.clearTimeout(timer);
   }, [request.expiresAt]);
-  const status = useQuery(
-    {
-      queryKey: ['receive', request.id],
-      queryFn: () => client.getReceiveStatus(request),
-      refetchInterval: (query) => (query.state.data?.phase === 'completed' ? false : 5000),
-    },
-    queries,
-  );
-  const phase = status.data?.phase;
-  let message = expired ? 'Request expired' : status.isError ? 'Payment status unavailable' : 'Waiting for payment';
-  if (status.data) {
-    if (phase === 'completed') message = `Received ${bitcoinAmount(status.data.receivedSats)}`;
-    if (phase === 'partial') message = `Partially paid: ${bitcoinAmount(status.data.receivedSats)}`;
+  const phase = receipt?.phase;
+  const [alreadyPaid] = useState(phase === 'completed');
+  let message = expired ? 'Request expired' : unavailable ? 'Payment status unavailable' : 'Waiting for payment';
+  if (receipt) {
+    if (phase === 'completed') message = `Received ${bitcoinAmount(receipt.receivedSats)}`;
+    if (phase === 'partial') message = `Partially paid: ${bitcoinAmount(receipt.receivedSats)}`;
     if (phase === 'pending') message = 'Payment pending';
   }
   const payload = unified ? request.uri : request.bolt11;
   const qr = unified ? payload : request.bolt11.toUpperCase();
   return (
     <>
-      <p role="status" className="font-semibold">
+      <p
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        className={phase === 'completed' ? 'sr-only' : 'font-semibold'}
+      >
         {message}
       </p>
-      {status.data?.phase === 'partial' && request.amountSats !== null && (
+      {receipt?.phase === 'partial' && request.amountSats !== null && (
         <p className="text-sm text-muted-foreground">
-          {bitcoinAmount(Math.max(0, request.amountSats - status.data.receivedSats))} remaining.
+          {bitcoinAmount(Math.max(0, request.amountSats - receipt.receivedSats))} remaining.
         </p>
       )}
-      {(!phase || phase === 'waiting') && !expired && (
-        <div className="flex flex-col items-start gap-4">
-          <p className="text-sm text-muted-foreground">Keep this wallet open and unlocked while waiting for payment.</p>
-          {request.uri && request.bolt11 && request.uri !== request.bolt11 && (
-            <div className="flex flex-wrap gap-2" role="group" aria-label="Request format">
+      <motion.div
+        layout={reduced ? false : 'size'}
+        transition={{ layout: { duration: 0.24, ease: 'easeOut' } }}
+        className="relative origin-top"
+      >
+        {phase === 'completed' && receipt ? (
+          <WalletReceipt receipt={receipt} description={request.description} animateEntrance={!alreadyPaid} />
+        ) : (
+          (!phase || phase === 'waiting') &&
+          !expired && (
+            <div className="flex w-full flex-col items-start gap-4">
+              <p className="text-sm text-muted-foreground">
+                Keep this wallet open and unlocked while waiting for payment.
+              </p>
+              {request.uri && request.bolt11 && request.uri !== request.bolt11 && (
+                <div className="flex flex-wrap gap-2" role="group" aria-label="Request format">
+                  <Button
+                    size="sm"
+                    variant={!unified ? 'default' : 'outline'}
+                    aria-pressed={!unified}
+                    onClick={() => {
+                      setUnified(false);
+                      setCopied(false);
+                    }}
+                  >
+                    <Zap /> Lightning
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={unified ? 'default' : 'outline'}
+                    aria-pressed={unified}
+                    onClick={() => {
+                      setUnified(true);
+                      setCopied(false);
+                    }}
+                  >
+                    Unified request
+                  </Button>
+                </div>
+              )}
+              {new TextEncoder().encode(qr).length <= 2900 && (
+                <QRCodeSVG
+                  title="Payment request QR code"
+                  value={qr}
+                  size={208}
+                  level="L"
+                  marginSize={4}
+                  className="rounded-xl"
+                />
+              )}
+              <div className="grid w-full gap-2">
+                <Label htmlFor="receive-code">{unified ? 'Payment request' : 'Lightning invoice'}</Label>
+                <Textarea id="receive-code" readOnly value={payload} className="max-h-24 font-mono text-xs" />
+              </div>
               <Button
-                size="sm"
-                variant={!unified ? 'default' : 'outline'}
-                aria-pressed={!unified}
-                onClick={() => {
-                  setUnified(false);
-                  setCopied(false);
-                }}
+                variant="outline"
+                disabled={task.busy}
+                onClick={() =>
+                  task.run(async () => {
+                    await copyToClipboard({ text: payload });
+                    setCopied(true);
+                  })
+                }
               >
-                <Zap /> Lightning
+                <Copy />
+                {copied ? 'Copied' : 'Copy request'}
               </Button>
-              <Button
-                size="sm"
-                variant={unified ? 'default' : 'outline'}
-                aria-pressed={unified}
-                onClick={() => {
-                  setUnified(true);
-                  setCopied(false);
-                }}
-              >
-                Unified request
-              </Button>
+              <p className="text-xs text-muted-foreground">Expires {new Date(request.expiresAt).toLocaleString()}</p>
+              <Warnings items={request.warnings} />
             </div>
-          )}
-          {new TextEncoder().encode(qr).length <= 2900 && (
-            <QRCodeSVG
-              title="Payment request QR code"
-              value={qr}
-              size={208}
-              level="L"
-              marginSize={4}
-              className="rounded-xl"
-            />
-          )}
-          <div className="grid w-full gap-2">
-            <Label htmlFor="receive-code">{unified ? 'Payment request' : 'Lightning invoice'}</Label>
-            <Textarea id="receive-code" readOnly value={payload} className="max-h-24 font-mono text-xs" />
-          </div>
-          <Button
-            variant="outline"
-            disabled={task.busy}
-            onClick={() =>
-              task.run(async () => {
-                await copyToClipboard({ text: payload });
-                setCopied(true);
-              })
-            }
-          >
-            <Copy />
-            {copied ? 'Copied' : 'Copy request'}
-          </Button>
-          <p className="text-xs text-muted-foreground">Expires {new Date(request.expiresAt).toLocaleString()}</p>
-          <Warnings items={request.warnings} />
-        </div>
-      )}
+          )
+        )}
+      </motion.div>
       <Button className="self-start" variant="outline" onClick={reset}>
         New request
       </Button>

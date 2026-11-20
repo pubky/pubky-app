@@ -1,5 +1,6 @@
 import { createPortableRuntime, createRelaySocketFactory } from '@beignet/portable-engine';
 import { createSqlJsDatabaseFactory } from '@beignet/portable-engine/sqljs';
+import { provisionRingWallet, ringBinding, ringDeviceId } from './ring.mjs';
 import { openFiles, unlockVolume } from './storage.mjs';
 
 const encoder = new TextEncoder();
@@ -20,6 +21,10 @@ let renewTimer;
 let background = false;
 let grantAbort;
 let connectionIssue;
+let activeGrant;
+let ringOperation;
+let activeRequests = 0;
+const busy = () => Object.assign(new Error('Another wallet operation is running.'), { code: 'WALLET_BUSY' });
 
 async function connection() {
   const response = await fetch('/api/wallet/connection', {
@@ -50,6 +55,15 @@ function profile(grant) {
   return { network: grant.network, primaryUri: grant.primaryUri, electrum: grant.electrum };
 }
 
+function sameDeployment(left, right) {
+  return (
+    left.network === right.network &&
+    left.primaryUri === right.primaryUri &&
+    left.peerUrl === right.peerUrl &&
+    left.electrumUrl === right.electrumUrl
+  );
+}
+
 function renew(grant) {
   const delay = Math.max(1000, Math.min(240000, (grant.expiresAt - Date.now()) * 0.7));
   renewTimer = setTimeout(async () => {
@@ -57,13 +71,7 @@ function renew(grant) {
       const next = await connection();
       if (closing || grantAbort?.signal.aborted) return;
       // Never move an existing wallet's authenticated peer to a different route.
-      if (
-        next.network !== grant.network ||
-        next.primaryUri !== grant.primaryUri ||
-        next.peerUrl !== grant.peerUrl ||
-        next.electrumUrl !== grant.electrumUrl
-      )
-        throw configurationError();
+      if (!sameDeployment(next, grant)) throw configurationError();
       grant.token = next.token;
       grant.expiresAt = next.expiresAt;
     } catch {
@@ -125,6 +133,7 @@ async function open(account, password) {
     engine.setAppBackgrounded(background);
     if (!saved || (moved && !existing)) volume.write(profilePath, encoder.encode(JSON.stringify(defaults)));
     if (grant) renew(grant);
+    activeGrant = grant;
     owner = account;
     return defaults;
   } catch (error) {
@@ -155,17 +164,15 @@ async function close() {
   volume?.close();
   volume = undefined;
   owner = undefined;
+  activeGrant = undefined;
 }
 
 async function handle({ operation, account, payload }) {
   if (operation === 'close') {
     closing = true;
     grantAbort?.abort();
-    try {
-      await transition;
-    } catch {
-      /* Failed opening already released the vault. */
-    }
+    // Opening and provisioning each finish their own cleanup before the lease is released.
+    await Promise.allSettled([transition, ringOperation]);
     await close();
     return;
   }
@@ -195,6 +202,34 @@ async function handle({ operation, account, payload }) {
     }
   }
   if (!engine || account !== owner) throw new Error('Unlock this wallet first.');
+  if (ringOperation) throw busy();
+  if (operation === 'ring-binding') return ringBinding(volume);
+  if (operation === 'ring-device') return ringDeviceId(volume);
+  if (operation === 'ring-wallet') {
+    if (activeRequests) throw busy();
+    if (connectionIssue || !activeGrant) throw configurationError();
+    ringOperation = provisionRingWallet({
+      engine,
+      volume,
+      account,
+      deployment: profile(activeGrant),
+      key: payload?.key,
+      network: payload?.network,
+      mode: payload?.mode,
+      verify: async () => {
+        const next = await connection();
+        rejectIfClosing();
+        if (owner !== account || !sameDeployment(next, activeGrant)) throw configurationError();
+        activeGrant.token = next.token;
+        activeGrant.expiresAt = next.expiresAt;
+      },
+    });
+    try {
+      return await ringOperation;
+    } finally {
+      ringOperation = undefined;
+    }
+  }
   if (operation === 'request') {
     // A recovery-only session cannot mutate wallet or channel state.
     if (
@@ -208,7 +243,26 @@ async function handle({ operation, account, payload }) {
     ) {
       throw Object.assign(new Error(connectionIssue), { code: 'WALLET_CONFIGURATION' });
     }
-    return engine.request(payload);
+    const bound = !!ringBinding(volume);
+    if (
+      bound &&
+      payload.method?.toUpperCase() === 'POST' &&
+      ['/api/wallets', '/api/wallets/import'].includes(payload.path)
+    ) {
+      throw Object.assign(new Error('This device vault is reserved for its Ring wallet.'), {
+        code: 'WALLET_RING_BINDING',
+      });
+    }
+    activeRequests++;
+    try {
+      const result = await engine.request(payload);
+      if (bound && result && typeof result === 'object' && 'mnemonic' in result) {
+        throw Object.assign(new Error('Use Ring to recover this wallet.'), { code: 'WALLET_RING_BINDING' });
+      }
+      return result;
+    } finally {
+      activeRequests--;
+    }
   }
   if (operation === 'load-activity' || operation === 'save-activity') {
     if (!/^[0-9a-f]{32}$/.test(payload.walletId)) throw new Error('Invalid wallet id.');
@@ -232,8 +286,15 @@ self.onmessage = async ({ data }) => {
       error: {
         code: error?.code,
         status: error?.status,
-        message: error instanceof Error ? error.message : 'The local wallet could not complete the operation.',
+        message:
+          data.operation === 'ring-wallet'
+            ? 'Ring wallet setup could not finish. Reopen the wallet and check its status.'
+            : error instanceof Error
+              ? error.message
+              : 'The local wallet could not complete the operation.',
       },
     });
+  } finally {
+    if (data.operation === 'ring-wallet' && data.payload?.key instanceof Uint8Array) data.payload.key.fill(0);
   }
 };

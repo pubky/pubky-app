@@ -41,3 +41,32 @@ it('fences a failed worker and verifies the stored state before reopening the sa
   workers[1].reply(lastRequest(workers[1]), {});
   await closingFresh;
 });
+
+it('checks the live Ring lease before worker dispatch and can still inspect and close a fenced wallet', async () => {
+  const sent = vi.fn();
+  class TestWorker {
+    onmessage?: (event: { data: unknown }) => void;
+    postMessage(request: { operation: string; id: number; payload?: { path?: string } }) {
+      sent(request);
+      const result = request.payload?.path === '/api/wallets' ? [] : null;
+      queueMicrotask(() => this.onmessage?.({ data: { id: request.id, result } }));
+    }
+    terminate() {}
+  }
+  vi.stubGlobal('Worker', TestWorker);
+  const session = new WalletSession('y'.repeat(52));
+  const guard = vi.fn(() => {
+    throw new Error('Device lease expired');
+  });
+  session.guardRingDevice(guard);
+  const key = new Uint8Array(32).fill(17);
+  await expect(session.createRingWallet(key, 'regtest', 'create')).rejects.toThrow('Device lease expired');
+  expect(key).toEqual(new Uint8Array(32));
+  session.client.selectWallet('a'.repeat(32));
+  await expect(session.client.startWallet()).rejects.toThrow('Device lease expired');
+  expect(sent).not.toHaveBeenCalled();
+  expect(await session.client.listWallets()).toEqual([]);
+  await session.ringBinding();
+  await session.close();
+  expect(sent.mock.calls.map(([call]) => call.operation)).toEqual(['request', 'ring-binding', 'close']);
+});
