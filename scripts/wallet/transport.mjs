@@ -23,15 +23,34 @@ export function connectionSettings(env) {
   const key = env.WALLET_RELAY_SECRET;
   if (
     !['regtest', 'testnet', 'mainnet'].includes(network) ||
-    !/^(02|03)[a-f0-9]{64}@(?:[a-z0-9.-]+|\[[a-f0-9:]+\]):[0-9]{1,5}$/i.test(primaryUri ?? '') ||
+    !/^(02|03)[a-f0-9]{64}@/i.test(primaryUri ?? '') ||
     !/^[0-9a-f]{64}$/i.test(key ?? '')
   )
     throw new Error('Wallet transport is not configured');
-  const peer = socketTarget('tcp://' + primaryUri.split('@')[1]);
+  const [, address, extra] = primaryUri.split('@');
+  if (!address || extra !== undefined) throw new Error('Invalid wallet primary');
+  const peer = address.startsWith('iroh:') ? irohTarget(address) : socketTarget('tcp://' + address);
   const appOrigin = originOf(env.WALLET_APP_ORIGIN, 'https:', 'http:');
   const relayOrigin = originOf(env.WALLET_RELAY_ORIGIN, 'wss:', 'ws:');
   if (appOrigin.startsWith('https:') && relayOrigin.startsWith('ws:')) throw new Error('Use WSS with HTTPS');
   return { network, primaryUri, appOrigin, relayOrigin, peer, key: Buffer.from(key, 'hex') };
+}
+
+function irohTarget(address) {
+  const match = /^iroh:([a-f0-9]{64})\?relay=([^&]+)$/i.exec(address);
+  if (!match) throw new Error('Invalid Iroh primary');
+  const relay = new URL(decodeURIComponent(match[2]));
+  if (
+    relay.protocol !== 'https:' ||
+    relay.username ||
+    relay.password ||
+    relay.hash ||
+    relay.search ||
+    relay.pathname !== '/'
+  ) {
+    throw new Error('Invalid Iroh relay');
+  }
+  return { endpointId: match[1], relayUrl: relay.href };
 }
 
 export function socketTarget(input) {
@@ -67,7 +86,11 @@ export function connectionGrant(settings, now = Date.now()) {
   claim.writeBigUInt64BE(BigInt(expiresAt));
   return {
     network: settings.network,
-    primaryUri: settings.primaryUri,
+    // The browser's socket factory sends all peer bytes to the fixed WebSocket.
+    // Give its TCP-shaped parser the selected Lightning key without invoking native Iroh in the browser.
+    primaryUri: settings.peer?.endpointId
+      ? settings.primaryUri.split('@')[0] + '@peer.relay:9735'
+      : settings.primaryUri,
     electrum: { host: 'electrum.relay', port: 50001, tls: false },
     peerUrl: settings.relayOrigin + '/peer',
     electrumUrl: settings.relayOrigin + '/electrum',

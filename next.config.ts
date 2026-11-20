@@ -6,6 +6,10 @@ import packageJson from './package.json';
 import { excludeChunksCarrying } from './src/libs/pwa/precacheExclude';
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ['@number0/iroh', '@number0/iroh-linux-x64-gnu', '@number0/iroh-linux-arm64-gnu'],
+  outputFileTracingIncludes: {
+    '/peer': ['./node_modules/@number0/iroh*/**/*'],
+  },
   env: {
     NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION ?? packageJson.version,
   },
