@@ -24,6 +24,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Typography } from '@/atoms/Typography/Typography';
 import { useJoinRoute } from '@/hooks/useJoinRoute/useJoinRoute';
 import { useShopNavigation } from '@/hooks/useShopNavigation/useShopNavigation';
+import { ensureFramedSessionStorage } from '@/libs/auth/framed-storage';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
 export function DialogSignIn() {
@@ -37,6 +38,7 @@ export function DialogSignIn() {
   const handleClose = () => setShowSignInDialog(false);
   const handleNavigate = (event: { preventDefault: () => void }, href: string) => {
     event.preventDefault();
+    void ensureFramedSessionStorage();
     navigate(() => router.push(href));
   };
   return (

@@ -1,0 +1,60 @@
+diff --git a/PATCHES.md b/PATCHES.md
+index 6975b574..d3b0fe46 100644
+--- a/PATCHES.md
++++ b/PATCHES.md
+@@ -2,0 +3,6 @@
++## Beignet 0.43.6
++
++The source baseline is upstream tag `v0.43.6`, commit `b60b9d22d40a12a3cd45e1cff096c6146aadad26`. The portable fork started at `c90f5f0`. The 86 upstream source files changed since `fbdd109e` were merged using Git's three-way patch application. The prior portable changes still apply across the same 25 source files, including transport routing, SQLite writes, saved invoices, and mobile peer lifecycle. Upstream kept the same package dependencies.
++
++The sections below record the history of those patches.
++
+diff --git a/README.md b/README.md
+index 6ba52b79..360c01ff 100644
+--- a/README.md
++++ b/README.md
+@@ -5 +5 @@ This local fork runs the real Beignet Bitcoin and Lightning engine inside a brow
+-Source baseline: upstream Beignet `0.41.0`, commit `fbdd109e` (full source commit recorded in `package.json`). The baseline is recorded in `package.json` (`upstreamVersion`, `upstreamCommit`) and substituted into the bundle at build time, so `GET /api/config` reports `0.41.0-portable` rather than a hand-maintained string. Upstream documentation is preserved in [README.upstream.md](README.upstream.md); the original CLI/package exports described there are **not** this package's exports. MIT license retained.
++The engine uses upstream Beignet `0.43.6`, commit `b60b9d22`. The build reads the full commit and version from `package.json` and reports `0.43.6-portable` at `GET /api/config`. See [README.upstream.md](README.upstream.md) for the upstream documentation and [PATCHES.md](PATCHES.md) for this fork's platform adaptations.
+diff --git a/VALIDATION.md b/VALIDATION.md
+index 7632df3d..fd3ab1fb 100644
+--- a/VALIDATION.md
++++ b/VALIDATION.md
+@@ -1 +1,9 @@
+-# Portable engine validation, 2026-11-15 addendum for 0.41.0
++# Portable engine validation, Beignet 0.43.6
++
++Tested on Node 24.22.1 against upstream tag `v0.43.6`. All 315 portable tests passed, including the loopback WebSocket transport test. The public TypeScript declarations passed `npm run check:types`. The ESM bundle reports `0.43.6-portable`.
++
++The difference between the merged source and upstream covers the same 25 files, with the same added and removed lines, as the difference between portable `c90f5f0` and its original upstream baseline `fbdd109e`. The node database schema version remains 20.
++
++The build records injected import paths relative to the source checkout in its esbuild metadata, so the package can be reproduced in another directory.
++
++## 2026-11-15 addendum for 0.41.0
+diff --git a/package.json b/package.json
+index 08b5285c..2dc2d67e 100644
+--- a/package.json
++++ b/package.json
+@@ -5,2 +5,2 @@
+-  "upstreamVersion": "0.41.0",
+-  "upstreamCommit": "fbdd109ec47f7e479cc6cae9cdf9c69c1d132465",
++  "upstreamVersion": "0.43.6",
++  "upstreamCommit": "b60b9d22d40a12a3cd45e1cff096c6146aadad26",
+diff --git a/scripts/build-portable.cjs b/scripts/build-portable.cjs
+index e3b94d2f..1c245bf5 100644
+--- a/scripts/build-portable.cjs
++++ b/scripts/build-portable.cjs
+@@ -61,3 +61,10 @@ const httpsPerImporter = {
+-			.then((r) =>
+-				fs.writeFileSync('dist/meta.json', JSON.stringify(r.metafile))
+-			);
++			.then((r) => {
++				// esbuild records injected imports with the build machine's absolute path.
++				const metadata = JSON.stringify(r.metafile, (key, value) => {
++					if (key === 'path' && path.isAbsolute(value)) {
++						return path.relative(process.cwd(), value).split(path.sep).join('/');
++					}
++					return value;
++				});
++				fs.writeFileSync('dist/meta.json', metadata);
++			});

@@ -511,6 +511,7 @@ describe('Header Components', () => {
 
       expect(homeLink).toHaveAttribute('href', '/home');
       expect(hotLink).toHaveAttribute('href', '/hot');
+      expect(screen.getByRole('button', { name: 'Wallet' }).closest('a')).toHaveAttribute('href', '/wallet');
       expect(collectionsLink).toHaveAttribute('href', '/collections');
       expect(settingsLink).toHaveAttribute('href', '/settings/account');
       expect(profileLink).toHaveAttribute('href', '/profile');
@@ -563,7 +564,6 @@ describe('Header Components', () => {
       expect(screen.getByTestId('search-input')).toBeInTheDocument();
 
       expect(screen.getByRole('button', { name: 'Shop' }).closest('a')).not.toHaveAttribute('target');
-      // All five nav icons are shown.
       expect(document.querySelector('.lucide-house')).toBeInTheDocument();
       expect(document.querySelector('.lucide-flame')).toBeInTheDocument();
       expect(document.querySelector('.lucide-store')).toBeInTheDocument();
@@ -572,6 +572,7 @@ describe('Header Components', () => {
 
       // Settings require an account, so it renders as an auth-gated button, not a link.
       expect(document.querySelector('.lucide-settings')?.closest('a')).toBeNull();
+      expect(screen.getByRole('button', { name: 'Wallet' }).closest('a')).toBeNull();
       expect(document.querySelector('[data-cy="header-settings-btn"]')?.tagName).toBe('BUTTON');
       expect(document.querySelector('.lucide-library')?.closest('a')).toHaveAttribute('href', '/collections');
     });

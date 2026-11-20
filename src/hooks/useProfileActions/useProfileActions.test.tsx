@@ -9,7 +9,7 @@ import type { Pubky } from '@/models/models.types';
 import { toast } from '@/molecules/Toaster/toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { authInitialState } from '@/stores/auth/auth.types';
-import { mockSession } from '@/test-utils/pubky';
+import { mockSession, PUBKY_52_STAGING_FIXTURE } from '@/test-utils/pubky';
 import { useProfileActions } from './useProfileActions';
 
 // Mock next/navigation
@@ -70,6 +70,25 @@ describe('useProfileActions', () => {
       expect(typeof result.current.onCopyLink).toBe('function');
       expect(typeof result.current.onSignOut).toBe('function');
       expect(typeof result.current.onStatusChange).toBe('function');
+    });
+  });
+
+  describe('onPay', () => {
+    const profile = { ...defaultProps, publicKey: `pk:${PUBKY_52_STAGING_FIXTURE}` };
+
+    it('opens the wallet with the profile key for payment review', () => {
+      useAuthStore.setState({ currentUserPubky: 'signed-in-viewer' });
+      const { result } = renderHook(() => useProfileActions(profile));
+      act(() => result.current.onPay?.());
+      expect(mockPush).toHaveBeenCalledWith(`/wallet?recipient=${PUBKY_52_STAGING_FIXTURE}`);
+    });
+
+    it('asks a guest to sign in before opening the wallet', () => {
+      useAuthStore.setState({ currentUserPubky: null, session: null });
+      const { result } = renderHook(() => useProfileActions(profile));
+      act(() => result.current.onPay?.());
+      expect(useAuthStore.getState().showSignInDialog).toBe(true);
+      expect(mockPush).not.toHaveBeenCalled();
     });
   });
 

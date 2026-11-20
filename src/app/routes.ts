@@ -49,6 +49,7 @@ export enum APP_ROUTES {
   WHO_TO_FOLLOW = '/who-to-follow',
   SHARE = '/share',
   SHOP = '/shop',
+  WALLET = '/wallet',
 }
 
 /**
@@ -146,6 +147,7 @@ export const ALLOWED_ROUTES = [
   APP_ROUTES.PROFILE,
   APP_ROUTES.WHO_TO_FOLLOW,
   APP_ROUTES.SHARE,
+  APP_ROUTES.WALLET,
   POST_ROUTES.POST,
   AUTH_ROUTES.LOGOUT,
 ];

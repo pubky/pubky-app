@@ -74,3 +74,6 @@ public/sw.js.map
 
 # Development Containers
 .devcontainer
+
+# Wallet worker and matching SQLite WASM, built from the pinned dependencies
+/public/wallet-engine/

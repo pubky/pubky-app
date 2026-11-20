@@ -2,7 +2,7 @@
 
 import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { SETTINGS_ROUTES } from '@/app/routes';
+import { APP_ROUTES, SETTINGS_ROUTES } from '@/app/routes';
 import { ProfileController } from '@/controllers/profile/profile';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
@@ -10,12 +10,13 @@ import { useSignOut } from '@/hooks/useSignOut/useSignOut';
 import { ClientErrorCode } from '@/libs/error/error.codes';
 import { isAppError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
-import { withPubkyPrefix } from '@/libs/utils/utils';
+import { isPubkyIdentifier, stripPubkyPrefix, withPubkyPrefix } from '@/libs/utils/utils';
 import { toast } from '@/molecules/Toaster/toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
 export interface ProfileActions {
   onEdit: () => void;
+  onPay?: () => void;
   onCopyPublicKey: () => void;
   onCopyLink: () => void;
   onSignOut: () => void;
@@ -42,8 +43,9 @@ export function useProfileActions({ publicKey, link }: UseProfileActionsProps): 
   const { copyToClipboard: copyProfileLinkToClipboard } = useCopyToClipboard({
     successTitle: 'Profile link copied to clipboard',
   });
-  const { waitForAuth } = useRequireAuth();
+  const { requireAuth, waitForAuth } = useRequireAuth();
   const { handleSignOut: onSignOut, isLoading: isLoggingOut } = useSignOut();
+  const recipient = stripPubkyPrefix(publicKey);
 
   const onEdit = useCallback(() => {
     router.push(SETTINGS_ROUTES.EDIT);
@@ -82,6 +84,9 @@ export function useProfileActions({ publicKey, link }: UseProfileActionsProps): 
 
   return {
     onEdit,
+    onPay: isPubkyIdentifier(recipient)
+      ? () => requireAuth(() => router.push(`${APP_ROUTES.WALLET}?recipient=${recipient}`))
+      : undefined,
     onCopyPublicKey,
     onCopyLink,
     onSignOut,

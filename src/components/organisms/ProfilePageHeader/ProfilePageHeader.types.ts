@@ -19,6 +19,7 @@ export interface ProfileHeaderData {
  */
 export interface ProfileHeaderActions {
   onEdit?: () => void;
+  onPay?: () => void;
   onCopyPublicKey?: () => void;
   onCopyLink: () => void;
   onSignOut?: () => void;

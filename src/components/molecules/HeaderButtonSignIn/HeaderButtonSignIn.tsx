@@ -7,6 +7,7 @@ import { AUTH_ROUTES } from '@/app/routes';
 import { Button } from '@/atoms/Button/Button';
 import { useJoinRoute } from '@/hooks/useJoinRoute/useJoinRoute';
 import { useShopNavigation } from '@/hooks/useShopNavigation/useShopNavigation';
+import { ensureFramedSessionStorage } from '@/libs/auth/framed-storage';
 
 export function HeaderButtonSignIn({ ...props }: React.HTMLAttributes<HTMLButtonElement>) {
   const router = useRouter();
@@ -16,6 +17,7 @@ export function HeaderButtonSignIn({ ...props }: React.HTMLAttributes<HTMLButton
   const isSignInPage = pathname === AUTH_ROUTES.SIGN_IN;
 
   const handleClick = () => {
+    void ensureFramedSessionStorage();
     // "New here?" is a sign-up entry point: Join step when Passport is enabled, fair-access otherwise.
     navigate(() => router.push(isSignInPage ? joinRoute : AUTH_ROUTES.SIGN_IN));
   };

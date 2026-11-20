@@ -41,6 +41,16 @@ import {
   UNAUTHENTICATED_ROUTES,
 } from './routes';
 
+describe('Wallet access', () => {
+  it('allows only signed-in accounts that have completed migration', () => {
+    expect(AUTHENTICATED_ROUTES.allowedRoutes).toContain(APP_ROUTES.WALLET);
+    expect(UNAUTHENTICATED_ROUTES.allowedRoutes).not.toContain(APP_ROUTES.WALLET);
+    expect(NEEDS_SOCIAL_MIGRATION_ROUTES.allowedRoutes).not.toContain(APP_ROUTES.WALLET);
+    expect(PUBLIC_ROUTES).not.toContain(APP_ROUTES.WALLET);
+    expect(isPublicExploreRoute(APP_ROUTES.WALLET)).toBe(false);
+  });
+});
+
 describe('getContentSearchUrl', () => {
   it('builds an encoded q-only search URL', () => {
     expect(getContentSearchUrl('bitcoin wallets & privacy')).toBe('/search?q=bitcoin+wallets+%26+privacy');

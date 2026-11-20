@@ -2,6 +2,8 @@
 
 # Pubky web app
 
+This branch adds a self-custodial Bitcoin wallet at `/wallet`. Sign in to Pubky and select **Wallet** in the navigation to create or unlock it. The hosting operator must configure a payment relay. [Wallet setup and recovery](docs/wallet.md)
+
 ## Prerequisites
 
 - Node.js (see [.nvmrc](./.nvmrc) for the recommended version)

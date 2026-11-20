@@ -4,6 +4,7 @@ import { ProfileStats } from '@/hooks/useProfileHeader/useProfileHeader';
 
 export interface ProfilePageLayoutActions {
   onEdit: () => void;
+  onPay?: () => void;
   onCopyPublicKey: () => void;
   onCopyLink: () => void;
   onSignOut: () => void;

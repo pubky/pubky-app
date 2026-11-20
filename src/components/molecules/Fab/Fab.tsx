@@ -35,7 +35,7 @@ import { useContextualBannerStore } from '@/stores/contextualBanner/contextualBa
  *   (Back/Continue) that the FAB would overlap, and creating posts
  *   mid-onboarding is out of flow (reachable once fully authenticated,
  *   e.g. the tags step)
- * - Hidden on Shop routes, which provide their own commerce actions
+ * - Hidden on Wallet and Shop routes, which provide their own payment actions
  * - Hidden on the Terms of Service and Privacy Policy pages, where it would cover the text
  * - Hidden while a collection is in reorder mode (reorder mode is for
  *   reordering, not adding posts; the flag bridges from the page via the
@@ -71,6 +71,7 @@ export function Fab() {
     !shouldShow ||
     isReorderActive ||
     isOnboardingRoute ||
+    pathname === APP_ROUTES.WALLET ||
     isShopRoute ||
     isLegalPage ||
     isReplacedByGuestBanner

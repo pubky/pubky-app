@@ -1,12 +1,13 @@
 # Stage 1: Dependencies
 FROM node:lts-alpine AS deps
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat git
 
 WORKDIR /app
 
 # Keep patches available before npm ci: patch-package skips missing patches during postinstall.
 COPY package.json package-lock.json ./
 COPY patches ./patches
+COPY vendor/beignet-portable-engine-0.43.6.tgz ./vendor/
 
 # Install all dependencies (including devDependencies for build)
 RUN npm ci

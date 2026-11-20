@@ -351,8 +351,8 @@ describe('Fab', () => {
   });
 });
 
-it.each(['/shop', '/shop/marketplace/cart'])(
-  'does not cover embedded Shop with the App post button on %s',
+it.each(['/shop', '/shop/marketplace/cart', '/wallet'])(
+  'keeps payment controls clear of the post button on %s',
   (pathname) => {
     mockUsePathname.mockReturnValue(pathname);
     mockIsPublicExploreRoute.mockReturnValue(true);

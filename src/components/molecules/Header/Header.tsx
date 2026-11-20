@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Flame, Home, Library, Settings, Store, UserRoundPlus } from 'lucide-react';
+import { Flame, Home, Library, Settings, Store, UserRoundPlus, Wallet } from 'lucide-react';
 import { APP_ROUTES, isCoreExploreRoute, isNavItemActive, SETTINGS_ROUTES } from '@/app/routes';
 import { Badge } from '@/atoms/Badge/Badge';
 import { Button } from '@/atoms/Button/Button';
@@ -63,6 +63,7 @@ const getNavigationItems = (): NavigationItemConfig[] => [
     dataCy: 'header-hot-btn',
   },
   { href: APP_ROUTES.SHOP, icon: Store, label: 'Shop', dataCy: 'header-shop-btn' },
+  { href: APP_ROUTES.WALLET, icon: Wallet, label: 'Wallet', dataCy: 'header-wallet-btn' },
   {
     href: APP_ROUTES.COLLECTIONS,
     icon: Library,
@@ -191,7 +192,7 @@ export function HeaderExploreNavigationButtons({
     <Container className={cn('hidden min-w-0 flex-1 flex-row items-center justify-end gap-3 lg:flex', className)}>
       {showSearch && <SearchInput />}
       {getNavigationItems().map((item) => {
-        // Core explore routes navigate freely; Settings requires an account.
+        // Wallet and Settings require an account.
         const requiresAuth = item.href !== APP_ROUTES.SHOP && !isCoreExploreRoute(item.href);
         return (
           <NavigationButton

@@ -141,6 +141,21 @@ const mockOtherUserProps: ProfilePageHeaderProps = {
 };
 
 describe('ProfilePageHeader', () => {
+  it('offers Pay on another profile and omits it on the viewer’s own profile', () => {
+    const onPay = vi.fn();
+    const { rerender } = render(
+      <ProfilePageHeader {...mockOtherUserProps} actions={{ ...mockOtherUserProps.actions, onPay }} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Pay' }));
+    expect(onPay).toHaveBeenCalledOnce();
+    rerender(
+      <TooltipProvider>
+        <ProfilePageHeader {...mockProps} actions={{ ...mockProps.actions, onPay }} />
+      </TooltipProvider>,
+    );
+    expect(screen.queryByRole('button', { name: 'Pay' })).toBeNull();
+  });
+
   it('renders name and bio correctly', () => {
     render(<ProfilePageHeader {...mockProps} />);
 

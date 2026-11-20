@@ -97,6 +97,7 @@ vi.mock('@/app/routes', async () => {
       SEARCH: '/search',
       HOT: '/hot',
       SHOP: '/shop',
+      WALLET: '/wallet',
       COLLECTIONS: '/collections',
       SETTINGS: '/settings',
       PROFILE: '/profile',
@@ -260,6 +261,7 @@ describe('MobileFooter', () => {
       { href: '/home', iconClass: '.lucide-house', label: 'Home' },
       { href: '/search', iconClass: '.lucide-search', label: 'Search' },
       { href: '/hot', iconClass: '.lucide-flame', label: 'Hot' },
+      { href: '/wallet', iconClass: '.lucide-wallet', label: 'Wallet' },
       { href: '/collections', iconClass: '.lucide-library', label: 'Collections' },
       { href: '/settings/account', iconClass: '.lucide-settings', label: 'Settings' },
     ];
@@ -596,9 +598,12 @@ describe('MobileFooter', () => {
       '/search',
       '/hot',
       '/shop',
+      '/wallet',
       '/collections',
       '/settings/account',
     ]);
+    expect(fireEvent.click(screen.getByRole('link', { name: 'Wallet' }))).toBe(false);
+    expect(collectionsDiscoveryMock.setShowSignInDialog).toHaveBeenCalledWith(true);
     expect(document.querySelector('.lucide-library')).toBeInTheDocument();
     expect(document.querySelector('.lucide-settings')).toBeInTheDocument();
     expect(screen.queryByTestId('avatar-with-fallback')).not.toBeInTheDocument();

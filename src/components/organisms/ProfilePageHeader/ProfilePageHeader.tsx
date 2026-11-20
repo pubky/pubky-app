@@ -12,6 +12,7 @@ import {
   UserMinus,
   UserRoundPlus,
   UsersRound,
+  Zap,
 } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -49,6 +50,7 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
   const { avatarUrl, emoji = '🌴', name, bio, publicKey, status } = profile;
   const {
     onEdit,
+    onPay,
     onCopyPublicKey,
     onCopyLink,
     onSignOut,
@@ -293,6 +295,18 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
                       {'Follow'}
                     </>
                   )}
+                </Button>
+              )}
+              {onPay && (
+                <Button
+                  data-cy="profile-pay-btn"
+                  className={ACTION_BUTTON_GRID_CELL}
+                  variant="secondary"
+                  size="sm"
+                  onClick={onPay}
+                >
+                  <Zap className="size-4" />
+                  {'Pay'}
                 </Button>
               )}
               {copyPublicKeyButton}
