@@ -1,6 +1,5 @@
 'use client';
 
-import { useState } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { isPinakesConfigured, PINAKES_SLOW_READ_MS } from '@/config/pinakes';
 import { usePinakesCard } from '@/hooks/usePinakesCard/usePinakesCard';
@@ -21,12 +20,10 @@ import { ResourceEmbedFrame } from '@/molecules/ResourceCard/ResourceEmbedFrame'
 import { ResourceLinkCard } from '@/molecules/ResourceCard/ResourceLinkCard';
 import { useResourceSurface } from '@/molecules/ResourceCard/ResourceSurfaceContext';
 import { ResourceCardSkeleton } from '@/molecules/ResourceCardSkeleton/ResourceCardSkeleton';
-import { getEmbedTarget } from '@/molecules/ResourcePlayer/resourcePlayer.utils';
-import { AnimatedHeight, ResourcePlayerFrame } from '@/molecules/ResourcePlayer/ResourcePlayerFrame';
+import { AnimatedHeight } from '@/molecules/ResourcePlayer/ResourcePlayerFrame';
 import { useCardPlayer } from '@/molecules/ResourcePlayer/useCardPlayer';
 import { ResourceActions } from '@/organisms/ResourceActions/ResourceActions';
 import { PinakesStatus, type TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
-import { useSettingsStore } from '@/stores/settings/settings.store';
 import { GenericPreview } from './GenericPreview';
 import { useSlowRead } from './useSlowRead';
 
@@ -81,14 +78,13 @@ interface GenericResourcePreviewProps {
  * Without a Pinakes origin configured no request is made and the plain `GenericPreview` renders;
  * a direct media file keeps it too, since it shows or plays the file inline.
  *
- * A card on a service that allows embedding plays there in place (`useCardPlayer`: "Play on
- * <service>" in the action row, a dock when it scrolls away); not in the composer or a quoted post.
- *
- * A card on such a service with no Also on shows that service's embed up front instead, in the
- * resource frame (`ResourceEmbedFrame`), as `NativeEmbedResource` does for a video; in a post, the
- * composer and a collection alike. It plays only on a press inside it. A viewer who turned platform
- * embeds up front off (Settings, Links & Media) gets our card instead, the service's player only on
- * Play on.
+ * Embed or card (`useCardPlayer`): a link on a service with a player (a Spotify track or artist
+ * page) shows that service's player up front, in the resource frame (`ResourceEmbedFrame`); a
+ * generic link Pinakes knows on such services (a MusicBrainz or Wikipedia page) shows our card up
+ * front. Either has the embed/card switch in its header when there is a choice (Card, then the
+ * services), and no Play on in its action row; in a post, the composer (without the footer) and a
+ * collection alike. A player plays only on a press inside it. A viewer who turned platform embeds
+ * up front off (Settings, Links & Media) gets a stand-in that loads nothing until its Play.
  *
  * A link Pinakes does not know yet (a post published seconds ago) is read again while the preview
  * is on screen (`usePinakesCard`'s `recheck`), and its card replaces the link's own preview in the
@@ -131,16 +127,13 @@ function ResourcePreview({
     resolve: isComposing,
   });
   const isSlow = useSlowRead(lookupUrl, isLoading, PINAKES_SLOW_READ_MS);
-  // The up-front service embed that has loaded (see `embedTarget`); another link loads anew.
-  const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
-  const embedsUpFront = useSettingsStore((state) => state.media.embedsUpFront);
-  const hiddenPlayers = useSettingsStore((state) => state.media.hiddenPlayers);
   const withActions = !isComposing && !isNested;
-  // A card with an action row plays its services in place; not while composing or in a quoted post.
-  const { playOn, renderBody, isOpen } = useCardPlayer(
-    withActions && card && !hasNothingToShow(card) ? card : null,
+  // Embed or card, with the switch; not in a quoted post. While composing, a player previews (`preview`).
+  const { embed, switcher } = useCardPlayer(
+    !isNested && card && !hasNothingToShow(card) ? card : null,
     url,
     actionSurface,
+    { preview: isComposing },
   );
 
   if (!lookupUrl) return <GenericPreview url={url} />;
@@ -152,14 +145,7 @@ function ResourcePreview({
   const linkUrl = shownCard ? getResourceLinks(shownCard, url).linkUrl : getHttpUrl(url);
   // A card on other services too lists them in its ⋯ menu ("Also on"): one row per service, never
   // the card's own (`pickAlsoOn`).
-  const cardAlsoOn = shownCard ? getMenuAlsoOn(shownCard, url) : null;
-  const alsoOn = withActions ? cardAlsoOn : null;
-  // No Also on and the link (or the card's canonical link) is on a service with an embed, not removed
-  // from Players: that embed, up front, in the resource frame.
-  const embedTarget =
-    embedsUpFront && !isNested && shownCard && !cardAlsoOn && getResourceStatus(shownCard.status) === PinakesStatus.OK
-      ? getEmbedTarget(url, shownCard, hiddenPlayers)
-      : null;
+  const alsoOn = withActions && shownCard ? getMenuAlsoOn(shownCard, url) : null;
   // The footer acts on the card's canonical link, its other spellings read along (`getResourceTarget`).
   const target = getResourceTarget(shownCard, url);
   const actions = !withActions ? null : (
@@ -173,7 +159,6 @@ function ResourcePreview({
       title={shownCard?.name}
       card={shownCard}
       isOnScreen={isOnScreen}
-      playOn={shownCard && !embedTarget ? playOn : undefined}
       extraMenuContent={
         alsoOn
           ? ({ variant, closeMenu }) => <ResourceAlsoOn alsoOn={alsoOn} variant={variant} closeMenu={closeMenu} />
@@ -182,27 +167,15 @@ function ResourcePreview({
     />
   );
   if (!shownCard) return <ResourceLinkCard url={url} actions={actions} />;
-  if (embedTarget) {
+  // A service's player: in the resource frame, the switch in its header.
+  if (embed) {
     return (
-      <ResourceEmbedFrame url={url} card={shownCard} actions={actions}>
-        <ResourcePlayerFrame
-          target={embedTarget}
-          title={shownCard.name?.trim() || url}
-          load={loadedSrc === embedTarget.src ? 'ready' : 'loading'}
-          onLoaded={() => setLoadedSrc(embedTarget.src)}
-          quiet
-        />
+      <ResourceEmbedFrame url={url} card={shownCard} actions={actions} headerControl={switcher}>
+        {embed}
       </ResourceEmbedFrame>
     );
   }
   return (
-    <ResourceCard
-      card={shownCard}
-      href={url}
-      actions={actions}
-      isOnScreen={isOnScreen}
-      renderBody={renderBody}
-      isBodyReplaced={isOpen}
-    />
+    <ResourceCard card={shownCard} href={url} actions={actions} isOnScreen={isOnScreen} headerControl={switcher} />
   );
 }

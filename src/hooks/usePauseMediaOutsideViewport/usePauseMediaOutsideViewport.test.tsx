@@ -1,5 +1,6 @@
-import { render, waitFor } from '@testing-library/react';
+import { fireEvent, render, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { onMediaStop } from '@/hooks/useOnePlayer/useOnePlayer';
 import { usePauseMediaOutsideViewport } from './usePauseMediaOutsideViewport';
 
 let intersectionCallback: ((entries: IntersectionObserverEntry[]) => void) | null = null;
@@ -146,5 +147,17 @@ describe('usePauseMediaOutsideViewport', () => {
     expect(pause).toHaveBeenCalledTimes(1);
     expect(pause.mock.contexts[0]).toBe(container.querySelector('[data-testid="other"]'));
     expect(postMessage).not.toHaveBeenCalled();
+  });
+
+  it('stops the other media when a post’s media starts: one media plays on the page', () => {
+    vi.stubGlobal('IntersectionObserver', MockIntersectionObserver);
+    vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => undefined);
+    const stopped = vi.fn();
+    const unsubscribe = onMediaStop(stopped);
+    const { container } = render(<MediaEmbed />);
+
+    fireEvent.play(container.querySelector('video')!);
+    unsubscribe();
+    expect(stopped).toHaveBeenCalledTimes(1);
   });
 });

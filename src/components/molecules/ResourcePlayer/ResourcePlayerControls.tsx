@@ -1,28 +1,36 @@
 'use client';
 
 import { type ComponentProps, type ReactNode, useEffect, useRef, useState } from 'react';
-import { ArrowUp, Check, ChevronDown, Play, X } from 'lucide-react';
+import { Check, ChevronDown, LinkIcon, Play, X } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
-import { Container } from '@/atoms/Container/Container';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/atoms/DropdownMenu/DropdownMenu';
 import { Typography } from '@/atoms/Typography/Typography';
 import { KEEP_PLAYING_ATTRIBUTE } from '@/hooks/usePauseMediaOutsideViewport/usePauseMediaOutsideViewport';
 import { cn } from '@/libs/utils/utils';
 import { ResourceSourceIcon } from '@/molecules/ResourceCard/ResourceSourceIcon';
-import { PostActionButton, type PostActionSurface } from '@/organisms/PostActionsBar/PostActionButton';
+import type { PostActionSurface } from '@/organisms/PostActionsBar/PostActionButton';
 import { postActionsButtonVariants } from '@/organisms/PostActionsBar/PostActionsBar.variants';
+import { DOCK_CLASS, DOCK_SLOT_CLASS, DockBar, DockSlotBack, PlayerSlot, usePlayerHost } from './PlayerHost';
 import type { PlayerTarget } from './resourcePlayer.utils';
-import type { ResourcePlayerState } from './useResourcePlayer';
 
 interface ProviderMenuProps {
   targets: PlayerTarget[];
-  player: ResourcePlayerState;
+  /** The service shown now (playing, or a song's player up front), or `null`. */
+  current: PlayerTarget | null;
+  onSelect: (target: PlayerTarget) => void;
   trigger: ReactNode;
+  /** Each row's favicon; off where nothing may load from the services yet (platform embeds off). */
+  icons?: boolean;
+  /** The menu's accessible name: what picking a row does. */
+  label: string;
+  /** A "Card" row before the services: shows the link's card instead of a player, current while `current` is `null`. */
+  onShowCard?: () => void;
 }
 
 const ROW = 'group gap-2 p-0';
@@ -30,29 +38,61 @@ const ROW_TEXT = 'truncate text-base font-medium transition-colors group-hover:t
 
 /**
  * The services to play on, in the post menu's style: one line per service (favicon and name), the
- * playing one in full colour with a check, then Close.
+ * current one in full colour with a check. Where the link's card can stand instead of a player (a
+ * card's switch), Card comes first, set apart from the services by the menu's separator.
  */
-function ProviderMenu({ targets, player, trigger }: ProviderMenuProps) {
+function ProviderMenu({ targets, current, onSelect, trigger, icons = true, label, onShowCard }: ProviderMenuProps) {
+  const cardShown = current === null;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
       <DropdownMenuContent
         align="start"
-        aria-label="Play on"
+        aria-label={label}
         className="flex w-56 flex-col gap-2.5"
         data-testid="play-on-menu"
       >
+        {onShowCard && (
+          <>
+            <DropdownMenuItem
+              data-testid="play-on-card"
+              aria-label="Show the link card instead of a player"
+              aria-current={cardShown || undefined}
+              onSelect={onShowCard}
+              className={ROW}
+            >
+              {icons && (
+                <LinkIcon
+                  aria-hidden="true"
+                  className={cn(
+                    'size-4 shrink-0 transition-colors group-hover:text-foreground',
+                    cardShown ? 'text-foreground' : 'text-muted-foreground',
+                  )}
+                />
+              )}
+              <Typography
+                as="span"
+                overrideDefaults
+                className={cn(ROW_TEXT, 'min-w-0 flex-1', cardShown ? 'text-foreground' : 'text-muted-foreground')}
+              >
+                Card
+              </Typography>
+              {cardShown && <Check aria-hidden="true" className="size-4 shrink-0 text-brand" />}
+            </DropdownMenuItem>
+            {targets.length > 0 && <DropdownMenuSeparator className="-mx-4 my-0" />}
+          </>
+        )}
         {targets.map((target) => {
-          const playing = player.current?.provider === target.provider;
+          const playing = current?.provider === target.provider;
           return (
             <DropdownMenuItem
               key={target.provider}
               data-testid="play-on-row"
               aria-current={playing || undefined}
-              onSelect={() => player.play(target)}
+              onSelect={() => onSelect(target)}
               className={ROW}
             >
-              <ResourceSourceIcon uri={target.link} />
+              {icons && <ResourceSourceIcon uri={target.link} />}
               <Typography
                 as="span"
                 overrideDefaults
@@ -64,77 +104,68 @@ function ProviderMenu({ targets, player, trigger }: ProviderMenuProps) {
             </DropdownMenuItem>
           );
         })}
-        {player.current && (
-          <DropdownMenuItem onSelect={player.close} className={ROW}>
-            <X
-              aria-hidden="true"
-              className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground"
-            />
-            <Typography as="span" overrideDefaults className={cn(ROW_TEXT, 'text-muted-foreground')}>
-              Close player
-            </Typography>
-          </DropdownMenuItem>
-        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
 }
 
 /**
- * The card's player, on its own line above the footer, in the action row's pills (`PostActionButton`'s):
- * ▶ and the service's logo play the first service; while it plays, the logo and ✕ close it. The service's
- * name is in the accessible name. A chevron pill beside it picks another service, only when there
- * is one.
+ * A card's embed/card switch, in the header of its frame or card (`useCardPlayer`'s `switcher`): the
+ * shown service's favicon, name and a chevron, in the action row's pill style, opening Card and,
+ * below a separator, the services to show instead (`ProviderMenu`). Picking one only switches
+ * the player shown; it never starts it. While the card shows (`current` is `null`), the switch reads Card.
+ * On a phone it shows the favicon (or the card's link icon) and the chevron only; the name stays in
+ * its accessible name.
  */
-export function PlayOnSplit({
+export function PlayerSwitch({
   targets,
-  player,
+  current,
+  onSelect,
+  onShowCard,
+  icons = true,
   surface = 'muted',
 }: {
   targets: PlayerTarget[];
-  player: ResourcePlayerState;
-  /** What the card's footer sits on (`PostActionButton`'s `surface`). */
+  /** The service shown, or `null` while the card shows instead. */
+  current: PlayerTarget | null;
+  onSelect: (target: PlayerTarget) => void;
+  onShowCard: () => void;
+  /** The favicons; off where nothing may load from the services yet. */
+  icons?: boolean;
   surface?: PostActionSurface;
 }) {
-  const shown = player.current ?? targets[0];
-  if (!shown) return null;
-  const isOpen = player.current !== null;
-  const hasMenu = targets.length > 1;
-  const label = isOpen ? `Close the ${shown.name} player` : `Play on ${shown.name}`;
+  const name = current?.name ?? 'Card';
   return (
-    <Container overrideDefaults role="group" aria-label="Player" className="flex shrink-0 items-center gap-px">
-      <PlayOnPill
-        uri={shown.link}
-        isOpen={isOpen}
-        label={label}
-        surface={surface}
-        onClick={() => (isOpen ? player.close() : player.play(shown))}
-        data-testid="play-on-main"
-        className={cn(hasMenu && 'rounded-r-none')}
-      />
-      {hasMenu && (
-        <ProviderMenu
-          targets={targets}
-          player={player}
-          trigger={
-            <PostActionButton
-              icon={ChevronDown}
-              surface={surface}
-              ariaLabel="Play on another service"
-              data-testid="play-on-trigger"
-              className="rounded-l-none"
-            />
-          }
-        />
-      )}
-    </Container>
+    <ProviderMenu
+      targets={targets}
+      current={current}
+      onSelect={onSelect}
+      onShowCard={onShowCard}
+      icons={icons}
+      label="Choose service"
+      trigger={
+        <Button
+          variant="secondary"
+          size="sm"
+          aria-label={`${name}: choose another service`}
+          data-testid="player-switch"
+          className={cn(postActionsButtonVariants({ surface }), 'w-fit max-w-full')}
+        >
+          {icons && (current ? <ResourceSourceIcon uri={current.link} /> : <LinkIcon aria-hidden="true" />)}
+          <Typography as="span" overrideDefaults className={cn('truncate', icons && 'max-sm:hidden')}>
+            {name}
+          </Typography>
+          <ChevronDown aria-hidden="true" />
+        </Button>
+      }
+    />
   );
 }
 
 /**
  * The player pill in the action row's own buttons: ▶ and the service's logo, while open the logo and
- * ✕; the label (the service's name) is its accessible name and tooltip. `PlayOnSplit`'s main part,
- * and an X post's "Show on" on its card (`NativeEmbedResource`).
+ * ✕; the label (the service's name) is its accessible name and tooltip: an X post's "Show on" on
+ * its card (`NativeEmbedResource`).
  */
 export function PlayOnPill({
   uri,
@@ -166,44 +197,78 @@ export function PlayOnPill({
   );
 }
 
+/** The page's player a card's frame is (`useResourcePlayer`'s owner), and the card's resource. */
+export interface PagePlayer {
+  owner: string;
+  resource: string;
+}
+
 /**
  * Keeps an open player on screen when its card scrolls away: the player's box becomes a small fixed
  * dock (CSS only, the frame is never moved, so it keeps playing) with Close and a way back; back in
  * view it returns to the card. The dock sits above the phone's bottom bar and left of the new-post
- * button (Fab: right-3 bottom-18 size-20, sm:right-10, md:bottom-20, lg:bottom-6), so it never
- * covers either. Audio uses the service's compact height; video keeps its ratio at the dock's width.
+ * button, so it never covers either (`DOCK_CLASS`). Audio uses the service's compact height; video
+ * keeps its ratio at the dock's width. A player nobody started (a player shown up front, `dockable` off)
+ * stays in its card, and a post pauses it off screen like any embed. Here (no player host: tests, a
+ * tree outside the app) a paused player is not `dockable`, so one paused in this dock goes back to
+ * its card; the host keeps one paused in the dock there.
+ *
+ * In the app (`PlayerHost`), a card's player (`pagePlayer`, never a preview's) is kept by the host
+ * instead (`PlayerSlot`): laid over the card, and, while it is the page's player, in the dock when
+ * no card of it is on screen, also on another page; `dockable` is then the host's call.
  */
 export function PlayerDock({
-  target,
-  title,
-  onClose,
-  children,
-}: {
+  pagePlayer,
+  ...props
+}: PlayerDockProps & {
+  /** The page's player the frame is: kept by the app's player host, where there is one. */
+  pagePlayer?: PagePlayer;
+}) {
+  const host = usePlayerHost();
+  if (host && pagePlayer) {
+    return (
+      <PlayerSlot {...pagePlayer} target={props.target} title={props.title} onClose={props.onClose}>
+        {props.children}
+      </PlayerSlot>
+    );
+  }
+  return <PlayerDockInPlace {...props} />;
+}
+
+interface PlayerDockProps {
   target: PlayerTarget;
   title: string;
   onClose: () => void;
+  dockable?: boolean;
   children: ReactNode;
-}) {
+}
+
+/** `PlayerDock` with no player host: the dock is the player's own box, fixed by CSS. */
+function PlayerDockInPlace({ target, title, onClose, dockable = true, children }: PlayerDockProps) {
   const slotRef = useRef<HTMLDivElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
-  const [docked, setDocked] = useState(false);
+  const [isOffScreen, setIsOffScreen] = useState(false);
   const [slotHeight, setSlotHeight] = useState<number | null>(null);
+  const docked = dockable && isOffScreen;
 
   useEffect(() => {
     const slot = slotRef.current;
-    if (!slot || typeof IntersectionObserver === 'undefined') return;
+    if (!dockable || !slot || typeof IntersectionObserver === 'undefined') return;
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (!entry.isIntersecting && boxRef.current && !boxRef.current.dataset.docked) {
           setSlotHeight(boxRef.current.offsetHeight);
         }
-        setDocked(!entry.isIntersecting);
+        setIsOffScreen(!entry.isIntersecting);
       },
       { threshold: 0 },
     );
     observer.observe(slot);
-    return () => observer.disconnect();
-  }, []);
+    return () => {
+      observer.disconnect();
+      setIsOffScreen(false);
+    };
+  }, [dockable]);
 
   const backToCard = () => slotRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
@@ -211,63 +276,23 @@ export function PlayerDock({
     <div
       ref={slotRef}
       style={docked && slotHeight ? { height: slotHeight } : undefined}
-      className={cn('relative min-w-0', docked && 'rounded-md border border-dashed border-border')}
+      className={cn('relative min-w-0', docked && DOCK_SLOT_CLASS)}
       data-testid="player-dock-slot"
       data-docked={docked ? 'true' : undefined}
     >
-      {docked && (
-        <Container overrideDefaults className="flex h-full items-center justify-center p-3">
-          <Button
-            variant="outline"
-            size="sm"
-            aria-label={`Back to ${title}`}
-            data-testid="player-dock-slot-back"
-            onClick={backToCard}
-          >
-            <ArrowUp aria-hidden="true" />
-          </Button>
-        </Container>
-      )}
+      {docked && <DockSlotBack title={title} onBack={backToCard} />}
       <div
         ref={boxRef}
         data-docked={docked ? 'true' : undefined}
-        className={cn(
-          docked && [
-            'fixed right-26 bottom-18 left-3 z-40 flex items-start gap-1 rounded-lg border border-border bg-popover p-1 shadow-2xl',
-            'sm:right-34 sm:left-auto sm:w-96 md:bottom-20 lg:bottom-6 [&_[data-player-region]]:h-(--player-dock-h)',
-          ],
-        )}
+        className={cn(docked && DOCK_CLASS)}
         // A post pauses its media once off screen (`usePauseMediaOutsideViewport`); the player then
         // plays on in the dock.
-        {...{ [KEEP_PLAYING_ATTRIBUTE]: 'true' }}
+        {...(dockable && { [KEEP_PLAYING_ATTRIBUTE]: 'true' })}
         role={docked ? 'complementary' : undefined}
         aria-label={docked ? `Player dock: ${title}` : undefined}
       >
         <div className="min-w-0 flex-1">{children}</div>
-        {docked && (
-          <Container overrideDefaults className="flex shrink-0 flex-col" data-testid="player-dock-bar">
-            <Button
-              variant="ghost"
-              size="sm"
-              aria-label={`Close the ${target.name} player`}
-              data-testid="player-dock-close"
-              onClick={onClose}
-              className="size-8 text-muted-foreground hover:text-foreground"
-            >
-              <X aria-hidden="true" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              aria-label={`Back to ${title}`}
-              data-testid="player-dock-back"
-              onClick={backToCard}
-              className="size-8 text-muted-foreground hover:text-foreground"
-            >
-              <ArrowUp aria-hidden="true" />
-            </Button>
-          </Container>
-        )}
+        {docked && <DockBar target={target} title={title} onClose={onClose} onBack={backToCard} />}
       </div>
     </div>
   );

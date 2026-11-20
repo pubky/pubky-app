@@ -5,6 +5,7 @@ import { COLORS } from '@/config/theme';
 import { TOOLTIP_DELAY_MS } from '@/config/ui';
 import { RootContainer } from '@/molecules/ContainerRoot/ContainerRoot';
 import { Metadata } from '@/molecules/Metadata/Metadata';
+import { PlayerHost } from '@/molecules/ResourcePlayer/PlayerHost';
 import { StructuredData } from '@/molecules/StructuredData/StructuredData';
 import { Toaster } from '@/molecules/Toaster/Toaster';
 import { AppShell } from '@/organisms/AppShell/AppShell';
@@ -60,7 +61,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <PwaManager />
             <Toaster />
             <ErrorBoundaryProvider>
-              <AppShell>{children}</AppShell>
+              {/* Keeps the playing player through every navigation, over its card or in the dock. */}
+              <PlayerHost>
+                <AppShell>{children}</AppShell>
+              </PlayerHost>
             </ErrorBoundaryProvider>
           </GlobalErrorHandlerProvider>
         </ServiceWorkerRegistrationProvider>

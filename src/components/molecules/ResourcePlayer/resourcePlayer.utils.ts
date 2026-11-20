@@ -13,6 +13,8 @@ export enum PlayerProvider {
   MIXCLOUD = 'mixcloud',
   TIDAL = 'tidal',
   DEEZER = 'deezer',
+  APPLE_MUSIC = 'apple-music',
+  APPLE_PODCASTS = 'apple-podcasts',
   AUDIO_FILE = 'audio-file',
 }
 
@@ -28,6 +30,8 @@ export const PROVIDER_NAMES: Record<ListedPlayer, string> = {
   [PlayerProvider.MIXCLOUD]: 'Mixcloud',
   [PlayerProvider.TIDAL]: 'TIDAL',
   [PlayerProvider.DEEZER]: 'Deezer',
+  [PlayerProvider.APPLE_MUSIC]: 'Apple Music',
+  [PlayerProvider.APPLE_PODCASTS]: 'Apple Podcasts',
 };
 
 /** Each service's site, whose favicon stands for it in the Players list. */
@@ -39,6 +43,8 @@ export const PROVIDER_SITES: Record<ListedPlayer, string> = {
   [PlayerProvider.MIXCLOUD]: 'https://www.mixcloud.com/',
   [PlayerProvider.TIDAL]: 'https://tidal.com/',
   [PlayerProvider.DEEZER]: 'https://www.deezer.com/',
+  [PlayerProvider.APPLE_MUSIC]: 'https://music.apple.com/',
+  [PlayerProvider.APPLE_PODCASTS]: 'https://podcasts.apple.com/',
 };
 
 /** The viewer's Players (Settings, Links & Media): their order and the removed ones. */
@@ -52,16 +58,23 @@ export function isListedPlayer(id: string): id is ListedPlayer {
 /**
  * The Players list as shown (Settings, Links & Media): the services in the viewer's order, then
  * those not in it in their default order (a service a later version adds shows up at the end), the
- * removed ones apart. Ids this version does not play are left out of both.
+ * removed ones apart. Card (no player) is a row too, last until moved, and never removed. Ids this
+ * version does not play are left out of both.
  */
 export function getPlayerList({ playerOrder, hiddenPlayers }: PlayerPreferences): {
-  shown: ListedPlayer[];
+  shown: PlayerListEntry[];
   removed: ListedPlayer[];
 } {
-  const all = [...new Set([...playerOrder.filter(isListedPlayer), ...(Object.keys(PROVIDER_NAMES) as ListedPlayer[])])];
+  const all = [
+    ...new Set<PlayerListEntry>([
+      ...playerOrder.filter(isPlayerListEntry),
+      ...(Object.keys(PROVIDER_NAMES) as ListedPlayer[]),
+      CARD_PLAYER,
+    ]),
+  ];
   return {
-    shown: all.filter((id) => !hiddenPlayers.includes(id)),
-    removed: all.filter((id) => hiddenPlayers.includes(id)),
+    shown: all.filter((id) => id === CARD_PLAYER || !hiddenPlayers.includes(id)),
+    removed: all.filter((id): id is ListedPlayer => id !== CARD_PLAYER && hiddenPlayers.includes(id)),
   };
 }
 
@@ -71,6 +84,41 @@ export function getPlayerList({ playerOrder, hiddenPlayers }: PlayerPreferences)
  */
 export function isPlayerShown(provider: PlayerProvider, hiddenPlayers: readonly string[] = []): boolean {
   return !hiddenPlayers.includes(provider);
+}
+
+/**
+ * The choice that is no player: a song shows its card ("Card" in its switch, "Card (no player)" in
+ * the Players list), and nothing loads from the services until one is picked.
+ */
+export const CARD_PLAYER = 'card';
+
+/** A row of the Players list: a service, or Card (no player), which is never removed. */
+export type PlayerListEntry = ListedPlayer | typeof CARD_PLAYER;
+
+/** Whether an id is a row of the Players list this version shows (a service it lists, or Card). */
+export function isPlayerListEntry(id: string): id is PlayerListEntry {
+  return id === CARD_PLAYER || isListedPlayer(id);
+}
+
+/**
+ * Whether a card shows itself instead of a service's player: Card (no player) is in the viewer's
+ * Players order above that service (`provider`, the one it would play first). A service not in the
+ * order comes after Card; a plain audio file is no service in the list, so it still plays. Without
+ * Card in the order (never moved, or a client that does not know it), the player shows.
+ */
+export function isCardFirst(provider: PlayerProvider, playerOrder: readonly string[]): boolean {
+  const card = playerOrder.indexOf(CARD_PLAYER);
+  if (card === -1) return false;
+  const service = playerOrder.indexOf(provider);
+  return service === -1 ? isListedPlayer(provider) : card < service;
+}
+
+/**
+ * Whether the viewer ranked the services: a service is in the order after Card, or without it. An
+ * order that ends at Card only places Card (moved alone), so the services keep Auto.
+ */
+export function isRankedOrder(playerOrder: readonly string[]): boolean {
+  return playerOrder.slice(playerOrder.indexOf(CARD_PLAYER) + 1).some(isListedPlayer);
 }
 
 /**
@@ -359,6 +407,80 @@ function deezer(value: string): PlayerTarget | null {
   };
 }
 
+const APPLE_MUSIC_LIST_EMBED = /^https:\/\/embed\.music\.apple\.com\/[a-z]{2}\/(?:album|playlist)\//;
+
+/**
+ * The narrowest width a service's embed lays itself out at, if any: Apple Podcasts' show and episode
+ * embeds and Apple Music's album and playlist embeds keep 290 px, and scroll sideways (and so down) in
+ * a narrower frame. `ResourcePlayerFrame` lays such a frame out at that width and scales it to the card.
+ */
+export function getMinFrameWidth(target: Pick<PlayerTarget, 'provider' | 'src'>): number | undefined {
+  if (target.provider === PlayerProvider.APPLE_PODCASTS) return 290;
+  if (target.provider === PlayerProvider.APPLE_MUSIC && APPLE_MUSIC_LIST_EMBED.test(target.src)) return 290;
+  return undefined;
+}
+
+/** What Apple's embed code asks for. */
+const APPLE_ALLOW = 'autoplay *; encrypted-media *; fullscreen *; clipboard-write';
+/** A storefront (`us`), then a song, album or playlist with or without its name (`/us/album/<name>/<id>`). */
+const APPLE_MUSIC_PATH =
+  /^\/(?:([a-z]{2})\/)?(song|album|playlist)\/(?:[^/]+\/)?([0-9]{1,15}|pl\.[A-Za-z0-9-]{1,64})\/?$/i;
+const APPLE_ID = /^[0-9]{1,15}$/;
+
+/**
+ * Apple Music's embed: a song (also an album's song, `?i=<song>`), an album or a playlist. It has no
+ * start command we can send, so the viewer presses play inside it.
+ */
+function appleMusic(value: string): PlayerTarget | null {
+  const url = parseHttps(value, ['music.apple.com']);
+  const match = url ? APPLE_MUSIC_PATH.exec(url.pathname) : null;
+  if (!url || !match) return null;
+  const storefront = (match[1] ?? 'us').toLowerCase();
+  const song = url.searchParams.get('i');
+  const isAlbumSong = match[2].toLowerCase() === 'album' && song !== null && APPLE_ID.test(song);
+  const kind = isAlbumSong ? 'song' : match[2].toLowerCase();
+  const id = isAlbumSong ? song : match[3];
+  // A playlist's id is `pl.…`, a song's or album's a number.
+  if ((kind === 'playlist') !== id.startsWith('pl.')) return null;
+  return {
+    provider: PlayerProvider.APPLE_MUSIC,
+    name: PROVIDER_NAMES[PlayerProvider.APPLE_MUSIC],
+    link: `https://music.apple.com/${storefront}/${kind}/${id}`,
+    src: `https://embed.music.apple.com/${storefront}/${kind}/${id}`,
+    element: 'iframe',
+    // Apple's embed code: 175 px for one song, 450 px for a list.
+    layout: { kind: 'audio', height: kind === 'song' ? 175 : 450, dockHeight: 175 },
+    allow: APPLE_ALLOW,
+    autoplay: false,
+  };
+}
+
+const APPLE_PODCAST_PATH = /^\/(?:([a-z]{2})\/)?podcast\/(?:[^/]+\/)?id([0-9]{1,15})\/?$/i;
+
+/** Apple Podcasts' embed: a show, or one of its episodes (`?i=<episode>`); played by a press inside it. */
+function applePodcasts(value: string): PlayerTarget | null {
+  const url = parseHttps(value, ['podcasts.apple.com']);
+  const match = url ? APPLE_PODCAST_PATH.exec(url.pathname) : null;
+  if (!url || !match) return null;
+  const storefront = (match[1] ?? 'us').toLowerCase();
+  const show = match[2];
+  const episode = url.searchParams.get('i');
+  const isEpisode = episode !== null && APPLE_ID.test(episode);
+  return {
+    provider: PlayerProvider.APPLE_PODCASTS,
+    name: PROVIDER_NAMES[PlayerProvider.APPLE_PODCASTS],
+    link: `https://podcasts.apple.com/${storefront}/podcast/id${show}${isEpisode ? `?i=${episode}` : ''}`,
+    src: isEpisode
+      ? `https://embed.podcasts.apple.com/${storefront}/episode/${episode}`
+      : `https://embed.podcasts.apple.com/${storefront}/podcast/${show}`,
+    element: 'iframe',
+    // A show's embed is its header only now, no episode list (175 px at every width, 2026-11-10).
+    layout: { kind: 'audio', height: 175, dockHeight: 175 },
+    allow: APPLE_ALLOW,
+    autoplay: false,
+  };
+}
+
 /** A plain audio file (a homeserver file, a podcast enclosure): the browser's own `<audio>` player. */
 function audioFile(value: string): PlayerTarget | null {
   let url: URL;
@@ -381,7 +503,18 @@ function audioFile(value: string): PlayerTarget | null {
   };
 }
 
-const LINK_PARSERS = [youtube, vimeo, spotify, soundcloud, mixcloud, tidal, deezer, audioFile];
+const LINK_PARSERS = [
+  youtube,
+  vimeo,
+  spotify,
+  soundcloud,
+  mixcloud,
+  tidal,
+  deezer,
+  appleMusic,
+  applePodcasts,
+  audioFile,
+];
 
 /** The player for one link, when the link is on a service in the allowlist. */
 export function getPlayerTarget(link: string): PlayerTarget | null {
@@ -404,24 +537,32 @@ function getOwnLink(card: TOwnLinks, href?: string | null): string {
   return links.find((link) => getPlayerTarget(link)) ?? href ?? card.uri;
 }
 
+/**
+ * Whether a card's own link is on a service with a player (`getOwnPlayer`): a Spotify track or
+ * artist page, a YouTube video or channel, a SoundCloud track. A generic link (a MusicBrainz
+ * recording, a Wikipedia article, an artist's Discogs page) is not, even when Pinakes knows it on
+ * such a service (Also on). `useCardPlayer` shows that player first unless the viewer removed its
+ * service in Players.
+ */
+export function isPlayable(card: TOwnLinks, href?: string | null): boolean {
+  return getOwnPlayer(card, href) !== null;
+}
+
+/** The player of a card's own link (`getOwnLink`), or `null` when its link is on no service with a player. */
+export function getOwnPlayer(card: TOwnLinks, href?: string | null): PlayerTarget | null {
+  return getPlayerTarget(getOwnLink(card, href));
+}
+
 /** The `src` parameters that start a player on load. */
 const AUTOPLAY_PARAMS = ['autoplay', 'auto_play'] as const;
 
 /**
- * A link's service embed shown up front (`GenericResourcePreview`), not after a press on Play: the
- * card player's frame for it without what starts it on load (its autoplay parameter and start
- * message), so it plays only when pressed inside. `null` when the link is on no such service, or is
- * a plain audio file (the link's own preview plays those). With the link's card, a link no player
- * takes falls back to the card's canonical `uri` and its aliases (`getOwnLink`). `null` too for a
- * service the viewer removed from Players (`hiddenPlayers`).
+ * A player shown up front, not after a press on Play: the same player without what starts it on
+ * load (its autoplay parameter and start message), so it plays only when pressed inside. A plain
+ * audio file keeps the browser's player, which then does not start on its own (`autoplay: false`).
  */
-export function getEmbedTarget(
-  link: string,
-  card?: TOwnLinks | null,
-  hiddenPlayers?: readonly string[],
-): PlayerTarget | null {
-  const target = getPlayerTarget(card ? getOwnLink(card, link) : link);
-  if (!target || target.element !== 'iframe' || !isPlayerShown(target.provider, hiddenPlayers)) return null;
+export function getUpFrontTarget(target: PlayerTarget): PlayerTarget {
+  if (target.element !== 'iframe') return { ...target, autoplay: false };
   const src = new URL(target.src);
   for (const param of AUTOPLAY_PARAMS) src.searchParams.delete(param);
   return { ...target, src: src.href, autoplay: false, start: undefined };
@@ -429,13 +570,14 @@ export function getEmbedTarget(
 
 /**
  * Every player the card offers, one per service: the card's own link first (`getOwnLink`), then
- * its `also_on` links in Pinakes' order (its best link of a service first), those that start on
- * our press before those that need a press inside (`autoplay`), so Play on starts with one press
- * whenever an Also on service can. A `missing` card's own link is gone upstream and offers no player.
+ * its `also_on` links in Pinakes' order (its best link of a service first). A `missing` card's own
+ * link is gone upstream and offers no player. A player shows paused and starts on a press inside
+ * it, so no service is put first for starting on our press.
  *
  * The viewer's Players (`players`, Settings, Links & Media) come last: a removed service offers no
  * player, and the services in the viewer's order go first, in that order,
- * before those not in it (Auto order). With no order (never reordered) it all stays Auto.
+ * before those not in it (Auto order). With no ranked order (never reordered, or only Card moved:
+ * `isRankedOrder`) it all stays Auto.
  */
 export function getPlayerTargets(
   card: Pick<TPinakesCard, 'status' | 'also_on'> & TOwnLinks,
@@ -452,15 +594,8 @@ export function getPlayerTargets(
     seen.add(target.provider);
     targets.push(target);
   }
-  const ownCount = own && getPlayerTarget(own) ? 1 : 0;
-  const alsoOn = targets.slice(ownCount);
-  const ordered = [
-    ...targets.slice(0, ownCount),
-    ...alsoOn.filter((target) => target.autoplay),
-    ...alsoOn.filter((target) => !target.autoplay),
-  ];
-  const shown = ordered.filter((target) => isPlayerShown(target.provider, players?.hiddenPlayers));
-  const order = players?.playerOrder ?? [];
+  const shown = targets.filter((target) => isPlayerShown(target.provider, players?.hiddenPlayers));
+  const order = players && isRankedOrder(players.playerOrder) ? players.playerOrder : [];
   const rank = (target: PlayerTarget) => {
     const index = order.indexOf(target.provider);
     return index === -1 ? order.length : index;

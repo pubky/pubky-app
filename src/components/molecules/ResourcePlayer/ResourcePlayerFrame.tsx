@@ -1,16 +1,18 @@
 'use client';
 
-import { type CSSProperties, type ReactNode, type RefObject, useEffect, useRef } from 'react';
+import { type CSSProperties, type ReactNode, type RefObject, useEffect, useRef, useState } from 'react';
 import { ArrowUpRight, Loader2 } from 'lucide-react';
 import { Audio } from '@/atoms/Audio/Audio';
 import { Container } from '@/atoms/Container/Container';
 import { Iframe } from '@/atoms/Iframe/Iframe';
 import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
+import { reportMediaStart, stopOtherMedia, useMediaBox } from '@/hooks/useOnePlayer/useOnePlayer';
+import { tellsWhenPlaying } from '@/libs/utils/mediaPlayback';
 import { cn } from '@/libs/utils/utils';
 import { VIDEO_EMBED_PROPS } from '@/molecules/PostLinkEmbeds/Providers/Provider.constants';
-import type { PlayerStart, PlayerTarget } from './resourcePlayer.utils';
-import type { PlayerLoadState } from './useResourcePlayer';
+import { getMinFrameWidth, type PlayerStart, type PlayerTarget } from './resourcePlayer.utils';
+import { type PlayerLoadState, useFramePress } from './useResourcePlayer';
 
 interface ResourcePlayerFrameProps {
   target: PlayerTarget;
@@ -18,6 +20,13 @@ interface ResourcePlayerFrameProps {
   title: string;
   load: PlayerLoadState;
   onLoaded: () => void;
+  /**
+   * Its media has started (`useMediaBox`): its card then stops it when other media starts. Without
+   * it, the frame stops itself: paused, or loaded anew when it cannot be paused.
+   */
+  onPlay?: (media: Element) => void;
+  /** Its media was paused or has ended, where its player tells (`useMediaBox`): paused in its card, it does not dock. */
+  onPause?: () => void;
   /**
    * An embed shown up front (a card without Also on, `GenericResourcePreview`), not opened by Play:
    * no status line, since nothing was asked to start; loaded once near the screen, like a post's
@@ -77,29 +86,104 @@ function useStartMessage(target: PlayerTarget, onLoaded: () => void) {
 }
 
 /**
+ * The scale that fits a frame laid out at `minWidth` (`getMinFrameWidth`) into its region: below 1
+ * only while the region is narrower; 1 when it fits, without a minimum width, or before the width is
+ * known.
+ */
+function useFitScale(regionRef: RefObject<HTMLDivElement | null>, minWidth: number | undefined): number {
+  const [scale, setScale] = useState(1);
+  useEffect(() => {
+    const region = regionRef.current;
+    if (!minWidth || !region || typeof ResizeObserver === 'undefined') return;
+    // The layout width (untransformed, with fractions); the first report comes before the next paint.
+    // A hidden region reports 0: the last scale is kept, so the frame comes back scaled.
+    const observer = new ResizeObserver(([entry]) => {
+      const width = entry?.contentRect.width ?? 0;
+      if (width > 0) setScale(width < minWidth ? width / minWidth : 1);
+    });
+    observer.observe(region);
+    return () => observer.disconnect();
+  }, [regionRef, minWidth]);
+  return minWidth ? scale : 1;
+}
+
+/**
  * A service's own player, unchanged: the iframe its embed code makes (or the themed `Audio` for a
  * plain file), at the service's height for audio and 16:9 for video (at the card's full width, no height
  * floor). Until the frame loads, a pulsing placeholder of the same size covers it, and only the
  * status line names the service, to screen readers. A frame that has not loaded after a while
  * offers the service's page. One press on our Play starts it: by its `src` or by its start message
  * (Spotify, TIDAL). A service that cannot start that way (Mixcloud, Deezer) says a press inside its
- * player is needed, to screen readers only; the card never claims playback.
+ * player is needed, to screen readers only; the card never claims playback. One media plays on the
+ * page (`useMediaBox`).
  */
-export function ResourcePlayerFrame({ target, title, load, onLoaded, quiet = false }: ResourcePlayerFrameProps) {
+export function ResourcePlayerFrame({
+  target,
+  title,
+  load: givenLoad,
+  onLoaded,
+  quiet = false,
+  onPlay,
+  onPause,
+}: ResourcePlayerFrameProps) {
   const { frameRef, onLoad } = useStartMessage(target, onLoaded);
+  const regionRef = useRef<HTMLDivElement>(null);
+  // A player that does not say when it plays (Deezer, TIDAL, Mixcloud, Spotify) starts by a press
+  // inside it. A frame no card owns, once started, is stopped when other media starts: paused by the
+  // page (`stopOtherMedia`), or loaded anew, paused, when it does not tell.
+  const tells = target.element === 'audio' || tellsWhenPlaying(target.src);
+  // Per source: a target changed in place (another service picked) starts unstarted.
+  const [started, setStarted] = useState(false);
+  const [startedSrc, setStartedSrc] = useState(target.src);
+  if (startedSrc !== target.src) {
+    setStartedSrc(target.src);
+    setStarted(false);
+  }
+  // A frame loaded anew (`round`) shows its placeholder again until it has loaded. So does one mounted
+  // anew while its card says loaded (the player host unloads a hidden frame, `HostedFrame`).
+  const [round, setRound] = useState(0);
+  const [loadedRound, setLoadedRound] = useState<number | null>(() => (givenLoad === 'ready' ? null : 0));
+  const load: PlayerLoadState = round === loadedRound ? givenLoad : 'loading';
+  useFramePress(
+    regionRef,
+    () => {
+      setStarted(true);
+      if (frameRef.current) reportMediaStart(frameRef.current);
+    },
+    !tells && !started,
+  );
+  const startHere = (media: Element) => {
+    setStarted(true);
+    stopOtherMedia(media);
+  };
+  const stop = () => {
+    if (!started) return;
+    setStarted(false);
+    if (!tells) setRound((value) => value + 1);
+  };
+  useMediaBox(regionRef, onPlay ? { onStart: onPlay, onPause } : { onStart: startHere, onStop: stop });
   const label = `${target.name} player: ${title}`;
   const isVideo = target.layout.kind === 'video';
+  // An embed with a minimum width (Apple's) is laid out at it and scaled to the region, the region's
+  // height with it: the player keeps its proportions, with no scrollbar, cut edge or gap under it.
+  const minWidth = target.element === 'iframe' ? getMinFrameWidth(target) : undefined;
+  const fit = useFitScale(regionRef, minWidth);
+  const fitStyle: CSSProperties | undefined =
+    minWidth && fit < 1
+      ? { width: minWidth, height: `${100 / fit}%`, transform: `scale(${fit})`, transformOrigin: '0 0' }
+      : undefined;
   const style =
     target.layout.kind === 'audio'
       ? ({
-          '--player-h': `${target.layout.height}px`,
-          '--player-dock-h': `${target.layout.dockHeight ?? target.layout.height}px`,
+          '--player-h': `${target.layout.height * fit}px`,
+          '--player-dock-h': `${(target.layout.dockHeight ?? target.layout.height) * fit}px`,
         } as CSSProperties)
       : undefined;
 
   return (
     <Container overrideDefaults className="flex min-w-0 flex-col gap-2" data-testid="resource-player">
       <div
+        ref={regionRef}
         role="region"
         aria-label={label}
         aria-busy={load === 'loading'}
@@ -107,9 +191,12 @@ export function ResourcePlayerFrame({ target, title, load, onLoaded, quiet = fal
         data-load={load}
         data-player-region
         style={style}
+        // The services draw their own rounded corners (TIDAL, Spotify: 12 px, `rounded-lg` here): ours
+        // match them, and our background shows only until the player has loaded, so none peeks out at a
+        // corner; never behind a plain file, whose own pill is rounder than the box.
         className={cn(
-          'relative w-full overflow-hidden rounded-md',
-          target.element !== 'audio' && 'bg-card',
+          'relative w-full overflow-hidden rounded-lg',
+          target.element !== 'audio' && load !== 'ready' && 'bg-card',
           isVideo ? 'aspect-video' : 'h-(--player-h)',
         )}
       >
@@ -117,15 +204,21 @@ export function ResourcePlayerFrame({ target, title, load, onLoaded, quiet = fal
           <Audio
             src={target.src}
             controls
-            autoPlay
+            autoPlay={target.autoplay}
             preload="metadata"
             aria-label={label}
-            onLoadedMetadata={onLoaded}
+            onLoadedMetadata={() => {
+              onLoaded();
+              setLoadedRound(round);
+            }}
+            // A file that fails shows the browser's own controls, not a placeholder that never ends.
+            onError={() => setLoadedRound(round)}
             className="absolute inset-0 size-full"
             data-testid="resource-player-audio"
           />
         ) : (
           <Iframe
+            key={round}
             ref={frameRef}
             src={target.src}
             // Named by `aria-label`; its `title` is left empty: a title is the browser's hover tooltip,
@@ -137,7 +230,11 @@ export function ResourcePlayerFrame({ target, title, load, onLoaded, quiet = fal
             referrerPolicy="strict-origin-when-cross-origin"
             loading={quiet ? 'lazy' : 'eager'}
             height="auto"
-            onLoad={onLoad}
+            onLoad={() => {
+              onLoad();
+              setLoadedRound(round);
+            }}
+            style={fitStyle}
             data-testid="resource-player-frame"
             className={cn(
               'absolute inset-0 size-full border-0 transition-opacity duration-300 motion-reduce:transition-none',

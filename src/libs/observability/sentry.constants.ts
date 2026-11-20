@@ -84,6 +84,18 @@ export const BROWSER_INJECTED_ERROR_PATTERNS: readonly RegExp[] = [
 ];
 
 /**
+ * Browser notices that reach `window.onerror` with no error object, although nothing failed. Chrome reports a
+ * ResizeObserver loop this way (it hands the sizes it could not deliver to the next frame), and a script from
+ * another origin without CORS throws as an opaque "Script error." with no file, line or stack. The global toast
+ * handler logs these at debug level and never toasts them; both error sinks already ignore the ResizeObserver ones.
+ * No /g or /y flags.
+ */
+export const BROWSER_NOTICE_PATTERNS: readonly RegExp[] = [
+  /^ResizeObserver loop (?:limit exceeded|completed with undelivered notifications)/,
+  /^Script error\.?$/,
+];
+
+/**
  * Noise neither error sink reports. `getSentryInitBase()` and `initPulse()` both spread this list into
  * their SDK's `ignoreErrors`, so the two sinks cannot drift onto different noise policies; add a pattern
  * here, never in one initializer. Matching differs slightly per SDK (Sentry tests the exception type and

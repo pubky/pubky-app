@@ -8,6 +8,7 @@ import { parseCompositeId } from '@/models/models.utils';
 import { PostLinkEmbeds } from '@/molecules/PostLinkEmbeds/PostLinkEmbeds';
 import { PostText } from '@/molecules/PostText/PostText';
 import { PostUnavailable } from '@/molecules/PostUnavailable/PostUnavailable';
+import { PlayerFrom } from '@/molecules/ResourcePlayer/PlayerHost';
 import { CollectionCard } from '@/organisms/Collections/CollectionCard/CollectionCard';
 import { useLocalFilesStore } from '@/stores/localFiles/localFiles.store';
 import { LockedPostContent } from '../LockedPostContent/LockedPostContent';
@@ -97,30 +98,35 @@ export function PostContentBase({
 
   if (!hasContent && !hasAttachments && !shownEmbedUrl) return null;
 
+  // A card player in the post leads back here from the dock on another page.
   if (mediaVariant === 'cards') {
     return (
-      <PostAttachments
-        attachments={postDetails.attachments}
-        localAttachments={localAttachments}
-        mediaVariant="cards"
-        className={cn('min-w-0', className)}
-      >
-        {hasContent && <PostText content={postDetails.content} className={textClassName} />}
-        {(hasContent || shownEmbedUrl) && <PostLinkEmbeds content={postDetails.content} url={shownEmbedUrl} />}
-      </PostAttachments>
+      <PlayerFrom postId={postId}>
+        <PostAttachments
+          attachments={postDetails.attachments}
+          localAttachments={localAttachments}
+          mediaVariant="cards"
+          className={cn('min-w-0', className)}
+        >
+          {hasContent && <PostText content={postDetails.content} className={textClassName} />}
+          {(hasContent || shownEmbedUrl) && <PostLinkEmbeds content={postDetails.content} url={shownEmbedUrl} />}
+        </PostAttachments>
+      </PlayerFrom>
     );
   }
 
   return (
-    <Container className={cn('min-w-0 gap-3', className)}>
-      <PostBody
-        content={postDetails.content}
-        attachments={postDetails.attachments}
-        localAttachments={localAttachments}
-        textClassName={textClassName}
-        embedUrl={shownEmbedUrl}
-        {...(mediaVariant !== 'default' ? { mediaVariant } : {})}
-      />
-    </Container>
+    <PlayerFrom postId={postId}>
+      <Container className={cn('min-w-0 gap-3', className)}>
+        <PostBody
+          content={postDetails.content}
+          attachments={postDetails.attachments}
+          localAttachments={localAttachments}
+          textClassName={textClassName}
+          embedUrl={shownEmbedUrl}
+          {...(mediaVariant !== 'default' ? { mediaVariant } : {})}
+        />
+      </Container>
+    </PlayerFrom>
   );
 }

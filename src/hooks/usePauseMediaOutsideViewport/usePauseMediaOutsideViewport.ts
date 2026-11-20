@@ -1,52 +1,26 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-
-const pauseIframe = (iframe: HTMLIFrameElement) => {
-  try {
-    const url = new URL(iframe.src);
-    const isYouTube =
-      url.hostname === 'youtube.com' ||
-      url.hostname.endsWith('.youtube.com') ||
-      url.hostname === 'youtube-nocookie.com' ||
-      url.hostname.endsWith('.youtube-nocookie.com');
-
-    if (isYouTube) {
-      iframe.contentWindow?.postMessage(JSON.stringify({ event: 'command', func: 'pauseVideo', args: '' }), url.origin);
-      return;
-    }
-
-    if (url.hostname === 'player.vimeo.com') {
-      iframe.contentWindow?.postMessage({ method: 'pause' }, url.origin);
-    }
-  } catch {
-    // A malformed iframe source cannot be controlled. Leave it untouched.
-  }
-};
+import { useOnePlayer } from '@/hooks/useOnePlayer/useOnePlayer';
+import { pauseMedia } from '@/libs/utils/mediaPlayback';
 
 /** Marks a box whose media keeps playing off screen (a player moved into the dock). */
 export const KEEP_PLAYING_ATTRIBUTE = 'data-keep-playing';
 
 const isKept = (element: Element) => element.closest(`[${KEEP_PLAYING_ATTRIBUTE}]`) !== null;
 
-const pauseMedia = (container: HTMLElement) => {
-  container.querySelectorAll<HTMLMediaElement>('audio, video').forEach((media) => {
-    if (!isKept(media)) media.pause();
-  });
-  container.querySelectorAll<HTMLIFrameElement>('iframe').forEach((iframe) => {
-    if (!isKept(iframe)) pauseIframe(iframe);
-  });
-};
-
 /**
  * Pauses media as soon as its embed is outside the viewport.
  *
  * Native media (including the video rendered by react-tweet) is paused
- * directly. YouTube and Vimeo are paused through their player APIs. Media
- * inside a box marked `data-keep-playing` (a docked player) is left playing.
+ * directly. YouTube, Vimeo, SoundCloud and Spotify are paused through their
+ * player APIs (`pauseMedia`). Media inside a box marked `data-keep-playing`
+ * (a docked player) is left playing. It also mounts the page's one-player
+ * watch (`useOnePlayer`): a post's media starting stops every other media.
  */
 export const usePauseMediaOutsideViewport = () => {
   const [container, setContainer] = useState<HTMLElement | null>(null);
+  useOnePlayer();
 
   useEffect(() => {
     if (!container) return;
@@ -65,12 +39,12 @@ export const usePauseMediaOutsideViewport = () => {
           return;
         }
 
-        pauseMedia(container);
+        pauseMedia(container, isKept);
 
         // Some embeds mount their media asynchronously. Keep newly added
         // players paused until the card returns to the viewport.
         if (!mediaObserver && typeof MutationObserver !== 'undefined') {
-          mediaObserver = new MutationObserver(() => pauseMedia(container));
+          mediaObserver = new MutationObserver(() => pauseMedia(container, isKept));
           mediaObserver.observe(container, { childList: true, subtree: true });
         }
       },

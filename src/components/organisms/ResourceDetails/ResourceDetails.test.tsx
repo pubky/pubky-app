@@ -1,9 +1,10 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { usePinakesGroup } from '@/hooks/usePinakesGroup/usePinakesGroup';
 import type { UsePinakesQueryResult } from '@/hooks/usePinakesQuery/usePinakesQuery.types';
 import { usePinakesRelated } from '@/hooks/usePinakesRelated/usePinakesRelated';
 import bookFixture from '@/services/pinakes/fixtures/by-uri.book.json';
+import mbGroupEnrichedFixture from '@/services/pinakes/fixtures/by-uri.mb-group.enriched.json';
 import mbRecordingEnrichedFixture from '@/services/pinakes/fixtures/by-uri.mb-recording.enriched.json';
 import missingFixture from '@/services/pinakes/fixtures/by-uri.missing.json';
 import placeFixture from '@/services/pinakes/fixtures/by-uri.place.json';
@@ -102,6 +103,11 @@ vi.mock('./ResourceReplies', () => ({
 }));
 
 const VIDEO: TPinakesResourceDetail = videoFixture;
+/** The same video without its tracks on Spotify, Deezer and TIDAL. */
+const ORDINARY_VIDEO: TPinakesResourceDetail = {
+  ...VIDEO,
+  also_on: VIDEO.also_on.filter((entry) => !['Spotify', 'Deezer', 'TIDAL'].includes(entry.site ?? '')),
+};
 const GROUP: TPinakesGroupDetail = groupFixture;
 const RELATED: TPinakesCard[] = relatedFixture.items;
 const NOT_KNOWN = 'https://example.com/pinakes-does-not-know-this-link-1104';
@@ -165,15 +171,16 @@ describe('ResourceDetails', () => {
 
   describe('when the link is known', () => {
     it('reads the card for the page’s link and shows it large, under the page’s heading, opened by its header alone', () => {
-      renderDetails(VIDEO.uri);
+      read = settled(placeFixture);
+      renderDetails(placeFixture.uri);
 
       expect(screen.getByTestId('resource-card')).toHaveAttribute('data-size', 'large');
-      expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(VIDEO.name!);
-      // One way to open the source: "Open in YouTube", no second link on the title.
+      expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(placeFixture.name!);
+      // One way to open the source: "Open in <site>", no second link on the title.
       expect(screen.getByTestId('resource-card-title')).not.toHaveAttribute('href');
-      expect(screen.getByTestId('resource-card-source')).toHaveAttribute('href', VIDEO.uri);
-      expect(screen.getByTestId('resource-card-source').textContent).toBe('YouTube');
-      expect(screen.getByTestId('resource-card-source')).toHaveAccessibleName('Open in YouTube');
+      expect(screen.getByTestId('resource-card-source')).toHaveAttribute('href', placeFixture.uri);
+      expect(screen.getByTestId('resource-card-source').textContent).toBe('OpenStreetMap');
+      expect(screen.getByTestId('resource-card-source')).toHaveAccessibleName('Open in OpenStreetMap');
       expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('External resource');
       // The lists are the page's sidebar cards (`ResourceSidebar`), not part of the body.
       expect(screen.queryByTestId('resource-also-on-list')).not.toBeInTheDocument();
@@ -284,23 +291,94 @@ describe('ResourceDetails', () => {
     });
 
     it('shows an enriched card’s whole text and image with their sources', () => {
+      read = settled(mbGroupEnrichedFixture);
+      renderDetails(mbGroupEnrichedFixture.uri);
+
+      const card = screen.getByTestId('resource-card');
+      expect(within(card).getByTestId('resource-card-description')).toHaveTextContent(
+        mbGroupEnrichedFixture.description!.slice(0, 40),
+      );
+      expect(within(card).getByTestId('resource-card-image')).toHaveAttribute('src', mbGroupEnrichedFixture.image);
+      const sources = within(card).getByRole('region', { name: 'Sources' });
+      const lines = within(sources)
+        .getAllByRole('listitem')
+        .map((line) => line.textContent);
+      expect(lines).toHaveLength(2);
+      expect(lines[0]).toMatch(/^Text: Wikipedia/);
+      expect(lines[1]).toMatch(/^Image: /);
+    });
+
+    it('shows a song’s generic link as its card first; a service picked in the header switch plays in place of its image and text, with its details, sources and footer', () => {
       read = settled(mbRecordingEnrichedFixture);
       renderDetails(mbRecordingEnrichedFixture.uri);
 
       const card = screen.getByTestId('resource-card');
-      expect(within(card).getByTestId('resource-card-description')).toHaveTextContent(
-        mbRecordingEnrichedFixture.description,
+      expect(document.querySelector('iframe')).toBeNull();
+      expect(within(card).getByTestId('resource-card-title')).toBeInTheDocument();
+      expect(within(card).queryByRole('button', { name: /^Play on/ })).not.toBeInTheDocument();
+      const header = within(card).getByTestId('resource-card-source').parentElement!;
+      const switchButton = within(header).getByRole('button', { name: 'Card: choose another service' });
+      fireEvent.pointerDown(switchButton, { button: 0, ctrlKey: false });
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Spotify' }));
+
+      const player = within(card).getByTestId('resource-player-frame');
+      expect(player).toHaveAttribute('src', 'https://open.spotify.com/embed/track/2OBofMJx94NryV2SK8p8Zf');
+      expect(within(card).queryByRole('button', { name: /^Play on/ })).not.toBeInTheDocument();
+      // No second card beside the player: no image, title link or description.
+      expect(within(card).queryByTestId('resource-card-image')).not.toBeInTheDocument();
+      expect(within(card).queryByTestId('resource-card-title')).not.toBeInTheDocument();
+      expect(within(card).queryByTestId('resource-card-description')).not.toBeInTheDocument();
+      // The page keeps its heading for screen readers, and everything outside the body.
+      expect(within(card).getByRole('heading', { level: 2, name: mbRecordingEnrichedFixture.name })).toHaveClass(
+        'sr-only',
       );
-      expect(within(card).getByTestId('resource-card-image')).toHaveAttribute('src', mbRecordingEnrichedFixture.image);
-      const sources = within(card).getByRole('region', { name: 'Sources' });
-      expect(
-        within(sources)
-          .getAllByRole('listitem')
-          .map((line) => line.textContent),
-      ).toEqual([
-        'Text: Wikipedia (en), excerpt, about its MusicBrainz work · CC BY-SA 4.0',
-        'Image: Queen · Wikimedia Commons · Public domain',
-      ]);
+      expect(within(card).getByRole('region', { name: 'Sources' })).toBeInTheDocument();
+      expect(within(card).getByRole('region', { name: 'Details' })).toBeInTheDocument();
+      expect(within(card).getByTestId('resource-actions')).toBeInTheDocument();
+    });
+
+    it('shows a video as its player in place of its image and text, its other services in the switch in the header', () => {
+      read = settled(ORDINARY_VIDEO);
+      renderDetails(VIDEO.uri);
+
+      const card = screen.getByTestId('resource-card');
+      expect(within(card).getByTestId('resource-player-frame')).toHaveAttribute(
+        'src',
+        'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1&rel=0',
+      );
+      expect(within(card).queryByTestId('resource-card-title')).not.toBeInTheDocument();
+      expect(within(card).queryByRole('button', { name: /^Play on/ })).not.toBeInTheDocument();
+      expect(within(card).getByRole('heading', { level: 2, name: VIDEO.name! })).toHaveClass('sr-only');
+      // The switch sits in the card's header, beside "Open in YouTube".
+      const header = within(card).getByTestId('resource-card-source').parentElement!;
+      expect(within(header).getByRole('button', { name: 'YouTube: choose another service' })).toBeInTheDocument();
+    });
+
+    it('shows a song as its card, with the switch in its header, with Card (no player) first in Players', () => {
+      useSettingsStore.setState({ media: { ...defaultMediaPreferences, playerOrder: ['card'] } });
+      onTestFinished(() => {
+        useSettingsStore.setState({ media: defaultMediaPreferences });
+      });
+      read = settled(mbRecordingEnrichedFixture);
+      renderDetails(mbRecordingEnrichedFixture.uri);
+
+      const card = screen.getByTestId('resource-card');
+      expect(document.querySelector('iframe')).toBeNull();
+      expect(within(card).getByRole('heading', { level: 2, name: mbRecordingEnrichedFixture.name })).not.toHaveClass(
+        'sr-only',
+      );
+      expect(within(card).getByRole('button', { name: 'Card: choose another service' })).toBeInTheDocument();
+      expect(within(card).queryByRole('button', { name: /^Play on/ })).not.toBeInTheDocument();
+    });
+
+    it('plays a song on the service of the link the page was opened with', () => {
+      read = settled(mbRecordingEnrichedFixture);
+      renderDetails('https://tidal.com/track/534050211');
+
+      expect(screen.getByTestId('resource-player-frame')).toHaveAttribute(
+        'src',
+        'https://embed.tidal.com/tracks/534050211?hideOverlays=true',
+      );
     });
 
     it('names OpenStreetMap once under Sources on a place’s page, not on its card', () => {
@@ -412,7 +490,21 @@ describe('ResourceDetails', () => {
       expect(screen.queryByTestId('show-embed')).toBeNull();
     });
 
-    it('shows our card with Show on <site> when Pinakes knows it on other services too, X’s embed only from there', () => {
+    it('shows X’s embed when Pinakes knows it on other services too, its only source: no switch, no Show on', () => {
+      read = settled(X_POST_WITH_ALSO_ON);
+      renderDetails(X_URL);
+
+      expect(within(screen.getByTestId('native-embed-body')).getByTestId('twitter-tweet')).toBeInTheDocument();
+      expect(screen.queryByTestId('resource-card-title')).toBeNull();
+      expect(screen.queryByTestId('show-embed')).toBeNull();
+      expect(screen.queryByTestId('player-switch')).toBeNull();
+    });
+
+    it('shows our card with Show on <site> to a viewer who turned platform embeds up front off, X’s embed only from there', () => {
+      useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } });
+      onTestFinished(() => {
+        useSettingsStore.setState({ media: defaultMediaPreferences });
+      });
       read = settled(X_POST_WITH_ALSO_ON);
       renderDetails(X_URL);
 
@@ -468,6 +560,10 @@ describe('ResourceDetails', () => {
     });
 
     it('goes back to our card, without Show on, when X cannot show the post it was asked to', () => {
+      useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } });
+      onTestFinished(() => {
+        useSettingsStore.setState({ media: defaultMediaPreferences });
+      });
       tweet.state = { data: null, error: new Error('gone'), isLoading: false };
       read = settled(X_POST_WITH_ALSO_ON);
       renderDetails(X_URL);
@@ -486,19 +582,25 @@ describe('ResourceDetails', () => {
       });
       renderDetails(X_URL);
 
-      // Our card offers X's post, as in a post, not the other service's player.
-      expect(screen.queryByTestId('play-on-main')).toBeNull();
-      fireEvent.click(screen.getByTestId('show-embed'));
-      fireEvent.click(screen.getByTestId('play-on-main'));
+      // Our card, its other service in the switch (Card first), never Play on or Show on.
+      expect(screen.getByTestId('resource-card-title')).toHaveTextContent(X_POST.name!);
+      expect(screen.queryByTestId('show-embed')).toBeNull();
+      expect(screen.queryByRole('button', { name: /^Play on/ })).toBeNull();
+      fireEvent.pointerDown(screen.getByRole('button', { name: 'Card: choose another service' }), {
+        button: 0,
+        ctrlKey: false,
+      });
+      fireEvent.click(screen.getByRole('menuitem', { name: 'YouTube' }));
       expect(screen.getByTestId('resource-player')).toBeInTheDocument();
       expect(screen.queryByTestId('native-embed-body')).toBeNull();
     });
 
-    it('keeps a video’s card, its text and details, with no platform embed', () => {
+    it('shows a video as its player, with no X embed and no switch for a video on one service', () => {
       read = settled({ ...VIDEO, also_on: [] });
       renderDetails(VIDEO.uri);
 
-      expect(screen.getByTestId('resource-card-title')).toHaveTextContent(VIDEO.name!);
+      expect(screen.getByTestId('resource-player-frame')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /choose another service$/ })).toBeNull();
       expect(screen.queryByTestId('native-embed-body')).toBeNull();
       expect(screen.queryByTestId('show-embed')).toBeNull();
     });

@@ -39,7 +39,10 @@ export interface PrivacyPreferences {
  * drop unknown top-level keys on write, so `media` resets to its defaults there.
  */
 export interface MediaPreferences {
-  /** Player ids (`PlayerProvider`) in the viewer's order; empty is Auto (the link's own service first). */
+  /**
+   * Player ids (`PlayerProvider`) in the viewer's order; empty is Auto (the link's own service first).
+   * `card` (`CARD_PLAYER`) ranks too: above a song's first service, the song shows its card.
+   */
   playerOrder: string[];
   /** Player ids the viewer removed: no player or embed loads from them. Default none. */
   hiddenPlayers: string[];

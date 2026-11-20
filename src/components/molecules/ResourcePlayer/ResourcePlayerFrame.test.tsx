@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getPlayerTarget } from './resourcePlayer.utils';
 import { ResourcePlayerFrame } from './ResourcePlayerFrame';
@@ -86,11 +86,62 @@ describe('ResourcePlayerFrame', () => {
     expect(screen.getByRole('region', { name: 'Spotify player: Get Lucky' })).toHaveAttribute('aria-busy', 'true');
   });
 
+  it('shows its placeholder again when mounted anew over a player its card has loaded, until this frame has loaded', () => {
+    // The player host unloads a frame hidden with its card and mounts it again when the card shows:
+    // the card still says loaded, but the new frame has to load anew.
+    render(<ResourcePlayerFrame target={SPOTIFY} title="Get Lucky" load="ready" onLoaded={() => {}} quiet />);
+    const frame = screen.getByTestId('resource-player-frame');
+    const region = screen.getByRole('region', { name: 'Spotify player: Get Lucky' });
+    expect(region).toHaveAttribute('aria-busy', 'true');
+    expect(region).toHaveClass('bg-card');
+    expect(frame).toHaveClass('opacity-0');
+    expect(screen.getByTestId('resource-player-placeholder')).toHaveAttribute('aria-hidden', 'true');
+
+    act(() => frame.dispatchEvent(new Event('load')));
+    expect(region).toHaveAttribute('aria-busy', 'false');
+    expect(region).not.toHaveClass('bg-card');
+    expect(frame).toHaveClass('opacity-100');
+    expect(screen.queryByTestId('resource-player-placeholder')).toBeNull();
+  });
+
+  it('shows its placeholder again over a plain audio file mounted anew, until its metadata has loaded', () => {
+    const file = getPlayerTarget('https://example.com/episode.mp3')!;
+    render(<ResourcePlayerFrame target={file} title="Episode 1" load="ready" onLoaded={() => {}} />);
+    expect(screen.getByTestId('resource-player-placeholder')).toBeInTheDocument();
+
+    act(() => screen.getByTestId('resource-player-audio').dispatchEvent(new Event('loadedmetadata')));
+    expect(screen.queryByTestId('resource-player-placeholder')).toBeNull();
+  });
+
+  it('drops the placeholder over a plain audio file mounted anew whose file fails to load', () => {
+    const file = getPlayerTarget('https://example.com/episode.mp3')!;
+    const onLoaded = vi.fn();
+    render(<ResourcePlayerFrame target={file} title="Episode 1" load="ready" onLoaded={onLoaded} />);
+    expect(screen.getByTestId('resource-player-placeholder')).toBeInTheDocument();
+
+    act(() => screen.getByTestId('resource-player-audio').dispatchEvent(new Event('error')));
+    expect(screen.queryByTestId('resource-player-placeholder')).toBeNull();
+    expect(onLoaded).not.toHaveBeenCalled();
+  });
+
+  it('rounds its corners as the services do, and shows its own background only until the player has loaded', () => {
+    const { rerender } = render(
+      <ResourcePlayerFrame target={TIDAL} title="Kind of Blue" load="loading" onLoaded={() => {}} />,
+    );
+    const region = screen.getByRole('region', { name: 'TIDAL player: Kind of Blue' });
+    expect(region).toHaveClass('rounded-lg', 'bg-card');
+
+    rerender(<ResourcePlayerFrame target={TIDAL} title="Kind of Blue" load="ready" onLoaded={() => {}} />);
+    expect(region).toHaveClass('rounded-lg');
+    expect(region).not.toHaveClass('bg-card');
+  });
+
   it.each([
     ['Mixcloud', MIXCLOUD],
     ['Deezer', DEEZER],
   ])('tells only screen readers that a press inside the %s player is needed', (name, target) => {
     render(<ResourcePlayerFrame target={target} title="Party Time" load="ready" onLoaded={() => {}} />);
+    act(() => screen.getByTestId('resource-player-frame').dispatchEvent(new Event('load')));
 
     const status = screen.getByTestId('resource-player-status');
     expect(status).toHaveTextContent(`Press play in the ${name} player to start.`);
@@ -109,6 +160,7 @@ describe('ResourcePlayerFrame', () => {
     postFromFrame(frame, { type: 'ready' });
     expect(post).toHaveBeenCalledTimes(1);
     expect(post).toHaveBeenCalledWith({ command: 'play' }, 'https://open.spotify.com');
+    act(() => frame.dispatchEvent(new Event('load')));
     expect(screen.getByTestId('resource-player-status')).toBeEmptyDOMElement();
   });
 
@@ -202,18 +254,21 @@ describe('ResourcePlayerFrame', () => {
     expect(post).toHaveBeenCalledTimes(1);
   });
 
-  it('sends no message to a player that starts by its own address', () => {
+  it('sends no start message to a player that starts by its own address, only asks it to say when it plays', () => {
     render(<ResourcePlayerFrame target={YOUTUBE} title="Video" load="loading" onLoaded={() => {}} />);
     const { frame, post } = watchFrame();
 
     act(() => frame.dispatchEvent(new Event('load')));
     postFromFrame(frame, { type: 'ready' }, 'https://www.youtube-nocookie.com');
 
-    expect(post).not.toHaveBeenCalled();
+    expect(post.mock.calls).toEqual([
+      [JSON.stringify({ event: 'listening', id: 1, channel: 'widget' }), 'https://www.youtube-nocookie.com'],
+    ]);
   });
 
   it('says nothing more once a player that starts on load has loaded', () => {
     render(<ResourcePlayerFrame target={YOUTUBE} title="Video" load="ready" onLoaded={() => {}} />);
+    act(() => screen.getByTestId('resource-player-frame').dispatchEvent(new Event('load')));
 
     expect(screen.getByTestId('resource-player-status')).toBeEmptyDOMElement();
   });
@@ -238,6 +293,60 @@ describe('ResourcePlayerFrame', () => {
     expect(screen.getByTestId('resource-player-status')).toHaveTextContent('Spotify has not answered.');
     expect(screen.getByTestId('resource-player-status')).not.toHaveClass('sr-only');
     expect(screen.getByRole('link', { name: 'Open in Spotify' })).toHaveAttribute('href', SPOTIFY.link);
+  });
+
+  it('stops an embed shown up front once pressed, when other media starts: loaded anew, paused', () => {
+    vi.useFakeTimers();
+    const ALBUM = getPlayerTarget('https://www.deezer.com/album/302127')!;
+    render(
+      <>
+        <ResourcePlayerFrame target={ALBUM} title="Discovery" load="ready" onLoaded={() => {}} quiet />
+        <Player target={SPOTIFY} />
+      </>,
+    );
+    const album = screen.getByLabelText('Deezer player: Discovery', { selector: 'iframe' });
+    // Loaded: the placeholder below comes from the reload, not from the first load.
+    act(() => album.dispatchEvent(new Event('load')));
+    expect(screen.getByRole('region', { name: 'Deezer player: Discovery' })).toHaveAttribute('aria-busy', 'false');
+    const press = () =>
+      act(() => {
+        fireEvent.mouseOver(album);
+        album.focus();
+        window.dispatchEvent(new Event('blur'));
+        vi.advanceTimersByTime(1);
+      });
+
+    // Not pressed, so not playing: opening another player leaves it as it is.
+    fireEvent.click(screen.getByRole('button', { name: 'play' }));
+    expect(screen.getByLabelText('Deezer player: Discovery', { selector: 'iframe' })).toBe(album);
+
+    // Pressed: it plays, and the page's player stops.
+    press();
+    expect(screen.getByRole('button', { name: 'play' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'play' }));
+    const reloaded = screen.getByLabelText('Deezer player: Discovery', { selector: 'iframe' });
+    expect(reloaded).not.toBe(album);
+    expect(reloaded).toHaveAttribute('src', ALBUM.src);
+    // Its placeholder holds the place until the new frame has loaded.
+    const region = screen.getByRole('region', { name: 'Deezer player: Discovery' });
+    expect(region).toHaveAttribute('aria-busy', 'true');
+    act(() => reloaded.dispatchEvent(new Event('load')));
+    expect(region).toHaveAttribute('aria-busy', 'false');
+  });
+
+  it('loads anew an embed shown up front that said it plays, when other media starts', () => {
+    render(
+      <>
+        <ResourcePlayerFrame target={SPOTIFY} title="Get Lucky" load="ready" onLoaded={() => {}} quiet />
+        <Player target={TIDAL} />
+      </>,
+    );
+    const song = screen.getByLabelText('Spotify player: Get Lucky', { selector: 'iframe' }) as HTMLIFrameElement;
+    postFromFrame(song, { type: 'playback_update', payload: { isPaused: false } });
+
+    fireEvent.click(screen.getByRole('button', { name: 'play' }));
+    expect(screen.getByLabelText('Spotify player: Get Lucky', { selector: 'iframe' })).not.toBe(song);
   });
 
   it('shows no status line and loads lazily when quiet (an embed shown up front)', () => {

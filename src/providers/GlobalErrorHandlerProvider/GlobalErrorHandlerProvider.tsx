@@ -3,7 +3,7 @@ import { type ReactNode, useEffect, useRef } from 'react';
 import { INLINE_MEDIA_UPLOAD_REJECTION_NAME } from '@/hooks/useInlineMediaUpload/useInlineMediaUpload.types';
 import { getErrorMessage } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
-import { BROWSER_INJECTED_ERROR_PATTERNS } from '@/libs/observability/sentry.constants';
+import { BROWSER_INJECTED_ERROR_PATTERNS, BROWSER_NOTICE_PATTERNS } from '@/libs/observability/sentry.constants';
 import { toast } from '@/molecules/Toaster/toast';
 
 interface GlobalErrorHandlerProviderProps {
@@ -52,6 +52,14 @@ export function GlobalErrorHandlerProvider({ children }: GlobalErrorHandlerProvi
     };
 
     const onWindowError = (event: ErrorEvent) => {
+      // A browser notice, not a failure (see BROWSER_NOTICE_PATTERNS): logged at debug level, never toasted.
+      if (!event.error && BROWSER_NOTICE_PATTERNS.some((pattern) => pattern.test(event.message ?? ''))) {
+        Logger.debug('[GlobalErrorHandlerProvider] browser notice', {
+          message: event.message,
+          filename: event.filename,
+        });
+        return;
+      }
       notifyError(event.error ?? event.message, 'window.error', {
         filename: event.filename,
         line: event.lineno,
