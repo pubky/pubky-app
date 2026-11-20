@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import eventFixture from '@/services/pinakes/fixtures/by-uri.event.json';
+import natureArticleFixture from '@/services/pinakes/fixtures/by-uri.nature-article.json';
+import scholarlyArticleFixture from '@/services/pinakes/fixtures/by-uri.scholarly-article.json';
+import unreachableFixture from '@/services/pinakes/fixtures/by-uri.unreachable.json';
 import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
 import typeFacetFixture from '@/services/pinakes/fixtures/search.type-facet.json';
 import { PinakesStatus, type TPinakesTypeFacet } from '@/services/pinakes/pinakes.types';
@@ -7,6 +10,9 @@ import { ResourceFamily } from './ResourceCard.types';
 import {
   formatResourceDates,
   formatResourcePoint,
+  getAlsoOnIdentifier,
+  getAlsoOnName,
+  getAlsoOnNote,
   getDisplayLink,
   getEventStatusNote,
   getFaviconUrl,
@@ -162,8 +168,12 @@ describe('link helpers', () => {
     expect(getLinkHost('doi:10.1038/nature12373')).toBeNull();
   });
 
-  it('asks a web link’s own origin for its favicon, and nothing else', () => {
+  it('asks a web link’s own host for its favicon over https, and nothing else', () => {
     expect(getFaviconUrl('https://en.wikipedia.org/wiki/Bitcoin')).toBe('https://en.wikipedia.org/favicon.ico');
+    // An `http:` image on the app's `https:` page would be mixed content.
+    expect(getFaviconUrl('http://nrs.harvard.edu/urn-3:HUL.InstRepos:12285462')).toBe(
+      'https://nrs.harvard.edu/favicon.ico',
+    );
     expect(getFaviconUrl('isbn:9780140328721')).toBeNull();
     expect(getFaviconUrl('javascript:alert(1)')).toBeNull();
   });
@@ -407,5 +417,81 @@ describe('isCardSurfaceClick', () => {
     document.body.append(portal);
     expect(isCardSurfaceClick(card, portal)).toBe(false);
     expect(isCardSurfaceClick(card, null)).toBe(false);
+  });
+});
+
+describe('getAlsoOnName', () => {
+  it('names an entry by its service, else its host, else the link as written', () => {
+    expect(getAlsoOnName(videoFixture.also_on[0])).toBe('TIDAL');
+    expect(getAlsoOnName({ uri: 'https://www.example.com/a', site: null })).toBe('example.com');
+    expect(getAlsoOnName({ uri: 'isbn:9780140328721', site: '  ' })).toBe('9780140328721');
+  });
+});
+
+describe('getAlsoOnIdentifier', () => {
+  it('gives the identifier of a non-web entry, unless it is the name already', () => {
+    expect(getAlsoOnIdentifier(natureArticleFixture.also_on[0])).toBe('10.1038/nature12373');
+    expect(getAlsoOnIdentifier({ uri: 'isbn:9780140328721' })).toBeNull();
+    expect(getAlsoOnIdentifier(videoFixture.also_on[0])).toBeNull();
+  });
+});
+
+describe('getAlsoOnNote', () => {
+  it('says nothing for a tagged link', () => {
+    expect(getAlsoOnNote(videoFixture.also_on[0])).toBeNull();
+  });
+
+  it('marks a derived link with the source it was found through', () => {
+    expect(getAlsoOnNote(videoFixture.also_on[7])).toBe('Found via musicbrainz');
+    expect(getAlsoOnNote({ uri: 'https://example.com/a', derived: true })).toBe('Found automatically');
+  });
+
+  it('dates an archived copy by its capture, in UTC', () => {
+    const [archived] = unreachableFixture.also_on;
+    expect(plain(getAlsoOnNote(archived, 'en-US'))).toBe('Archived Dec 28, 2018 · found via wayback');
+    expect(getAlsoOnNote({ ...archived, at: '2018-12-28T23:59:59-05:00' }, 'en-US')).toMatch(/^Archived Dec 29, 2018/);
+    expect(getAlsoOnNote({ ...archived, at: null }, 'en-US')).toBe('Archived · found via wayback');
+  });
+
+  it('shows another qualifier as written', () => {
+    const submitted = scholarlyArticleFixture.also_on.find((entry) => entry.kind === 'submitted');
+    expect(submitted && getAlsoOnNote(submitted)).toMatch(/^Submitted · found via /);
+    expect(getAlsoOnNote({ uri: 'https://example.com/a', kind: 'work', derived: true, via: 'x' })).toBe(
+      'Work · found via x',
+    );
+  });
+
+  it('writes the pdf qualifier as an acronym', () => {
+    const pdf = { uri: 'https://www.govinfo.gov/a.pdf', derived: true, via: 'federalregister', kind: 'pdf' };
+    expect(getAlsoOnNote(pdf)).toBe('PDF · found via federalregister');
+  });
+
+  it('gives the identifier of a non-web entry named by its service', () => {
+    const [doi] = natureArticleFixture.also_on;
+    expect(doi).toEqual({ id: expect.any(String), uri: 'doi:10.1038/nature12373', site: 'DOI' });
+    expect(getAlsoOnNote(doi)).toBe('10.1038/nature12373');
+    expect(getAlsoOnNote({ uri: 'osm:node/240109189', site: 'OSM', derived: true, via: 'wikidata' })).toBe(
+      'node/240109189 · Found via wikidata',
+    );
+  });
+
+  it('does not repeat an identifier that already names the entry', () => {
+    expect(getAlsoOnNote({ uri: 'isbn:9780140328721' })).toBeNull();
+    expect(getAlsoOnNote({ uri: 'isbn:9780140328721', site: ' ', derived: true, via: 'x' })).toBe('Found via x');
+  });
+
+  it('leaves out the source a link was found through when asked, keeping its other qualifiers', () => {
+    const archived = {
+      uri: 'https://web.archive.org/web/2018/x',
+      kind: 'archived',
+      derived: true,
+      via: 'wayback',
+      at: null,
+    };
+    expect(getAlsoOnNote(videoFixture.also_on[7], undefined, { withSource: false })).toBeNull();
+    expect(getAlsoOnNote(archived, 'en-US', { withSource: false })).toBe('Archived');
+    expect(
+      getAlsoOnNote({ uri: 'doi:10.1038/x', site: 'DOI', derived: true, via: 'w' }, undefined, { withSource: false }),
+    ).toBe('10.1038/x');
   });
 });

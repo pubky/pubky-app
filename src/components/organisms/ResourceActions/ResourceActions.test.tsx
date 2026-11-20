@@ -2,7 +2,10 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MENU_VARIANT } from '@/config/ui';
 import { PostController } from '@/controllers/post/post';
+import { ResourceAlsoOn } from '@/molecules/ResourceCard/ResourceAlsoOn';
+import { dedupeAlsoOn } from '@/molecules/ResourceCard/ResourceAlsoOn.utils';
 import type { NexusTag } from '@/services/nexus/nexus.types';
+import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
 import { ResourceActions } from './ResourceActions';
 
 const URI = 'https://open.spotify.com/track/5Z01UMMf7V1o0MzF86s6WJ';
@@ -566,6 +569,36 @@ describe('ResourceActions', () => {
       await waitFor(() => expect(menuLabels()).toEqual(['Copy link', `Also on (${MENU_VARIANT.DROPDOWN})`]));
     });
 
+    it('lists the other services last, one row per service under "Also on", in a menu that scrolls', async () => {
+      render(
+        <ResourceActions
+          uri={URI}
+          tagsLabel="Tags on this song"
+          linkUrl={LINK}
+          title="Bohemian Rhapsody"
+          extraMenuContent={({ variant, closeMenu }) => (
+            <ResourceAlsoOn alsoOn={dedupeAlsoOn(videoFixture.also_on)} variant={variant} closeMenu={closeMenu} />
+          )}
+        />,
+      );
+
+      openMenu('More options');
+
+      const menu = await screen.findByRole('menu');
+      expect(menuLabels()).toEqual([
+        'Copy link',
+        'Copy title',
+        'TIDAL',
+        'Apple Music',
+        'YouTube',
+        'MusicBrainz',
+        'Deezer',
+        'Spotify',
+      ]);
+      expect(within(menu).getByRole('group', { name: 'Also on' })).toBeInTheDocument();
+      expect(menu).toHaveClass('overflow-y-auto');
+    });
+
     it('opens as a bottom sheet on a phone', async () => {
       mocks.isMobile = true;
       renderActions();
@@ -587,6 +620,28 @@ describe('ResourceActions', () => {
       fireEvent.click(screen.getByRole('button', { name: 'More options' }));
       const sheet = await screen.findByRole('dialog');
       fireEvent.click(within(sheet).getByRole('button', { name: `Also on (${MENU_VARIANT.SHEET})` }));
+
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    });
+
+    it('lists the other services in the sheet as links, which close it once followed', async () => {
+      mocks.isMobile = true;
+      render(
+        <ResourceActions
+          uri={URI}
+          tagsLabel="Tags on this song"
+          linkUrl={LINK}
+          extraMenuContent={({ variant, closeMenu }) => (
+            <ResourceAlsoOn alsoOn={dedupeAlsoOn(videoFixture.also_on)} variant={variant} closeMenu={closeMenu} />
+          )}
+        />,
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+      const sheet = await screen.findByRole('dialog');
+      expect(sheet).toHaveClass('overflow-y-auto');
+      const group = within(sheet).getByRole('group', { name: 'Also on' });
+      fireEvent.click(within(group).getByRole('link', { name: 'TIDAL' }));
 
       await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     });

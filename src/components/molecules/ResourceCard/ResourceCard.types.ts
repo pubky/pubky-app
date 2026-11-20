@@ -27,4 +27,9 @@ export interface ResourceCardProps {
    * nothing to act on yet.
    */
   actions?: ReactNode;
+  /**
+   * Whether the actions' ⋯ menu lists other services under "Also on" (the card is on other services
+   * too). Then the viewer picks the service there and the card is no click-through; else it always is.
+   */
+  hasAlsoOn?: boolean;
 }

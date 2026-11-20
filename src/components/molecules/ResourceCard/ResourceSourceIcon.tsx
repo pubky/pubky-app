@@ -4,8 +4,9 @@ import { useState } from 'react';
 import { BookOpen, FileText, Globe, Link2, MapPin } from 'lucide-react';
 import { Image } from '@/atoms/Image/Image';
 import { AppleMusic, PubkyIcon } from '@/icons';
+import { cn } from '@/libs/utils/utils';
 import { getLinkHost } from './ResourceCard.utils';
-import { getFaviconUrls } from './ResourceSourceIcon.utils';
+import { getFaviconOverride, getFaviconUrls, isDarkFavicon } from './ResourceSourceIcon.utils';
 
 const ICON_SIZE = 16;
 const ICON_PROPS = { size: ICON_SIZE, 'aria-hidden': true, className: 'shrink-0 text-muted-foreground' } as const;
@@ -44,11 +45,12 @@ interface ResourceSourceIconProps {
 }
 
 /**
- * The site's own favicon (`https://<host>/favicon.ico`) for a web link, then its parent domain's
- * when that fails (`open.qobuz.com` → `qobuz.com`), a globe when both fail, and an icon for the
- * kind of identifier (`isbn:`, `doi:`, `pubky://`) otherwise. A few services whose favicon is not
- * their known mark (Apple Music, `BRAND_ICONS`) get a bundled icon instead. Decorative: the site
- * name is always shown next to it.
+ * The site's own favicon (`https://<host>/favicon.ico`, or where `getFaviconOverride` says it is,
+ * inverted for the dark ones, `isDarkFavicon`) for a web link, then, unless overridden, its parent domain's
+ * when the host's own fails (`open.qobuz.com` → `qobuz.com`), a globe when none loads, and an icon
+ * for the kind of identifier (`isbn:`, `doi:`, `pubky://`) otherwise. A few services whose favicon
+ * is not their known mark (Apple Music, `BRAND_ICONS`) get a bundled icon instead. Decorative: the
+ * site name is always shown next to it.
  */
 export function ResourceSourceIcon({ uri }: ResourceSourceIconProps) {
   const [failedUrls, setFailedUrls] = useState<readonly string[]>([]);
@@ -60,7 +62,8 @@ export function ResourceSourceIcon({ uri }: ResourceSourceIconProps) {
     );
   }
 
-  const faviconUrls = getFaviconUrls(uri);
+  const override = getFaviconOverride(host);
+  const faviconUrls = override ? [override] : getFaviconUrls(uri);
   const faviconUrl = faviconUrls.find((url) => !failedUrls.includes(url));
 
   if (faviconUrl) {
@@ -73,7 +76,10 @@ export function ResourceSourceIcon({ uri }: ResourceSourceIconProps) {
         width={ICON_SIZE}
         height={ICON_SIZE}
         data-testid="resource-source-favicon"
-        className="size-4 shrink-0 rounded-sm"
+        // Asked from the site itself: it learns the viewer's IP, not which page or post they are on.
+        referrerPolicy="no-referrer"
+        // Inverted for the dark theme; the hue turned back, so a coloured mark keeps its colour.
+        className={cn('size-4 shrink-0 rounded-sm', isDarkFavicon(host) && 'dark:hue-rotate-180 dark:invert')}
         onError={() => setFailedUrls((failed) => [...failed, faviconUrl])}
       />
     );

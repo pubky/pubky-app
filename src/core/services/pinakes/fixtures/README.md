@@ -13,6 +13,7 @@ schema drift in a re-capture fails the typecheck.
 | `by-uri.event.json`             | 200  | `/v1/resources/by-uri?uri=https%3A%2F%2Fluma.com%2F376whqyw`                                                                                        | `Event`, status `ok`                        |
 | `by-uri.book.json`              | 200  | `/v1/resources/by-uri?uri=isbn%3A9780140328721`                                                                                                     | `Book`, status `ok`                         |
 | `by-uri.scholarly-article.json` | 200  | `/v1/resources/by-uri?uri=https%3A%2F%2Fdoi.org%2F10.1038%2Fnature12373`                                                                            | `ScholarlyArticle`, status `ok`             |
+| `by-uri.nature-article.json`    | 200  | `/v1/resources/by-uri?uri=https%3A%2F%2Fwww.nature.com%2Farticles%2Fnature12373`                                                                    | `ScholarlyArticle`, status `ok`             |
 | `by-uri.podcast.json`           | 200  | `/v1/resources/by-uri?uri=https%3A%2F%2Fpodcasts.apple.com%2Fus%2Fpodcast%2Fdan-carlins-hardcore-history%2Fid173001861`                             | `PodcastSeries`, status `ok`                |
 | `by-uri.movie.json`             | 200  | `/v1/resources/by-uri?uri=https%3A%2F%2Fletterboxd.com%2Ffilm%2Fthe-matrix%2F`                                                                      | `Movie`, status `ok`                        |
 | `by-uri.music-recording.json`   | 200  | `/v1/resources/by-uri?uri=https%3A%2F%2Fopen.spotify.com%2Ftrack%2F1YQWosTIljIvxAgHWTp7KP`                                                          | `MusicRecording`, status `ok`               |
@@ -25,7 +26,9 @@ schema drift in a re-capture fails the typecheck.
 | `group.video.json`              | 200  | `/v1/groups/02fb8d65ac72842c9ddf06efdbcbf73b`                                                                                                       | group of 8 (`type` MusicRecording)          |
 | `search.type-facet.json`        | 200  | `/v1/search?facet=type&limit=1`                                                                                                                     | 68 card types with `type_path`              |
 
-`isbn:9780140328721` is a typed card whose `uri` is not a web link. `by-uri.pubky` is a Loopky deck
+`isbn:9780140328721` is a typed card whose `uri` is not a web link. `by-uri.nature-article` is the
+same paper as `by-uri.scholarly-article`, read by its publisher's link: its `also_on` names the
+`doi:` identifier by its service (`"site": "DOI"`). `by-uri.pubky` is a Loopky deck
 (found with `/v1/search?sort=recent&limit=500`): a `pubky://` card whose `image` is `pubky://` too
 and whose `open_in` names the client that opens it. `by-uri.missing` (the object
 is gone upstream) and `by-uri.unreachable` were found with `/v1/search?sort=recent&limit=500`.

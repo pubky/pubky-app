@@ -6,6 +6,8 @@ import { usePinakesCard } from '@/hooks/usePinakesCard/usePinakesCard';
 import { useViewportObserver } from '@/hooks/useViewportObserver/useViewportObserver';
 import { fileNameFromUrl, inferMediaKindFromUrl } from '@/libs/file/inlineMediaKind';
 import { useIsNestedPostPreview } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
+import { ResourceAlsoOn } from '@/molecules/ResourceCard/ResourceAlsoOn';
+import { pickAlsoOn } from '@/molecules/ResourceCard/ResourceAlsoOn.utils';
 import { ResourceCard } from '@/molecules/ResourceCard/ResourceCard';
 import {
   getHttpUrl,
@@ -45,6 +47,16 @@ function hasNothingToShow(card: TPinakesResourceDetail): boolean {
   return !card.name && (status === PinakesStatus.PENDING || status === PinakesStatus.ERROR);
 }
 
+/**
+ * The ⋯ menu's Also on: the card's other services, one row each, without its own service (the
+ * card's header opens it), or `null` when that leaves none.
+ */
+function getMenuAlsoOn(card: TPinakesResourceDetail, url: string): TPinakesResourceDetail['also_on'] | null {
+  const { sourceUri, siteName } = getResourceLinks(card, url);
+  const alsoOn = pickAlsoOn(card.also_on, { site: siteName, uris: [card.uri, url, sourceUri] });
+  return alsoOn.length > 0 ? alsoOn : null;
+}
+
 interface GenericResourcePreviewProps {
   url: string;
   /** The composer's preview: the card without its action row and tag bar. */
@@ -56,9 +68,10 @@ interface GenericResourcePreviewProps {
  * is only in the post's text keeps `GenericPreview`, see `Generic.renderEmbed`): its Pinakes card when Pinakes
  * has one, else the link's own preview in the same frame (`ResourceLinkCard`), both closed by the
  * post's own footer (`ResourceActions`: tags, actions and a ⋯ menu that copies the link and the
- * title), which reads the link's tags once the card is first on screen. A card that is pending or
- * failed and has no name says less than the link's own preview, and a failed read is treated like
- * an unknown link (no error box in a feed).
+ * title), which reads the link's tags once the card is first on screen. A card on other services too
+ * (`also_on`) lists them in the ⋯ menu under "Also on". A card that is pending or failed and has no
+ * name says less than the link's own preview, and a failed read is treated like an unknown link (no
+ * error box in a feed).
  *
  * Inside a quoted or reposted post (`PostPreviewCard`) the card has no action row or tag bar, as
  * while composing: that post is itself a link (or sits in the Reply/Repost dialog), so controls
@@ -103,6 +116,9 @@ function ResourcePreview({
   const shownCard = card && !hasNothingToShow(card) ? card : null;
   // The ⋯ menu copies what the card links.
   const linkUrl = shownCard ? getResourceLinks(shownCard, url).linkUrl : getHttpUrl(url);
+  // A card on other services too lists them in its ⋯ menu ("Also on") and is then no click-through:
+  // one row per service, never the card's own (`pickAlsoOn`).
+  const alsoOn = withActions && shownCard ? getMenuAlsoOn(shownCard, url) : null;
   const actions = !withActions ? null : (
     <ResourceActions
       uri={url}
@@ -111,8 +127,13 @@ function ResourcePreview({
       linkUrl={linkUrl}
       title={shownCard?.name}
       isOnScreen={isOnScreen}
+      extraMenuContent={
+        alsoOn
+          ? ({ variant, closeMenu }) => <ResourceAlsoOn alsoOn={alsoOn} variant={variant} closeMenu={closeMenu} />
+          : undefined
+      }
     />
   );
   if (!shownCard) return <ResourceLinkCard url={url} actions={actions} />;
-  return <ResourceCard card={shownCard} href={url} actions={actions} />;
+  return <ResourceCard card={shownCard} href={url} actions={actions} hasAlsoOn={alsoOn !== null} />;
 }
