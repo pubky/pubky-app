@@ -160,6 +160,36 @@ export const createSettingsActions = (set: ZustandSet<SettingsStore>): SettingsA
     );
   },
 
+  // Links and media actions
+  setPlayers: (playerOrder, hiddenPlayers) => {
+    set(
+      (state) =>
+        withTimestamp({
+          media: {
+            ...state.media,
+            playerOrder,
+            hiddenPlayers,
+          },
+        }),
+      false,
+      SettingsActionTypes.SET_PLAYERS,
+    );
+  },
+
+  setEmbedsUpFront: (embedsUpFront) => {
+    set(
+      (state) =>
+        withTimestamp({
+          media: {
+            ...state.media,
+            embedsUpFront,
+          },
+        }),
+      false,
+      SettingsActionTypes.SET_EMBEDS_UP_FRONT,
+    );
+  },
+
   // Muted users actions
   addMutedUser: (userId) => {
     set(
@@ -202,6 +232,7 @@ export const createSettingsActions = (set: ZustandSet<SettingsStore>): SettingsA
       {
         notifications: settings.notifications,
         privacy: settings.privacy,
+        media: settings.media,
         muted: settings.muted,
         updatedAt: settings.updatedAt,
         version: settings.version,

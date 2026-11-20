@@ -16,10 +16,12 @@ import {
 } from '@/molecules/ResourceCard/ResourceCard.utils';
 import { ResourceEmbedFrame } from '@/molecules/ResourceCard/ResourceEmbedFrame';
 import { ResourceCardSkeleton } from '@/molecules/ResourceCardSkeleton/ResourceCardSkeleton';
+import { getPlayerTargets } from '@/molecules/ResourcePlayer/resourcePlayer.utils';
 import { PlayOnPill } from '@/molecules/ResourcePlayer/ResourcePlayerControls';
 import { AnimatedHeight } from '@/molecules/ResourcePlayer/ResourcePlayerFrame';
 import { useCardPlayer } from '@/molecules/ResourcePlayer/useCardPlayer';
 import { ResourceActions } from '@/organisms/ResourceActions/ResourceActions';
+import { useSettingsStore } from '@/stores/settings/settings.store';
 import { useSlowRead } from '../Generic/useSlowRead';
 import type { EmbedResourceKind } from '../Provider.types';
 import { chooseNativeEmbed, getNativeEmbedCard, getShowPostLabel } from './nativeEmbed.utils';
@@ -68,9 +70,11 @@ function useEmbedEngaged(box: React.RefObject<HTMLElement | null>): boolean {
 /**
  * A post's embedded X post, YouTube or Vimeo video as an external resource (`chooseNativeEmbed`):
  * our card when Pinakes knows it on other services (a video plays from Play on, an X post from
- * "Show on <site>"), else the platform's own embed in the resource frame. The card's skeleton holds
- * the place while Pinakes is read (at most `PINAKES_SLOW_READ_MS`), so no embed loads only to be
- * replaced. Nothing is read before the box first comes near the screen.
+ * "Show on <site>"), else the platform's own embed in the resource frame. A viewer who turned
+ * platform embeds up front off (Settings, Links & Media) gets our card whenever there is one,
+ * unless it is a video the card player cannot play (then the card would have no Play on). The
+ * card's skeleton holds the place while Pinakes is read (at most `PINAKES_SLOW_READ_MS`), so no
+ * embed loads only to be replaced. Nothing is read before the box first comes near the screen.
  */
 export function NativeEmbedResource(props: NativeEmbedResourceProps) {
   // The default margin: the box counts as near 200px before it scrolls in.
@@ -111,14 +115,18 @@ function NativeEmbedChoice({
   const engaged = useEmbedEngaged(embedRef);
   const [failed, setFailed] = useState(false);
   const [isPostOpen, setIsPostOpen] = useState(false);
+  const embedsUpFront = useSettingsStore((state) => state.media.embedsUpFront);
 
   const card = getNativeEmbedCard(data);
   const alsoOn = card ? getMenuAlsoOn(card, url) : null;
+  // A video the card player has no player for (an `http:` link, one gone upstream) keeps its embed.
+  const upFront = embedsUpFront || (kind === 'video' && !(card && getPlayerTargets(card, { href: url }).length > 0));
   const choice = chooseNativeEmbed({
     hasCard: card !== null,
     hasAlsoOn: alsoOn !== null,
     embedFailed: failed,
     engaged,
+    upFront,
   });
   const showsCard = choice === 'card' && card !== null;
   const isVideo = kind === 'video';

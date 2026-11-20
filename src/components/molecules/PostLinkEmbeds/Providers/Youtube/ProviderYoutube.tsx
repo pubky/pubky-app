@@ -3,6 +3,7 @@ import { Iframe } from '@/atoms/Iframe/Iframe';
 import { convertHmsToSeconds } from '@/libs/utils/utils';
 import { HMS_TIMESTAMP_REGEX } from '@/libs/utils/utils.constants';
 import { extractYouTubeVideoId, YOUTUBE_DOMAINS } from '@/libs/utils/videoUrl';
+import { PlayerProvider } from '@/molecules/ResourcePlayer/resourcePlayer.utils';
 import { VIDEO_EMBED_PROPS } from '../Provider.constants';
 import type { EmbedData, EmbedProvider } from '../Provider.types';
 
@@ -57,6 +58,7 @@ const extractVideoIdFromEmbedUrl = (embedUrl: string): string => {
  */
 export const Youtube: EmbedProvider = {
   resourceKind: 'video',
+  player: PlayerProvider.YOUTUBE,
 
   /**
    * List of supported YouTube domains

@@ -2,6 +2,7 @@ import { inferMediaKindFromUrl } from '@/libs/file/inlineMediaKind';
 import { extractVimeoVideoId, extractYouTubeVideoId } from '@/libs/utils/videoUrl';
 import { VIDEO_EMBED_PROPS } from '@/molecules/PostLinkEmbeds/Providers/Provider.constants';
 import type { TPinakesCard, TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
+import type { MediaPreferences } from '@/stores/settings/settings.types';
 
 /** The services whose own player the card can load. Anything else stays "Open in" only. */
 export enum PlayerProvider {
@@ -15,7 +16,11 @@ export enum PlayerProvider {
   AUDIO_FILE = 'audio-file',
 }
 
-const PROVIDER_NAMES: Record<Exclude<PlayerProvider, PlayerProvider.AUDIO_FILE>, string> = {
+/** A service the viewer ranks or removes (Settings, Links & Media, Players): every one but a plain audio file. */
+export type ListedPlayer = Exclude<PlayerProvider, PlayerProvider.AUDIO_FILE>;
+
+/** Each service's name, in this order also the Players list's default order (Settings, Links & Media). */
+export const PROVIDER_NAMES: Record<ListedPlayer, string> = {
   [PlayerProvider.YOUTUBE]: 'YouTube',
   [PlayerProvider.VIMEO]: 'Vimeo',
   [PlayerProvider.SPOTIFY]: 'Spotify',
@@ -24,6 +29,49 @@ const PROVIDER_NAMES: Record<Exclude<PlayerProvider, PlayerProvider.AUDIO_FILE>,
   [PlayerProvider.TIDAL]: 'TIDAL',
   [PlayerProvider.DEEZER]: 'Deezer',
 };
+
+/** Each service's site, whose favicon stands for it in the Players list. */
+export const PROVIDER_SITES: Record<ListedPlayer, string> = {
+  [PlayerProvider.YOUTUBE]: 'https://www.youtube.com/',
+  [PlayerProvider.VIMEO]: 'https://vimeo.com/',
+  [PlayerProvider.SPOTIFY]: 'https://open.spotify.com/',
+  [PlayerProvider.SOUNDCLOUD]: 'https://soundcloud.com/',
+  [PlayerProvider.MIXCLOUD]: 'https://www.mixcloud.com/',
+  [PlayerProvider.TIDAL]: 'https://tidal.com/',
+  [PlayerProvider.DEEZER]: 'https://www.deezer.com/',
+};
+
+/** The viewer's Players (Settings, Links & Media): their order and the removed ones. */
+export type PlayerPreferences = Pick<MediaPreferences, 'playerOrder' | 'hiddenPlayers'>;
+
+/** Whether an id is a service this version lists (a later version's id is not). */
+export function isListedPlayer(id: string): id is ListedPlayer {
+  return Object.hasOwn(PROVIDER_NAMES, id);
+}
+
+/**
+ * The Players list as shown (Settings, Links & Media): the services in the viewer's order, then
+ * those not in it in their default order (a service a later version adds shows up at the end), the
+ * removed ones apart. Ids this version does not play are left out of both.
+ */
+export function getPlayerList({ playerOrder, hiddenPlayers }: PlayerPreferences): {
+  shown: ListedPlayer[];
+  removed: ListedPlayer[];
+} {
+  const all = [...new Set([...playerOrder.filter(isListedPlayer), ...(Object.keys(PROVIDER_NAMES) as ListedPlayer[])])];
+  return {
+    shown: all.filter((id) => !hiddenPlayers.includes(id)),
+    removed: all.filter((id) => hiddenPlayers.includes(id)),
+  };
+}
+
+/**
+ * Whether a service may load at all: not removed from Players. A plain audio file is no service, so
+ * it always may.
+ */
+export function isPlayerShown(provider: PlayerProvider, hiddenPlayers: readonly string[] = []): boolean {
+  return !hiddenPlayers.includes(provider);
+}
 
 /**
  * How the player sits in the card: a video keeps 16:9 at the card's width, audio its own strip
@@ -364,11 +412,16 @@ const AUTOPLAY_PARAMS = ['autoplay', 'auto_play'] as const;
  * card player's frame for it without what starts it on load (its autoplay parameter and start
  * message), so it plays only when pressed inside. `null` when the link is on no such service, or is
  * a plain audio file (the link's own preview plays those). With the link's card, a link no player
- * takes falls back to the card's canonical `uri` and its aliases (`getOwnLink`).
+ * takes falls back to the card's canonical `uri` and its aliases (`getOwnLink`). `null` too for a
+ * service the viewer removed from Players (`hiddenPlayers`).
  */
-export function getEmbedTarget(link: string, card?: TOwnLinks | null): PlayerTarget | null {
+export function getEmbedTarget(
+  link: string,
+  card?: TOwnLinks | null,
+  hiddenPlayers?: readonly string[],
+): PlayerTarget | null {
   const target = getPlayerTarget(card ? getOwnLink(card, link) : link);
-  if (!target || target.element !== 'iframe') return null;
+  if (!target || target.element !== 'iframe' || !isPlayerShown(target.provider, hiddenPlayers)) return null;
   const src = new URL(target.src);
   for (const param of AUTOPLAY_PARAMS) src.searchParams.delete(param);
   return { ...target, src: src.href, autoplay: false, start: undefined };
@@ -379,10 +432,14 @@ export function getEmbedTarget(link: string, card?: TOwnLinks | null): PlayerTar
  * its `also_on` links in Pinakes' order (its best link of a service first), those that start on
  * our press before those that need a press inside (`autoplay`), so Play on starts with one press
  * whenever an Also on service can. A `missing` card's own link is gone upstream and offers no player.
+ *
+ * The viewer's Players (`players`, Settings, Links & Media) come last: a removed service offers no
+ * player, and the services in the viewer's order go first, in that order,
+ * before those not in it (Auto order). With no order (never reordered) it all stays Auto.
  */
 export function getPlayerTargets(
   card: Pick<TPinakesCard, 'status' | 'also_on'> & TOwnLinks,
-  { href }: { href?: string | null } = {},
+  { href, players }: { href?: string | null; players?: PlayerPreferences } = {},
 ): PlayerTarget[] {
   const own = card.status === 'missing' ? null : getOwnLink(card, href);
   const links = [...(own ? [own] : []), ...card.also_on.map((entry) => entry.uri)];
@@ -397,9 +454,17 @@ export function getPlayerTargets(
   }
   const ownCount = own && getPlayerTarget(own) ? 1 : 0;
   const alsoOn = targets.slice(ownCount);
-  return [
+  const ordered = [
     ...targets.slice(0, ownCount),
     ...alsoOn.filter((target) => target.autoplay),
     ...alsoOn.filter((target) => !target.autoplay),
   ];
+  const shown = ordered.filter((target) => isPlayerShown(target.provider, players?.hiddenPlayers));
+  const order = players?.playerOrder ?? [];
+  const rank = (target: PlayerTarget) => {
+    const index = order.indexOf(target.provider);
+    return index === -1 ? order.length : index;
+  };
+  // A stable sort: those not in the order keep the Auto order among themselves.
+  return [...shown].sort((a, b) => rank(a) - rank(b));
 }

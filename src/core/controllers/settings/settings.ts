@@ -109,6 +109,19 @@ export class SettingsController {
   }
 
   /**
+   * Updates the links and media preferences and syncs to homeserver.
+   */
+  static async setPlayers(playerOrder: string[], hiddenPlayers: string[]): Promise<void> {
+    useSettingsStore.getState().setPlayers(playerOrder, hiddenPlayers);
+    await this.commitUpdate();
+  }
+
+  static async setEmbedsUpFront(embedsUpFront: boolean): Promise<void> {
+    useSettingsStore.getState().setEmbedsUpFront(embedsUpFront);
+    await this.commitUpdate();
+  }
+
+  /**
    * Muted users management (local-only, not synced to homeserver).
    * These methods update the local store directly without triggering
    * a homeserver sync since muted users are device-specific.

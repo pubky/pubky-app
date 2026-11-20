@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { usePinakesGroup } from '@/hooks/usePinakesGroup/usePinakesGroup';
 import type { UsePinakesQueryResult } from '@/hooks/usePinakesQuery/usePinakesQuery.types';
@@ -11,6 +11,8 @@ import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
 import groupFixture from '@/services/pinakes/fixtures/group.video.json';
 import relatedFixture from '@/services/pinakes/fixtures/search.related.json';
 import type { TPinakesCard, TPinakesGroupDetail, TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
+import { useSettingsStore } from '@/stores/settings/settings.store';
+import { defaultMediaPreferences } from '@/stores/settings/settings.types';
 import { ResourceDetails } from './ResourceDetails';
 
 const mocks = vi.hoisted(() => ({
@@ -428,6 +430,22 @@ describe('ResourceDetails', () => {
 
       fireEvent.click(screen.getByTestId('show-embed'));
       expect(screen.getByTestId('resource-card-title')).toBeInTheDocument();
+    });
+
+    it('shows our card with Show on 𝕏 to a viewer who turned platform embeds up front off', () => {
+      useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } });
+      try {
+        read = settled(X_POST);
+        renderDetails(X_URL);
+
+        expect(screen.getByTestId('resource-card-title')).toHaveTextContent(X_POST.name!);
+        expect(screen.getByTestId('resource-facts')).toBeInTheDocument();
+        expect(screen.queryByTestId('twitter-tweet')).toBeNull();
+        fireEvent.click(within(screen.getByTestId('resource-actions')).getByTestId('show-embed'));
+        expect(within(screen.getByTestId('native-embed-body')).getByTestId('twitter-tweet')).toBeInTheDocument();
+      } finally {
+        act(() => useSettingsStore.setState({ media: defaultMediaPreferences }));
+      }
     });
 
     it('shows our card, without Show on, when X cannot show the post', () => {

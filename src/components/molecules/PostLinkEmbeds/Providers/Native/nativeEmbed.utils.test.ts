@@ -18,6 +18,9 @@ describe('chooseNativeEmbed', () => {
     [{ hasCard: true, hasAlsoOn: false, embedFailed: true }, 'card'],
     [{ hasCard: false, hasAlsoOn: false, embedFailed: true }, 'embed'],
     [{ hasCard: true, hasAlsoOn: true, engaged: true }, 'embed'],
+    [{ hasCard: true, hasAlsoOn: false, upFront: false }, 'card'],
+    [{ hasCard: false, hasAlsoOn: false, upFront: false }, 'embed'],
+    [{ hasCard: true, hasAlsoOn: false, embedFailed: true, upFront: false }, 'card'],
   ] as const)('%o -> %s', (input, expected) => {
     expect(chooseNativeEmbed(input)).toBe(expected);
   });

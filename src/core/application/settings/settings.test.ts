@@ -15,6 +15,7 @@ import {
 } from '@/services/homeserver/write-retry';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import {
+  defaultMediaPreferences,
   defaultNotificationPreferences,
   defaultPrivacyPreferences,
   type SettingsState,
@@ -53,6 +54,7 @@ describe('SettingsApplication', () => {
   const createMockSettingsState = (overrides?: Partial<SettingsState>): SettingsState => ({
     notifications: defaultNotificationPreferences,
     privacy: { ...defaultPrivacyPreferences, moderationBot },
+    media: defaultMediaPreferences,
     muted: [],
     updatedAt: 1700000000000,
     version: 1,
@@ -63,6 +65,7 @@ describe('SettingsApplication', () => {
     settings: {
       notifications: settings.notifications,
       privacy: settings.privacy,
+      media: settings.media,
       updatedAt: settings.updatedAt,
       version: settings.version,
     },

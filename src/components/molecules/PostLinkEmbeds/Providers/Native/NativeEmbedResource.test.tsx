@@ -1,10 +1,12 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getResourceRoute } from '@/app/routes';
 import { PINAKES_SLOW_READ_MS } from '@/config/pinakes';
 import { usePinakesCard } from '@/hooks/usePinakesCard/usePinakesCard';
 import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
 import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
+import { useSettingsStore } from '@/stores/settings/settings.store';
+import { defaultMediaPreferences } from '@/stores/settings/settings.types';
 import { NativeEmbedResource, type RenderNativeEmbed } from './NativeEmbedResource';
 
 const mockPush = vi.fn();
@@ -216,6 +218,37 @@ describe('NativeEmbedResource', () => {
         expect(screen.getByTestId('resource-card-source')).toHaveTextContent('x.com');
         unmount();
       }
+    });
+
+    describe('with platform embeds up front off', () => {
+      beforeEach(() => useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } }));
+      afterEach(() => useSettingsStore.setState({ media: defaultMediaPreferences }));
+
+      it('shows our card with Play on and loads nothing from the platform', () => {
+        mockCard(VIDEO_ALONE);
+        render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
+
+        expect(screen.getByTestId('resource-card')).toBeInTheDocument();
+        expect(embed).not.toHaveBeenCalled();
+        expect(document.querySelector('iframe')).toBeNull();
+        expect(screen.getByRole('button', { name: 'Play on YouTube' })).toBeInTheDocument();
+      });
+
+      it('keeps the embed of a video the card player cannot play, which would have no Play on', () => {
+        mockCard({ ...VIDEO_ALONE, status: 'missing' });
+        render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
+
+        expect(within(screen.getByTestId('resource-embed-frame')).getByTestId('platform-embed')).toBeInTheDocument();
+      });
+
+      it('shows an X post on our card, its embed only from Show on', () => {
+        mockCard(POST_CARD);
+        render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
+
+        expect(embed).not.toHaveBeenCalled();
+        fireEvent.click(screen.getByTestId('show-embed'));
+        expect(screen.getByTestId('platform-embed')).toBeInTheDocument();
+      });
     });
 
     it('gives way to the card when the platform cannot show the post', () => {

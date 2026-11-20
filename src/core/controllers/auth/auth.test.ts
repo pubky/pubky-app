@@ -22,6 +22,7 @@ import { useNotificationStore } from '@/stores/notification/notification.store';
 import type { NotificationState } from '@/stores/notification/notification.types';
 import { useSettingsStore } from '@/stores/settings/settings.store';
 import {
+  defaultMediaPreferences,
   defaultNotificationPreferences,
   defaultPrivacyPreferences,
   type NotificationPreferences,
@@ -46,6 +47,7 @@ const getLastReadUrl = (pubky: string) => `pubky://${pubky}/priv/app.pubky/v1/la
 const createMockSettingsState = (overrides?: Partial<SettingsState>): SettingsState => ({
   notifications: defaultNotificationPreferences,
   privacy: defaultPrivacyPreferences,
+  media: defaultMediaPreferences,
   muted: [],
   updatedAt: 0,
   version: 1,

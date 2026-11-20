@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getResourceRoute } from '@/app/routes';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/atoms/DropdownMenu/DropdownMenu';
 import { isPinakesConfigured, PINAKES_SLOW_READ_MS } from '@/config/pinakes';
@@ -17,6 +17,8 @@ import musicFixture from '@/services/pinakes/fixtures/by-uri.music-recording.jso
 import unreachableFixture from '@/services/pinakes/fixtures/by-uri.unreachable.json';
 import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
 import { PinakesStatus } from '@/services/pinakes/pinakes.types';
+import { useSettingsStore } from '@/stores/settings/settings.store';
+import { defaultMediaPreferences } from '@/stores/settings/settings.types';
 import { GenericResourcePreview } from './GenericResourcePreview';
 
 const mockPush = vi.fn();
@@ -647,6 +649,48 @@ describe('GenericResourcePreview', () => {
       expect(screen.getByTestId('resource-embed-frame')).toBeInTheDocument();
       expect(screen.getByTestId('resource-player-frame')).toBeInTheDocument();
       expect(screen.queryByTestId('resource-actions')).not.toBeInTheDocument();
+    });
+
+    describe('with platform embeds up front off', () => {
+      beforeEach(() => useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } }));
+      afterEach(() => useSettingsStore.setState({ media: defaultMediaPreferences }));
+
+      it('keeps our card and loads nothing from the service', () => {
+        mockUsePinakesCard.mockReturnValue({
+          data: { ...musicFixture, also_on: [] },
+          isLoading: false,
+          isError: false,
+        });
+        render(<GenericResourcePreview url={SPOTIFY} />);
+
+        expect(screen.getByTestId('resource-card')).toBeInTheDocument();
+        expect(screen.queryByTestId('resource-embed-frame')).not.toBeInTheDocument();
+        expect(document.querySelector('iframe')).toBeNull();
+      });
+    });
+
+    describe('with the service removed from Players', () => {
+      beforeEach(() =>
+        useSettingsStore.setState({ media: { ...defaultMediaPreferences, hiddenPlayers: ['spotify'] } }),
+      );
+      afterEach(() => useSettingsStore.setState({ media: defaultMediaPreferences }));
+
+      it('keeps our card, with no Play on, and loads nothing from the service', () => {
+        const album = {
+          ...musicFixture,
+          uri: 'https://open.spotify.com/album/2noRn2Aes5aoNVsU6iWThc',
+          type: 'MusicAlbum',
+          type_path: ['Thing', 'CreativeWork', 'MusicAlbum'],
+          also_on: [],
+        };
+        mockUsePinakesCard.mockReturnValue({ data: album, isLoading: false, isError: false });
+        render(<GenericResourcePreview url={album.uri} />);
+
+        expect(screen.getByTestId('resource-card')).toBeInTheDocument();
+        expect(screen.queryByTestId('resource-embed-frame')).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /^Play on/ })).not.toBeInTheDocument();
+        expect(document.querySelector('iframe')).toBeNull();
+      });
     });
 
     it('keeps the card in a quoted post', () => {

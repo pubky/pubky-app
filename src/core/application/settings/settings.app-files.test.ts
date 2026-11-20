@@ -6,6 +6,7 @@ import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
 import {
+  defaultMediaPreferences,
   defaultNotificationPreferences,
   defaultPrivacyPreferences,
   type SettingsState,
@@ -19,6 +20,7 @@ const LEGACY_PATH = '/pub/pubky.app/settings.json';
 const settings = (overrides?: Partial<SettingsState>): SettingsState => ({
   notifications: defaultNotificationPreferences,
   privacy: { ...defaultPrivacyPreferences, moderationBot: fakeOwner(2) as Pubky },
+  media: defaultMediaPreferences,
   muted: [],
   updatedAt: 1_700_000_000_000,
   version: 1,

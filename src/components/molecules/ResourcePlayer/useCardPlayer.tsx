@@ -3,6 +3,7 @@
 import { type ReactNode, useId } from 'react';
 import type { PostActionSurface } from '@/organisms/PostActionsBar/PostActionButton';
 import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
+import { useSettingsStore } from '@/stores/settings/settings.store';
 import { getPlayerTargets } from './resourcePlayer.utils';
 import { PlayerDock, PlayOnSplit } from './ResourcePlayerControls';
 import { AnimatedHeight, ResourcePlayerFrame } from './ResourcePlayerFrame';
@@ -26,7 +27,8 @@ export interface CardPlayer {
  * dock at the bottom of the screen (`PlayerDock`). One player plays on the whole page.
  *
  * No player is loaded before Play is pressed (the pill shows the service's favicon). A card on no
- * such service gets neither.
+ * such service gets neither. The viewer's Players (Settings, Links & Media) order the services and
+ * leave out removed ones.
  *
  * @param card - The card shown, or `null` (nothing to play: a link's own preview, a pending card)
  * @param href - The link as written, played first when it is on such a service
@@ -38,7 +40,9 @@ export function useCardPlayer(
   surface?: PostActionSurface,
 ): CardPlayer {
   const owner = useId();
-  const targets = card ? getPlayerTargets(card, { href }) : [];
+  const playerOrder = useSettingsStore((state) => state.media.playerOrder);
+  const hiddenPlayers = useSettingsStore((state) => state.media.hiddenPlayers);
+  const targets = card ? getPlayerTargets(card, { href, players: { playerOrder, hiddenPlayers } }) : [];
   const player = useResourcePlayer(owner, targets);
   if (!card || targets.length === 0) return {};
 

@@ -24,6 +24,7 @@ import type { LockFile } from '@/services/locks/locks.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useNotificationStore } from '@/stores/notification/notification.store';
 import {
+  defaultMediaPreferences,
   defaultNotificationPreferences,
   defaultPrivacyPreferences,
   type SettingsState,
@@ -238,6 +239,7 @@ describe('a settings write that the homeserver refuses with the publish conflict
   const settings: SettingsState = {
     notifications: defaultNotificationPreferences,
     privacy: { ...defaultPrivacyPreferences, moderationBot: 'euwmq57zefw5ynnkhh37b3gcmhs7g3cptdbw1doaxj1pbmzp3wro' },
+    media: defaultMediaPreferences,
     muted: [],
     updatedAt: 1_700_000_000_000,
     version: 1,
