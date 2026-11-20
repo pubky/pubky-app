@@ -584,6 +584,100 @@ describe('Shop listing metadata expected-error policy', () => {
   );
 });
 
+describe('Pinakes card transport expected-error policy', () => {
+  const PINAKES_URL = 'https://pinakes.example';
+  const LINK = 'https://example.com/post-link?token=secret';
+
+  /** A fresh PinakesService on the capture-enabled module graph, configured to read Pinakes. */
+  async function importPinakesService() {
+    vi.doMock('@/config/pinakes', async (importOriginal) => ({
+      ...(await importOriginal<typeof import('@/config/pinakes')>()),
+      getPinakesUrl: () => PINAKES_URL,
+    }));
+    const { PinakesService } = await import('@/services/pinakes/pinakes');
+    return PinakesService;
+  }
+
+  it.each([
+    { name: 'connection failure', rejection: () => new TypeError('Failed to fetch') },
+    { name: 'DNS failure', rejection: () => new TypeError('getaddrinfo ENOTFOUND') },
+    { name: 'transport timeout', rejection: () => new DOMException('signal timed out', 'TimeoutError') },
+  ])('rejects a card read without capturing a $name, retry included', async ({ rejection }) => {
+    await withEnabledSentryCapture(async ({ captureException }) => {
+      const PinakesService = await importPinakesService();
+      const { safeFetch: fetchWithErrors } = await import('@/libs/error/error.http');
+      const { AppError: PipelineAppError } = await import('@/libs/error/error');
+      const { getSentryInitBase: initBase } = await import('./sentry');
+      vi.useFakeTimers();
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(rejection());
+      try {
+        // Real service → safeFetch → Err → captureAppError, with the production capture gate enabled.
+        const result = PinakesService.fetchCardByUri(LINK);
+        const assertion = expect(result).rejects.toBeInstanceOf(PipelineAppError);
+        await vi.runAllTimersAsync();
+        await assertion;
+        expect(fetchSpy).toHaveBeenCalledTimes(2);
+        expect(captureException).not.toHaveBeenCalled();
+
+        // The same real pipeline error, to verify the SDK/global-handler policy too.
+        const error: unknown = await fetchWithErrors(LINK, {}, ErrorService.Pinakes, 'fetchRelated').catch(
+          (error: unknown) => error,
+        );
+        expect(error).toBeInstanceOf(PipelineAppError);
+        if (!(error instanceof PipelineAppError)) return;
+        expect(shouldDropAppErrorFromSentry(error)).toBe(true);
+        expect(initBase().beforeSend!({ type: undefined }, { originalException: error })).toBeNull();
+        expect(captureException).not.toHaveBeenCalled();
+      } finally {
+        fetchSpy.mockRestore();
+        vi.useRealTimers();
+        vi.doUnmock('@/config/pinakes');
+      }
+    });
+  });
+
+  it('keeps a Pinakes 500 reportable', async () => {
+    await withEnabledSentryCapture(async ({ captureException }) => {
+      const PinakesService = await importPinakesService();
+      vi.useFakeTimers();
+      const fetchSpy = vi
+        .spyOn(globalThis, 'fetch')
+        .mockImplementation(() => Promise.resolve(new Response('{"error":"internal"}', { status: 500 })));
+      try {
+        const result = PinakesService.fetchCardByUri(LINK).catch((error: unknown) => error);
+        await vi.runAllTimersAsync();
+        const error = await result;
+        expect(error).toMatchObject({
+          category: ErrorCategory.Server,
+          service: ErrorService.Pinakes,
+          operation: 'fetchCardByUri',
+        });
+        expect(captureException).toHaveBeenCalledWith(error);
+      } finally {
+        fetchSpy.mockRestore();
+        vi.useRealTimers();
+        vi.doUnmock('@/config/pinakes');
+      }
+    });
+  });
+
+  it('keeps a connection failure of another service reportable', async () => {
+    await withEnabledSentryCapture(async ({ captureException }) => {
+      const { safeFetch: fetchWithErrors } = await import('@/libs/error/error.http');
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new TypeError('Failed to fetch'));
+      try {
+        const error: unknown = await fetchWithErrors(LINK, {}, ErrorService.Nexus, 'fetchCardByUri').catch(
+          (error: unknown) => error,
+        );
+        expect(error).toMatchObject({ category: ErrorCategory.Network, service: ErrorService.Nexus });
+        expect(captureException).toHaveBeenCalledExactlyOnceWith(error);
+      } finally {
+        fetchSpy.mockRestore();
+      }
+    });
+  });
+});
+
 describe('once-per-error-chain capture', () => {
   const localParams = { service: ErrorService.Local, operation: 'findById' } as const;
   const wrapperParams = { service: ErrorService.Local, operation: 'unblurModeration' } as const;

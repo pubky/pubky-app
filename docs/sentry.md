@@ -92,6 +92,11 @@ that fallback runs, the `shop-listing-metadata-transport` rule drops only networ
 `Shop/fetchListingMetadata`. Local error logs remain; Shop readiness, cleanup, authentication, and payment operations,
 plus other error categories on the metadata operation, remain reportable.
 
+External resource cards (Pinakes) fall back to the plain link preview on any failure. The `pinakes-transport` rule
+drops network and timeout errors from every `Pinakes` operation (all are optional, read-only card reads), which also
+keeps the post link in their `context.url` out of telemetry. Pinakes HTTP errors other than the 404 "no card" answer,
+which never becomes an `AppError`, remain reportable.
+
 The `/api/og-metadata` fallback paths use `Logger.warn`, which is currently platform/server logging. Sentry Logs are disabled in this app, so
 these warnings are not Sentry aggregate events unless logging infrastructure is enabled separately.
 

@@ -5,8 +5,15 @@ on:
     branches:
       - master
       - dev
+  pull_request:
+    branches:
+      - '**' # Run on PRs targeting any branch
   # Enable manual trigger
   workflow_dispatch:
+
+# PR runs execute the PR's code; nothing here needs to write to the repository.
+permissions:
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
