@@ -141,6 +141,117 @@ describe('useCardPlayer, a generic link', () => {
   });
 });
 
+describe('useCardPlayer, links Pinakes matched by metadata (kind maybe)', () => {
+  const DEEZER_MAYBE = {
+    uri: 'https://www.deezer.com/track/67238735',
+    site: 'Deezer',
+    derived: true,
+    via: 'youtube_match',
+    kind: 'maybe',
+  };
+  const TIDAL_EXACT = { id: 't', uri: 'https://tidal.com/track/490851477', site: 'TIDAL' };
+  // A song on Spotify (its own link), exactly on TIDAL, and maybe on Deezer (by artist, title and length).
+  const SONG: TPinakesResourceDetail = { ...musicFixture, also_on: [DEEZER_MAYBE, TIDAL_EXACT] };
+  const DEEZER_WIDGET = 'https://widget.deezer.com/widget/dark/track/67238735';
+  const setPlayers = (playerOrder: string[]) =>
+    useSettingsStore.setState({ media: { ...defaultMediaPreferences, playerOrder } });
+
+  afterEach(() => setPlayers([]));
+
+  it('shows an exact link’s player up front, never a match, even one the viewer ranks first', () => {
+    setPlayers(['deezer', 'tidal', 'spotify']);
+    render(<Card card={SONG} testId="song" />);
+
+    expect(screen.getByTestId('resource-player-frame')).toHaveAttribute(
+      'src',
+      'https://embed.tidal.com/tracks/490851477?hideOverlays=true',
+    );
+    expect(screen.getByTestId('player-switch').textContent).toBe('TIDAL');
+    expect(rowsOf(openSwitchOf('song'))).toEqual(['TIDAL', 'Spotify', 'Deezer']);
+  });
+
+  it('lists a match after the exact services with no label, its note in its hover text and name only', () => {
+    render(<Card card={SONG} testId="song" />);
+
+    const menu = openSwitchOf('song');
+    expect(rowsOf(menu)).toEqual(['Spotify', 'TIDAL', 'Deezer']);
+    expect(menu.textContent).not.toMatch(/maybe|matched/i);
+    const [spotify, tidal, deezer] = within(menu).getAllByTestId('play-on-row');
+    expect(deezer).toHaveAccessibleName('Deezer, Matched by title and length');
+    expect(deezer).toHaveAttribute('title', 'Matched by title and length');
+    // An exact link's row is as before: named by what it shows, no hover text.
+    for (const [row, name] of [
+      [spotify, 'Spotify'],
+      [tidal, 'TIDAL'],
+    ] as const) {
+      expect(row).toHaveAccessibleName(name);
+      expect(row).not.toHaveAttribute('title');
+    }
+    fireEvent.click(deezer);
+
+    expect(screen.getByTestId('resource-player-frame')).toHaveAttribute('src', DEEZER_WIDGET);
+    const trigger = screen.getByTestId('player-switch');
+    expect(trigger.textContent).toBe('Deezer');
+    expect(trigger).toHaveAccessibleName('Deezer, Matched by title and length: choose another service');
+    expect(trigger).toHaveAttribute('title', 'Matched by title and length');
+    expect(
+      within(openSwitchOf('song')).getByRole('menuitem', { name: 'Deezer, Matched by title and length' }),
+    ).toHaveAttribute('aria-current', 'true');
+  });
+
+  it('gives an exact service the switch shows no hover text, and its name as before', () => {
+    render(<Card card={SONG} testId="song" />);
+
+    const trigger = screen.getByTestId('player-switch');
+    expect(trigger.textContent).toBe('Spotify');
+    expect(trigger).toHaveAccessibleName('Spotify: choose another service');
+    expect(trigger).not.toHaveAttribute('title');
+  });
+
+  it('shows the card, not a match, when Card (no player) ranks between the match and the exact services', () => {
+    setPlayers(['deezer', 'card', 'spotify', 'tidal']);
+    render(<Card card={SONG} testId="song" />);
+
+    expect(document.querySelector('iframe')).toBeNull();
+    expect(screen.getByTestId('song')).toHaveAttribute('data-card', 'true');
+    expect(rowsOf(openSwitchOf('song'))).toEqual(['Spotify', 'TIDAL', 'Deezer']);
+  });
+
+  it('still embeds a card’s only match: a generic link offers it below Card, and plays it when picked', () => {
+    const recording: TPinakesResourceDetail = {
+      ...ARTIST,
+      uri: 'https://musicbrainz.org/recording/b1a9c0e9-d987-4042-ae91-78d6a3267d69',
+      type: 'MusicRecording',
+      type_path: ['Thing', 'CreativeWork', 'MusicRecording'],
+      also_on: [DEEZER_MAYBE],
+    };
+    render(<Card card={recording} testId="recording" />);
+
+    expect(screen.getByTestId('recording')).toHaveAttribute('data-card', 'true');
+    const menu = openSwitchOf('recording');
+    expect(rowsOf(menu)).toEqual(['Deezer']);
+    fireEvent.click(within(menu).getByTestId('play-on-row'));
+
+    expect(screen.getByTestId('resource-player-frame')).toHaveAttribute('src', DEEZER_WIDGET);
+    expect(screen.getByTestId('player-switch').textContent).toBe('Deezer');
+  });
+
+  it('marks nothing on a card with exact links only, in Pinakes’ order as before', () => {
+    render(<Card card={{ ...SONG, also_on: [TIDAL_EXACT, { ...DEEZER_MAYBE, kind: undefined }] }} testId="song" />);
+
+    expect(screen.getByTestId('resource-player-frame')).toHaveAttribute(
+      'src',
+      'https://open.spotify.com/embed/track/1YQWosTIljIvxAgHWTp7KP',
+    );
+    const menu = openSwitchOf('song');
+    expect(rowsOf(menu)).toEqual(['Spotify', 'TIDAL', 'Deezer']);
+    for (const row of within(menu).getAllByTestId('play-on-row')) {
+      expect(row).not.toHaveAttribute('title');
+      expect(row).not.toHaveAttribute('aria-label');
+    }
+  });
+});
+
 /**
  * A song shared as its link on a service with a player shows that player up front (`embed`):
  * the chosen service's own embed, paused, with a switch to Card and the card's other services; no

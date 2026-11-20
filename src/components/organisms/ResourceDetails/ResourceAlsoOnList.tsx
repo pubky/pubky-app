@@ -4,7 +4,14 @@ import { type ComponentProps, useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { usePinakesGroup } from '@/hooks/usePinakesGroup/usePinakesGroup';
 import { useResourceRowCounts } from '@/hooks/useResourceRowCounts/useResourceRowCounts';
-import { getAlsoOnName, getAlsoOnNote, getAlsoOnRoute, getHttpUrl } from '@/molecules/ResourceCard/ResourceCard.utils';
+import {
+  getAlsoOnName,
+  getAlsoOnNote,
+  getAlsoOnRoute,
+  getHttpUrl,
+  isMaybeAlsoOn,
+  MAYBE_ALSO_ON_NOTE,
+} from '@/molecules/ResourceCard/ResourceCard.utils';
 import { ResourceListRow } from '@/molecules/ResourceCard/ResourceListRow';
 import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { ResourceAlsoOnLanguagesRow } from './ResourceAlsoOnLanguagesRow';
@@ -72,6 +79,8 @@ export function ResourceAlsoOnList({ card }: ResourceAlsoOnListProps) {
             name={getAlsoOnName(row.entry)}
             // A link that is not a web link keeps its identifier (`10.1038/…` under DOI).
             note={getAlsoOnNote(row.entry, undefined, { withSource: false })}
+            // A match by metadata shows no label: its note is in the tooltip and name only.
+            hint={isMaybeAlsoOn(row.entry) ? MAYBE_ALSO_ON_NOTE : null}
             source={getAlsoOnSource(row.entry)}
             testId="resource-also-on-list-row"
           />

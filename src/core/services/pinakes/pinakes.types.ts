@@ -112,7 +112,10 @@ export interface TPinakesAlsoOn {
   refs?: string[] | null;
   /** A link nobody tagged, found by a source. */
   derived?: boolean;
-  /** For a derived link, a qualifier (`archived`, `work`, `source`, `submitted`, `published`, `pdf`). */
+  /**
+   * For a derived link, a qualifier (`archived`, `work`, `source`, `submitted`, `published`, `pdf`), or
+   * `maybe`: a match by metadata (title, artist, length), possibly the same thing, never an exact ID.
+   */
   kind?: string | null;
   /** For a derived link, the hub or service it came through (`musicbrainz`, `wikidata`). */
   via?: string | null;

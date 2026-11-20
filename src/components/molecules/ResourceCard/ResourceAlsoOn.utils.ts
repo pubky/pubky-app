@@ -1,5 +1,12 @@
 import type { TPinakesAlsoOn, TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
-import { getAlsoOnName, getAlsoOnNote, getHttpUrl, getLinkHost, getResourceLinks } from './ResourceCard.utils';
+import {
+  getAlsoOnName,
+  getAlsoOnNote,
+  getHttpUrl,
+  getLinkHost,
+  getResourceLinks,
+  isMaybeAlsoOn,
+} from './ResourceCard.utils';
 
 /** One language edition of a service in Also on (`Wikipedia (de)`): its language code and entry. */
 export interface TAlsoOnEdition {
@@ -62,7 +69,8 @@ function getEdition(entry: TPinakesAlsoOn): { key: string; name: string; lang: s
 
 /**
  * One entry per service, by name or by host, where the service is first listed: its first entry,
- * or its first with a web link. Language editions differ in both and stay for `groupAlsoOn`.
+ * or its first with a web link, never a match by metadata over an exact entry (`isMaybeAlsoOn`).
+ * Language editions differ in both and stay for `groupAlsoOn`.
  */
 export function dedupeAlsoOn(alsoOn: TPinakesAlsoOn[]): TPinakesAlsoOn[] {
   const kept = new Map<string, TPinakesAlsoOn>();
@@ -72,7 +80,13 @@ export function dedupeAlsoOn(alsoOn: TPinakesAlsoOn[]): TPinakesAlsoOn[] {
     const key = (host && keyOfHost.get(host)) || getAlsoOnName(entry).toLowerCase();
     if (host && !keyOfHost.has(host)) keyOfHost.set(host, key);
     const first = kept.get(key);
-    if (!first || (!getHttpUrl(first.uri) && getHttpUrl(entry.uri))) kept.set(key, entry);
+    // A later entry with a web link takes the place of one without; a match never takes an exact entry's.
+    const replacesFirst =
+      first !== undefined &&
+      !getHttpUrl(first.uri) &&
+      getHttpUrl(entry.uri) !== null &&
+      (isMaybeAlsoOn(first) || !isMaybeAlsoOn(entry));
+    if (!first || replacesFirst) kept.set(key, entry);
   }
   return [...kept.values()];
 }
@@ -85,18 +99,21 @@ export interface TOwnService {
 
 /**
  * What a card's Also on lists: one entry per service (`dedupeAlsoOn`) in Pinakes' order, never the
- * card's own service (matched by name or host), which its header already opens.
+ * card's own service (matched by name or host), which its header already opens. The matches by
+ * metadata (`isMaybeAlsoOn`) come after every exact link, so a service with both keeps its exact one.
  */
 export function pickAlsoOn(alsoOn: TPinakesAlsoOn[], own: TOwnService): TPinakesAlsoOn[] {
   const ownName = own.site?.trim().toLowerCase();
   const ownHosts = new Set(own.uris.map((uri) => getLinkHost(uri)?.toLowerCase()).filter(Boolean));
-  return dedupeAlsoOn(
-    alsoOn.filter((entry) => {
-      const host = getLinkHost(entry.uri)?.toLowerCase();
-      if (host && ownHosts.has(host)) return false;
-      return !ownName || getAlsoOnName(entry).toLowerCase() !== ownName;
-    }),
-  );
+  const others = alsoOn.filter((entry) => {
+    const host = getLinkHost(entry.uri)?.toLowerCase();
+    if (host && ownHosts.has(host)) return false;
+    return !ownName || getAlsoOnName(entry).toLowerCase() !== ownName;
+  });
+  return dedupeAlsoOn([
+    ...others.filter((entry) => !isMaybeAlsoOn(entry)),
+    ...others.filter((entry) => isMaybeAlsoOn(entry)),
+  ]);
 }
 
 /**

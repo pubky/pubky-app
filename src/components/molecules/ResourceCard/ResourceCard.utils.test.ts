@@ -483,6 +483,13 @@ describe('getAlsoOnNote', () => {
     );
   });
 
+  it('says how a match by metadata was found with its source, never as a qualifier shown on its own', () => {
+    const maybe = { uri: 'https://music.apple.com/song/1', derived: true, via: 'itunes_song', kind: ' Maybe ' };
+    expect(getAlsoOnNote(maybe)).toBe('Matched by title and length · found via itunes_song');
+    expect(getAlsoOnNote({ ...maybe, via: null })).toBe('Matched by title and length · found automatically');
+    expect(getAlsoOnNote(maybe, undefined, { withSource: false })).toBeNull();
+  });
+
   it('writes the pdf qualifier as an acronym', () => {
     const pdf = { uri: 'https://www.govinfo.gov/a.pdf', derived: true, via: 'federalregister', kind: 'pdf' };
     expect(getAlsoOnNote(pdf)).toBe('PDF · found via federalregister');

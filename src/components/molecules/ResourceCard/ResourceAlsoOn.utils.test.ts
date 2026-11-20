@@ -249,6 +249,35 @@ describe('pickAlsoOn', () => {
     ]);
   });
 
+  it('lists the matches by metadata after every exact link, and a service’s exact link over its match', () => {
+    const alsoOn: TPinakesAlsoOn[] = [
+      {
+        uri: 'https://www.deezer.com/track/67238735',
+        site: 'Deezer',
+        derived: true,
+        via: 'youtube_match',
+        kind: 'maybe',
+      },
+      { uri: 'https://music.apple.com/song/1', site: 'Apple Music', derived: true, via: 'itunes_song', kind: 'Maybe' },
+      { uri: 'https://open.spotify.com/track/1', site: 'Spotify', derived: true, via: 'musicbrainz' },
+      { uri: 'https://tidal.com/track/2', site: 'TIDAL', derived: true, via: 'youtube_match', kind: 'maybe' },
+      { id: 't', uri: 'https://tidal.com/track/1', site: 'TIDAL' },
+    ];
+    expect(pickAlsoOn(alsoOn, own).map((entry) => entry.uri)).toEqual([
+      'https://open.spotify.com/track/1',
+      'https://tidal.com/track/1',
+      'https://www.deezer.com/track/67238735',
+      'https://music.apple.com/song/1',
+    ]);
+  });
+
+  it('keeps a service’s exact entry without a web link over its match with one', () => {
+    const exact: TPinakesAlsoOn = { id: 's', uri: 'spotify:track:1', site: 'Spotify' };
+    const maybe: TPinakesAlsoOn = { uri: 'https://open.spotify.com/track/2', site: 'Spotify', kind: 'maybe' };
+    expect(pickAlsoOn([maybe, exact], own)).toEqual([exact]);
+    expect(dedupeAlsoOn([exact, maybe])).toEqual([exact]);
+  });
+
   it('keeps the other language editions of a Wikipedia article', () => {
     const picked = pickAlsoOn(placeFixture.also_on, {
       site: 'Wikipedia (en)',

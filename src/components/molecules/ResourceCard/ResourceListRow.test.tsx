@@ -53,6 +53,29 @@ describe('ResourceListRow', () => {
     expect(link).toHaveAttribute('title', 'TIDAL · Found via musicbrainz');
   });
 
+  it('says a hint in its name and tooltip only, never shown', () => {
+    render(
+      <ul>
+        <ResourceListRow
+          uri="https://music.apple.com/song/1"
+          href="/resource?uri=https%3A%2F%2Fmusic.apple.com%2Fsong%2F1"
+          name="Apple Music"
+          note={null}
+          hint="Matched by title and length"
+          source="Found via itunes_song"
+          counts={{ tags: 2, isTagsAtReadLimit: false, replies: 0, posts: 0 }}
+          testId="row"
+        />
+      </ul>,
+    );
+
+    const row = screen.getByTestId('row');
+    const link = within(row).getAllByRole('link')[0];
+    expect(link).toHaveAccessibleName('Apple Music Matched by title and length 2 tags');
+    expect(link).toHaveAttribute('title', 'Apple Music · Matched by title and length · 2 tags · Found via itunes_song');
+    expect(within(row).getByText('Matched by title and length')).toHaveClass('sr-only');
+  });
+
   it('links a row to an app page in the same tab', () => {
     render(
       <ul>

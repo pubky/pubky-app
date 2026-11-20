@@ -13,6 +13,7 @@ import {
 import { Typography } from '@/atoms/Typography/Typography';
 import { KEEP_PLAYING_ATTRIBUTE } from '@/hooks/usePauseMediaOutsideViewport/usePauseMediaOutsideViewport';
 import { cn } from '@/libs/utils/utils';
+import { MAYBE_ALSO_ON_NOTE } from '@/molecules/ResourceCard/ResourceCard.utils';
 import { ResourceSourceIcon } from '@/molecules/ResourceCard/ResourceSourceIcon';
 import type { PostActionSurface } from '@/organisms/PostActionsBar/PostActionButton';
 import { postActionsButtonVariants } from '@/organisms/PostActionsBar/PostActionsBar.variants';
@@ -39,7 +40,9 @@ const ROW_TEXT = 'truncate text-base font-medium transition-colors group-hover:t
 /**
  * The services to play on, in the post menu's style: one line per service (favicon and name), the
  * current one in full colour with a check. Where the link's card can stand instead of a player (a
- * card's switch), Card comes first, set apart from the services by the menu's separator.
+ * card's switch), Card comes first, set apart from the services by the menu's separator. A service
+ * whose link is a match by metadata (`maybe`) shows no label: its note (`MAYBE_ALSO_ON_NOTE`) is in its
+ * hover text and accessible name.
  */
 function ProviderMenu({ targets, current, onSelect, trigger, icons = true, label, onShowCard }: ProviderMenuProps) {
   const cardShown = current === null;
@@ -88,6 +91,8 @@ function ProviderMenu({ targets, current, onSelect, trigger, icons = true, label
             <DropdownMenuItem
               key={target.provider}
               data-testid="play-on-row"
+              aria-label={target.maybe ? `${target.name}, ${MAYBE_ALSO_ON_NOTE}` : undefined}
+              title={target.maybe ? MAYBE_ALSO_ON_NOTE : undefined}
               aria-current={playing || undefined}
               onSelect={() => onSelect(target)}
               className={ROW}
@@ -113,7 +118,8 @@ function ProviderMenu({ targets, current, onSelect, trigger, icons = true, label
  * A card's embed/card switch, in the header of its frame or card (`useCardPlayer`'s `switcher`): the
  * shown service's favicon, name and a chevron, in the action row's pill style, opening Card and,
  * below a separator, the services to show instead (`ProviderMenu`). Picking one only switches
- * the player shown; it never starts it. While the card shows (`current` is `null`), the switch reads Card.
+ * the player shown; it never starts it. While the card shows (`current` is `null`), the switch reads Card;
+ * a service whose link is a match by metadata shows no label here either, its note in the hover text and name.
  * On a phone it shows the favicon (or the card's link icon) and the chevron only; the name stays in
  * its accessible name.
  */
@@ -135,6 +141,8 @@ export function PlayerSwitch({
   surface?: PostActionSurface;
 }) {
   const name = current?.name ?? 'Card';
+  // A match by metadata says so in the trigger's name and hover text, never in a label.
+  const label = current?.maybe ? `${name}, ${MAYBE_ALSO_ON_NOTE}` : name;
   return (
     <ProviderMenu
       targets={targets}
@@ -147,7 +155,8 @@ export function PlayerSwitch({
         <Button
           variant="secondary"
           size="sm"
-          aria-label={`${name}: choose another service`}
+          aria-label={`${label}: choose another service`}
+          title={current?.maybe ? MAYBE_ALSO_ON_NOTE : undefined}
           data-testid="player-switch"
           className={cn(postActionsButtonVariants({ surface }), 'w-fit max-w-full')}
         >

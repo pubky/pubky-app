@@ -9,7 +9,7 @@ import {
   getLanguageTag,
   type TAlsoOnEdition,
 } from '@/molecules/ResourceCard/ResourceAlsoOn.utils';
-import { getHttpUrl } from '@/molecules/ResourceCard/ResourceCard.utils';
+import { getHttpUrl, isMaybeAlsoOn, MAYBE_ALSO_ON_NOTE } from '@/molecules/ResourceCard/ResourceCard.utils';
 import { ResourceListRow } from '@/molecules/ResourceCard/ResourceListRow';
 import { useAlsoOnEdition } from '@/molecules/ResourceCard/useAlsoOnEdition';
 import { getAlsoOnSource } from './ResourceAlsoOnList.utils';
@@ -40,6 +40,8 @@ export function ResourceAlsoOnLanguagesRow({ name, editions, testId }: ResourceA
       externalHref={getHttpUrl(edition.entry.uri)}
       name={name}
       note={getAlsoOnEditionNote(edition)}
+      // A match by metadata shows no label: its note is in the tooltip and name only.
+      hint={isMaybeAlsoOn(edition.entry) ? MAYBE_ALSO_ON_NOTE : null}
       source={getAlsoOnSource(edition.entry)}
       counts={counts}
       testId={testId}

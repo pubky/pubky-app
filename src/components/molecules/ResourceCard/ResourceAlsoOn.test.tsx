@@ -11,7 +11,7 @@ import unreachableFixture from '@/services/pinakes/fixtures/by-uri.unreachable.j
 import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
 import type { TPinakesAlsoOn, TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { ResourceAlsoOn } from './ResourceAlsoOn';
-import { dedupeAlsoOn } from './ResourceAlsoOn.utils';
+import { dedupeAlsoOn, pickAlsoOn } from './ResourceAlsoOn.utils';
 
 const VIDEO: TPinakesResourceDetail = videoFixture;
 
@@ -57,6 +57,62 @@ describe('ResourceAlsoOn', () => {
       'href',
       getResourceRoute(VIDEO.also_on[6].uri),
     );
+  });
+
+  describe('a match by metadata', () => {
+    const DEEZER_MAYBE: TPinakesAlsoOn = {
+      uri: 'https://www.deezer.com/track/67238735',
+      site: 'Deezer',
+      derived: true,
+      via: 'youtube_match',
+      kind: 'maybe',
+    };
+    const ALSO_ON: TPinakesAlsoOn[] = [
+      DEEZER_MAYBE,
+      { uri: 'https://open.spotify.com/track/1', site: 'Spotify', derived: true, via: 'musicbrainz' },
+      { id: 't', uri: 'https://tidal.com/track/1', site: 'TIDAL' },
+    ];
+    const picked = () => pickAlsoOn(ALSO_ON, { site: 'YouTube', uris: [] });
+
+    it('is listed after the exact links with no label, its note in its hover text and name only', () => {
+      const menu = renderAlsoOn(picked());
+
+      expect(rows().map((row) => row.textContent)).toEqual(['Spotify', 'TIDAL', 'Deezer']);
+      expect(within(menu).getByRole('group', { name: 'Also on' }).textContent).not.toMatch(/maybe|matched/i);
+      const deezer = screen.getByRole('menuitem', {
+        name: 'Deezer, Matched by title and length · found via youtube_match',
+      });
+      expect(deezer).toBe(rows()[2]);
+      expect(deezer).toHaveAttribute('title', 'Matched by title and length');
+      expect(deezer).toHaveAttribute('href', getResourceRoute(DEEZER_MAYBE.uri));
+    });
+
+    it('leaves the exact links’ rows as they were: no hover text, named by their own note', () => {
+      renderAlsoOn(picked());
+
+      const [spotify, tidal] = rows();
+      expect(spotify).toHaveAccessibleName('Spotify, Found via musicbrainz');
+      expect(tidal).toHaveAccessibleName('TIDAL');
+      expect(spotify).not.toHaveAttribute('title');
+      expect(tidal).not.toHaveAttribute('title');
+    });
+
+    it('shows no label in the bottom sheet either, its note in its hover text and name', () => {
+      renderSheet(picked());
+
+      expect(rows().map((row) => row.textContent)).toEqual(['Spotify', 'TIDAL', 'Deezer']);
+      expect(screen.getByTestId('resource-also-on').textContent).not.toMatch(/maybe|matched/i);
+      const deezer = rows()[2];
+      expect(deezer).toHaveAccessibleName('Deezer, Matched by title and length · found via youtube_match');
+      expect(deezer).toHaveAttribute('title', 'Matched by title and length');
+      expect(deezer).toHaveAttribute('href', getResourceRoute(DEEZER_MAYBE.uri));
+    });
+  });
+
+  it('gives no row of a card with exact links only a hover text', () => {
+    renderAlsoOn(VIDEO.also_on);
+
+    for (const row of rows()) expect(row).not.toHaveAttribute('title');
   });
 
   it('opens every entry’s page on Pubky in the same tab, with its site’s favicon', () => {
