@@ -171,6 +171,79 @@ describe('useLocksSettingsStatus', () => {
     await waitFor(() => expect(result.current.status).toBe('unavailable'));
   });
 
+  it('keeps set up when a check sent before the setup dialog finished answers later', async () => {
+    signIn();
+    mocks.fetchPaykitSetupStatus.mockResolvedValueOnce('unavailable');
+    const { result } = renderHook(() => useLocksSettingsStatus());
+    await waitFor(() => expect(result.current.status).toBe('unavailable'));
+
+    const pendingCheck = Promise.withResolvers<string>();
+    mocks.fetchPaykitSetupStatus.mockReturnValueOnce(pendingCheck.promise);
+    showTab('visible');
+    expect(mocks.fetchPaykitSetupStatus).toHaveBeenCalledTimes(2);
+
+    act(() => {
+      result.current.markSetUp();
+    });
+    expect(result.current.status).toBe('set-up');
+
+    await act(async () => {
+      pendingCheck.resolve('setup_required');
+    });
+    expect(result.current.status).toBe('set-up');
+  });
+
+  it('drops a check sent before a setup dialog opened, without marking Paykit connected', async () => {
+    signIn();
+    mocks.fetchPaykitSetupStatus.mockResolvedValueOnce('unavailable');
+    const { result, rerender } = renderHook(({ paused }) => useLocksSettingsStatus({ paused }), {
+      initialProps: { paused: false },
+    });
+    await waitFor(() => expect(result.current.status).toBe('unavailable'));
+
+    const pendingCheck = Promise.withResolvers<string>();
+    mocks.fetchPaykitSetupStatus.mockReturnValueOnce(pendingCheck.promise);
+    showTab('visible');
+    rerender({ paused: true });
+    await act(async () => {
+      pendingCheck.resolve('ready');
+    });
+
+    expect(result.current.status).toBe('unavailable');
+    expect(useLocksAuthStore.getState().paykitConnected).toBe(false);
+  });
+
+  it('shows set up when a setup dialog closes with Paykit connected, without onSuccess', async () => {
+    signIn();
+    mocks.fetchPaykitSetupStatus.mockResolvedValueOnce('unavailable');
+    const { result, rerender } = renderHook(({ paused }) => useLocksSettingsStatus({ paused }), {
+      initialProps: { paused: false },
+    });
+    await waitFor(() => expect(result.current.status).toBe('unavailable'));
+
+    rerender({ paused: true });
+    act(() => {
+      useLocksAuthStore.getState().setPaykitConnected(true);
+    });
+    rerender({ paused: false });
+
+    expect(result.current.status).toBe('set-up');
+  });
+
+  it('keeps the last answer when a setup dialog closes without connecting Paykit', async () => {
+    signIn();
+    mocks.fetchPaykitSetupStatus.mockResolvedValueOnce('unavailable');
+    const { result, rerender } = renderHook(({ paused }) => useLocksSettingsStatus({ paused }), {
+      initialProps: { paused: false },
+    });
+    await waitFor(() => expect(result.current.status).toBe('unavailable'));
+
+    rerender({ paused: true });
+    rerender({ paused: false });
+
+    expect(result.current.status).toBe('unavailable');
+  });
+
   it('shows set up after a finished setup dialog, even over an older answer', async () => {
     signIn();
     mocks.fetchPaykitSetupStatus.mockResolvedValue('setup_required');

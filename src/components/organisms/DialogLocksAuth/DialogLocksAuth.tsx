@@ -49,6 +49,7 @@ import {
   BITKIT_WEBSITE_URL,
   getPubkyRingLink,
 } from '@/config/externalLinks';
+import { LocksController } from '@/controllers/locks/locks';
 import { useLocksAuthFlow } from '@/hooks/useLocksAuthFlow/useLocksAuthFlow';
 import { LocksAuthFlowStatus } from '@/hooks/useLocksAuthFlow/useLocksAuthFlow.types';
 import { usePaykitSetupFlow } from '@/hooks/usePaykitSetupFlow/usePaykitSetupFlow';
@@ -158,6 +159,8 @@ export function DialogLocksAuth({
   const heldCheckSecret = useRef<string | null>(null);
   useEffect(() => {
     heldCheckSecret.current = open && startAtHeldCheck ? useLocksAuthStore.getState().selectLocksSessionSecret() : null;
+    // An earlier `ready` would open this on "done" and skip that check; docs/locks.md.
+    if (open && startAtHeldCheck) LocksController.clearPaykitConnected();
   }, [open, startAtHeldCheck]);
 
   // The Paykit page is the whole step, so it opens on arrival rather than behind another "Continue",

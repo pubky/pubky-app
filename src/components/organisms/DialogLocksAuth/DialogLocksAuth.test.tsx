@@ -558,6 +558,24 @@ describe('DialogLocksAuth', () => {
     expect(mocks.checkPaykit).not.toHaveBeenCalled();
   });
 
+  it('asks Paykit for a reconnect even when an earlier `ready` left Paykit marked connected', () => {
+    signIn({ paykitConnected: true });
+    render(<DialogLocksAuth open onOpenChange={vi.fn()} onSuccess={vi.fn()} startAtHeldCheck />);
+
+    expect(useLocksAuthStore.getState().paykitConnected).toBe(false);
+    expect(mocks.checkPaykitHeld).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument();
+  });
+
+  it('keeps Paykit marked connected when opened for a setup, not a reconnect', () => {
+    signIn({ paykitConnected: true });
+    render(<DialogLocksAuth open onOpenChange={vi.fn()} onSuccess={vi.fn()} />);
+
+    expect(useLocksAuthStore.getState().paykitConnected).toBe(true);
+    expect(mocks.checkPaykitHeld).not.toHaveBeenCalled();
+    expect(mocks.checkPaykit).not.toHaveBeenCalled();
+  });
+
   it('uses the Paykit-first check only once: a later check asks the Lock Server again', () => {
     signIn();
     // A new element each time: React skips a rerender with the same element.

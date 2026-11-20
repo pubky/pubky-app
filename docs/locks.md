@@ -635,7 +635,10 @@ creator (`checkHeld`). Held opens the reconnect confirmation above, with its new
 presence read never shows it, because neither says anything about the grant, and a reconnect there could rotate a
 ready creator's receiving account. `startAtHeldCheck` opens the Bitkit step at this presence read instead of the
 setup-status check, for a caller that already got `unavailable`. It applies once, and only to the session that got
-that answer; any later check in the dialog asks the Lock Server again.
+that answer; any later check in the dialog asks the Lock Server again. It also clears `paykitConnected` when the
+dialog opens: an earlier `ready` may have set it, and the dialog would then open on "done" and skip the presence
+read. `markPaykitConnected` supersedes any setup-status check still in flight, so an older `setup_required` cannot
+clear a newer success; the presence-read path asks no setup-status question that would supersede it otherwise.
 
 `/setup/creator-held` starts no setup flow and spends neither Paykit's setup-start budget nor its pending-flow
 capacity. It has its own per-client-IP read limit (600 a minute by default). A refused read is `429`
@@ -674,9 +677,11 @@ Elsewhere the menu hides it and the route redirects to Account. `useLocksSetting
 - Not set up without a Locks session, on a session that cannot reach `/priv`, or when the Lock Server answers
   `setup_required`. **Enable Locks** opens `DialogLocksAuth`; it is disabled, with `LocksRegionNotice`, where
   paid unlocks are held.
-- Set up once Paykit is connected. The latest answer wins, so a later `unavailable` replaces it. Neither **Revoke access** nor **Disconnect Bitkit** calls an API: pubky.app
-  cannot remove a grant without a root session, so each opens a dialog that says where to do it, and **OK**
-  checks again.
+- Set up once Paykit is connected. The latest answer wins, so a later `unavailable` replaces it, but a check
+  sent before a setup dialog opened or finished is dropped, and changes neither the page nor `paykitConnected`.
+  A dialog that closes with Paykit connected shows set up, also through **Cancel** or Esc on "Locks Enabled". Neither **Revoke access** nor **Disconnect Bitkit** calls an
+  API: pubky.app cannot remove a grant without a root session, so each opens a dialog that says where to do it,
+  and **OK** checks again.
 - Unavailable (the Lock Server answered `unavailable`) offers **Try again** and **Reconnect Bitkit**, which opens
   `DialogLocksAuth` with `startAtHeldCheck`. A failed request offers **Try again** only.
 

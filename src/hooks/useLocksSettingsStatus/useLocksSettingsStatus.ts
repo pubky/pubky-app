@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Session as LocksSdkSession } from '@synonymdev/locks-sdk';
 import { LocksController } from '@/controllers/locks/locks';
 import { useSessionNeedsUpgrade } from '@/hooks/useSessionNeedsUpgrade/useSessionNeedsUpgrade';
@@ -32,6 +32,8 @@ export function useLocksSettingsStatus({
   const needsSessionUpgrade = useSessionNeedsUpgrade();
   const [answer, setAnswer] = useState<PaykitAnswer | null>(null);
   const [checkCount, setCheckCount] = useState(0);
+  // Bumped when a setup dialog opens or finishes: a check sent before then must not touch its result.
+  const answerGeneration = useRef(0);
   const canCheck = isLocksAuthenticated(session) && !needsSessionUpgrade;
 
   const recheck = () => {
@@ -40,6 +42,7 @@ export function useLocksSettingsStatus({
   };
 
   const markSetUp = () => {
+    answerGeneration.current += 1;
     if (session) setAnswer({ session, status: 'set-up' });
   };
 
@@ -48,21 +51,34 @@ export function useLocksSettingsStatus({
   useEffect(() => {
     if (!session || needsSessionUpgrade) return;
     let isCurrent = true;
+    const generation = answerGeneration.current;
     void (async () => {
       let next: PaykitAnswer['status'] = 'error';
       try {
-        const status = await LocksController.fetchPaykitSetupStatus('BTC');
-        next = PAYKIT_STATUS_TO_SETTINGS[status];
-        if (status === 'ready') LocksController.markPaykitConnected();
+        next = PAYKIT_STATUS_TO_SETTINGS[await LocksController.fetchPaykitSetupStatus('BTC')];
       } catch {
         // Already reported by the Err factory.
       }
-      if (isCurrent) setAnswer({ session, status: next });
+      if (!isCurrent || generation !== answerGeneration.current) return;
+      if (next === 'set-up') LocksController.markPaykitConnected();
+      setAnswer({ session, status: next });
     })();
     return () => {
       isCurrent = false;
     };
   }, [session, needsSessionUpgrade, checkCount]);
+
+  // "Cancel" or Esc on "Locks Enabled" closes the dialog without `onSuccess`, yet the setup is done.
+  useEffect(() => {
+    if (!paused) return;
+    answerGeneration.current += 1;
+    return () => {
+      const { session: current, paykitConnected: connected } = useLocksAuthStore.getState();
+      if (!current || !connected) return;
+      answerGeneration.current += 1;
+      setAnswer({ session: current, status: 'set-up' });
+    };
+  }, [paused]);
 
   // Quiet: the last answer stays on screen. Not window `focus`, which leaving a dialog's iframe also fires.
   useEffect(() => {
