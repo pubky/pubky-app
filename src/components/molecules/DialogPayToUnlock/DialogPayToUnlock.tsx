@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { CircleCheck } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
@@ -15,14 +15,19 @@ import { generateBitkitContactDeeplink } from '@/libs/deeplink/deeplink';
 import { getLockContentDisplay } from '@/libs/post/lockContentKind';
 import { formatLockPrice } from '@/libs/utils/lockPrice';
 import { cn, formatPublicKey, withPubkyPrefix } from '@/libs/utils/utils';
+import { fundingInProgress, type FundingState } from '@/libs/wallet/fundingState';
 import { AppDownload } from '@/molecules/AppDownload/AppDownload';
 import { LocksRegionNotice } from '@/molecules/LocksRegionNotice/LocksRegionNotice';
 import { LockTitle } from '@/molecules/LockTitle/LockTitle';
 import { PostHeaderUserInfo } from '@/molecules/PostHeaderUserInfo/PostHeaderUserInfo';
 import { QR_HOVER_OPACITY } from '@/molecules/QrCodeSlot/QrCodeSlot';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import type { DialogPayToUnlockProps } from './DialogPayToUnlock.types';
 
 const FIELD_LABEL_CLASS = 'text-xs font-medium tracking-widest text-muted-foreground uppercase';
+const CheckoutFunding = lazy(() =>
+  import('@/templates/Wallet/CheckoutFunding').then((m) => ({ default: m.CheckoutFunding })),
+);
 
 const INSTALL_STEPS = ['Install Bitkit', 'Set up profile', 'Fund wallet'];
 const BITKIT_LOGO = { src: '/images/bitkit-logo.svg', alt: 'Bitkit', width: 110 };
@@ -87,7 +92,24 @@ export function DialogPayToUnlock({
   onRetry,
   onRecheck,
   onViewContent,
+  fundingPostId,
+  fundingEligible,
 }: DialogPayToUnlockProps) {
+  const account = useAuthStore((state) => (state.session ? state.currentUserPubky : null));
+  // The dialog stays mounted across close/reopen. A transfer receipt never creates another purchase.
+  const [transfers, setTransfers] = useState<Record<string, FundingState>>({});
+  const fundingKey = JSON.stringify([account, fundingPostId]);
+  const transfer = transfers[fundingKey];
+  const tracking = fundingInProgress(transfer);
+  const canStartFunding =
+    fundingEligible &&
+    stage === 'waiting' &&
+    connectionState === 'connected' &&
+    !isConnectionPending &&
+    !walletSetupNeeded &&
+    !isSubmitting &&
+    !isStalled;
+  const showFunding = open && fundingPostId && account && account !== authorId && (canStartFunding || tracking);
   const { title: defaultTitle, Icon: KindIcon } = getLockContentDisplay(contentKind);
   // The install screen comes before any submission, so it never has a Noise link state to show.
   const isInstall = stage === 'install';
@@ -121,7 +143,7 @@ export function DialogPayToUnlock({
     }
     // `isSubmitting` covers the gap before `waiting`, while the submission is in flight.
     // On the install screen it is only the wallet check, and nothing is running yet.
-    if (!next && (stage === 'waiting' || stage === 'finishing' || (isSubmitting && !isInstall))) {
+    if (!next && (tracking || stage === 'waiting' || stage === 'finishing' || (isSubmitting && !isInstall))) {
       setIsConfirmingClose(true);
       return;
     }
@@ -330,6 +352,18 @@ export function DialogPayToUnlock({
           )}
         </Container>
 
+        {showFunding && (
+          <Suspense fallback={null}>
+            <CheckoutFunding
+              key={fundingKey}
+              account={account}
+              price={price}
+              state={transfer}
+              purchaseWaiting={stage === 'waiting'}
+              onState={(state) => setTransfers((previous) => ({ ...previous, [fundingKey]: state }))}
+            />
+          </Suspense>
+        )}
         <DialogFooter>
           {stage === 'paid' ? (
             <Button
@@ -378,6 +412,12 @@ export function DialogPayToUnlock({
                 ? 'Your payment is complete. You can open this post again to access your content.'
                 : 'Your payment to unlock this post has not finished yet. It keeps running if you close this, and you can open it again to come back to it.'}
             </Typography>
+            {tracking && (
+              <p className="text-sm text-muted-foreground">
+                Your Bitkit funding transfer is still running. Keep your wallet unlocked, or reopen it from checkout to
+                check this transfer.
+              </p>
+            )}
             <DialogFooter>
               <Button
                 variant={ButtonVariant.OUTLINE}

@@ -2,6 +2,9 @@ import type { TPayToUnlockStage } from '@/hooks/usePayToUnlock/usePayToUnlock.ty
 import type { TLockPrice, TPaykitConnectionState } from '@/services/locks/locks.types';
 
 export interface DialogPayToUnlockProps {
+  /** Public post id available to eligible readers. Wallet funding has its own explicit approval. */
+  fundingPostId?: string;
+  fundingEligible?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** Creator-typed lock title, shown in the header card. */

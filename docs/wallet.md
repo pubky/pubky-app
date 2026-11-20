@@ -2,7 +2,9 @@
 
 Sign in to Pubky and open **Wallet**. Choose a wallet password, create a wallet, and record the recovery words. On return, use the same Pubky account, browser profile and site origin. A Vibes board frame opens the wallet in its own tab so the browser always uses the same storage partition.
 
-**Receive** quotes any inbound liquidity fee before creating a Lightning invoice. Share its QR or copy the unified Bitcoin request for a payer choosing between Lightning and on-chain payment. Keep the wallet page open and unlocked for Lightning receives and channel monitoring. **Send** takes an invoice, Bitcoin address, BIP21 request, or Pubky ID. Review the destination, payment method, amount and fees, then confirm. Activity shows pending and settled outcomes.
+**Receive** quotes any inbound liquidity fee before creating a Lightning invoice. Share its QR or copy the unified Bitcoin request for a payer choosing between Lightning and on-chain payment. Keep the wallet page open and unlocked for Lightning receives and channel monitoring. Use **Receive on-chain** to generate a watched Bitcoin address and QR without requesting Lightning liquidity. **Send** takes an invoice, Bitcoin address, BIP21 request, or Pubky ID. Review the destination, payment method, amount and fees, then confirm. Activity shows pending and settled outcomes.
+
+**Max** asks the engine for a new quote for the scanned or pasted destination. Fixed invoices keep the amount chosen by the recipient. An amountless Lightning invoice can receive the full channel balance, including fees in the reviewed debit. For a Bitcoin address, Max normally pays the recipient from the channel and keeps the channel open. Whole-wallet Max checks for funds outside that payment. If a channel reserve or other coins would remain, an address without a requested amount can instead use **Empty wallet to this address**. Review its cooperative channel close, any sweep of loose coins, estimated payout and fees before confirming. Coins that arrive after the review stay in the wallet.
 
 **Pay** on a profile opens Send with that Pubky ID. Review looks up the recipient’s public Paykit list and prefers a current BOLT11 invoice, followed by a compatible address on this wallet’s network. The recipient’s homeserver supplies the payment details. If the profile has no payable endpoint, ask the recipient to share a request from Receive. Creating a wallet does not publish a payment address on the user’s profile.
 
@@ -28,9 +30,19 @@ The app includes the browser worker and a small Node relay. The operator supplie
 
 Serve the app over HTTPS on a stable origin. Run the relay as a persistent Node process on the host with access to the two configured upstreams. Put a TLS reverse proxy in front of its loopback port (8790 by default, configurable through `WALLET_RELAY_PORT`). Forward WebSocket upgrades for `/peer` and `/electrum`. Set `WALLET_APP_ORIGIN` to the literal HTTPS app origin and `WALLET_RELAY_ORIGIN` to the public WSS relay origin. Supply the same secret, primary, network and origins to the app server and relay. Keep the secret in server-side environment variables. The browser receives a 15-minute grant which the worker renews while open.
 
+For zero-reserve receiving channels, set `BEIGNET_WAIVE_CLIENT_RESERVE=true` on the Beignet primary before the wallet requests a new, private just-in-time (JIT) receiving channel. A manual channel to a trusted peer alone does not qualify for the waiver. The embedded wallet advertises this feature and keeps the primary's reserve intact. The primary must monitor revoked commitments and enforce the penalty within the channel delay. Existing channels keep their negotiated terms, and a wallet that opened a channel must still cover its commitment costs. [Beignet zero-reserve policy](https://github.com/coreyphillips/beignet/blob/v0.43.6/docs/ZERO-RESERVE.md)
+
 Set `WALLET_ELECTRUM` to a `tls://host:port` URL for a TLS Electrum server. The relay verifies its certificate. For a primary behind Tor or another tunnel, configure a fixed local forward and set `WALLET_PEER_TUNNEL=tcp://127.0.0.1:<forwarded-port>`. Keep the primary’s real identity in `WALLET_PRIMARY_URI`. The peer authenticates over BOLT8. The relay can observe Electrum requests and network metadata.
 
+On Vercel, the included `/peer` and `/electrum` Node functions serve the relay on the app's own domain. Use `WALLET_RELAY_ORIGIN=wss://<app-host>`. Fluid compute supports WebSocket upgrades and connections can reopen after the function duration expires. A primary using Chicory's relay-only Iroh link accepts its full `<lightning-key>@iroh:<endpoint-id>?relay=<encoded-https-origin>` as `WALLET_PRIMARY_URI`. The relay opens an authenticated Iroh stream for the selected endpoint. The browser authenticates the selected Lightning key over BOLT8 inside that stream.
+
 The grant endpoint is public and permits transport to the two fixed upstreams. Use your proxy’s connection and rate limits for a public deployment. A static page host alone cannot run the relay. The fork can be listed in the Vibes registry once it has a stable reachable HTTPS deployment.
+
+## Staging and locked posts
+
+The hosted wallet uses Bitcoin mainnet with Chicory mobile’s Iroh primary and TLS Electrum. Pubky identities, posts and Locks use the Pubky staging services. The network badge in Wallet identifies the network that holds the money.
+
+Locks delivers a purchase request privately to the reader’s registered Paykit wallet. Bitkit accepts the request and the Lock Server verifies its settlement before issuing access to the post. On a deployment where the wallet and Locks use the same Bitcoin network, the purchase dialog can look up the reader’s own public Bitkit address, quote a top-up and send it after confirmation. The reader then confirms the purchase in Bitkit. Set `WALLET_LOCKS_NETWORK` to the Bitcoin network used by the deployment’s Paykit Server. The hosted staging instance sets it to `regtest`, so readers use regtest Bitkit for locked posts and their mainnet wallet stays out of that checkout.
 
 ## Storage and recovery
 

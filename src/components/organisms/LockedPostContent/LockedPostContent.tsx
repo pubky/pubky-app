@@ -230,6 +230,8 @@ export function LockedPostContent({
       )}
       {price && (
         <DialogPayToUnlock
+          fundingPostId={postId}
+          fundingEligible={paidUnlocks.status === 'available' && !showPermissionNotice && !isOwnLock && isAuthenticated}
           open={isPayOpen}
           onOpenChange={setIsPayOpen}
           lockTitle={lockContent.lock_title}

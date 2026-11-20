@@ -1,10 +1,12 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TPayToUnlockStage } from '@/hooks/usePayToUnlock/usePayToUnlock.types';
+import type { FundingState } from '@/libs/wallet/fundingState';
 import type { TPaykitConnectionState } from '@/services/locks/locks.types';
 import { DialogPayToUnlock } from './DialogPayToUnlock';
 
 const mocks = vi.hoisted(() => ({
+  account: 'reader1' as string | null,
   copyToClipboard: vi.fn(),
   toast: vi.fn(),
 }));
@@ -18,8 +20,18 @@ vi.mock('@/hooks/useUserProfile/useUserProfile', () => ({
   useUserProfile: () => ({ profile: { name: 'Jane Whitlock', avatarUrl: undefined }, isLoading: false }),
 }));
 vi.mock('@/stores/auth/auth.store', () => ({
-  useAuthStore: (selector: (s: { currentUserPubky: string | null }) => unknown) =>
-    selector({ currentUserPubky: 'reader1' }),
+  useAuthStore: (selector: (s: { currentUserPubky: string | null; session: object }) => unknown) =>
+    selector({ currentUserPubky: mocks.account, session: {} }),
+}));
+vi.mock('@/templates/Wallet/CheckoutFunding', () => ({
+  CheckoutFunding: ({ state, onState }: { state?: FundingState; onState: (s: FundingState) => void }) =>
+    state ? (
+      <p>Tracking existing transfer</p>
+    ) : (
+      <button onClick={() => onState({ status: 'pending', id: 'payment-id', network: 'regtest' })}>
+        Fund my Bitkit
+      </button>
+    ),
 }));
 vi.mock('qrcode.react', () => ({
   QRCodeSVG: ({ value, size }: { value: string; size: number }) => (
@@ -28,6 +40,7 @@ vi.mock('qrcode.react', () => ({
 }));
 
 type DialogOverrides = {
+  fundingPostId?: string;
   open?: boolean;
   price?: React.ComponentProps<typeof DialogPayToUnlock>['price'];
   isSubmitting?: boolean;
@@ -47,6 +60,8 @@ type DialogOverrides = {
 
 const dialogElement = (stage: TPayToUnlockStage, overrides: DialogOverrides = {}) => (
   <DialogPayToUnlock
+    fundingPostId={overrides.fundingPostId}
+    fundingEligible={!!overrides.fundingPostId}
     open={overrides.open ?? true}
     onOpenChange={overrides.onOpenChange ?? vi.fn()}
     lockTitle={overrides.lockTitle ?? 'My locked post'}
@@ -70,6 +85,48 @@ const renderDialog = (stage: TPayToUnlockStage, overrides: DialogOverrides = {})
   render(dialogElement(stage, overrides), { wrapper: overrides.wrapper });
 
 describe('DialogPayToUnlock', () => {
+  it('keeps an accepted funding transfer active when checkout changes, and hides it on signout', async () => {
+    const eligible = { fundingPostId: 'public-post', connectionState: 'connected' as const };
+    const { rerender } = renderDialog('waiting', eligible);
+    fireEvent.click(await screen.findByRole('button', { name: 'Fund my Bitkit' }));
+    expect(screen.getByText('Tracking existing transfer')).toBeVisible();
+    rerender(dialogElement('waiting', { ...eligible, isStalled: true }));
+    expect(screen.getByText('Tracking existing transfer')).toBeVisible();
+    rerender(dialogElement('paid', eligible));
+    expect(screen.getByText('Tracking existing transfer')).toBeVisible();
+    mocks.account = null;
+    rerender(dialogElement('paid', eligible));
+    expect(screen.queryByText('Tracking existing transfer')).toBeNull();
+    mocks.account = 'reader1';
+  });
+  it('offers funding only in a connected, eligible, unpaid checkout', async () => {
+    const eligible = { fundingPostId: 'public-post', connectionState: 'connected' as const };
+    const { rerender } = renderDialog('waiting', eligible);
+    expect(await screen.findByRole('button', { name: 'Fund my Bitkit' })).toBeInTheDocument();
+    for (const stage of [
+      'checking',
+      'install',
+      'finishing',
+      'paid',
+      'unopened',
+      'blocked',
+      'region-blocked',
+      'retry',
+    ] as const) {
+      rerender(dialogElement(stage, eligible));
+      expect(screen.queryByRole('button', { name: 'Fund my Bitkit' })).toBeNull();
+    }
+    for (const override of [
+      { fundingPostId: undefined },
+      { connectionState: 'blocked' as const },
+      { isSubmitting: true },
+      { isStalled: true },
+    ]) {
+      rerender(dialogElement('waiting', { ...eligible, ...override }));
+      expect(screen.queryByRole('button', { name: 'Fund my Bitkit' })).toBeNull();
+    }
+  });
+
   it.each([
     ['waiting', 'COST TO UNLOCK'],
     ['paid', 'PAYMENT RECEIVED'],

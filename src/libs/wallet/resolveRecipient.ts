@@ -9,7 +9,7 @@ import { ErrorService } from '@/libs/error/error.types';
 const identity = /^(?:pubky:\/\/|pubky)?([ybndrfg8ejkmcpqxot1uwisza345h769]{51}[yo])$/;
 const operation = { service: ErrorService.Homeserver, operation: 'readPaymentList' };
 
-function endpointValue(payload: string) {
+export function endpointValue(payload: string) {
   const text = payload.trim();
   if (!text.startsWith('{')) return text;
   try {
@@ -57,12 +57,16 @@ export function selectDestination(endpoints: PaymentEndpoint[], network: Network
   return address;
 }
 
+export function paymentIdentity(input: string) {
+  return identity.exec(input.trim())?.[1];
+}
+
 export async function resolveRecipient(
   input: string,
   network: Network,
 ): Promise<{ destination: string; pubky?: string }> {
   const destination = input.trim();
-  const pubky = identity.exec(destination)?.[1];
+  const pubky = paymentIdentity(destination);
   if (!pubky) return { destination };
 
   let endpoints: PaymentEndpoint[];
