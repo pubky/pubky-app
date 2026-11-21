@@ -1,7 +1,9 @@
 import { createRelaySocketFactory } from '@beignet/portable-engine';
 import { prepareElectrumHandshake } from './electrum-handshake.mjs';
 
-const maxIdleMs = 15_000;
+const electrumIdleMs = 15_000;
+// Beignet primaries normally allow 10 seconds for an incoming handshake.
+const peerIdleMs = 5_000;
 
 // Only the hosted mainnet transport opts into the pinned public handshake.
 export function createStartupSockets(grant) {
@@ -74,7 +76,7 @@ export function createStartupSockets(grant) {
       if (!usable(slot)) discard(slot);
       else if (slot.url === url) available.add(slot.index);
     }
-    const until = Math.min(grant.expiresAt, Date.now() + maxIdleMs);
+    const until = Math.min(grant.expiresAt, Date.now() + (url === peerUrl ? peerIdleMs : electrumIdleMs));
     if (available.size >= count || !(until > Date.now())) return;
     attempts.set(url, previous + 1);
     for (let index = 0; index < count; index++) {
@@ -103,7 +105,8 @@ export function createStartupSockets(grant) {
     socketFactory,
     // An explicit unlock can replace sockets that expired while the user typed.
     prepareElectrum: () => prepare(electrumUrl, 2, 2),
-    preparePeer: () => prepare(peerUrl, 1, 1),
+    // A slow node startup can outlast the first idle peer socket.
+    preparePeer: () => prepare(peerUrl, 1, 2),
     close() {
       closed = true;
       for (const slot of pending) discard(slot);

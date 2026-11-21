@@ -1,7 +1,7 @@
 'use client';
 
 import { type ReactNode, useEffect, useRef, useState } from 'react';
-import type { Activity, Network, ReceiveRequest } from '@beignet/wallet-core';
+import type { Activity, Network, ReceiveRequest, WalletSnapshot } from '@beignet/wallet-core';
 import { QueryClient, useQuery } from '@tanstack/react-query';
 import {
   Activity as ActivityIcon,
@@ -65,6 +65,17 @@ function keepActivityOrder(rows: Activity[], previous: ActivityEntry[] = []) {
   const retainedKeys = new Set(retained.map(({ key }) => key));
   let index = 0;
   return entries.map((entry) => (retainedKeys.has(entry.key) ? retained[index++] : entry));
+}
+
+// Wallet-core exposes sanitized setup diagnostics. Network interruptions and its
+// nonspecific connection failure can clear on the engine's first automatic retry.
+function canRetryPrimary(error?: string) {
+  return (
+    !error ||
+    /timed out|unreachable|refused the connection|address could not be resolved|^Primary setup could not complete\./i.test(
+      error,
+    )
+  );
 }
 
 type View = 'overview' | 'send' | 'receive' | 'backup';
@@ -147,9 +158,13 @@ export function WalletDashboard({
       enabled: ready,
       queryFn: async ({ queryKey }) => {
         const live = await session.client.snapshot();
-        const previous = queries.getQueryData<{ entries: ActivityEntry[]; away: string[]; settledAt: number }>(
-          queryKey,
-        );
+        const previous = queries.getQueryData<{
+          entries: ActivityEntry[];
+          away: string[];
+          settledAt: number;
+          firstReadAt: number;
+          connectedOnce: boolean;
+        }>(queryKey);
         const [activityChecked, away] = await Promise.all([
           interrupted ? session.activityIncludesChannelSends(live.activity).catch(() => false) : false,
           live.wallet?.id === walletId && live.wallet.network === network
@@ -160,6 +175,12 @@ export function WalletDashboard({
         const settledAt = newReceipt ? Date.now() : (previous?.settledAt ?? 0);
         return {
           ...live,
+          firstReadAt: previous?.firstReadAt ?? Date.now(),
+          connectedOnce:
+            previous?.connectedOnce ||
+            (live.primary.connected &&
+              (!live.primary.setup || live.primary.setup === 'ready') &&
+              !live.primary.setupError),
           entries: keepActivityOrder(live.activity, previous?.entries),
           activityChecked,
           away,
@@ -182,6 +203,67 @@ export function WalletDashboard({
     },
     queries,
   );
+  useEffect(() => {
+    if (!ready) return;
+    const queryKey = ['wallet', walletId];
+    let active = true;
+    let queued = false;
+    const refreshPrimary = async () => {
+      if (!active || queued) return;
+      queued = true;
+      // A hint can arrive while the first snapshot is still reading the old
+      // peer state. Finish that read, then ask the engine for fresh evidence.
+      if (queries.isFetching({ queryKey })) await queries.refetchQueries({ queryKey }, { cancelRefetch: false });
+      queued = false;
+      if (active) await queries.refetchQueries({ queryKey }, { cancelRefetch: false });
+    };
+    const unsubscribe = session.onPrimaryChange(() => void refreshPrimary());
+    // Catch a missed peer event or the offline capability probe completing
+    // after connect. The local wallet record does not scan Bitcoin or reconcile history.
+    const deadline = Date.now() + 60_000;
+    let checking = false;
+    const timer = window.setInterval(async () => {
+      if (Date.now() >= deadline) window.clearInterval(timer);
+      if (!active || checking || document.hidden || queries.isFetching({ queryKey })) return;
+      const live = queries.getQueryData<WalletSnapshot>(queryKey);
+      if (!live) return;
+      const peer = live.primary;
+      const receivePeer = live.primaries?.find((entry) => entry.isReceiveTarget) ?? peer;
+      if (
+        peer.connected &&
+        peer.setup !== 'pending' &&
+        peer.setup !== 'failed' &&
+        !peer.setupError &&
+        receivePeer.offlineReceiveAvailable !== null
+      )
+        return;
+      checking = true;
+      try {
+        const records = await session.client.listWallets();
+        const record = records.find((entry) => entry.id === walletId && entry.network === network)?.lfbw;
+        const connected = record?.primaries?.[0]?.connected;
+        if (
+          record &&
+          (record.setup !== peer.setup ||
+            record.setupError !== peer.setupError ||
+            (typeof connected === 'boolean' && connected !== peer.connected) ||
+            (typeof record.offlineReceiveAvailable === 'boolean' &&
+              record.offlineReceiveAvailable !== receivePeer.offlineReceiveAvailable))
+        ) {
+          await refreshPrimary();
+        }
+      } catch {
+        // The normal snapshot cadence still covers older engines and read failures.
+      } finally {
+        checking = false;
+      }
+    }, 1500);
+    return () => {
+      active = false;
+      unsubscribe();
+      window.clearInterval(timer);
+    };
+  }, [network, queries, ready, session, walletId]);
   const data = snapshot.data;
   const entries = data?.entries ?? savedActivity.data?.map((row) => ({ key: row.id, row }));
   const receivePrimary = data?.primaries?.find((primary) => primary.isReceiveTarget) ?? data?.primary;
@@ -218,6 +300,29 @@ export function WalletDashboard({
         ),
     ),
   );
+  // The engine includes the generic setup note even during an ordinary peer handshake.
+  notes.delete('Wallet setup is not finished. Check Settings.');
+  const primary = data?.primary;
+  const setupError = primary?.setup !== 'pending' ? primary?.setupError : undefined;
+  const setupFailed = primary?.setup === 'failed' || !!setupError;
+  const firstReadAt = data?.firstReadAt;
+  const warmingPrimary =
+    !!data &&
+    !data.connectedOnce &&
+    (!primary?.connected || primary.setup === 'pending' || setupFailed) &&
+    (!setupFailed || canRetryPrimary(setupError));
+  const [startupWaitElapsed, setStartupWaitElapsed] = useState(false);
+  useEffect(() => {
+    if (!warmingPrimary || !firstReadAt || startupWaitElapsed) return;
+    // Give the engine's first automatic retry (5s plus its dial timeout) time
+    // to finish. Persistent failures keep their diagnostic and reconnect action.
+    const timeout = window.setTimeout(
+      () => setStartupWaitElapsed(true),
+      Math.max(0, firstReadAt + 20_000 - Date.now()),
+    );
+    return () => window.clearTimeout(timeout);
+  }, [firstReadAt, warmingPrimary, startupWaitElapsed]);
+  const slowConnection = warmingPrimary && startupWaitElapsed && !setupFailed;
   const needsRecovery = data?.balance.pending?.erroredSats ?? 0;
   if (needsRecovery > 0) notes.add(`${bitcoinAmount(needsRecovery)} need recovery attention before they can be spent.`);
   const refresh = () => {
@@ -235,11 +340,7 @@ export function WalletDashboard({
       {notes.size > 0 && (
         <ul className="grid gap-1 rounded-xl bg-background p-3 text-sm text-muted-foreground">
           {Array.from(notes, (note) => (
-            <li key={note}>
-              {note === 'Wallet setup is not finished. Check Settings.'
-                ? 'Lightning setup is incomplete.'
-                : walletMessage(note)}
-            </li>
+            <li key={note}>{walletMessage(note)}</li>
           ))}
         </ul>
       )}
@@ -248,29 +349,34 @@ export function WalletDashboard({
           Could not refresh the wallet. {data ? 'Showing the last balance.' : 'Try refreshing.'}
         </p>
       )}
-      {data &&
-        (!data.primary.connected ||
-          (data.primary.setup && data.primary.setup !== 'ready') ||
-          data.primary.setupError) && (
-          <div className="flex flex-wrap items-center gap-2 border-t border-border pt-4 text-sm text-muted-foreground">
-            <Zap className="size-4" />{' '}
-            {data.primary.connected ? 'Lightning setup needs attention' : 'Lightning disconnected'}
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={task.busy}
-              onClick={() =>
-                task.run(async () => {
-                  await session.client.retrySetup();
-                  refresh();
-                })
-              }
-            >
-              Reconnect
-            </Button>
-            {data.primary.setupError && <p className="basis-full">{walletMessage(data.primary.setupError)}</p>}
-          </div>
-        )}
+      {warmingPrimary && !startupWaitElapsed ? (
+        <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Spinner size="sm" aria-hidden className="motion-reduce:animate-none" /> Connecting to Lightning…
+        </p>
+      ) : primary && (setupFailed || !primary.connected || slowConnection) ? (
+        <div className="flex flex-wrap items-center gap-2 border-t border-border pt-4 text-sm text-muted-foreground">
+          <Zap className="size-4" />{' '}
+          {setupFailed
+            ? 'Lightning connection failed'
+            : slowConnection
+              ? 'Still connecting to Lightning…'
+              : 'Lightning disconnected'}
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={task.busy}
+            onClick={() =>
+              task.run(async () => {
+                await session.client.retrySetup();
+                refresh();
+              })
+            }
+          >
+            Reconnect
+          </Button>
+          {setupError && <p className="basis-full">{walletMessage(setupError)}</p>}
+        </div>
+      ) : null}
     </>
   );
   const navigation = {

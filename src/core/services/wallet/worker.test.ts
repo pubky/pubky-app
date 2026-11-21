@@ -60,18 +60,21 @@ const payload = () => ({ key: key(), network: 'regtest', mode: 'create' });
 const walletId = 'e'.repeat(32);
 type Reply = { id: number; result?: unknown; error?: { code: string; message: string } };
 type OpenEvent = { id: number; event: 'unlocked'; account: string; balance: unknown };
+type PrimaryEvent = { event: 'primary-change'; account: string };
 type WorkerInput = {
   data: { id: number; operation: string; account: string; payload: unknown; notifyUnlocked?: boolean };
 };
 let messageId = 0;
 const waiters = new Map<number, (r: Reply) => void>();
 const unlocked = vi.fn<(event: OpenEvent) => void>();
+const primaryChanged = vi.fn<(event: PrimaryEvent) => void>();
 const worker = {
   location: { href: 'https://example.invalid/worker.js' },
   onmessage: undefined as undefined | ((msg: WorkerInput) => Promise<void>),
-  postMessage(r: Reply | OpenEvent) {
+  postMessage(r: Reply | OpenEvent | PrimaryEvent) {
     if ('event' in r) {
-      unlocked(r);
+      if (r.event === 'primary-change') primaryChanged(r);
+      else unlocked(r);
       return;
     }
     waiters.get(r.id)?.(r);
@@ -198,6 +201,38 @@ it('drops prepared sockets on password failure and ignores diagnostics from a cl
   expect(fixture.sockets.preparePeer).toHaveBeenCalledOnce();
   await request('close');
   onDiagnostic(created);
+  expect(fixture.sockets.preparePeer).toHaveBeenCalledOnce();
+});
+
+it('signals a status reread only for the active primary without exposing peer diagnostics', async () => {
+  const [{ onDiagnostic }] = fixture.createRuntime.mock.lastCall!;
+  const key = grant.primaryUri.split('@')[0];
+  onDiagnostic({ phase: 'peer:connect', message: '03' + 'b'.repeat(64) });
+  onDiagnostic({ phase: 'peer:warning', message: key });
+  expect(primaryChanged).not.toHaveBeenCalled();
+  onDiagnostic({ phase: 'peer:connect', message: key });
+  onDiagnostic({ phase: 'peer:disconnect', message: key + ' closed by peer: timed out' });
+  expect(primaryChanged.mock.calls).toEqual([
+    [{ event: 'primary-change', account: owner }],
+    [{ event: 'primary-change', account: owner }],
+  ]);
+  await request('close');
+  onDiagnostic({ phase: 'peer:connect', message: key });
+  expect(primaryChanged).toHaveBeenCalledTimes(2);
+});
+
+it('opens the fixed peer transport before the foreground engine start, after access checks', async () => {
+  const start = { method: 'POST', path: '/api/wallets/' + walletId + '/start' };
+  expect((await request('request', start, 'other')).error).toBeDefined();
+  await request('request', { method: 'GET', path: '/api/wallets' });
+  expect(fixture.sockets.preparePeer).not.toHaveBeenCalled();
+  fixture.engine.request.mockImplementationOnce(() => {
+    expect(fixture.sockets.preparePeer).toHaveBeenCalledOnce();
+    return {};
+  });
+  expect((await request('request', start)).error).toBeUndefined();
+  await request('visibility', true);
+  await request('request', start);
   expect(fixture.sockets.preparePeer).toHaveBeenCalledOnce();
 });
 

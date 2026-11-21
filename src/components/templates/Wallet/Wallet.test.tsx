@@ -31,6 +31,7 @@ const wallet = vi.hoisted(() => ({
   snapshot: vi.fn(),
   prepareSend: vi.fn(),
   retrySetup: vi.fn(),
+  onPrimaryChange: vi.fn<(listener: () => void) => () => void>(),
   getConfig: vi.fn(),
   loadOfflineReceiveDraft: vi.fn(),
   discardOfflineReceiveDraft: vi.fn(),
@@ -73,6 +74,7 @@ vi.mock('@/services/wallet/session', () => ({
     }
     rememberBalance = wallet.rememberBalance;
     savedActivity = wallet.savedActivity;
+    onPrimaryChange = wallet.onPrimaryChange;
     awayReceipts = wallet.awayReceipts;
     loadOfflineReceiveDraft = wallet.loadOfflineReceiveDraft;
     discardOfflineReceiveDraft = wallet.discardOfflineReceiveDraft;
@@ -123,6 +125,7 @@ beforeEach(() => {
   wallet.activityIncludesChannelSends.mockResolvedValue(true);
   wallet.acknowledgePayment.mockResolvedValue(undefined);
   wallet.startWallet.mockResolvedValue(undefined);
+  wallet.onPrimaryChange.mockReturnValue(() => {});
   wallet.rememberBalance.mockResolvedValue(undefined);
   wallet.savedActivity.mockResolvedValue([]);
   wallet.awayReceipts.mockResolvedValue([]);
@@ -551,12 +554,141 @@ describe('Pubky wallet', () => {
     expect(screen.getByRole('button', { name: action })).toHaveFocus();
   });
 
+  const genericSetupError =
+    'Primary setup could not complete. Check the node address and connection settings, then retry setup.';
+
+  it('updates Receive as soon as a pending primary connects without claiming setup failed', async () => {
+    const base = {
+      wallet: record,
+      balance: { totalSats: 0, availableSats: 0, offlineReceivableSats: 5000, pendingSats: 0 },
+      activity: [],
+    };
+    wallet.snapshot.mockResolvedValue({
+      ...base,
+      primary: { connected: false, setup: 'pending', setupError: genericSetupError },
+      notes: ['Wallet setup is not finished. Check Settings.'],
+    });
+    const unsubscribe = vi.fn();
+    wallet.onPrimaryChange.mockReturnValue(unsubscribe);
+    const view = render(<Wallet />);
+    await unlock();
+    fireEvent.click(screen.getByRole('button', { name: 'Receive' }));
+    expect(await screen.findByText('Connecting to Lightning…')).toBeVisible();
+    expect(
+      screen.queryByText(
+        /setup is incomplete|needs attention|Primary setup could not complete|Lightning disconnected/i,
+      ),
+    ).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Reconnect' })).toBeNull();
+    expect(screen.getByRole('switch', { name: 'Receive offline' })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText(/Amount in bitcoin/), { target: { value: '1000' } });
+    wallet.snapshot.mockResolvedValue({
+      ...base,
+      primary: { connected: true, setup: 'ready', offlineReceiveAvailable: true },
+    });
+    act(() => wallet.onPrimaryChange.mock.calls[0][0]());
+    await waitFor(() => expect(screen.getByRole('switch', { name: 'Receive offline' })).toBeEnabled());
+    expect(screen.queryByText('Connecting to Lightning…')).toBeNull();
+    expect(screen.getByLabelText(/Amount in bitcoin/)).toHaveValue('1000');
+    expect(wallet.retrySetup).not.toHaveBeenCalled();
+    view.unmount();
+    expect(unsubscribe).toHaveBeenCalledOnce();
+  });
+
+  it('rechecks a peer event that arrived while the first snapshot was reading', async () => {
+    const base = { wallet: record, balance: { totalSats: 0, availableSats: 0, pendingSats: 0 }, activity: [] };
+    let finishFirst!: () => void;
+    wallet.snapshot
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finishFirst = () => resolve({ ...base, primary: { connected: false, setup: 'pending' } });
+          }),
+      )
+      .mockResolvedValue({ ...base, primary: { connected: true, setup: 'ready' } });
+    render(<Wallet />);
+    await unlock();
+    await waitFor(() => expect(wallet.snapshot).toHaveBeenCalledTimes(1));
+    act(() => {
+      const hint = wallet.onPrimaryChange.mock.calls[0][0];
+      hint();
+      hint();
+    });
+    expect(wallet.snapshot).toHaveBeenCalledTimes(1);
+    await act(async () => finishFirst());
+    await waitFor(() => expect(wallet.snapshot).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.queryByText('Connecting to Lightning…')).toBeNull());
+    expect(wallet.retrySetup).not.toHaveBeenCalled();
+  });
+
+  it('quickly notices a recovered primary when the peer event was missed', async () => {
+    const base = { wallet: record, balance: { totalSats: 0, availableSats: 0, pendingSats: 0 }, activity: [] };
+    wallet.snapshot.mockResolvedValue({ ...base, primary: { connected: false, setup: 'ready' } });
+    render(<Wallet />);
+    await unlock();
+    expect(await screen.findByText('Connecting to Lightning…')).toBeVisible();
+    wallet.listWallets.mockResolvedValue([{ ...record, lfbw: { setup: 'ready', primaries: [{ connected: true }] } }]);
+    wallet.snapshot.mockResolvedValue({ ...base, primary: { connected: true, setup: 'ready' } });
+    await waitFor(() => expect(screen.queryByText('Connecting to Lightning…')).toBeNull(), { timeout: 3500 });
+    expect(wallet.snapshot).toHaveBeenCalledTimes(2);
+    expect(wallet.retrySetup).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    genericSetupError,
+    'The primary node connection timed out. Check the address, port, and network, then retry setup.',
+  ])('allows the first automatic redial, then offers Reconnect if the transport still fails: %s', async (error) => {
+    const timer = vi.spyOn(window, 'setTimeout');
+    try {
+      wallet.snapshot.mockResolvedValue({
+        wallet: record,
+        balance: { totalSats: 0, availableSats: 0, pendingSats: 0 },
+        activity: [],
+        primary: { connected: false, setup: 'failed', setupError: error },
+        notes: ['Wallet setup is not finished. Check Settings.'],
+      });
+      render(<Wallet />);
+      await unlock();
+      expect(await screen.findByText('Connecting to Lightning…')).toBeVisible();
+      expect(screen.queryByText(error)).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Reconnect' })).toBeNull();
+      const grace = timer.mock.calls.find(([, delay]) => delay !== undefined && delay > 19_000 && delay <= 20_000)?.[0];
+      expect(typeof grace).toBe('function');
+      act(() => {
+        if (typeof grace === 'function') grace();
+      });
+      expect(screen.getByText(error)).toBeVisible();
+      expect(screen.getByRole('button', { name: 'Reconnect' })).toBeEnabled();
+    } finally {
+      timer.mockRestore();
+    }
+  });
+
+  it('shows the actionable reason when the primary reports a failed setup', async () => {
+    wallet.snapshot.mockResolvedValue({
+      wallet: record,
+      balance: { totalSats: 0, availableSats: 0, pendingSats: 0 },
+      activity: [],
+      primary: { connected: false, setup: 'failed', setupError: 'The connection could not be authenticated.' },
+      notes: ['Wallet setup is not finished. Check Settings.'],
+    });
+    render(<Wallet />);
+    await unlock();
+    expect(await screen.findByText('Lightning connection failed')).toBeVisible();
+    expect(screen.getByText('The connection could not be authenticated.')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Reconnect' })).toBeEnabled();
+    expect(screen.queryByText(/setup is incomplete/i)).toBeNull();
+  });
+
   it('keeps reconnect within reach when Lightning goes offline during a payment flow', async () => {
     const snapshot = { wallet: record, balance: { totalSats: 0, availableSats: 0, pendingSats: 0 }, activity: [] };
-    wallet.snapshot.mockResolvedValue({ ...snapshot, primary: { connected: false, setup: 'ready' } });
+    wallet.snapshot.mockResolvedValue({ ...snapshot, primary: { connected: true, setup: 'ready' } });
     render(<Wallet />);
     await unlock();
     fireEvent.click(screen.getByRole('button', { name: 'Receive' }));
+    await screen.findByText('Accept a Lightning payment while your wallet is closed.');
+    wallet.snapshot.mockResolvedValue({ ...snapshot, primary: { connected: false, setup: 'ready' } });
+    act(() => wallet.onPrimaryChange.mock.calls[0][0]());
     expect(await screen.findByText('Lightning disconnected')).toBeVisible();
     wallet.snapshot.mockResolvedValue({ ...snapshot, primary: { connected: true, setup: 'ready' } });
     fireEvent.click(screen.getByRole('button', { name: 'Reconnect' }));

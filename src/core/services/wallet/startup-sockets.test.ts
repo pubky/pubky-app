@@ -169,6 +169,42 @@ it('opens the fixed peer once on request and skips preparation after an ordinary
   expect(sockets.map((s) => s.url)).toEqual([peerUrl, electrumUrl, peerUrl]);
 });
 
+it('replaces an expired peer slot only once and leaves its Lightning handshake to the engine', () => {
+  const pool = createStartupSockets(makeGrant());
+  pool.preparePeer();
+  sockets[0].open();
+  vi.setSystemTime(Date.now() + 5_000);
+  pool.preparePeer();
+  pool.preparePeer();
+  expect(sockets.map((socket) => socket.readyState)).toEqual([3, 0]);
+  sockets[1].open();
+  vi.advanceTimersByTime(5_000);
+  pool.preparePeer();
+  expect(sockets.map((socket) => socket.readyState)).toEqual([3, 3]);
+  expect(sockets.every((socket) => socket.send.mock.calls.length === 0)).toBe(true);
+  pool.socketFactory(primary);
+  expect(sockets.map((socket) => socket.url)).toEqual([peerUrl, peerUrl, peerUrl]);
+  expect(vi.getTimerCount()).toBe(0);
+});
+
+it('dials a fresh peer for a slow scan even when its idle timer was suspended, keeping Electrum available', () => {
+  const pool = createStartupSockets(makeGrant());
+  pool.preparePeer();
+  pool.prepareElectrum();
+  sockets[0].open();
+  vi.setSystemTime(Date.now() + 5_001);
+  pool.socketFactory(primary);
+  expect(sockets.map((socket) => socket.readyState)).toEqual([3, 0, 0, 0]);
+  expect(sockets.at(-1)?.url).toBe(peerUrl);
+  pool.socketFactory(electrum);
+  expect(sockets).toHaveLength(4);
+  // Hiding or locking closes unused slots. Only the engine closes claimed sockets.
+  pool.close();
+  pool.preparePeer();
+  expect(sockets.map((socket) => socket.readyState)).toEqual([3, 0, 3, 0]);
+  expect(vi.getTimerCount()).toBe(0);
+});
+
 it('falls back to an ordinary dial after a speculative constructor error and validates relay settings before dialing', () => {
   const grant = makeGrant();
   let first = true;

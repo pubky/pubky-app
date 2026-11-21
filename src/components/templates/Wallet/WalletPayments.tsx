@@ -478,7 +478,7 @@ export function WalletReceive({
   const [hostSupport, setHostSupport] = useState<'checking' | 'available' | 'unavailable' | 'error'>('checking');
   const [check, setCheck] = useState(0);
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || !primaryConnected) return;
     let active = true;
     Promise.resolve()
       .then(() => client.getConfig())
@@ -491,13 +491,13 @@ export function WalletReceive({
     return () => {
       active = false;
     };
-  }, [client, check, ready]);
+  }, [client, check, ready, primaryConnected]);
   const pending = offlineDraft ?? attemptedDraft;
   const canReceiveOffline =
     ready &&
     offlineDraftReady &&
     hostSupport === 'available' &&
-    primaryConnected !== false &&
+    primaryConnected === true &&
     primaryOfflineAvailable !== false &&
     (offlineCapacity === undefined || offlineCapacity >= MIN_OFFLINE_SATS);
   let switchHint = 'Accept a Lightning payment while your wallet is closed.';
@@ -506,10 +506,11 @@ export function WalletReceive({
     switchHint = reloadOfflineDraft
       ? 'Could not check for a saved offline request.'
       : 'Checking for a saved offline request…';
+  else if (primaryConnected === false) switchHint = 'Offline receiving needs a connection to your primary.';
+  else if (!primaryConnected) switchHint = 'Checking the Lightning connection…';
   else if (hostSupport === 'checking') switchHint = 'Checking offline support…';
   else if (hostSupport === 'error') switchHint = 'Could not check offline support.';
   else if (hostSupport === 'unavailable') switchHint = 'This browser wallet does not support offline receiving.';
-  else if (primaryConnected === false) switchHint = 'Reconnect to your primary to prepare an offline invoice.';
   else if (primaryOfflineAvailable === false) switchHint = 'Your primary does not offer offline receiving.';
   else if (!canReceiveOffline)
     switchHint = 'There is no room for an offline payment right now. You can still receive with the wallet open.';

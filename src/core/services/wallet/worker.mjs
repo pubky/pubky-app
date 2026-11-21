@@ -187,6 +187,7 @@ async function open(account, password, onUnlocked) {
     rejectIfClosing();
     const fastStart = existing && grant?.network === 'mainnet' && grant.fastElectrumStart === true;
     startupScan = fastStart ? createStartupScan() : undefined;
+    const primaryKey = grant?.primaryUri.split('@')[0].toLowerCase();
     engine = await createPortableRuntime({
       nodeOptions: startupScan?.nodeOptions,
       databaseFactory,
@@ -194,9 +195,19 @@ async function open(account, password, onUnlocked) {
       electrum: defaults.electrum,
       socketFactory: relay?.socketFactory ?? offline,
       onDiagnostic({ phase, message }) {
+        if (
+          (phase === 'peer:connect' || phase === 'peer:disconnect') &&
+          !closing &&
+          owner === account &&
+          grant &&
+          activeGrant === grant &&
+          message.split(' ', 1)[0].toLowerCase() === primaryKey
+        ) {
+          // A hint to reread verified wallet state. No diagnostic payload leaves the worker.
+          self.postMessage({ event: 'primary-change', account });
+        }
         if (phase === 'engine-perf' && message.startsWith('initial-sync ')) startupScan?.restoreCadence();
-        // Beignet emits this mark after checking genesis and creating the node.
-        // Open the peer transport while its Bitcoin scan runs. Beignet owns BOLT8.
+        // Replenish an unused transport if restoring the node took long enough for it to expire.
         const createdNode = phase === 'engine-perf' && message.startsWith('create ');
         if (createdNode && relay && transport === relay && !closing && !background) {
           relay.preparePeer();
@@ -380,15 +391,16 @@ async function handle({ id, operation, account, payload, notifyUnlocked }) {
     }
     activeRequests++;
     try {
+      const start = payload.method === 'POST' && /^\/api\/wallets\/([0-9a-f]{32})\/start$/.exec(payload.path);
+      // The caller has verified the device lease. Overlap the fixed relay dial
+      // with node restoration and leave the authenticated Lightning handshake to Beignet.
+      if (start && !background) transport?.preparePeer();
       const result = await engine.request(payload);
-      if (startupScan && payload.method === 'POST') {
-        const start = /^\/api\/wallets\/([0-9a-f]{32})\/start$/.exec(payload.path);
-        if (start) {
-          await startupScan.confirm(() => {
-            rejectIfClosing();
-            return engine.request({ method: 'POST', path: `/wallets/${start[1]}/api/wallet/refresh`, body: {} });
-          });
-        }
+      if (startupScan && start) {
+        await startupScan.confirm(() => {
+          rejectIfClosing();
+          return engine.request({ method: 'POST', path: `/wallets/${start[1]}/api/wallet/refresh`, body: {} });
+        });
       }
       if (bound && result && typeof result === 'object' && 'mnemonic' in result) {
         throw Object.assign(new Error('Use Ring to recover this wallet.'), { code: 'WALLET_RING_BINDING' });

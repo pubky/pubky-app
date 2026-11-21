@@ -16,6 +16,7 @@ export type OfflineReceiveDraft = { id: string; amountSats: number; description:
 export type WalletDefaults = { network: Network; primaryUri: string; electrum: ElectrumServer };
 export type LastWalletBalance = { walletId: string; network: Network; totalSats: number; updatedAt: number };
 type UnlockedEvent = { id: number; event: 'unlocked'; account: string; balance: LastWalletBalance | null };
+type PrimaryChangeEvent = { event: 'primary-change'; account: string };
 type Reply = { id: number; result?: unknown; error?: { code?: string; status?: number; message: string } };
 
 // A same-tab remount can begin while its previous worker is still flushing.
@@ -32,6 +33,7 @@ export class WalletSession {
   private closeAttempt?: Promise<void>;
   private assertRingDevice?: () => void;
   private readonly ownsAccount: () => boolean;
+  private readonly primaryListeners = new Set<() => void>();
   private pending = new Map<
     number,
     { resolve(value: unknown): void; reject(error: Error): void; notifyUnlocked?: boolean }
@@ -54,7 +56,17 @@ export class WalletSession {
       );
     };
     this.worker = new Worker('/wallet-engine/worker.js', { type: 'module', name: 'Pubky wallet' });
-    this.worker.onmessage = ({ data }: MessageEvent<Reply | UnlockedEvent>) => {
+    this.worker.onmessage = ({ data }: MessageEvent<Reply | UnlockedEvent | PrimaryChangeEvent>) => {
+      if ('event' in data && data.event === 'primary-change') {
+        if (data.account !== this.account) return;
+        try {
+          this.selectedWallet();
+        } catch {
+          return;
+        }
+        for (const listener of this.primaryListeners) listener();
+        return;
+      }
       const waiter = this.pending.get(data.id);
       if (!waiter) return;
       if ('event' in data) {
@@ -97,6 +109,13 @@ export class WalletSession {
   /** The UI installs the verified homeserver lease before starting its Ring-bound wallet. */
   guardRingDevice(assertActive: () => void) {
     this.assertRingDevice = assertActive;
+  }
+
+  onPrimaryChange(listener: () => void): () => void {
+    this.primaryListeners.add(listener);
+    return () => {
+      this.primaryListeners.delete(listener);
+    };
   }
 
   private call<T>(operation: string, payload?: unknown, transfer: Transferable[] = []): Promise<T> {
@@ -366,6 +385,7 @@ export class WalletSession {
   }
 
   private dispose(error: Error) {
+    this.primaryListeners.clear();
     document.removeEventListener('visibilitychange', this.onVisibility);
     this.worker?.terminate();
     this.worker = undefined;

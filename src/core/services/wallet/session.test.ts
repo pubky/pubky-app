@@ -127,6 +127,46 @@ it('checks the live Ring lease before worker dispatch and can still inspect and 
   expect(sent.mock.calls.map(([call]) => call.operation)).toEqual(['request', 'ring-binding', 'close']);
 });
 
+it('delivers primary status hints only to listeners for the active, unlocked wallet', async () => {
+  const workers: TestWorker[] = [];
+  class TestWorker {
+    onmessage?: (event: { data: unknown }) => void;
+    constructor() {
+      workers.push(this);
+    }
+    postMessage(request: Request) {
+      queueMicrotask(() => this.onmessage?.({ data: { id: request.id, result: null } }));
+    }
+    terminate() {}
+  }
+  vi.stubGlobal('Worker', TestWorker);
+  const session = new WalletSession(auth.currentUserPubky);
+  const listener = vi.fn();
+  const unsubscribe = session.onPrimaryChange(listener);
+  const hint = (account = auth.currentUserPubky) =>
+    workers[0].onmessage?.({ data: { event: 'primary-change', account } });
+  hint();
+  session.client.selectWallet('a'.repeat(32));
+  hint('another account');
+  expect(listener).not.toHaveBeenCalled();
+  hint();
+  expect(listener).toHaveBeenCalledOnce();
+  unsubscribe();
+  hint();
+  expect(listener).toHaveBeenCalledOnce();
+  session.onPrimaryChange(listener);
+  session.guardRingDevice(() => {
+    throw new Error('Device lease expired');
+  });
+  hint();
+  expect(listener).toHaveBeenCalledOnce();
+  session.guardRingDevice(() => {});
+  const closing = session.close();
+  hint();
+  await closing;
+  expect(listener).toHaveBeenCalledOnce();
+});
+
 it.each(['current', 'other account', 'signout', 'sync', 'new generation', 'lock'])(
   'delivers local unlock only to the pending open for its current signed-in owner (%s)',
   async (condition) => {
