@@ -243,7 +243,13 @@ export class LocksController {
   }
 
   static markPaykitConnected(): void {
+    // A check sent before this success, such as one the held-check path never superseded, must not undo it.
+    this.paykitSetupGeneration += 1;
     useLocksAuthStore.getState().setPaykitConnected(true);
+  }
+
+  static clearPaykitConnected(): void {
+    useLocksAuthStore.getState().setPaykitConnected(false);
   }
 
   /**

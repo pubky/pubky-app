@@ -3,7 +3,7 @@ import type { AppError } from '@/libs/error/error';
 
 export enum PaykitSetupFlowStatus {
   IDLE = 'idle',
-  /** Asking the Lock Server whether the creator's Paykit setup is already done. */
+  /** Asking the Lock Server whether the creator's Paykit setup is done, or Paykit whether it holds the creator. */
   CHECKING = 'checking',
   /** The check got no usable answer: nothing opens until the creator runs it again. */
   UNAVAILABLE = 'unavailable',
@@ -51,6 +51,8 @@ export type UsePaykitSetupFlowReturn = {
    * stops at `RECONNECT_REQUIRED`), `unavailable` stops at `UNAVAILABLE`.
    */
   check: () => Promise<void>;
+  /** Like `check`, but asks only Paykit whether it holds the creator (#2984). */
+  checkHeld: () => Promise<void>;
   /** Begins the initial setup: generates CSRF state + the `/setup` URL. */
   start: () => void;
   /** Begins the reconnect for a creator Paykit holds: generates CSRF state + the `/setup/reconnect` URL. */

@@ -560,6 +560,20 @@ describe('LocksController (auth)', () => {
     });
   });
 
+  describe('clearPaykitConnected', () => {
+    it('forgets that Paykit is connected and keeps the session', () => {
+      useLocksAuthStore
+        .getState()
+        .init({ session: fakeSession, secret: 'secret-abc', creatorPubky: MOCK_LOCK_AUTHOR_PUBKY });
+      LocksController.markPaykitConnected();
+
+      LocksController.clearPaykitConnected();
+
+      expect(useLocksAuthStore.getState().selectIsPaykitConnected()).toBe(false);
+      expect(useLocksAuthStore.getState().selectLocksSession()).toBe(fakeSession);
+    });
+  });
+
   describe('fetchPaykitSetupStatus', () => {
     beforeEach(() => {
       useLocksAuthStore
@@ -575,6 +589,18 @@ describe('LocksController (auth)', () => {
 
       expect(useLocksAuthStore.getState().selectIsPaykitConnected()).toBe(false);
       expect(useLocksAuthStore.getState().selectLocksSession()).toBe(fakeSession);
+    });
+
+    it('keeps a newer success when an older check answers setup_required', async () => {
+      const olderCheck = Promise.withResolvers<string>();
+      mocks.fetchPaykitSetupStatus.mockReturnValueOnce(olderCheck.promise);
+      const checked = LocksController.fetchPaykitSetupStatus('BTC');
+
+      LocksController.markPaykitConnected();
+      olderCheck.resolve('setup_required');
+
+      await expect(checked).resolves.toBe('setup_required');
+      expect(useLocksAuthStore.getState().selectIsPaykitConnected()).toBe(true);
     });
 
     it('keeps the session when a superseded setup check is rejected after a successful check', async () => {

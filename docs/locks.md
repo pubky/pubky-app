@@ -24,6 +24,7 @@ Paykit Server's optional USDT configuration is absent.
   - [Reading a lock post](#reading-a-lock-post)
   - [The Unlocked screen](#the-unlocked-screen)
   - [Marker tracking](#marker-tracking)
+  - [Locks settings page](#locks-settings-page)
   - [Sessions from before locks](#sessions-from-before-locks)
   - [Testing & local demo](#testing--local-demo)
   - [References](#references)
@@ -626,6 +627,19 @@ unavailable. Only `setup_required` goes on to the presence read:
 - Paykit cannot say: the dialog says payments are unavailable and offers **Try again**, both before setup
   and after a failed setup. Neither setup nor reconnect opens until a later check answers held or not held.
 
+When the Lock Server itself answers `unavailable` (no request error), the dialog also offers **Reconnect Bitkit**
+(#2984). A Paykit Server that restarted after the creator revoked its grant in Pubky Ring answers that on every
+check, so **Try again** never helps. The button does not reconnect: it asks Paykit directly whether it holds the
+creator (`checkHeld`). Held opens the reconnect confirmation above, with its new-account warning; not held opens
+`/setup`; no answer stays unavailable, now with an error, so the button goes away. A failed request or a failed
+presence read never shows it, because neither says anything about the grant, and a reconnect there could rotate a
+ready creator's receiving account. `startAtHeldCheck` opens the Bitkit step at this presence read instead of the
+setup-status check, for a caller that already got `unavailable`. It applies once, and only to the session that got
+that answer; any later check in the dialog asks the Lock Server again. It also clears `paykitConnected` when the
+dialog opens: an earlier `ready` may have set it, and the dialog would then open on "done" and skip the presence
+read. `markPaykitConnected` supersedes any setup-status check still in flight, so an older `setup_required` cannot
+clear a newer success; the presence-read path asks no setup-status question that would supersede it otherwise.
+
 `/setup/creator-held` starts no setup flow and spends neither Paykit's setup-start budget nor its pending-flow
 capacity. It has its own per-client-IP read limit (600 a minute by default). A refused read is `429`
 (`Retry-After: 60`) and storage trouble is `503` (`Retry-After: 1`), so neither is read as "not held"; a `400`
@@ -651,6 +665,29 @@ Creator-configurable credential TTLs still come later. The descriptor and readab
 Every dev / temporary shortcut carries the ticket number that owns it —
 `grep -rn "TODO:\[Locks\]" src/` lists them, and each number is the issue to read.
 Use `grep -rniE "TODO.*lock" src/` to catch one that lost its tag.
+
+## Locks settings page
+
+`/settings/locks` (#2984) shows the creator's setup with the same steps as `DialogLocksAuth`, and only where
+Locks is configured (`isLocksConfigured()` in `@/config/network`: both the Lock Server and the Paykit Server).
+Elsewhere the menu hides it and the route redirects to Account. `useLocksSettingsStatus` derives the state:
+
+- Loading until the store hydrates and a persisted Locks session is restored, then while the Paykit check runs.
+  The page never shows **Enable Locks** to a creator it has not checked.
+- Not set up without a Locks session, on a session that cannot reach `/priv`, or when the Lock Server answers
+  `setup_required`. **Enable Locks** opens `DialogLocksAuth`; it is disabled, with `LocksRegionNotice`, where
+  paid unlocks are held.
+- Set up once Paykit is connected. The latest answer wins, so a later `unavailable` replaces it, but a check
+  sent before a setup dialog opened or finished is dropped, and changes neither the page nor `paykitConnected`.
+  A dialog that closes with Paykit connected shows set up, also through **Cancel** or Esc on "Locks Enabled". Neither **Revoke access** nor **Disconnect Bitkit** calls an
+  API: pubky.app cannot remove a grant without a root session, so each opens a dialog that says where to do it,
+  and **OK** checks again.
+- Unavailable (the Lock Server answered `unavailable`) offers **Try again** and **Reconnect Bitkit**, which opens
+  `DialogLocksAuth` with `startAtHeldCheck`. A failed request offers **Try again** only.
+
+The Paykit answer is in memory only (#2627), so the page asks on every visit, on **OK**, and quietly when the tab
+is shown again (not while a setup dialog is open). A revoke of the Lock Server's grant in Pubky Ring is not seen
+yet: the Lock Server answers from its cached session (pubky/locks#114).
 
 ## Sessions from before locks
 
