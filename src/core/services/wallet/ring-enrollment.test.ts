@@ -7,6 +7,7 @@ import {
   ringEnrollment,
   RingEnrollmentError,
 } from './ring-enrollment';
+import { WalletHandoffImportError } from './session';
 
 const auth = vi.hoisted(() => ({ getState: vi.fn(), subscribe: vi.fn() }));
 vi.mock('@/stores/auth/auth.store', () => ({ useAuthStore: auth }));
@@ -356,6 +357,24 @@ describe('Ring private wallet device', () => {
       }),
     ).rejects.toThrow(/changed/);
     expect(f.get()).toMatchObject({ state: 'ready', transferId: secondTransfer });
+  });
+
+  it('preserves a worker import explanation and redacts arbitrary installer errors', async () => {
+    await ready();
+    const approvedMessage =
+      'The saved wallet record does not match the Ring wallet. Lock and reopen the wallet to check it.';
+    for (const error of [
+      new WalletHandoffImportError(approvedMessage),
+      Object.assign(new Error('private diagnostic'), { code: 'WALLET_HANDOFF_INVALID' }),
+    ]) {
+      await expect(
+        claimRingHandoff(account, 'mainnet', b, transfer, vi.fn(), async () => {
+          throw error;
+        }),
+      ).rejects.toThrow(
+        error instanceof WalletHandoffImportError ? approvedMessage : 'Could not verify and install this wallet move.',
+      );
+    }
   });
 
   it('recovers an ambiguous publication or claim by inspecting the durable owner and exact receipt', async () => {

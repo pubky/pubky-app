@@ -37,9 +37,11 @@ import { WalletCheckoutRecovery } from './WalletRecoveryStatus';
 import { type RingSetupMode, WalletRingSetup } from './WalletRingSetup';
 
 type ActiveWallet = { id: string; network: Network; session: WalletSession };
+type TransferResult = 'offered' | 'moved-away' | 'received' | 'still-ready' | 'kept' | 'unpublished' | 'incomplete';
 type Stage =
   | { kind: 'checking' | 'unavailable' | 'framed' }
   | { kind: 'opening' }
+  | { kind: 'preparing-move' }
   | { kind: 'password'; exists: boolean; showPassword?: boolean }
   | {
       kind: 'local-approval';
@@ -52,8 +54,15 @@ type Stage =
   | { kind: 'ring'; defaults: CreateWalletInput; network: Network; session: WalletSession; reserved: boolean }
   | { kind: 'backup'; id: string; network: Network; phrase: string }
   | { kind: 'start'; id: string; network: Network }
-  | { kind: 'switch'; session: WalletSession; network: Network; deviceId: string; status: RingDeviceStatus | 'offer' }
-  | { kind: 'switch-result'; result: 'offered' | 'received' | 'kept' | 'incomplete' }
+  | {
+      kind: 'switch';
+      session: WalletSession;
+      network: Network;
+      deviceId: string;
+      status: RingDeviceStatus | 'offer';
+      sourceReceipt?: string;
+    }
+  | { kind: 'switch-result'; result: TransferResult }
   | ({ kind: 'wallet' } & ActiveWallet &
       (
         | { status: 'syncing'; progress?: WalletStartProgress }
@@ -216,6 +225,45 @@ export function WalletAccount({
     reset();
   }
 
+  async function prepareMove(wallet: ActiveWallet) {
+    const held = lease.current;
+    if (!held) throw new RingEnrollmentError('Reopen the wallet on its current device.');
+    held.assertActive();
+    setNotice('');
+    setStage({ kind: 'preparing-move' });
+    let stopped = false;
+    try {
+      // Finish the channel and database checks while the mobile browser is still in front.
+      const binding = await wallet.session.prepareHandoff(wallet.network);
+      stopped = true;
+      if (live.current !== wallet.session) return;
+      held.assertActive();
+      await held.release();
+      if (live.current !== wallet.session) return;
+      lease.current = null;
+      setStage({
+        kind: 'switch',
+        status: 'offer',
+        network: wallet.network,
+        deviceId: binding.deviceId,
+        sourceReceipt: binding.transferId,
+        session: wallet.session,
+      });
+    } catch (error) {
+      if (live.current !== wallet.session) return;
+      setNotice(error instanceof Error ? walletMessage(error.message) : 'The wallet could not prepare this transfer.');
+      const uncertain = error instanceof Error && 'code' in error && error.code === 'WALLET_CLOSE_UNCERTAIN';
+      if (!stopped && !uncertain) {
+        setStage({ ...wallet, kind: 'wallet', status: 'ready' });
+        return;
+      }
+      lease.current = null;
+      if (uncertain) await held.abandon().catch(() => {});
+      await closeDevice(wallet.session, uncertain ? null : held).catch(() => {});
+      if (live.current === wallet.session) setStage({ kind: 'switch-result', result: 'unpublished' });
+    }
+  }
+
   async function switchDevice(
     session: WalletSession,
     network: Network,
@@ -223,6 +271,7 @@ export function WalletAccount({
     status: RingDeviceStatus | 'offer',
     key: Uint8Array,
     assertApproval: () => void,
+    sourceReceipt?: string,
   ) {
     function current() {
       assertApproval();
@@ -233,17 +282,24 @@ export function WalletAccount({
     }
     current();
     setProgress(undefined);
-    let result: 'offered' | 'received' | 'kept' | 'incomplete' = 'incomplete';
-    let resumeSource: string | undefined;
+    let result: TransferResult = 'incomplete';
+    let publishedOffer: string | undefined;
+    const claim =
+      status !== 'offer' && status.state === 'handoff-ready' && status.sourceDeviceId !== deviceId ? status : undefined;
+    if (status === 'offer') result = 'unpublished';
     try {
       if (status === 'offer') {
-        const held = lease.current;
-        if (!held) throw new RingEnrollmentError('Reopen the wallet on this device before moving it.');
-        held.assertActive();
+        // The node is stopped and its vault is still locked to this worker. Ring
+        // may have been in front for longer than a homeserver lease. Acquire a
+        // new lease and match the last installed receipt before allowing publication.
+        const held = await holdDevice(session, network, deviceId, 'open', sourceReceipt);
+        current();
         const transferId = crypto.randomUUID();
         const envelope = await session.exportHandoff(key, network, transferId, deviceId);
         try {
           current();
+          publishedOffer = transferId;
+          result = 'incomplete';
           await held.publishHandoff(transferId, envelope, report);
           result = 'offered';
         } finally {
@@ -258,7 +314,9 @@ export function WalletAccount({
           network,
           deviceId,
           status.transferId,
-          () => lostDevice(session),
+          // A lost lease must stop the worker. Let this claim reconcile its receipt
+          // after shutdown while this account is still mounted.
+          () => session.close(),
           async (envelope, sourceDeviceId) => {
             current();
             if (sourceDeviceId !== status.sourceDeviceId)
@@ -284,34 +342,50 @@ export function WalletAccount({
       }
     } catch (error) {
       if (live.current === session) {
-        setNotice(error instanceof Error ? walletMessage(error.message) : 'Reopen the wallet to check the transfer.');
-        // This refusal is issued before shutdown starts or any transfer is published.
-        if (
-          status === 'offer' &&
-          error instanceof Error &&
-          'code' in error &&
-          error.code === 'WALLET_HANDOFF_PENDING'
-        ) {
-          resumeSource = session.client.connection.walletId ?? undefined;
-        }
+        const safe = error instanceof Error && (!claim || error instanceof RingEnrollmentError);
+        setNotice(safe ? walletMessage(error.message) : 'Could not finish this wallet transfer.');
       }
     } finally {
       key.fill(0);
-      if (resumeSource && live.current === session) {
-        setProgress(undefined);
-        setStage({ kind: 'wallet', status: 'ready', id: resumeSource, session, network });
-      } else {
-        const held = lease.current;
-        lease.current = null;
+      const held = lease.current;
+      lease.current = null;
+      try {
+        await closeDevice(session, held);
+      } catch {
+        // The server expires the lease if it did not acknowledge the release.
+      }
+      if (result === 'incomplete' && (publishedOffer || claim) && live.current === session) {
         try {
-          await closeDevice(session, held);
+          const observed = await inspectRingDevice(account, network, deviceId);
+          if (claim) {
+            if (observed.state === 'this-device' && observed.transferId === claim.transferId) {
+              result = 'received';
+            } else if (
+              observed.state === 'handoff-ready' &&
+              observed.sourceDeviceId === claim.sourceDeviceId &&
+              observed.transferId === claim.transferId
+            ) {
+              result = 'still-ready';
+            }
+          } else if (
+            observed.state === 'handoff-ready' &&
+            observed.sourceDeviceId === deviceId &&
+            observed.transferId === publishedOffer
+          ) {
+            result = 'offered';
+          } else if (observed.state === 'other-device' && observed.transferId === publishedOffer) {
+            result = 'moved-away';
+          } else if (observed.state === 'this-device' && observed.transferId === (sourceReceipt ?? null)) {
+            result = 'unpublished';
+          }
         } catch {
-          // The homeserver lease expires if shutdown or its acknowledgement is interrupted.
+          // A lost write acknowledgement needs an authoritative read before reporting its outcome.
         }
-        if (live.current === session) {
-          setProgress(undefined);
-          setStage({ kind: 'switch-result', result });
-        }
+      }
+      if (live.current === session) {
+        if (result === 'received' || result === 'offered' || result === 'moved-away') setNotice('');
+        setProgress(undefined);
+        setStage({ kind: 'switch-result', result });
       }
     }
   }
@@ -572,6 +646,11 @@ export function WalletAccount({
           }
         />
       )}
+      {stage.kind === 'preparing-move' && (
+        <WalletPanel title="Preparing your transfer" icon={WalletIcon}>
+          <p role="status">Saving and checking the wallet on this device…</p>
+        </WalletPanel>
+      )}
       {stage.kind === 'switch' && (
         <WalletDeviceSwitch
           key={stage.status === 'offer' ? 'offer' : stage.status.state}
@@ -588,20 +667,24 @@ export function WalletAccount({
           }
           progress={progress}
           onApprove={(key, assertCurrent) =>
-            switchDevice(stage.session, stage.network, stage.deviceId, stage.status, key, assertCurrent)
+            switchDevice(
+              stage.session,
+              stage.network,
+              stage.deviceId,
+              stage.status,
+              key,
+              assertCurrent,
+              stage.sourceReceipt,
+            )
           }
-          onRefresh={async () => {
+          onRefresh={async (signal) => {
             const status = await inspectRingDevice(account, stage.network, stage.deviceId);
-            if (live.current !== stage.session) return;
+            if (signal.aborted || live.current !== stage.session) return;
             if (status.state === 'this-device') lock();
             else setStage({ ...stage, status });
+            return status.state;
           }}
-          onClose={() => {
-            const id = stage.session.client.connection.walletId;
-            if (stage.status === 'offer' && id && lease.current) {
-              setStage({ kind: 'wallet', status: 'ready', id, session: stage.session, network: stage.network });
-            } else lock();
-          }}
+          onClose={lock}
         />
       )}
       {stage.kind === 'switch-result' && (
@@ -609,8 +692,11 @@ export function WalletAccount({
           title={
             {
               offered: 'Ready on your other device',
+              'moved-away': 'Wallet moved to your other device',
               received: 'Wallet moved to this device',
+              'still-ready': 'Wallet is still ready to move',
               kept: 'Wallet kept on this device',
+              unpublished: 'Transfer was not shared',
               incomplete: 'Check your transfer',
             }[stage.result]
           }
@@ -621,15 +707,22 @@ export function WalletAccount({
               {
                 offered:
                   'Sign in to the same Pubky account on your other device. Open Wallet and choose “Use wallet on this device”. Payments are paused here.',
+                'moved-away': 'Open Wallet on the device that received the transfer.',
                 received: 'Unlock your wallet to reconnect your channels and see your Activity.',
+                'still-ready': 'Unlock this wallet and approve the transfer in Ring to try again.',
                 kept: 'The transfer was cancelled. You can unlock your wallet here.',
+                unpublished: 'Your local wallet data is still on this device.',
                 incomplete:
                   'Reopen Wallet to check which device owns it. Keep the wallet data in both browsers until the move finishes.',
               }[stage.result]
             }
           </p>
           <Button type="button" variant="brand" className="self-start" onClick={lock}>
-            {stage.result === 'offered' ? 'Done' : stage.result === 'incomplete' ? 'Reopen wallet' : 'Unlock wallet'}
+            {['offered', 'moved-away'].includes(stage.result)
+              ? 'Done'
+              : stage.result === 'incomplete'
+                ? 'Reopen wallet'
+                : 'Unlock wallet'}
           </Button>
         </WalletPanel>
       )}
@@ -781,22 +874,7 @@ export function WalletAccount({
                 : undefined
             }
             onMoveWallet={
-              ringBacked && stage.status === 'ready'
-                ? () =>
-                    void task.run(async () => {
-                      const deviceId = await stage.session.ringDeviceId();
-                      if (live.current !== stage.session) return;
-                      lease.current?.assertActive();
-                      setNotice('');
-                      setStage({
-                        kind: 'switch',
-                        status: 'offer',
-                        deviceId,
-                        session: stage.session,
-                        network: stage.network,
-                      });
-                    })
-                : undefined
+              ringBacked && stage.status === 'ready' ? () => void task.run(() => prepareMove(stage)) : undefined
             }
             interrupted={interrupted}
             onPaymentReviewed={() => setInterrupted(null)}

@@ -12,6 +12,18 @@ import {
 } from '@beignet/wallet-core';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
+// The dedicated wallet worker sanitizes messages for this operation before replying.
+export class WalletHandoffImportError extends Error {}
+const handoffImportCodes = new Set([
+  'WALLET_HANDOFF_INVALID',
+  'WALLET_HANDOFF_PENDING',
+  'WALLET_CLOSE_UNCERTAIN',
+  'WALLET_CONFIGURATION',
+  'WALLET_BUSY',
+  'WALLET_CLOSED',
+  'WALLET_STORAGE',
+]);
+
 export type PrimaryConnectionIssue =
   | 'ownership-pending'
   | 'ownership-changed'
@@ -48,7 +60,13 @@ export class WalletSession {
   private readonly primaryListeners = new Set<() => void>();
   private pending = new Map<
     number,
-    { resolve(value: unknown): void; reject(error: Error): void; notifyUnlocked?: boolean; startWalletId?: string }
+    {
+      operation: string;
+      resolve(value: unknown): void;
+      reject(error: Error): void;
+      notifyUnlocked?: boolean;
+      startWalletId?: string;
+    }
   >();
 
   constructor(
@@ -108,11 +126,14 @@ export class WalletSession {
         return;
       }
       this.pending.delete(data.id);
-      if (data.error)
-        waiter.reject(
-          Object.assign(new Error(data.error.message), { code: data.error.code, status: data.error.status }),
-        );
-      else waiter.resolve(data.result);
+      if (data.error) {
+        const { code, status, message } = data.error;
+        const failure =
+          waiter.operation === 'handoff-import' && code && handoffImportCodes.has(code)
+            ? new WalletHandoffImportError(message)
+            : new Error(message);
+        waiter.reject(Object.assign(failure, { code, status }));
+      } else waiter.resolve(data.result);
       if (data.error?.code === 'WALLET_CLOSE_UNCERTAIN') this.dispose(locked());
     };
     this.worker.onerror = () => this.dispose(new Error('The wallet worker stopped. Reopen the wallet.'));
@@ -153,7 +174,13 @@ export class WalletSession {
       const selected = this.onStartProgress && operation === 'request' ? this.client.connection.walletId : undefined;
       const startWalletId =
         selected && input?.method === 'POST' && input.path === `/api/wallets/${selected}/start` ? selected : undefined;
-      this.pending.set(id, { resolve: (value) => resolve(value as T), reject, notifyUnlocked, startWalletId });
+      this.pending.set(id, {
+        operation,
+        resolve: (value) => resolve(value as T),
+        reject,
+        notifyUnlocked,
+        startWalletId,
+      });
       try {
         if (this.assertRingDevice && (operation === 'ring-wallet' || operation === 'request')) {
           const input = payload as { method?: string; path?: string };
@@ -457,6 +484,12 @@ export class WalletSession {
 
   createRingWallet(key: Uint8Array, network: Network, mode: 'create' | 'restore') {
     return this.withRingKey<{ id: string; network: Network }>(key, 'ring-wallet', { network, mode });
+  }
+
+  prepareHandoff(network: Network) {
+    const walletId = this.selectedWallet();
+    if (!this.assertRingDevice || this.offlineOperation) throw locked();
+    return this.call<{ deviceId: string; transferId?: string }>('prepare-handoff', { walletId, network });
   }
 
   exportHandoff(key: Uint8Array, network: Network, transferId: string, sourceDeviceId: string) {

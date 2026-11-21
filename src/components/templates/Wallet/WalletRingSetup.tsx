@@ -6,7 +6,7 @@ import { KeyRound } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Checkbox } from '@/atoms/Checkbox/Checkbox';
 import { Spinner } from '@/atoms/Spinner/Spinner';
-import { inspectRingDevice, type RingDeviceStatus,RingEnrollmentError } from '@/services/wallet/ring-enrollment';
+import { inspectRingDevice, type RingDeviceStatus, RingEnrollmentError } from '@/services/wallet/ring-enrollment';
 import type { WalletSession } from '@/services/wallet/session';
 import { WalletDeviceSwitch } from './WalletDeviceSwitch';
 import { WalletKeyApproval } from './WalletKeyApproval';
@@ -76,9 +76,12 @@ export function WalletRingSetup({
         network={network}
         progress={progress}
         action={status.state === 'handoff-ready' ? 'take' : 'elsewhere'}
-        onRefresh={async () =>
-          setDevice({ id: device.id, status: await inspectRingDevice(account, network, device.id) })
-        }
+        onRefresh={async (signal) => {
+          const status = await inspectRingDevice(account, network, device.id);
+          if (signal.aborted) return;
+          setDevice({ id: device.id, status });
+          return status.state;
+        }}
         onClose={onCancel}
         onRecover={() => setRecoverWithoutDevice(true)}
         onApprove={(key, assertCurrent) => onHandoff(status, device.id, key, assertCurrent)}

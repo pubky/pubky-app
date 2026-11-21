@@ -15,6 +15,7 @@ import {
   RingEnrollmentError,
   uploadHandoff,
 } from './handoff-storage';
+import { WalletHandoffImportError } from './session';
 
 export { RingEnrollmentError };
 
@@ -497,6 +498,7 @@ export async function claimRingHandoff(
         await install(envelope, from.deviceId);
       } catch (error) {
         if (error instanceof RingEnrollmentError) throw error;
+        if (error instanceof WalletHandoffImportError) throw new RingEnrollmentError(error.message);
         throw new RingEnrollmentError(
           'Could not verify and install this wallet move. Check your Ring identity and available device storage, then try again.',
         );

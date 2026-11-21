@@ -1,6 +1,8 @@
 // @vitest-environment node
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { primaryChannelReadiness } from './channel-readiness.mjs';
+import { assertHandoffReady, sealHandoff } from './handoff.mjs';
+import { createHandoffClose } from './handoff-close.mjs';
 import type { WalletStartProgress } from './session';
 import type { createStartupScan } from './startup-scan.mjs';
 
@@ -46,6 +48,8 @@ vi.mock('@beignet/portable-engine', () => ({
 }));
 vi.mock('./startup-sockets.mjs', () => ({ createStartupSockets: () => fixture.sockets }));
 vi.mock('./channel-readiness.mjs', { spy: true });
+vi.mock('./handoff.mjs', { spy: true });
+vi.mock('./handoff-close.mjs', { spy: true });
 vi.mock('@beignet/portable-engine/sqljs', () => ({ createSqlJsDatabaseFactory: fixture.compile }));
 vi.mock('./storage.mjs', () => ({
   inspectFiles: fixture.inspect,
@@ -146,13 +150,17 @@ it('opens the verified local Ring wallet for reading when its Bitcoin relay is u
   expect(result.result).toMatchObject({ network: 'regtest' });
   expect(unlocked).toHaveBeenCalledOnce();
   expect(input.key).toEqual(new Uint8Array(32));
-  expect((await request('request', { method: 'POST', path: '/wallets/' + walletId + '/start' })).error?.code)
-    .toBe('WALLET_CONFIGURATION');
+  expect((await request('request', { method: 'POST', path: '/wallets/' + walletId + '/start' })).error?.code).toBe(
+    'WALLET_CONFIGURATION',
+  );
 });
 
 it('rejects a returning Ring credential for a different saved network before exposing the wallet', async () => {
   await freshWorker();
-  fixture.files.set('/pubky/deployment.json', new TextEncoder().encode(JSON.stringify({ ...grant, network: 'mainnet' })));
+  fixture.files.set(
+    '/pubky/deployment.json',
+    new TextEncoder().encode(JSON.stringify({ ...grant, network: 'mainnet' })),
+  );
   const input = { network: 'regtest', deviceId: crypto.randomUUID(), key: key() };
   expect((await request('open-with-ring', input, owner, true)).error?.code).toBe('WALLET_CONFIGURATION');
   expect(unlocked).not.toHaveBeenCalled();
@@ -236,6 +244,82 @@ it('fences new business while draining an admitted request, and cancels a move w
   expect(input.key).toEqual(new Uint8Array(32));
 });
 
+// The close observer and envelope have their own SQL/crypto tests. Keep the real
+// Ring provisioning, authorization and source binding checks at the worker boundary.
+async function pauseForHandoff() {
+  fixture.engine.request.mockImplementationOnce(async ({ body }) => {
+    const record = { id: walletId, network: grant.network };
+    fixture.volume.write(
+      '/wallet/registry.json',
+      new TextEncoder().encode(JSON.stringify({ record, mnemonic: body.mnemonic })),
+    );
+    return { record };
+  });
+  expect((await request('ring-wallet', payload())).error).toBeUndefined();
+  const deviceId = (await request('ring-device')).result;
+  const observer = vi.mocked(createHandoffClose).mock.results.at(-1)!.value;
+  const digest = new Uint8Array(32).fill(29);
+  vi.mocked(assertHandoffReady).mockResolvedValueOnce(undefined);
+  vi.spyOn(observer, 'close').mockImplementationOnce(async () => {
+    await fixture.engine.close();
+    return digest;
+  });
+  const prepared = await request('prepare-handoff', { network: grant.network, walletId });
+  expect(prepared.result).toEqual({ deviceId, network: grant.network });
+  expect(assertHandoffReady).toHaveBeenCalledWith(fixture.engine, walletId);
+  expect(fixture.engine.close).toHaveBeenCalledOnce();
+  return {
+    digest,
+    approved: () => ({ key: key(), network: grant.network, sourceDeviceId: deviceId, transferId: crypto.randomUUID() }),
+  };
+}
+
+it('fences a paused source and exports exactly once for its matching Ring key, account and device', async () => {
+  const { approved, digest } = await pauseForHandoff();
+  fixture.engine.request.mockClear();
+  expect((await request('begin-send')).error?.code).toBe('WALLET_BUSY');
+  for (const method of ['GET', 'POST']) {
+    expect((await request('request', { method, path: '/api/wallets/' + walletId })).error?.code).toBe('WALLET_BUSY');
+  }
+  expect(fixture.engine.request).not.toHaveBeenCalled();
+  expect(fixture.store.markPayment).not.toHaveBeenCalled();
+  const otherAccount = approved();
+  const otherDevice = { ...approved(), sourceDeviceId: crypto.randomUUID() };
+  const otherKey = { ...approved(), key: new Uint8Array(32).fill(18) };
+  expect((await request('handoff-export', otherAccount, 'b' + owner.slice(1))).error?.code).toBe('WALLET_BUSY');
+  expect((await request('handoff-export', otherDevice)).error?.code).toBe('WALLET_BUSY');
+  expect((await request('handoff-export', otherKey)).error?.code).toBe('WALLET_HANDOFF_INVALID');
+  for (const rejected of [otherAccount, otherDevice, otherKey]) expect(rejected.key).toEqual(new Uint8Array(32));
+  expect(sealHandoff).not.toHaveBeenCalled();
+  expect(digest[0]).toBe(29);
+
+  const sealing = Promise.withResolvers<Uint8Array<ArrayBuffer>>();
+  vi.mocked(sealHandoff).mockReturnValueOnce(sealing.promise);
+  const first = request('handoff-export', approved());
+  await vi.waitFor(() => expect(sealHandoff).toHaveBeenCalledOnce());
+  const duplicate = approved();
+  expect((await request('handoff-export', duplicate)).error?.code).toBe('WALLET_BUSY');
+  expect(duplicate.key).toEqual(new Uint8Array(32));
+  const envelope = Uint8Array.of(23, 42);
+  sealing.resolve(envelope);
+  expect((await first).result).toEqual(envelope);
+  expect(digest).toEqual(new Uint8Array(32));
+  expect((await request('handoff-export', approved())).error?.code).toBe('WALLET_BUSY');
+  expect(sealHandoff).toHaveBeenCalledOnce();
+  expect(fixture.engine.close).toHaveBeenCalledOnce();
+});
+
+it('discards a prepared export on explicit close and refuses a later Ring approval', async () => {
+  const { approved, digest } = await pauseForHandoff();
+  expect((await request('close')).error).toBeUndefined();
+  expect(digest).toEqual(new Uint8Array(32));
+  const late = approved();
+  expect((await request('handoff-export', late)).error?.code).toBe('WALLET_CLOSED');
+  expect(late.key).toEqual(new Uint8Array(32));
+  expect(sealHandoff).not.toHaveBeenCalled();
+  expect(fixture.volume.close).toHaveBeenCalledOnce();
+});
+
 it('does not install into a running destination and suppresses underlying wallet details', async () => {
   const input = {
     ...payload(),
@@ -250,6 +334,57 @@ it('does not install into a running destination and suppresses underlying wallet
   expect(response.result).toBeUndefined();
   expect(input.key).toEqual(new Uint8Array(32));
   expect(fixture.engine.close).not.toHaveBeenCalled();
+});
+
+it('uses the verified current primary only to receive a move into a stopped wallet with an older primary', async () => {
+  await freshWorker();
+  addWalletRecord();
+  const stale = { ...grant, primaryUri: '03' + 'b'.repeat(64) + '@old:2' };
+  fixture.files.set('/pubky/deployment.json', new TextEncoder().encode(JSON.stringify(stale)));
+  const opened = await request('open', 'returning vault password');
+  expect(opened.result).toMatchObject({ primaryUri: stale.primaryUri });
+  expect(fixture.sockets.prepareElectrum).not.toHaveBeenCalled();
+
+  const move = {
+    sourceDeviceId: crypto.randomUUID(),
+    targetDeviceId: crypto.randomUUID(),
+    transferId: crypto.randomUUID(),
+    envelope: Uint8Array.of(1),
+  };
+  const configError = { error: { code: 'WALLET_CONFIGURATION' } };
+  expect(await request('begin-send')).toMatchObject(configError);
+  expect(await request('request', { method: 'POST', path: '/api/wallets/' + walletId + '/start' })).toMatchObject(
+    configError,
+  );
+  expect(await request('handoff-export', { ...payload(), ...move })).toMatchObject(configError);
+  expect(await request('handoff-import', { ...payload(), ...move, network: 'mainnet' })).toMatchObject(configError);
+  fetchGrant.mockRejectedValueOnce(new Error('offline'));
+  expect(await request('handoff-import', { ...payload(), ...move })).toMatchObject(configError);
+  fetchGrant.mockResolvedValueOnce(Response.json(stale));
+  expect(await request('handoff-import', { ...payload(), ...move })).toMatchObject(configError);
+  expect(fixture.engine.close).not.toHaveBeenCalled();
+
+  // The installer separately verifies the Ring-derived key, source profile, and
+  // local binding. Check which deployment and device this worker gives it.
+  const installer = vi.spyOn(await import('./handoff.mjs'), 'installHandoff');
+  const result = { id: walletId, network: grant.network, deviceId: move.targetDeviceId };
+  try {
+    installer.mockResolvedValueOnce(result);
+    fixture.engine.request.mockResolvedValueOnce([{ id: walletId, status: 'stopped' }]);
+    expect((await request('handoff-import', { ...payload(), ...move })).result).toEqual(result);
+    expect(installer).toHaveBeenCalledWith(
+      fixture.volume,
+      expect.objectContaining({
+        deployment: { network: grant.network, primaryUri: grant.primaryUri, electrum: grant.electrum },
+      }),
+      move.targetDeviceId,
+      move.envelope,
+      expect.any(Function),
+    );
+    expect(fixture.engine.close).toHaveBeenCalledOnce();
+  } finally {
+    installer.mockRestore();
+  }
 });
 
 it('prepares SQL and a fixed relay ticket without unlocking, then reuses both during open', async () => {
@@ -454,7 +589,10 @@ it('reports only local dial categories and authoritative ownership evidence for 
     [prefix + 'Handshake timeout', 'handshake-timeout'],
     ["connectPeer timed out after 10000ms (is test:1 the peer's P2P address?)", 'handshake-timeout'],
     [prefix + 'Connection closed during handshake', 'handshake-closed'],
-    [prefix + 'Primary node connection is unavailable at test:1. Check the address, port, and network.', 'relay-unavailable'],
+    [
+      prefix + 'Primary node connection is unavailable at test:1. Check the address, port, and network.',
+      'relay-unavailable',
+    ],
     [prefix + 'Expected init message (type 16), got type 17', 'protocol-mismatch'],
     [prefix + 'Remote warning: writer ownership is not confirmed', null],
   ] as const) {
@@ -475,7 +613,9 @@ it('reports only local dial categories and authoritative ownership evidence for 
   onDiagnostic({ phase: 'peer:connect', message: key });
   fixture.engine.request.mockResolvedValueOnce(running);
   expect((await inspect()).result).toBeNull();
-  expect(fixture.engine.request.mock.lastCall).toEqual([{ method: 'GET', path: '/wallets/' + walletId + '/api/recovery/status' }]);
+  expect(fixture.engine.request.mock.lastCall).toEqual([
+    { method: 'GET', path: '/wallets/' + walletId + '/api/recovery/status' },
+  ]);
   fixture.engine.request.mockClear();
   expect((await request('primary-connection-issue', { walletId: '../another-wallet' })).error).toBeDefined();
   expect((await request('primary-connection-issue', { walletId }, 'another account')).error).toBeDefined();

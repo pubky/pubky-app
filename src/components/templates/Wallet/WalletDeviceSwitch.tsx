@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useEffectEvent, useState } from 'react';
+import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import type { Network } from '@beignet/wallet-core';
 import { ArrowRight, ArrowRightLeft } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import type { WalletKeyConsumer } from '@/services/homeserver/wallet-identity';
+import type { RingDeviceStatus } from '@/services/wallet/ring-enrollment';
 import { WalletKeyApproval } from './WalletKeyApproval';
 import { WalletPanel } from './WalletPanel';
 
@@ -13,7 +14,8 @@ export type DeviceAction = 'offer' | 'take' | 'keep' | 'elsewhere';
 const copy = {
   offer: {
     title: 'Move to another device',
-    description: 'Approve in Ring to pause payments here and save an encrypted copy for your other device.',
+    description:
+      'Your wallet is paused on this device. Approve in Ring to share the encrypted transfer with your other device.',
     button: 'Prepare transfer',
     working: 'Saving your wallet to your homeserver…',
   },
@@ -34,7 +36,7 @@ const copy = {
   elsewhere: {
     title: 'Your wallet is on another device',
     description:
-      'Open Wallet on the device you last used. Under the key icon, choose “Move to another device”, then check here.',
+      'Open Wallet on the device you last used. Under the key icon, choose “Move to another device”, then approve in Ring. This screen checks for the transfer automatically.',
     button: 'Check for transfer',
     working: '',
   },
@@ -55,22 +57,61 @@ export function WalletDeviceSwitch({
   action: DeviceAction;
   progress?: number;
   onApprove: WalletKeyConsumer;
-  onRefresh: () => Promise<void>;
+  onRefresh: (signal: AbortSignal) => Promise<RingDeviceStatus['state'] | undefined>;
   onRecover?: () => void;
   onClose: () => void;
 }) {
   const [approving, setApproving] = useState(action === 'offer');
   const [checking, setChecking] = useState(false);
   const [message, setMessage] = useState('');
-  const checkOnReturn = useEffectEvent(() => {
-    if (!document.hidden && !checking) void onRefresh().catch(() => {});
-  });
+  const manualCheck = useRef<() => void>(null);
+  const refresh = useEffectEvent((signal: AbortSignal) => onRefresh(signal));
   useEffect(() => {
     if (action !== 'elsewhere') return;
-    const returned = () => checkOnReturn();
-    document.addEventListener('visibilitychange', returned);
-    return () => document.removeEventListener('visibilitychange', returned);
-  }, [action]);
+    const controller = new AbortController();
+    const { signal } = controller;
+    const interval = 5000;
+    let delay = interval;
+    let timer: number | undefined;
+    let pending = false;
+    function schedule() {
+      window.clearTimeout(timer);
+      if (!signal.aborted && !document.hidden) timer = window.setTimeout(() => void check(), delay);
+    }
+    async function check() {
+      if (pending || document.hidden || signal.aborted) return;
+      window.clearTimeout(timer);
+      pending = true;
+      setChecking(true);
+      try {
+        const state = await refresh(signal);
+        if (!signal.aborted) setMessage(state === 'other-device' ? 'Still waiting for your other device.' : '');
+        delay = interval;
+      } catch {
+        if (!signal.aborted) setMessage('Could not check your homeserver. Trying again…');
+        delay = Math.min(30_000, delay * 2);
+      } finally {
+        pending = false;
+        if (!signal.aborted) {
+          setChecking(false);
+          schedule();
+        }
+      }
+    }
+    function visibilityChanged() {
+      if (document.hidden) window.clearTimeout(timer);
+      else void check();
+    }
+    manualCheck.current = () => void check();
+    document.addEventListener('visibilitychange', visibilityChanged);
+    schedule();
+    return () => {
+      controller.abort();
+      window.clearTimeout(timer);
+      document.removeEventListener('visibilitychange', visibilityChanged);
+      manualCheck.current = null;
+    };
+  }, [account, network, action]);
   const content = copy[action];
   if (approving && action !== 'elsewhere') {
     return (
@@ -86,18 +127,6 @@ export function WalletDeviceSwitch({
       />
     );
   }
-  async function check() {
-    setChecking(true);
-    setMessage('');
-    try {
-      await onRefresh();
-      setMessage('Still waiting for your other device.');
-    } catch {
-      setMessage('Could not check your homeserver. Try again.');
-    } finally {
-      setChecking(false);
-    }
-  }
   return (
     <WalletPanel title={content.title} icon={ArrowRightLeft}>
       <p className="text-sm text-muted-foreground">{content.description}</p>
@@ -106,7 +135,7 @@ export function WalletDeviceSwitch({
           type="button"
           variant="brand"
           disabled={checking}
-          onClick={() => (action === 'elsewhere' ? void check() : setApproving(true))}
+          onClick={() => (action === 'elsewhere' ? manualCheck.current?.() : setApproving(true))}
         >
           {checking ? 'Checking…' : content.button} <ArrowRight aria-hidden />
         </Button>
@@ -119,7 +148,7 @@ export function WalletDeviceSwitch({
           Lock wallet
         </Button>
       </div>
-      {message && (
+      {action === 'elsewhere' && message && (
         <p className="text-sm text-muted-foreground" role="status">
           {message}
         </p>

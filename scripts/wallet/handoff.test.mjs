@@ -6,8 +6,10 @@ import { sha256 } from '@noble/hashes/sha256';
 import {
   assertHandoffReady,
   authorizeHandoff,
+  handoffErrorMessage,
   installHandoff,
   sealHandoff,
+  verifyHandoffSource,
 } from '../../src/core/services/wallet/handoff.mjs';
 import { createHandoffClose } from '../../src/core/services/wallet/handoff-close.mjs';
 import { provisionRingWallet, ringBinding, ringDeviceId } from '../../src/core/services/wallet/ring.mjs';
@@ -90,7 +92,15 @@ test('a clean handoff moves exact wallet files under the destination password, r
   source.write(receipt, encode({ receipt: 'away' }));
   source.compact();
   const digest = sha256(source.read(dbPath));
-  await assert.rejects(sealHandoff(source, auth, new Uint8Array(32)));
+  await assert.rejects(sealHandoff(source, auth, new Uint8Array(32)), { reason: 'SNAPSHOT' });
+  await assert.rejects(
+    sealHandoff(source, { ...auth, deployment: { ...profile, primaryUri: 'another-primary' } }, digest),
+    {
+      reason: 'PROFILE',
+    },
+  );
+  assert.throws(() => verifyHandoffSource(source, { ...auth, commitment: '0'.repeat(64) }), { reason: 'RING_BINDING' });
+  assert.throws(() => verifyHandoffSource(source, { ...auth, mnemonic: '' }), { reason: 'REGISTRY' });
   const envelope = await sealHandoff(source, auth, digest);
   assert.equal(new TextDecoder().decode(envelope).includes('durable commitment'), false);
   const opened = () => installHandoff(target, auth, targetId, envelope, assertOpen);
@@ -166,20 +176,40 @@ test('a clean handoff moves exact wallet files under the destination password, r
 });
 
 test('a clean close requires graceful node and wallet stops and the exact flushed SQL image', async () => {
-  for (const outcome of ['clean', 'fallback', 'abandoned', 'persistence', 'new htlc', 'no database close']) {
+  for (const outcome of [
+    'clean',
+    'idle empty',
+    'live database changed',
+    'write failed',
+    'fallback',
+    'abandoned',
+    'persistence',
+    'new htlc',
+    'no database close',
+  ]) {
     const observer = createHandoffClose();
     const volume = new Map();
     const factory = await createSqlJsDatabaseFactory({
-      load: () => null,
+      load: (path) => volume.get(path),
       save(path, bytes) {
         if (!observer.capture(path, bytes)) volume.set(path, bytes.slice());
       },
     });
     const db = observer.opened(dbPath, factory(dbPath));
     db.exec('CREATE TABLE channels (channel_id TEXT PRIMARY KEY)');
-    db.prepare('INSERT INTO channels VALUES (?)').run('deadbeef');
     const state = { htlcs: new Map(), pendingLocalUpdates: [] };
-    const channels = [{ getFullState: () => state, getChannelId: () => Buffer.from('deadbeef', 'hex') }];
+    const channels = [];
+    if (!['idle empty', 'live database changed'].includes(outcome)) {
+      db.prepare('INSERT INTO channels VALUES (?)').run('deadbeef');
+      channels.push({ getFullState: () => state, getChannelId: () => Buffer.from('deadbeef', 'hex') });
+    }
+    const before = volume.get(dbPath);
+    if (outcome === 'live database changed') {
+      // SQL.js can change the live header through pragma() without a save callback.
+      db.pragma('user_version = 17');
+      assert.deepEqual(db.pragma('user_version'), [{ user_version: 17 }]);
+      assert.equal(volume.get(dbPath), before);
+    }
     const node = Object.assign(new EventEmitter(), {
       getChannelManager: () => ({ listChannels: () => channels }),
       async gracefulShutdown() {
@@ -209,9 +239,24 @@ test('a clean close requires graceful node and wallet stops and the exact flushe
         },
       },
       network,
+      (path, bytes) => {
+        if (outcome === 'write failed') throw new Error('Commit interrupted');
+        volume.set(path, bytes.slice());
+      },
     );
-    if (outcome === 'clean') assert.deepEqual(await close, sha256(volume.get(dbPath)));
-    else await assert.rejects(close, { code: 'WALLET_CLOSE_UNCERTAIN' });
+    if (['clean', 'idle empty', 'live database changed'].includes(outcome)) {
+      assert.deepEqual(await close, sha256(volume.get(dbPath)));
+      if (outcome === 'idle empty') assert.deepEqual(volume.get(dbPath), before);
+      if (outcome === 'live database changed') {
+        assert.notDeepEqual(volume.get(dbPath), before);
+        const reopened = factory(dbPath);
+        assert.deepEqual(reopened.pragma('user_version'), [{ user_version: 17 }]);
+        reopened.close();
+      }
+    } else {
+      await assert.rejects(close, { code: 'WALLET_CLOSE_UNCERTAIN' });
+      assert.equal(volume.get(dbPath), before);
+    }
     assert.equal(node.gracefulShutdown, graceful);
     assert.equal(wallet.stop, stop);
     db.close();
@@ -226,18 +271,38 @@ test('requires a running, idle recovery and payment surface', async () => {
     autoApply: { phase: 'idle' },
     node: { gate: 'disabled', fenced: false, awaitingDurabilityCount: 0, heldReestablish: [], channels: [] },
   };
+  const payments = [{ status: 'PENDING', direction: 'INCOMING' }];
   const engine = {
     request: async ({ path }) => {
       if (path.endsWith('/recovery/status')) return status;
       if (path.endsWith('/receive/offline')) return { reservedChannelIds: [], requests: [] };
-      if (path.endsWith('/payments')) return [{ status: 'PENDING', direction: 'INCOMING' }];
+      assert.equal(status.importPending, false, 'a recovering node may reject its other daemon routes');
+      if (path.endsWith('/payments')) return payments;
       return [];
     },
   };
   await assertHandoffReady(engine, id);
   status.node.channels.push({ channelId: 'a', status: 'active', restoreRecencyUnproven: true });
-  await assert.rejects(assertHandoffReady(engine, id), { code: 'WALLET_HANDOFF_PENDING' });
+  await assert.rejects(assertHandoffReady(engine, id), {
+    code: 'WALLET_HANDOFF_PENDING',
+    reason: 'CHANNELS_UNSETTLED',
+  });
   status.node.channels.length = 0;
   status.importPending = true;
-  await assert.rejects(assertHandoffReady(engine, id), { code: 'WALLET_HANDOFF_PENDING' });
+  await assert.rejects(assertHandoffReady(engine, id), { code: 'WALLET_HANDOFF_PENDING', reason: 'RECOVERY_PENDING' });
+  status.importPending = false;
+  payments.push({ status: 'PENDING', direction: 'OUTGOING' });
+  await assert.rejects(assertHandoffReady(engine, id), {
+    code: 'WALLET_HANDOFF_PENDING',
+    reason: 'OPERATIONS_UNSETTLED',
+  });
+});
+
+test('only known handoff reasons can reach the device', () => {
+  assert.match(handoffErrorMessage({ code: 'WALLET_HANDOFF_PENDING', reason: 'RECOVERY_PENDING' }), /recovery peer/i);
+  assert.doesNotMatch(
+    handoffErrorMessage({ code: 'WALLET_HANDOFF_INVALID', reason: 'private text', message: 'sensitive' }),
+    /private text|sensitive/,
+  );
+  assert.equal(typeof handoffErrorMessage({ code: 'WALLET_HANDOFF_INVALID', reason: '__proto__' }), 'string');
 });

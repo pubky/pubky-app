@@ -1,6 +1,6 @@
 import { type ReceiveQuote, type ReceiveRequest, type SendReview, WalletError } from '@beignet/wallet-core';
 import { afterEach, expect, it, vi } from 'vitest';
-import { WalletSession } from './session';
+import { WalletHandoffImportError, WalletSession } from './session';
 
 type Request = { id: number; operation: string };
 
@@ -86,6 +86,27 @@ it('waits for the durable send marker and clears it only for known outcomes', as
   send.mockRejectedValueOnce(new WalletError('expired', 'QUOTE_EXPIRED'));
   await expect(session.send(review)).rejects.toThrow('expired');
   expect(operations.at(-1)).toEqual(['finish-send', 'failed']);
+  await session.close();
+});
+
+it('marks only recognized worker replies to the pending import as handoff explanations', async () => {
+  const details = { code: 'WALLET_HANDOFF_INVALID', message: 'The saved wallet transfer could not be verified.' };
+  class TestWorker {
+    onmessage?: (event: { data: unknown }) => void;
+    postMessage(request: Request) {
+      this.onmessage?.({ data: { id: request.id, ...(request.operation === 'close' ? {} : { error: details }) } });
+    }
+    terminate() {}
+  }
+  vi.stubGlobal('Worker', TestWorker);
+  const session = new WalletSession(auth.currentUserPubky);
+  const install = () =>
+    session.importHandoff(new Uint8Array(32), 'regtest', 'transfer', 'source', 'destination', Uint8Array.of(1));
+  await expect(install()).rejects.toBeInstanceOf(WalletHandoffImportError);
+  await expect(session.ringBinding()).rejects.not.toBeInstanceOf(WalletHandoffImportError);
+  details.code = 'UNKNOWN_CODE';
+  details.message = 'private diagnostic';
+  await expect(install()).rejects.not.toBeInstanceOf(WalletHandoffImportError);
   await session.close();
 });
 

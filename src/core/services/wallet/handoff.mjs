@@ -15,16 +15,52 @@ const limits = { maxFiles: 16384, maxNameBytes: 4096, views: true };
 const profilePath = '/pubky/deployment.json';
 const registryPath = '/wallet/registry.json';
 
-const invalid = () =>
-  Object.assign(new Error('The wallet transfer could not be verified.'), { code: 'WALLET_HANDOFF_INVALID' });
-const unsettled = () =>
-  Object.assign(new Error('Wait for wallet activity and recovery to settle before moving the wallet.'), {
-    code: 'WALLET_HANDOFF_PENDING',
-  });
+const transferMessages = {
+  RING_BINDING:
+    'The Ring approval does not match this wallet and device. Approve with the identity that created the wallet.',
+  REGISTRY: 'The saved wallet record does not match the Ring wallet. Lock and reopen the wallet to check it.',
+  PROFILE:
+    'The Bitcoin network or primary node differs from the wallet’s saved configuration. Reopen with its original relay settings.',
+  RECOVERY_PENDING:
+    'This wallet is waiting for its channel backup from the recovery peer. Check Recovery before moving it.',
+  CHANNELS_UNSETTLED:
+    'Lightning channel state is still being verified. Check Recovery and wait for the channels to settle before moving the wallet.',
+  OPERATIONS_UNSETTLED: 'Review pending wallet activity before moving this wallet.',
+  SNAPSHOT: 'The saved wallet transfer could not be verified. Lock and reopen the wallet to check its status.',
+};
 
-function json(bytes) {
-  if (!bytes || bytes.length > 1024 * 1024) throw invalid();
-  return JSON.parse(decoder.decode(bytes));
+export function handoffErrorMessage(error) {
+  if (
+    ['WALLET_HANDOFF_INVALID', 'WALLET_HANDOFF_PENDING'].includes(error?.code) &&
+    typeof error.reason === 'string' &&
+    Object.hasOwn(transferMessages, error.reason)
+  )
+    return transferMessages[error.reason];
+  if (error?.code === 'WALLET_HANDOFF_PENDING') return transferMessages.OPERATIONS_UNSETTLED;
+  if (error?.code === 'WALLET_HANDOFF_INVALID') return transferMessages.SNAPSHOT;
+  if (error?.code === 'WALLET_CLOSE_UNCERTAIN')
+    return 'The wallet could not verify a clean shutdown. Reopen it and check Activity before trying again.';
+  if (error?.code === 'WALLET_CONFIGURATION')
+    return 'Reconnect to the wallet’s original Bitcoin network and primary node, then try the move again.';
+  if (error?.code === 'WALLET_BUSY') return 'Wait for the current wallet operation to finish and try the move again.';
+  if (error?.code === 'WALLET_CLOSED') return 'The wallet locked during the move. Unlock it to continue.';
+  if (error?.code === 'WALLET_STORAGE' || error?.name === 'QuotaExceededError')
+    return 'The browser could not read or save the wallet data. Keep the site data and check available storage.';
+  return 'This browser could not verify the wallet data for this move.';
+}
+
+const invalid = (reason = 'SNAPSHOT') =>
+  Object.assign(new Error(transferMessages[reason]), { code: 'WALLET_HANDOFF_INVALID', reason });
+const unsettled = (reason) =>
+  Object.assign(new Error(transferMessages[reason]), { code: 'WALLET_HANDOFF_PENDING', reason });
+
+function json(bytes, reason) {
+  if (!bytes || bytes.length > 1024 * 1024) throw invalid(reason);
+  try {
+    return JSON.parse(decoder.decode(bytes));
+  } catch {
+    throw invalid(reason);
+  }
 }
 
 function held(channel) {
@@ -43,21 +79,16 @@ function held(channel) {
 export async function assertHandoffReady(engine, id) {
   const get = (path) => engine.request({ method: 'GET', path });
   const api = '/wallets/' + id + '/api';
-  const [recovery, channels, payments, submissions, sends, offline] = await Promise.all([
-    get(api + '/recovery/status'),
-    get(api + '/channels'),
-    get(api + '/payments'),
-    get('/api/wallets/' + id + '/activity'),
-    get(api + '/channel-send/list'),
-    get(api + '/receive/offline'),
-  ]);
+  // A node held for seed recovery can reject its other daemon routes.
+  // Read recovery first so the refusal retains its actual cause.
+  const recovery = await get(api + '/recovery/status');
+  if (recovery?.importPending === true || recovery?.restore?.inProgress) throw unsettled('RECOVERY_PENDING');
   const node = recovery?.node;
   if (
     recovery?.mode !== 'peer-storage' ||
     recovery.state !== 'running' ||
     recovery.importPending !== false ||
     !['idle', 'applied'].includes(recovery.autoApply?.phase) ||
-    recovery.restore?.inProgress ||
     !node ||
     !['disabled', 'confirmed'].includes(node.gate) ||
     node.fenced !== false ||
@@ -68,7 +99,14 @@ export async function assertHandoffReady(engine, id) {
     !Array.isArray(node.channels) ||
     node.channels.some((ch) => ch.status !== 'active' || held(ch))
   )
-    throw unsettled();
+    throw unsettled('CHANNELS_UNSETTLED');
+  const [channels, payments, submissions, sends, offline] = await Promise.all([
+    get(api + '/channels'),
+    get(api + '/payments'),
+    get('/api/wallets/' + id + '/activity'),
+    get(api + '/channel-send/list'),
+    get(api + '/receive/offline'),
+  ]);
   if (
     !Array.isArray(channels) ||
     channels.some((ch) => {
@@ -84,7 +122,7 @@ export async function assertHandoffReady(engine, id) {
       );
     })
   )
-    throw unsettled();
+    throw unsettled('CHANNELS_UNSETTLED');
   if (
     !Array.isArray(payments) ||
     payments.some(
@@ -98,11 +136,12 @@ export async function assertHandoffReady(engine, id) {
     !Array.isArray(offline.requests) ||
     offline.requests.some((job) => !job.done || job.unresolvedSlots > 0)
   )
-    throw unsettled();
+    throw unsettled('OPERATIONS_UNSETTLED');
 }
 
 export async function authorizeHandoff(account, { key, network, transferId, sourceDeviceId }, deployment) {
-  if (!uuid.test(transferId) || !uuid.test(sourceDeviceId) || network !== deployment?.network) throw invalid();
+  if (network !== deployment?.network) throw invalid('PROFILE');
+  if (!uuid.test(transferId) || !uuid.test(sourceDeviceId)) throw invalid();
   const entropy = deriveRingEntropy(key, account, network);
   const info = text.encode([account, network, transferId, sourceDeviceId].join('\0'));
   try {
@@ -132,18 +171,18 @@ export async function authorizeHandoff(account, { key, network, transferId, sour
 
 function verifyBinding(record, auth, deviceId) {
   if (record?.network !== auth.network || record.commitment !== auth.commitment || record.deviceId !== deviceId)
-    throw invalid();
+    throw invalid('RING_BINDING');
 }
 
 function verifyRegistry(registry, auth) {
-  const record = registry.record;
+  const record = registry?.record;
   if (
     !record ||
     !/^[0-9a-f]{32}$/.test(record.id) ||
     record.network !== auth.network ||
     registry.mnemonic !== auth.mnemonic
   )
-    throw invalid();
+    throw invalid('REGISTRY');
   return record.id;
 }
 
@@ -151,14 +190,19 @@ export function verifyHandoffSource(volume, auth) {
   verifyBinding(bindingRecord(volume), auth, auth.sourceDeviceId);
   const bytes = volume.read(registryPath);
   try {
-    return verifyRegistry(json(bytes), auth);
+    return verifyRegistry(json(bytes, 'REGISTRY'), auth);
   } finally {
     bytes?.fill(0);
   }
 }
 
 function readSnapshot(plain, auth) {
-  const files = unpackFiles(plain, limits);
+  let files;
+  try {
+    files = unpackFiles(plain, limits);
+  } catch {
+    throw invalid();
+  }
   for (const path of files.keys()) {
     if (
       !path.startsWith('/') ||
@@ -176,22 +220,26 @@ function readSnapshot(plain, auth) {
   };
   const binding = bindingRecord(stored);
   verifyBinding(binding, auth, auth.sourceDeviceId);
-  const registry = json(files.get(registryPath));
+  const registry = json(files.get(registryPath), 'REGISTRY');
   const id = verifyRegistry(registry, auth);
-  const profile = json(files.get(profilePath));
+  const profile = json(files.get(profilePath), 'PROFILE');
   if (
-    profile.network !== auth.network ||
+    profile?.network !== auth.network ||
     profile.primaryUri !== auth.deployment.primaryUri ||
     profile.electrum?.host !== auth.deployment.electrum.host ||
     profile.electrum?.port !== auth.deployment.electrum.port ||
-    profile.electrum?.tls !== auth.deployment.electrum.tls ||
+    profile.electrum?.tls !== auth.deployment.electrum.tls
+  )
+    throw invalid('PROFILE');
+  if (
     (registry.recoveryImport?.autoApply && registry.recoveryImport.complete !== true) ||
     (binding.mode === 'restore' && registry.recoveryImport?.complete !== true) ||
     files.has('/wallet/' + auth.network + '.capsule-restore.json')
   )
-    throw invalid();
+    throw invalid('RECOVERY_PENDING');
   const db = files.get('/wallet/' + auth.network + '.db');
-  if (!db || db.length < 100 || decoder.decode(db.subarray(0, 16)) !== 'SQLite format 3\0') throw invalid();
+  if (!db || db.length < 100 || !text.encode('SQLite format 3\0').every((byte, index) => db[index] === byte))
+    throw invalid();
   return { files, binding, id, db };
 }
 
@@ -243,20 +291,26 @@ export async function installHandoff(volume, auth, targetDeviceId, envelope, ass
     verifyBinding(previous, auth, targetDeviceId);
     const bytes = volume.read(registryPath);
     try {
-      if (bytes) localId = verifyRegistry(json(bytes), auth);
+      if (bytes) localId = verifyRegistry(json(bytes, 'REGISTRY'), auth);
     } finally {
       bytes?.fill(0);
     }
   } else if (volume.list().some((path) => path !== profilePath && path !== devicePath)) {
     throw invalid();
   }
-  const plain = new Uint8Array(
-    await crypto.subtle.decrypt(
-      parameters(auth, envelope.subarray(0, nonceBytes)),
-      auth.cipher,
-      envelope.subarray(nonceBytes),
-    ),
-  );
+  let plain;
+  try {
+    plain = new Uint8Array(
+      await crypto.subtle.decrypt(
+        parameters(auth, envelope.subarray(0, nonceBytes)),
+        auth.cipher,
+        envelope.subarray(nonceBytes),
+      ),
+    );
+  } catch {
+    // Failed authentication can also mean the envelope changed in transit.
+    throw invalid();
+  }
   let installed = false;
   try {
     const { files, binding, id } = readSnapshot(plain, auth);

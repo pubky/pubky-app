@@ -59,18 +59,20 @@ export function createHandoffClose() {
       if (/^\/wallet\/(mainnet|testnet|regtest)\.db$/.test(path)) database = { path, db };
       return db;
     },
-    // The SQL adapter exports the live SQLite image synchronously for backup.
-    // Only this one-time worker-internal destination intercepts a save.
+    // SQL.js calls save synchronously from backup. Hash and commit the same
+    // final export before releasing the live database.
     capture(path, bytes) {
       if (!capture || capture.path !== path) return false;
       try {
-        capture.digest = sha256(bytes);
+        const digest = sha256(bytes);
+        capture.writeDatabase(database.path, bytes);
+        capture.digest = digest;
       } finally {
         bytes.fill(0);
       }
       return true;
     },
-    async close(engine, network) {
+    async close(engine, network, writeDatabase) {
       const current = build;
       const db = database?.db;
       if (
@@ -79,7 +81,8 @@ export function createHandoffClose() {
         current.network !== network ||
         database?.path !== '/wallet/' + network + '.db' ||
         !current.node ||
-        !db
+        !db ||
+        typeof writeDatabase !== 'function'
       )
         throw uncertain();
       const node = current.node;
@@ -134,7 +137,7 @@ export function createHandoffClose() {
               return result;
             },
         );
-        capture = { path: '/pubky/handoff-check/' + crypto.randomUUID() };
+        capture = { path: '/pubky/handoff-check/' + crypto.randomUUID(), writeDatabase };
         observe(
           db,
           'close',
@@ -152,7 +155,7 @@ export function createHandoffClose() {
                     .some((ch) => !saved.has(ch.getChannelId()?.toString('hex')))
                 )
                   failure();
-                backup = db.backup(capture.path).catch(failure);
+                if (!failed && build === current && current.shutdown) backup = db.backup(capture.path).catch(failure);
               } catch {
                 failure();
               }

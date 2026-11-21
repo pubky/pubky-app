@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { bech32 } from 'bech32';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { RingEnrollmentError } from '@/services/wallet/ring-enrollment';
 import type { LastWalletBalance, WalletStartProgress } from '@/services/wallet/session';
 import { Wallet } from './Wallet';
 import { WalletAccount } from './WalletAccount';
@@ -28,6 +29,7 @@ const wallet = vi.hoisted(() => ({
   cancelRingHandoff: vi.fn(),
   claimRingHandoff: vi.fn(),
   importHandoff: vi.fn(),
+  prepareHandoff: vi.fn(),
   exportHandoff: vi.fn(),
   prepareLocalUnlock: vi.fn(),
   openWithRing: vi.fn(),
@@ -71,8 +73,17 @@ vi.mock('@/services/wallet/ring-enrollment', () => ({
   claimRingHandoff: wallet.claimRingHandoff,
 }));
 vi.mock('./WalletKeyApproval', () => ({
-  WalletKeyApproval: ({ onKey }: { onKey: (key: Uint8Array, assertCurrent: () => void) => Promise<void> }) => (
-    <button onClick={() => void onKey(new Uint8Array(32), () => {})}>Approve in test Ring</button>
+  WalletKeyApproval: ({
+    onKey,
+    onCancel,
+  }: {
+    onKey: (key: Uint8Array, assertCurrent: () => void) => Promise<void>;
+    onCancel: () => void;
+  }) => (
+    <>
+      <button onClick={() => void onKey(new Uint8Array(32), () => {})}>Approve in test Ring</button>
+      <button onClick={onCancel}>Cancel Ring approval</button>
+    </>
   ),
 }));
 vi.mock('@/libs/wallet/resolveRecipient', () => ({ resolveRecipient: wallet.resolveRecipient }));
@@ -111,6 +122,7 @@ vi.mock('@/services/wallet/session', () => ({
     ringDeviceId = wallet.ringDeviceId;
     createRingWallet = wallet.createRingWallet;
     importHandoff = wallet.importHandoff;
+    prepareHandoff = wallet.prepareHandoff;
     exportHandoff = wallet.exportHandoff;
     prepareLocalUnlock = wallet.prepareLocalUnlock;
     openWithRing = wallet.openWithRing;
@@ -256,6 +268,169 @@ describe('Pubky wallet', () => {
     expect(wallet.prepareLocalUnlock).toHaveBeenCalledOnce();
   });
 
+  describe('moving a Ring wallet from its current device', () => {
+    const binding = { mode: 'create', network: 'regtest', deviceId: 'phone', transferId: 'previous-transfer' };
+    const lease = () => ({
+      assertActive: vi.fn(),
+      release: vi.fn().mockResolvedValue(undefined),
+      abandon: vi.fn().mockResolvedValue(undefined),
+      publishHandoff: vi.fn().mockResolvedValue(undefined),
+    });
+    async function startMove(beforeClick?: () => void) {
+      render(<Wallet />);
+      await unlock();
+      fireEvent.click(await screen.findByRole('button', { name: 'Back up wallet' }));
+      const move = await screen.findByRole('button', { name: 'Move to another device' });
+      await waitFor(() => expect(move).toBeEnabled());
+      beforeClick?.();
+      await act(async () => fireEvent.click(move));
+    }
+    function openSource() {
+      const running = lease();
+      wallet.ringBinding.mockResolvedValue(binding);
+      wallet.acquireRingDevice.mockResolvedValueOnce(running);
+      wallet.prepareHandoff.mockResolvedValue(binding);
+      wallet.exportHandoff.mockResolvedValue(Uint8Array.of(1));
+      return running;
+    }
+    it('pauses under the original lease, releases it before Ring, and reacquires the installed receipt before exporting', async () => {
+      const running = openSource();
+      const stopped = Promise.withResolvers<typeof binding>();
+      const released = Promise.withResolvers<void>();
+      const acquired = Promise.withResolvers<ReturnType<typeof lease>>();
+      const publishing = lease();
+      wallet.prepareHandoff.mockReturnValue(stopped.promise);
+      running.release.mockReturnValue(released.promise);
+      wallet.acquireRingDevice.mockReturnValueOnce(acquired.promise);
+
+      await startMove(() => running.assertActive.mockClear());
+      expect(wallet.prepareHandoff).toHaveBeenCalledWith(binding.network);
+      expect(wallet.guardRingDevice).toHaveBeenCalledWith(running.assertActive);
+      expect(running.assertActive).toHaveBeenCalledBefore(wallet.prepareHandoff);
+      expect(screen.queryByRole('button', { name: 'Approve in test Ring' })).toBeNull();
+      expect(running.release).not.toHaveBeenCalled();
+      await act(async () => stopped.resolve(binding));
+      expect(running.release).toHaveBeenCalledOnce();
+      expect(running.assertActive).toHaveBeenCalledTimes(2);
+      expect(running.assertActive).toHaveBeenCalledBefore(running.release);
+      expect(screen.queryByRole('button', { name: 'Approve in test Ring' })).toBeNull();
+      await act(async () => released.resolve());
+      expect(wallet.acquireRingDevice).toHaveBeenCalledTimes(1);
+      expect(wallet.close).not.toHaveBeenCalled();
+      fireEvent.click(await screen.findByRole('button', { name: 'Approve in test Ring' }));
+      expect(wallet.acquireRingDevice).toHaveBeenNthCalledWith(
+        2,
+        wallet.account,
+        binding.network,
+        binding.deviceId,
+        'open',
+        expect.any(Function),
+        binding.transferId,
+      );
+      expect(wallet.exportHandoff).not.toHaveBeenCalled();
+      await act(async () => acquired.resolve(publishing));
+      expect(await screen.findByText('Ready on your other device')).toBeVisible();
+      expect(wallet.guardRingDevice).toHaveBeenLastCalledWith(publishing.assertActive);
+      expect(publishing.assertActive).toHaveBeenCalledBefore(wallet.exportHandoff);
+      const transferId = wallet.exportHandoff.mock.calls[0][2];
+      expect(wallet.exportHandoff).toHaveBeenCalledWith(
+        expect.any(Uint8Array),
+        binding.network,
+        transferId,
+        binding.deviceId,
+      );
+      expect(publishing.publishHandoff).toHaveBeenCalledWith(transferId, expect.any(Uint8Array), expect.any(Function));
+      expect(running.publishHandoff).not.toHaveBeenCalled();
+      expect(publishing.release).toHaveBeenCalledOnce();
+    });
+
+    it('leaves the transfer unpublished if the owner changed while Ring was in front', async () => {
+      openSource();
+      wallet.acquireRingDevice.mockRejectedValueOnce(new Error('The wallet device record changed.'));
+      await startMove();
+      fireEvent.click(await screen.findByRole('button', { name: 'Approve in test Ring' }));
+      expect(await screen.findByText('Transfer was not shared')).toBeVisible();
+      expect(wallet.exportHandoff).not.toHaveBeenCalled();
+      expect(wallet.close).toHaveBeenCalledOnce();
+    });
+
+    it('locks the stopped source when Ring approval is cancelled', async () => {
+      const running = openSource();
+      await startMove();
+      fireEvent.click(await screen.findByRole('button', { name: 'Cancel Ring approval' }));
+      expect(await screen.findByRole('button', { name: 'Unlock wallet' })).toBeVisible();
+      expect(running.release).toHaveBeenCalledOnce();
+      expect(wallet.close).toHaveBeenCalledOnce();
+      expect(wallet.acquireRingDevice).toHaveBeenCalledTimes(1);
+      expect(wallet.exportHandoff).not.toHaveBeenCalled();
+    });
+
+    it('lets the writer lease expire when the worker cannot verify its shutdown', async () => {
+      const running = openSource();
+      wallet.prepareHandoff.mockRejectedValue(
+        Object.assign(new Error('Wallet shutdown was interrupted.'), { code: 'WALLET_CLOSE_UNCERTAIN' }),
+      );
+      await startMove();
+      expect(await screen.findByText('Transfer was not shared')).toBeVisible();
+      expect(running.abandon).toHaveBeenCalledOnce();
+      expect(running.release).not.toHaveBeenCalled();
+      expect(wallet.exportHandoff).not.toHaveBeenCalled();
+    });
+
+    it('keeps the original wallet usable when activity prevents a clean pause', async () => {
+      const running = openSource();
+      wallet.prepareHandoff.mockRejectedValue(
+        Object.assign(new Error('Review pending wallet activity.'), { code: 'WALLET_HANDOFF_PENDING' }),
+      );
+      await startMove();
+      expect(await screen.findByText('Review pending wallet activity.')).toBeVisible();
+      expect(screen.getByRole('button', { name: 'Receive' })).toBeEnabled();
+      expect(screen.queryByRole('button', { name: 'Reopen wallet' })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Approve in test Ring' })).toBeNull();
+      expect(wallet.startWallet).toHaveBeenCalledOnce();
+      expect(wallet.close).not.toHaveBeenCalled();
+      expect(running.release).not.toHaveBeenCalled();
+      expect(wallet.exportHandoff).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['ready', 'Ready on your other device'],
+      ['claimed', 'Wallet moved to your other device'],
+      ['different-claim', 'Check your transfer'],
+      ['owned', 'Transfer was not shared'],
+      ['different-receipt', 'Check your transfer'],
+      ['different-offer', 'Check your transfer'],
+      ['unreachable', 'Check your transfer'],
+    ])('reconciles a lost publish response when the marker is %s', async (scenario, result) => {
+      const running = openSource();
+      const publishing = lease();
+      wallet.acquireRingDevice.mockResolvedValueOnce(publishing);
+      publishing.publishHandoff.mockRejectedValue(new Error('No acknowledgement.'));
+      wallet.inspectRingDevice.mockImplementation(async () => {
+        if (scenario === 'unreachable') throw new Error();
+        if (scenario === 'owned') return { state: 'this-device', transferId: binding.transferId };
+        if (scenario === 'different-receipt') return { state: 'this-device', transferId: 'different-receipt' };
+        const offerId = publishing.publishHandoff.mock.calls[0][0];
+        if (scenario === 'claimed' || scenario === 'different-claim') {
+          return { state: 'other-device', transferId: scenario === 'claimed' ? offerId : 'different-transfer' };
+        }
+        return {
+          state: 'handoff-ready',
+          sourceDeviceId: binding.deviceId,
+          transferId: scenario === 'ready' ? offerId : 'different-transfer',
+        };
+      });
+      await startMove();
+      fireEvent.click(await screen.findByRole('button', { name: 'Approve in test Ring' }));
+      expect(await screen.findByText(result)).toBeVisible();
+      if (scenario === 'claimed') expect(screen.getByRole('button', { name: 'Done' })).toBeVisible();
+      expect(wallet.inspectRingDevice).toHaveBeenCalledWith(wallet.account, binding.network, binding.deviceId);
+      expect(publishing.release).toHaveBeenCalledBefore(wallet.inspectRingDevice);
+      expect(publishing.publishHandoff).toHaveBeenCalledOnce();
+      expect(running.publishHandoff).not.toHaveBeenCalled();
+    });
+  });
+
   it('offers a ready handoff before peer recovery and waits for ownership before reporting success', async () => {
     wallet.exists = false;
     wallet.listWallets.mockResolvedValue([]);
@@ -285,6 +460,53 @@ describe('Pubky wallet', () => {
     expect(await screen.findByText('Wallet moved to this device')).toBeVisible();
     expect(wallet.startWallet).not.toHaveBeenCalled();
   });
+  it.each([
+    ['owned', 'Wallet moved to this device'],
+    ['ready', 'Wallet is still ready to move'],
+    ['untrusted-error', 'Wallet is still ready to move'],
+    ['lost-lease', 'Wallet is still ready to move'],
+    ['different-source', 'Check your transfer'],
+    ['different-offer', 'Check your transfer'],
+    ['different-receipt', 'Check your transfer'],
+    ['unreachable', 'Check your transfer'],
+  ])('rechecks an interrupted claim after closing when the marker is %s', async (scenario, title) => {
+    const destination = 'destination';
+    const offer = { state: 'handoff-ready', sourceDeviceId: 'source', transferId: 'transfer' };
+    const explanation = 'The saved wallet transfer could not be verified.';
+    wallet.ringBinding.mockResolvedValue({ deviceId: destination, network: 'regtest' });
+    wallet.acquireRingDevice.mockRejectedValueOnce(new RingEnrollmentError('Another device owns this wallet.'));
+    wallet.inspectRingDevice.mockResolvedValueOnce(offer).mockImplementationOnce(async () => {
+      expect(wallet.close).toHaveBeenCalled();
+      if (scenario === 'unreachable') throw new Error();
+      if (scenario === 'owned' || scenario === 'different-receipt')
+        return { state: 'this-device', transferId: scenario === 'owned' ? offer.transferId : 'different' };
+      if (scenario === 'different-source') return { ...offer, sourceDeviceId: 'someone-else' };
+      if (scenario === 'different-offer') return { ...offer, transferId: 'different' };
+      return offer;
+    });
+    wallet.claimRingHandoff.mockImplementationOnce(async (_account, _net, _device, _id, lost) => {
+      if (scenario === 'lost-lease') await lost();
+      if (scenario === 'untrusted-error') throw new Error('private diagnostic text');
+      throw new RingEnrollmentError(explanation);
+    });
+    render(<Wallet />);
+    await unlock();
+    fireEvent.click(await screen.findByRole('button', { name: 'Use wallet on this device' }));
+    expect(wallet.claimRingHandoff).not.toHaveBeenCalled();
+    fireEvent.click(await screen.findByRole('button', { name: 'Approve in test Ring' }));
+    expect(await screen.findByText(title)).toBeVisible();
+    expect(wallet.claimRingHandoff).toHaveBeenCalledOnce();
+    expect(wallet.inspectRingDevice).toHaveBeenCalledTimes(2);
+    expect(wallet.close.mock.invocationCallOrder[0]).toBeLessThan(wallet.inspectRingDevice.mock.invocationCallOrder[1]);
+    expect(wallet.startWallet).not.toHaveBeenCalled();
+    if (scenario === 'owned') expect(screen.queryByText(explanation)).toBeNull();
+    else if (scenario === 'untrusted-error') expect(screen.queryByText('private diagnostic text')).toBeNull();
+    else expect(screen.getByText(explanation)).toBeVisible();
+    expect(
+      screen.getByRole('button', { name: title === 'Check your transfer' ? 'Reopen wallet' : 'Unlock wallet' }),
+    ).toBeVisible();
+  });
+
   it('waits for recovery evidence on a new phrase import before reading its balance', async () => {
     const initial = Promise.withResolvers<object>();
     wallet.exists = false;

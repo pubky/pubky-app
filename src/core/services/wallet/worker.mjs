@@ -3,7 +3,14 @@ import { createSqlJsDatabaseFactory } from '@beignet/portable-engine/sqljs';
 import { createAwayReceipts } from './away-receipts.mjs';
 import { lastBalance, rememberBalance } from './balance.mjs';
 import { primaryChannelReadiness } from './channel-readiness.mjs';
-import { assertHandoffReady, authorizeHandoff, installHandoff, sealHandoff, verifyHandoffSource } from './handoff.mjs';
+import {
+  assertHandoffReady,
+  authorizeHandoff,
+  handoffErrorMessage,
+  installHandoff,
+  sealHandoff,
+  verifyHandoffSource,
+} from './handoff.mjs';
 import { createHandoffClose } from './handoff-close.mjs';
 import { provisionRingWallet, ringBinding, ringDeviceId } from './ring.mjs';
 import { createStartupScan } from './startup-scan.mjs';
@@ -39,10 +46,12 @@ let transport;
 let compiledDatabase;
 let connectionIssue;
 let activeGrant;
+let importOnlyGrant;
 let ringOperation;
 let activeRequests = 0;
 let requestsDrained;
 let handoffStopped = false;
+let preparedSource;
 let engineFilesSealed = false;
 let lateWrite = false;
 let pendingLocalUnlock;
@@ -298,6 +307,9 @@ async function open(account, password, onUnlocked, localUnlock) {
         'The wallet relay is unavailable. You can view your recovery phrase. Lock and reopen to reconnect.';
     }
     const moved = saved && grant && (grant.network !== saved.network || grant.primaryUri !== saved.primaryUri);
+    // A stopped former owner can receive the current owner's authenticated
+    // snapshot on this network. Its local node still opens with no transport.
+    importOnlyGrant = moved && existing && grant.network === saved.network ? grant : undefined;
     if (moved && existing) {
       grant = undefined;
       connectionIssue =
@@ -400,7 +412,7 @@ async function stopEngine(handoffNetwork) {
     if (shutdownFailed) throw new Error();
     if (engine) {
       let digest;
-      if (handoffNetwork) digest = await handoffClose.close(engine, handoffNetwork);
+      if (handoffNetwork) digest = await handoffClose.close(engine, handoffNetwork, engineFiles.write);
       else await engine.close();
       if (handoffStopped) engineFilesSealed = true;
       volume.compact();
@@ -417,6 +429,8 @@ async function stopEngine(handoffNetwork) {
 }
 
 async function close() {
+  preparedSource?.digest.fill(0);
+  preparedSource = undefined;
   await stopEngine();
   activeStore = undefined;
   startupScan = undefined;
@@ -428,16 +442,66 @@ async function close() {
   awayReceipts = undefined;
   owner = undefined;
   activeGrant = undefined;
+  importOnlyGrant = undefined;
+}
+
+async function prepareSource(account, { network, walletId }) {
+  if (sending || activeStore.paymentNeedsReview()) {
+    throw Object.assign(new Error('Review the payment in Activity before moving this wallet.'), { code: 'WALLET_HANDOFF_PENDING' });
+  }
+  const binding = ringBinding(volume);
+  if (
+    !binding ||
+    owner !== account ||
+    !activeGrant ||
+    connectionIssue ||
+    network !== activeGrant.network ||
+    binding.network !== network ||
+    typeof walletId !== 'string' ||
+    !/^[0-9a-f]{32}$/.test(walletId)
+  ) throw configurationError();
+  if (activeRequests) await new Promise((resolve) => { requestsDrained = resolve; });
+  rejectIfClosing();
+  await assertHandoffReady(engine, walletId);
+  rejectIfClosing();
+  handoffStopped = true;
+  const digest = await stopEngine(network);
+  rejectIfClosing();
+  preparedSource = { digest, network, walletId, deviceId: binding.deviceId };
+  return binding;
+}
+
+async function exportPrepared(account, payload) {
+  const source = preparedSource;
+  if (!source || account !== owner || source.network !== payload?.network || source.deviceId !== payload?.sourceDeviceId)
+    throw busy();
+  const auth = await authorizeHandoff(account, payload, profile(activeGrant));
+  if (verifyHandoffSource(volume, auth) !== source.walletId) throw configurationError();
+  rejectIfClosing();
+  const envelope = await sealHandoff(volume, auth, source.digest);
+  rejectIfClosing();
+  if (lateWrite) throw Object.assign(new Error(), { code: 'WALLET_CLOSE_UNCERTAIN' });
+  source.digest.fill(0);
+  preparedSource = undefined;
+  return envelope;
 }
 
 async function handoff(operation, account, payload) {
   if (sending || activeStore.paymentNeedsReview()) {
     throw Object.assign(new Error('Review the payment in Activity before moving this wallet.'), { code: 'WALLET_HANDOFF_PENDING' });
   }
-  if (!activeGrant || connectionIssue || activeGrant.network !== payload?.network) throw configurationError();
+  let grant = connectionIssue ? undefined : activeGrant;
+  if (operation === 'handoff-import' && importOnlyGrant && payload?.network === importOnlyGrant.network) {
+    // Recheck after Ring approval. This grant authorizes only the incoming
+    // envelope's deployment check and is never installed on the local node.
+    grant = await connection().catch(() => { throw configurationError(); });
+    rejectIfClosing();
+    if (!sameDeployment(grant, importOnlyGrant)) throw configurationError();
+  }
+  if (!grant || grant.network !== payload?.network) throw configurationError();
   if (activeRequests) await new Promise((resolve) => { requestsDrained = resolve; });
   rejectIfClosing();
-  const auth = await authorizeHandoff(account, payload, profile(activeGrant));
+  const auth = await authorizeHandoff(account, payload, profile(grant));
   if (operation === 'handoff-export') {
     const id = verifyHandoffSource(volume, auth);
     await assertHandoffReady(engine, id);
@@ -473,6 +537,14 @@ async function handle({ id, operation, account, payload, notifyUnlocked, notifyS
   }
   rejectIfClosing();
   if (handoffStopped) {
+    if (operation === 'handoff-export' && preparedSource && !ringOperation) {
+      ringOperation = exportPrepared(account, payload);
+      try {
+        return await ringOperation;
+      } finally {
+        ringOperation = undefined;
+      }
+    }
     if (operation === 'ring-binding' && account === owner && !ringOperation) return ringBinding(volume);
     throw busy();
   }
@@ -526,6 +598,14 @@ async function handle({ id, operation, account, payload, notifyUnlocked, notifyS
   }
   if (!engine || account !== owner) throw new Error('Unlock this wallet first.');
   if (ringOperation) throw busy();
+  if (operation === 'prepare-handoff') {
+    ringOperation = prepareSource(account, payload);
+    try {
+      return await ringOperation;
+    } finally {
+      ringOperation = undefined;
+    }
+  }
   if (operation === 'enroll-local-unlock') {
     if (!activeGrant || connectionIssue || activeGrant.network !== payload?.network) throw configurationError();
     verifyLocalUnlockIntent(account, payload, 'enroll');
@@ -691,10 +771,8 @@ self.onmessage = async ({ data }) => {
         code: error?.code,
         status: error?.status,
         message:
-          data.operation === 'handoff-export' || data.operation === 'handoff-import'
-            ? error?.code === 'WALLET_HANDOFF_PENDING'
-              ? 'Review pending wallet activity and recovery before moving this wallet.'
-              : 'The wallet transfer could not finish. Lock and reopen the wallet to check its status.'
+          ['prepare-handoff', 'handoff-export', 'handoff-import'].includes(data.operation)
+            ? handoffErrorMessage(error)
             : data.operation === 'ring-wallet'
             ? 'Ring wallet setup could not finish. Reopen the wallet and check its status.'
             : error instanceof Error
