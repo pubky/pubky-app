@@ -43,7 +43,7 @@
     "@dnd-kit/sortable": "10.0.0",
     "@dnd-kit/utilities": "3.2.2",
     "@emoji-mart/data": "1.2.1",
-    "@hookform/resolvers": "6.0.2",
+    "@hookform/resolvers": "7.0.6",
     "@lexical/react": "0.48.0",
     "@lexical/utils": "0.48.0",
     "@mdxeditor/editor": "4.3.4",
