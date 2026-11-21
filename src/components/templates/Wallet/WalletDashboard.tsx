@@ -28,6 +28,7 @@ import { SavedBalance } from './WalletOpening';
 import { RecoveryWords, WalletPanel, type WalletTask } from './WalletPanel';
 import { WalletReceive, WalletSend } from './WalletPayments';
 import { ActivityReceipt, activityReceiptAmount, activityReceiptTitle, WalletBalance } from './WalletReceipt';
+import type { Timing } from './WalletTimings';
 
 type ActivityEntry = { key: string; row: Activity };
 
@@ -84,6 +85,7 @@ export function WalletDashboard({
   session,
   connection,
   connectionNotice,
+  recordTiming,
   walletId,
   ringBacked,
   interrupted,
@@ -97,6 +99,7 @@ export function WalletDashboard({
   session: WalletSession;
   connection: 'syncing' | 'ready' | 'failed';
   connectionNotice: ReactNode;
+  recordTiming?: (timing: Timing) => void;
   walletId: string;
   ringBacked: boolean;
   interrupted: 'legacy' | 'payment' | null;
@@ -265,6 +268,9 @@ export function WalletDashboard({
     };
   }, [network, queries, ready, session, walletId]);
   const data = snapshot.data;
+  useEffect(() => {
+    if (data?.connectedOnce) recordTiming?.({ phase: 'dashboard-connected' });
+  }, [data?.connectedOnce, recordTiming]);
   const entries = data?.entries ?? savedActivity.data?.map((row) => ({ key: row.id, row }));
   const receivePrimary = data?.primaries?.find((primary) => primary.isReceiveTarget) ?? data?.primary;
   const away = new Set(data?.away);
@@ -418,6 +424,7 @@ export function WalletDashboard({
     return (
       <WalletSend
         ready={ready}
+        recordTiming={recordTiming}
         client={session.client}
         navigation={navigation}
         activity={data?.activity}

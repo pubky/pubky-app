@@ -1,5 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { primaryChannelReadiness } from './channel-readiness.mjs';
+import type { WalletStartupTiming } from './session';
 import type { createStartupScan } from './startup-scan.mjs';
 
 const fixture = vi.hoisted(() => {
@@ -22,7 +24,10 @@ const fixture = vi.hoisted(() => {
     volume,
     store,
     engine,
-    unlock: vi.fn(async () => volume),
+    unlock: vi.fn(
+      async (_store?: object, _account?: string, _password?: string, _beginSave?: () => (() => void) | undefined) =>
+        volume,
+    ),
     inspect: vi.fn(async () => ({ exists: false })),
     sockets: { socketFactory: vi.fn(), prepareElectrum: vi.fn(), preparePeer: vi.fn(), close: vi.fn() },
     compile: vi.fn(async () => ({})),
@@ -38,6 +43,7 @@ vi.mock('@beignet/portable-engine', () => ({
   createPortableRuntime: fixture.createRuntime,
 }));
 vi.mock('./startup-sockets.mjs', () => ({ createStartupSockets: () => fixture.sockets }));
+vi.mock('./channel-readiness.mjs', { spy: true });
 vi.mock('@beignet/portable-engine/sqljs', () => ({ createSqlJsDatabaseFactory: fixture.compile }));
 vi.mock('./storage.mjs', () => ({
   inspectFiles: fixture.inspect,
@@ -61,19 +67,29 @@ const walletId = 'e'.repeat(32);
 type Reply = { id: number; result?: unknown; error?: { code: string; message: string } };
 type OpenEvent = { id: number; event: 'unlocked'; account: string; balance: unknown };
 type PrimaryEvent = { event: 'primary-change'; account: string };
+type TimingEvent = WalletStartupTiming & { event: 'startup-timing' };
 type WorkerInput = {
-  data: { id: number; operation: string; account: string; payload: unknown; notifyUnlocked?: boolean };
+  data: {
+    id: number;
+    operation: string;
+    account: string;
+    payload: unknown;
+    notifyUnlocked?: boolean;
+    notifyStartupTiming?: boolean;
+  };
 };
 let messageId = 0;
 const waiters = new Map<number, (r: Reply) => void>();
 const unlocked = vi.fn<(event: OpenEvent) => void>();
 const primaryChanged = vi.fn<(event: PrimaryEvent) => void>();
+const timing = vi.fn<(event: TimingEvent) => void>();
 const worker = {
   location: { href: 'https://example.invalid/worker.js' },
   onmessage: undefined as undefined | ((msg: WorkerInput) => Promise<void>),
-  postMessage(r: Reply | OpenEvent | PrimaryEvent) {
+  postMessage(r: Reply | OpenEvent | PrimaryEvent | TimingEvent) {
     if ('event' in r) {
       if (r.event === 'primary-change') primaryChanged(r);
+      else if (r.event === 'startup-timing') timing(r);
       else unlocked(r);
       return;
     }
@@ -81,11 +97,17 @@ const worker = {
     waiters.delete(r.id);
   },
 };
-function request(operation: string, body?: unknown, account = owner, notifyUnlocked = false) {
+function request(
+  operation: string,
+  body?: unknown,
+  account = owner,
+  notifyUnlocked = false,
+  notifyStartupTiming = false,
+) {
   const id = ++messageId;
   return new Promise<Reply>((resolve) => {
     waiters.set(id, resolve);
-    void worker.onmessage!({ data: { id, operation, account, payload: body, notifyUnlocked } });
+    void worker.onmessage!({ data: { id, operation, account, payload: body, notifyUnlocked, notifyStartupTiming } });
   });
 }
 const fetchGrant = vi.fn();
@@ -212,6 +234,8 @@ it('signals a status reread only for the active primary without exposing peer di
   expect(primaryChanged).not.toHaveBeenCalled();
   onDiagnostic({ phase: 'peer:connect', message: key });
   onDiagnostic({ phase: 'peer:disconnect', message: key + ' closed by peer: timed out' });
+  onDiagnostic({ phase: 'engine-perf', message: 'create 10ms' });
+  expect(timing).not.toHaveBeenCalled();
   expect(primaryChanged.mock.calls).toEqual([
     [{ event: 'primary-change', account: owner }],
     [{ event: 'primary-change', account: owner }],
@@ -219,6 +243,70 @@ it('signals a status reread only for the active primary without exposing peer di
   await request('close');
   onDiagnostic({ phase: 'peer:connect', message: key });
   expect(primaryChanged).toHaveBeenCalledTimes(2);
+});
+
+it('reports only local allowlisted timings on opt-in and keeps channel hints independent of the measurement', async () => {
+  const [primary, usable] = vi.mocked(primaryChannelReadiness).mock.lastCall!;
+  expect(primary).toBe(grant.primaryUri.split('@')[0]);
+  usable();
+  expect(primaryChanged).toHaveBeenCalledOnce();
+  expect(timing).not.toHaveBeenCalled();
+  await freshWorker();
+  await request('open', 'vault password', owner, false, true);
+  const [{ onDiagnostic }] = fixture.createRuntime.mock.lastCall!;
+  const [, channelUsable] = vi.mocked(primaryChannelReadiness).mock.lastCall!;
+  const beginSave = fixture.unlock.mock.lastCall![3]!;
+  const clock = vi.spyOn(performance, 'now').mockReturnValue(500);
+  try {
+    const start = { method: 'POST', path: '/api/wallets/' + walletId + '/start' };
+    fixture.engine.request.mockRejectedValueOnce(new Error('start failed'));
+    expect((await request('request', start)).error).toBeDefined();
+    expect(timing).not.toHaveBeenCalled();
+    clock.mockReturnValue(600);
+    fixture.engine.request.mockImplementationOnce(() => {
+      clock.mockReturnValue(750);
+      onDiagnostic({ phase: 'engine-perf', message: 'create 100ms ' + walletId });
+      onDiagnostic({ phase: 'engine-perf', message: 'restore-graph private text' });
+      onDiagnostic({ phase: 'peer:connect', message: '03' + 'b'.repeat(64) });
+      onDiagnostic({ phase: 'peer:disconnect', message: primary });
+      expect(timing).not.toHaveBeenCalled();
+      onDiagnostic({ phase: 'engine-perf', message: 'create 100ms' });
+      const firstWrite = beginSave();
+      clock.mockReturnValue(760);
+      firstWrite?.();
+      clock.mockReturnValue(770);
+      const secondWrite = beginSave();
+      clock.mockReturnValue(795);
+      secondWrite?.();
+      onDiagnostic({ phase: 'engine-perf', message: 'initial-sync 45ms' });
+      onDiagnostic({ phase: 'peer:connect', message: primary });
+      onDiagnostic({ phase: 'peer:connect', message: primary });
+      channelUsable();
+      channelUsable();
+      clock.mockReturnValue(800);
+    });
+    await request('request', start);
+    onDiagnostic({ phase: 'engine-perf', message: 'restore-graph 325ms channels 990 nodes 15 load 31+20ms' });
+    expect(timing.mock.calls.map(([event]) => event)).toEqual([
+      { event: 'startup-timing', phase: 'electrum-verification', durationMs: 50 },
+      { event: 'startup-timing', phase: 'node-restore', durationMs: 100 },
+      { event: 'startup-timing', phase: 'initial-sync', durationMs: 45 },
+      { event: 'startup-timing', phase: 'first-primary-connected' },
+      { event: 'startup-timing', phase: 'first-channel-usable' },
+      { event: 'startup-timing', phase: 'vault-writes', durationMs: 35 },
+      { event: 'startup-timing', phase: 'engine-start', durationMs: 200 },
+      { event: 'startup-timing', phase: 'routing-graph-restored', durationMs: 325 },
+    ]);
+    expect(fixture.engine.request.mock.calls).toEqual([[start], [start]]);
+    expect(fetchGrant).toHaveBeenCalledOnce();
+    expect(primaryChanged).toHaveBeenCalledTimes(5);
+    await request('close');
+    onDiagnostic({ phase: 'peer:connect', message: primary });
+    channelUsable();
+    expect(primaryChanged).toHaveBeenCalledTimes(5);
+  } finally {
+    clock.mockRestore();
+  }
 });
 
 it('opens the fixed peer transport before the foreground engine start, after access checks', async () => {

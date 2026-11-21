@@ -116,6 +116,7 @@ function PaymentCode({ label, value, preview = false }: { label: string; value: 
 export function WalletSend({
   client,
   ready = true,
+  recordTiming,
   navigation,
   sendPayment,
   activity,
@@ -124,6 +125,7 @@ export function WalletSend({
   task,
   refresh,
 }: PaymentProps & {
+  recordTiming?: (timing: { phase: 'first-lightning-review'; durationMs: number }) => void;
   sendPayment: (review: SendReview) => Promise<SendResult>;
   network: Network;
   recipient?: string;
@@ -139,7 +141,12 @@ export function WalletSend({
   const [expired, setExpired] = useState(false);
   async function prepare() {
     try {
-      setReview(await reviewWalletPayment(client, request, network, maximum ? undefined : amount, maximum));
+      const start = recordTiming && performance.now();
+      const reviewed = await reviewWalletPayment(client, request, network, maximum ? undefined : amount, maximum);
+      setReview(reviewed);
+      if (start !== undefined && reviewed.payment.route === 'lightning') {
+        recordTiming?.({ phase: 'first-lightning-review', durationMs: performance.now() - start });
+      }
     } catch (error) {
       if (error instanceof WalletDrainAvailable) setDrainOffer(error);
       throw error;

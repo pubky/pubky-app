@@ -49,6 +49,31 @@ test('an ambiguous commit fences a live volume against subsequent channel reads 
   recovered.close();
 });
 
+test('a save timing surrounds each changed file commit and sees no file data', async () => {
+  const events = [];
+  const disk = store();
+  const persist = disk.commit;
+  disk.commit = (bytes) => {
+    events.push('commit');
+    persist(bytes);
+  };
+  const volume = await unlockVolume(disk, account, password, (...args) => {
+    assert.equal(args.length, 0);
+    events.push('begin');
+    return (...endArgs) => {
+      assert.equal(endArgs.length, 0);
+      events.push('finish');
+    };
+  });
+  volume.write('/first', Uint8Array.of(1));
+  volume.write('/first', Uint8Array.of(1));
+  volume.rename('/first', '/second');
+  volume.remove('/unknown');
+  volume.remove('/second');
+  volume.close();
+  assert.deepEqual(events, Array.from({ length: 3 }, () => ['begin', 'commit', 'finish']).flat());
+});
+
 test('identical files reuse the last durable commit, including after reopening', async () => {
   const disk = store();
   let volume = await unlockVolume(disk, account, password);

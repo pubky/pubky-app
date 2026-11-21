@@ -2,9 +2,11 @@ import { createPortableRuntime } from '@beignet/portable-engine';
 import { createSqlJsDatabaseFactory } from '@beignet/portable-engine/sqljs';
 import { createAwayReceipts } from './away-receipts.mjs';
 import { lastBalance, rememberBalance } from './balance.mjs';
+import { primaryChannelReadiness } from './channel-readiness.mjs';
 import { provisionRingWallet, ringBinding, ringDeviceId } from './ring.mjs';
 import { createStartupScan } from './startup-scan.mjs';
 import { createStartupSockets } from './startup-sockets.mjs';
+import { createStartupTiming } from './startup-timing.mjs';
 import { inspectFiles, openFiles, unlockVolume } from './storage.mjs';
 
 const encoder = new TextEncoder();
@@ -27,6 +29,7 @@ let background = false;
 let grantAbort;
 let openingGrant;
 let startupScan;
+let startupTiming;
 let transport;
 let compiledDatabase;
 let connectionIssue;
@@ -138,11 +141,12 @@ function rejectIfClosing() {
   if (closing) throw Object.assign(new Error('The wallet is locked.'), { code: 'WALLET_CLOSED' });
 }
 
-async function open(account, password, onUnlocked) {
+async function open(account, password, onUnlocked, measureStartup) {
   prepareDatabase();
   const store = await openFiles(account);
+  const timing = measureStartup ? createStartupTiming() : undefined;
   try {
-    volume = await unlockVolume(store, account, password);
+    volume = await unlockVolume(store, account, password, timing?.beginSave);
     awayReceipts = createAwayReceipts(volume, background);
     rejectIfClosing();
     if (onUnlocked) onUnlocked(lastBalance(volume));
@@ -188,8 +192,19 @@ async function open(account, password, onUnlocked) {
     const fastStart = existing && grant?.network === 'mainnet' && grant.fastElectrumStart === true;
     startupScan = fastStart ? createStartupScan() : undefined;
     const primaryKey = grant?.primaryUri.split('@')[0].toLowerCase();
+    const isActive = () => grant && !closing && owner === account && activeGrant === grant;
+    const extensions = [...(startupScan?.nodeOptions.extensions ?? [])];
+    if (primaryKey) {
+      extensions.push(
+        primaryChannelReadiness(primaryKey, () => {
+          if (!isActive()) return;
+          timing?.channelUsable();
+          self.postMessage({ event: 'primary-change', account });
+        }),
+      );
+    }
     engine = await createPortableRuntime({
-      nodeOptions: startupScan?.nodeOptions,
+      nodeOptions: extensions.length ? { extensions } : undefined,
       databaseFactory,
       volume,
       electrum: defaults.electrum,
@@ -197,15 +212,14 @@ async function open(account, password, onUnlocked) {
       onDiagnostic({ phase, message }) {
         if (
           (phase === 'peer:connect' || phase === 'peer:disconnect') &&
-          !closing &&
-          owner === account &&
-          grant &&
-          activeGrant === grant &&
+          isActive() &&
           message.split(' ', 1)[0].toLowerCase() === primaryKey
         ) {
-          // A hint to reread verified wallet state. No diagnostic payload leaves the worker.
+          if (phase === 'peer:connect') timing?.primaryConnected();
+          // A hint to reread verified wallet state.
           self.postMessage({ event: 'primary-change', account });
         }
+        if (phase === 'engine-perf' && timing && isActive()) timing.engineStep(message);
         if (phase === 'engine-perf' && message.startsWith('initial-sync ')) startupScan?.restoreCadence();
         // Replenish an unused transport if restoring the node took long enough for it to expire.
         const createdNode = phase === 'engine-perf' && message.startsWith('create ');
@@ -220,6 +234,7 @@ async function open(account, password, onUnlocked) {
     if (!saved || (moved && !existing)) volume.write(profilePath, encoder.encode(JSON.stringify(defaults)));
     if (grant) renew(grant);
     activeGrant = grant;
+    startupTiming = timing;
     owner = account;
     return defaults;
   } catch (error) {
@@ -255,6 +270,7 @@ async function close() {
   }
   activeStore = undefined;
   startupScan = undefined;
+  startupTiming = undefined;
   engine = undefined;
   volume?.close();
   volume = undefined;
@@ -263,7 +279,7 @@ async function close() {
   activeGrant = undefined;
 }
 
-async function handle({ id, operation, account, payload, notifyUnlocked }) {
+async function handle({ id, operation, account, payload, notifyUnlocked, notifyStartupTiming }) {
   if (operation === 'close') {
     closing = true;
     discardIdleSockets();
@@ -285,9 +301,12 @@ async function handle({ id, operation, account, payload, notifyUnlocked }) {
     if (engine || transition) throw new Error('The wallet is already opening.');
     transition =
       operation === 'open'
-        ? open(account, payload, notifyUnlocked === true
-          ? (balance) => self.postMessage({ id, event: 'unlocked', account, balance })
-          : undefined)
+        ? open(
+            account,
+            payload,
+            notifyUnlocked === true ? (balance) => self.postMessage({ id, event: 'unlocked', account, balance }) : undefined,
+            notifyStartupTiming === true,
+          )
         : (async () => {
             prepareDatabase();
             const state = await inspectFiles(account);
@@ -390,11 +409,14 @@ async function handle({ id, operation, account, payload, notifyUnlocked }) {
       });
     }
     activeRequests++;
+    let finishTiming;
+    let succeeded = false;
     try {
       const start = payload.method === 'POST' && /^\/api\/wallets\/([0-9a-f]{32})\/start$/.exec(payload.path);
       // The caller has verified the device lease. Overlap the fixed relay dial
       // with node restoration and leave the authenticated Lightning handshake to Beignet.
       if (start && !background) transport?.preparePeer();
+      if (start) finishTiming = startupTiming?.beginStart();
       const result = await engine.request(payload);
       if (startupScan && start) {
         await startupScan.confirm(() => {
@@ -405,8 +427,10 @@ async function handle({ id, operation, account, payload, notifyUnlocked }) {
       if (bound && result && typeof result === 'object' && 'mnemonic' in result) {
         throw Object.assign(new Error('Use Ring to recover this wallet.'), { code: 'WALLET_RING_BINDING' });
       }
+      succeeded = true;
       return result;
     } finally {
+      finishTiming?.(succeeded && !closing);
       activeRequests--;
     }
   }

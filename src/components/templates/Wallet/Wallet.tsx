@@ -6,7 +6,7 @@ import { ContentLayout } from '@/organisms/ContentLayout/ContentLayout';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { WalletAccount } from './WalletAccount';
 
-export function Wallet({ recipient }: { recipient?: string }) {
+export function Wallet({ recipient, showTimings = false }: { recipient?: string; showTimings?: boolean }) {
   const account = useAuthStore((state) => (state.session ? state.currentUserPubky : null));
   const [revision, setRevision] = useState(0);
   return (
@@ -20,9 +20,10 @@ export function Wallet({ recipient }: { recipient?: string }) {
         <PageTitle size="medium">Wallet</PageTitle>
         {account && (
           <WalletAccount
-            key={`${account}-${revision}`}
+            key={`${account}-${revision}-${showTimings}`}
             account={account}
             recipient={recipient}
+            showTimings={showTimings}
             reset={() => setRevision((n) => n + 1)}
           />
         )}
