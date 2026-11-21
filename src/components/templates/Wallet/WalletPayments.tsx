@@ -48,33 +48,19 @@ function AmountField({
   disabled,
   required = false,
   hint,
-  onSenderChooses,
 }: {
   value: string;
   onChange: (value: string) => void;
   disabled: boolean;
   required?: boolean;
   hint?: string;
-  onSenderChooses?: () => void;
 }) {
   return (
     <div className="grid gap-2">
-      <div className="flex items-center justify-between gap-2">
-        <Label htmlFor="payment-amount">
-          Amount <span className="sr-only">in bitcoin</span>
-          {!required && ' (optional)'}
-        </Label>
-        {onSenderChooses && (
-          <button
-            type="button"
-            disabled={disabled}
-            onClick={onSenderChooses}
-            className="min-h-6 rounded-sm text-sm text-brand underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-50"
-          >
-            Let sender choose
-          </button>
-        )}
-      </div>
+      <Label htmlFor="payment-amount">
+        Amount <span className="sr-only">in bitcoin</span>
+        {!required && ' (optional)'}
+      </Label>
       <div className="relative">
         <span
           aria-hidden
@@ -525,23 +511,24 @@ export function WalletReceive({
   const amountSats = receiveAmount(amount);
   const canReviewAmount =
     amountSats !== undefined &&
-    amountSats > 0 &&
-    (!offline ||
-      (canReceiveOffline &&
+    (offline
+      ? canReceiveOffline &&
         !pending &&
         amountSats >= MIN_OFFLINE_SATS &&
-        (offlineCapacity === undefined || amountSats <= offlineCapacity)));
-  const onlineHint = primaryNeedsAmount
-    ? 'Enter an amount for a Lightning request with this primary.'
-    : amountSats === undefined
+        (offlineCapacity === undefined || amountSats <= offlineCapacity)
+      : amountSats > 0 || !primaryNeedsAmount);
+  const onlineHint =
+    amountSats === undefined
       ? 'Enter a whole number within the Bitcoin supply.'
-      : 'Enter at least ₿1 for a fixed invoice.';
+      : primaryNeedsAmount
+        ? 'Enter an amount for a Lightning request with this primary.'
+        : 'Leave blank or enter 0 to let the sender choose the amount.';
   const jitFee = quote?.jitFee;
-  async function reviewSenderChoice() {
+  async function reviewOnline(sats: number) {
     try {
-      setQuote(await client.quoteReceive({ amountSats: undefined, description }));
+      setQuote(await client.quoteReceive({ amountSats: sats === 0 ? undefined : sats, description }));
     } catch (error) {
-      if (!(error instanceof WalletError) || error.code !== 'AMOUNT_REQUIRED') throw error;
+      if (sats > 0 || !(error instanceof WalletError) || error.code !== 'AMOUNT_REQUIRED') throw error;
       setPrimaryNeedsAmount(true);
     }
   }
@@ -758,16 +745,13 @@ export function WalletReceive({
             if (!canReviewAmount || task.busy) return;
             void task.run(async () => {
               if (offline) await reviewOffline(amountSats, description);
-              else setQuote(await client.quoteReceive({ amountSats, description }));
+              else await reviewOnline(amountSats);
             });
           }}
         >
           <AmountField
-            required
+            required={offline || primaryNeedsAmount}
             hint={offline ? offlineRange : onlineHint}
-            onSenderChooses={
-              !offline && !primaryNeedsAmount && amountSats === 0 ? () => void task.run(reviewSenderChoice) : undefined
-            }
             value={amount}
             onChange={setAmount}
             disabled={task.busy}

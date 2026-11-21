@@ -448,7 +448,7 @@ describe('Pubky wallet', () => {
     render(<Wallet />);
     await unlock();
     fireEvent.click(screen.getByRole('button', { name: 'Receive' }));
-    fireEvent.change(screen.getByLabelText('Amount in bitcoin'), { target: { value: '1000' } });
+    fireEvent.change(screen.getByLabelText(/Amount in bitcoin/), { target: { value: '1000' } });
     fireEvent.click(screen.getByRole('button', { name: 'Receive on-chain' }));
     expect(await screen.findByText(address)).toBeInTheDocument();
     expect(screen.getByTitle('Bitcoin deposit QR code')).toBeInTheDocument();
@@ -499,7 +499,7 @@ describe('Pubky wallet', () => {
     expect(screen.queryByRole('button', { name: 'Let sender choose' })).toBeNull();
     expect(screen.getByText(/Enter ₿354 to ₿2,000/)).toBeVisible();
     const review = screen.getByRole('button', { name: 'Review request' });
-    const amount = screen.getByLabelText('Amount in bitcoin');
+    const amount = screen.getByLabelText(/Amount in bitcoin/);
     for (const value of ['', '0', '353', '2001']) {
       fireEvent.change(amount, { target: { value } });
       expect(review).toBeDisabled();
@@ -525,7 +525,7 @@ describe('Pubky wallet', () => {
     expect(wallet.receive).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'New request' }));
     expect(await screen.findByRole('switch', { name: 'Receive offline' })).not.toBeChecked();
-    expect(screen.getByRole('button', { name: 'Let sender choose' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Review request' })).toBeEnabled();
   });
 
   it('resumes an interrupted offline request at its original primary even when its capacity is reserved', async () => {
@@ -579,9 +579,8 @@ describe('Pubky wallet', () => {
       const hint = await screen.findByText(reason);
       expect(hint).toBeVisible();
       expect(screen.getByRole('switch', { name: 'Receive offline' })).toBeDisabled();
-      expect(screen.getByRole('button', { name: 'Review request' })).toBeDisabled();
-      expect(screen.getByRole('button', { name: 'Let sender choose' })).toBeEnabled();
-      fireEvent.change(screen.getByLabelText('Amount in bitcoin'), { target: { value: '1' } });
+      expect(screen.getByRole('button', { name: 'Review request' })).toBeEnabled();
+      fireEvent.change(screen.getByLabelText(/Amount in bitcoin/), { target: { value: '1' } });
       expect(screen.getByRole('button', { name: 'Review request' })).toBeEnabled();
       expect(screen.getByRole('button', { name: 'Receive on-chain' })).toBeEnabled();
     },
@@ -610,7 +609,7 @@ describe('Pubky wallet', () => {
     render(<Wallet />);
     await unlock();
     fireEvent.click(screen.getByRole('button', { name: 'Receive' }));
-    fireEvent.change(screen.getByLabelText('Amount in bitcoin'), { target: { value: '8000' } });
+    fireEvent.change(screen.getByLabelText(/Amount in bitcoin/), { target: { value: '8000' } });
     fireEvent.click(screen.getByRole('button', { name: 'Review request' }));
     expect(await screen.findByText('₿110')).toBeVisible();
     expect(wallet.receive).not.toHaveBeenCalled();
@@ -627,18 +626,16 @@ describe('Pubky wallet', () => {
     expect(screen.getByLabelText('Payment request')).toHaveValue(request.uri);
   });
 
-  it('only submits fixed Lightning requests for positive whole amounts within the Bitcoin supply', async () => {
+  it('rejects malformed or out-of-range amounts and quotes a positive fixed amount', async () => {
     const user = userEvent.setup();
     wallet.quoteReceive.mockResolvedValue({ id: 'fixed', amountSats: 1, netSats: 1, feeSats: 0, warnings: [] });
     render(<Wallet />);
     await unlock();
     fireEvent.click(screen.getByRole('button', { name: 'Receive' }));
-    const amount = screen.getByRole('textbox', { name: 'Amount in bitcoin' });
+    const amount = screen.getByRole('textbox', { name: /Amount in bitcoin/ });
     const review = screen.getByRole<HTMLButtonElement>('button', { name: 'Review request' });
     const form = review.form!;
-    await user.click(amount);
-    await user.keyboard('{Enter}');
-    for (const value of ['', '0', '00', '-1', '1.5', '1e3', '2100000000000001', '9007199254740992']) {
+    for (const value of [' ', '-1', '1.5', '1e3', '2100000000000001', '9007199254740992']) {
       fireEvent.change(amount, { target: { value } });
       expect(review).toBeDisabled();
       fireEvent.submit(form);
@@ -654,7 +651,8 @@ describe('Pubky wallet', () => {
     expect(wallet.receive).not.toHaveBeenCalled();
   });
 
-  it('quotes a sender-chosen amount on the first Lightning invoice through its own action', async () => {
+  it.each(['', '0', '000'])('reviews a sender-chosen first Lightning invoice for amount "%s"', async (input) => {
+    const user = userEvent.setup();
     wallet.snapshot.mockResolvedValue({
       wallet: record,
       balance: { totalSats: 0, availableSats: 0, pendingSats: 0, receivableSats: 0 },
@@ -683,10 +681,17 @@ describe('Pubky wallet', () => {
     render(<Wallet />);
     await unlock();
     fireEvent.click(screen.getByRole('button', { name: 'Receive' }));
-    expect(screen.getByRole('button', { name: 'Review request' })).toBeDisabled();
-    const senderChoice = screen.getByRole('button', { name: 'Let sender choose' });
-    expect(senderChoice).toHaveAttribute('type', 'button');
-    fireEvent.click(senderChoice);
+    const amount = screen.getByRole('textbox', { name: /Amount in bitcoin/ });
+    const review = screen.getByRole('button', { name: 'Review request' });
+    expect(screen.queryByRole('button', { name: 'Let sender choose' })).toBeNull();
+    if (input) await user.type(amount, input);
+    expect(review).toBeEnabled();
+    expect(wallet.quoteReceive).not.toHaveBeenCalled();
+    if (input) await user.click(review);
+    else {
+      await user.click(amount);
+      await user.keyboard('{Enter}');
+    }
     expect(await screen.findByText('Sender chooses')).toBeVisible();
     expect(wallet.quoteReceive).toHaveBeenCalledWith({ amountSats: undefined, description: '' });
     expect(screen.getByText('Receive fee').nextElementSibling).toHaveTextContent('₿0');
@@ -711,7 +716,7 @@ describe('Pubky wallet', () => {
     render(<Wallet />);
     await unlock();
     fireEvent.click(screen.getByRole('button', { name: 'Receive' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Let sender choose' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Review request' }));
     expect(await screen.findByText('₿20 + 0.25% of the payment')).toBeVisible();
     expect(screen.getByText('Maximum receive fee').nextElementSibling).toHaveTextContent('₿2,520');
     expect(screen.queryByText('You receive')).toBeNull();
@@ -732,9 +737,9 @@ describe('Pubky wallet', () => {
     await unlock();
     fireEvent.click(screen.getByRole('button', { name: 'Receive' }));
     fireEvent.change(screen.getByLabelText('Description (optional)'), { target: { value: 'Coffee' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Let sender choose' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Review request' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Enter a fixed amount and try again.');
-    fireEvent.change(screen.getByLabelText('Amount in bitcoin'), { target: { value: '1200' } });
+    fireEvent.change(screen.getByLabelText(/Amount in bitcoin/), { target: { value: '1200' } });
     fireEvent.click(screen.getByRole('button', { name: 'Review request' }));
     expect(await screen.findByText('You receive')).toBeVisible();
     expect(wallet.quoteReceive).toHaveBeenLastCalledWith({ amountSats: 1200, description: 'Coffee' });
@@ -750,14 +755,19 @@ describe('Pubky wallet', () => {
     await unlock();
     fireEvent.click(screen.getByRole('button', { name: 'Receive' }));
     fireEvent.change(screen.getByLabelText('Description (optional)'), { target: { value: 'Coffee' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Let sender choose' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Review request' }));
     const hint = await screen.findByText('Enter an amount for a Lightning request with this primary.');
     expect(hint).toBeVisible();
     expect(screen.queryByText(legacy)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Let sender choose' })).toBeNull();
-    const review = screen.getByRole('button', { name: 'Review request' });
+    const review = screen.getByRole<HTMLButtonElement>('button', { name: 'Review request' });
+    const amount = screen.getByLabelText(/Amount in bitcoin/);
     expect(review).toBeDisabled();
-    fireEvent.change(screen.getByLabelText('Amount in bitcoin'), { target: { value: '600' } });
+    fireEvent.change(amount, { target: { value: '00' } });
+    expect(review).toBeDisabled();
+    fireEvent.submit(review.form!);
+    expect(wallet.quoteReceive).toHaveBeenCalledTimes(1);
+    fireEvent.change(amount, { target: { value: '600' } });
     expect(review).toBeEnabled();
     fireEvent.click(review);
     await screen.findByText('You receive');
@@ -772,7 +782,7 @@ describe('Pubky wallet', () => {
     render(<Wallet />);
     await unlock();
     fireEvent.click(screen.getByRole('button', { name: 'Receive' }));
-    fireEvent.change(screen.getByLabelText('Amount in bitcoin'), { target: { value: input } });
+    fireEvent.change(screen.getByLabelText(/Amount in bitcoin/), { target: { value: input } });
     fireEvent.click(screen.getByRole('button', { name: 'Receive on-chain' }));
     await user.click(await screen.findByRole('button', { name: 'Copy Bitcoin request' }));
     await expect(navigator.clipboard.readText()).resolves.toBe(address);
@@ -1031,7 +1041,7 @@ describe('Pubky wallet', () => {
     render(<Wallet />);
     await unlock();
     fireEvent.click(screen.getByRole('button', { name: 'Receive' }));
-    fireEvent.change(screen.getByLabelText('Amount in bitcoin'), { target: { value: '1000' } });
+    fireEvent.change(screen.getByLabelText(/Amount in bitcoin/), { target: { value: '1000' } });
     fireEvent.click(screen.getByRole('button', { name: 'Review request' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Create request' }));
     await screen.findByText('Waiting for payment');
@@ -1075,7 +1085,7 @@ describe('Pubky wallet', () => {
       render(<Wallet />);
       await unlock();
       fireEvent.click(screen.getByRole('button', { name: 'Receive' }));
-      fireEvent.change(screen.getByLabelText('Amount in bitcoin'), { target: { value: '1000' } });
+      fireEvent.change(screen.getByLabelText(/Amount in bitcoin/), { target: { value: '1000' } });
       fireEvent.click(screen.getByRole('button', { name: 'Review request' }));
       fireEvent.click(await screen.findByRole('button', { name: 'Create request' }));
       expect(await screen.findByText(message)).toBeVisible();
