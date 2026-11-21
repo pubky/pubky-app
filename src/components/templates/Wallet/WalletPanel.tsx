@@ -1,20 +1,83 @@
 'use client';
 
-import { type ReactNode, useRef, useState } from 'react';
-import type { LucideIcon } from 'lucide-react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { ArrowLeft, LockKeyhole, type LucideIcon } from 'lucide-react';
+import { Button } from '@/atoms/Button/Button';
 import { Card } from '@/atoms/Card/Card';
 import { Heading } from '@/atoms/Heading/Heading';
 import { walletMessage } from '@/libs/wallet/amount';
 
-export function WalletPanel({ title, icon: Icon, children }: { title: string; icon: LucideIcon; children: ReactNode }) {
+export type WalletNavigation = {
+  back: () => void;
+  lock: () => void;
+  busy: boolean;
+  balance: ReactNode;
+  notices: ReactNode;
+};
+
+export function WalletPanel({
+  title,
+  icon: Icon,
+  children,
+  navigation,
+}: {
+  title: string;
+  icon: LucideIcon;
+  children: ReactNode;
+  navigation?: WalletNavigation;
+}) {
+  const backButton = useRef<HTMLButtonElement>(null);
+  const isPaymentScreen = !!navigation;
+  useEffect(() => {
+    if (isPaymentScreen) {
+      backButton.current?.focus({ preventScroll: true });
+      backButton.current?.scrollIntoView?.({ block: 'nearest' });
+    }
+  }, [isPaymentScreen]);
   return (
-    <Card className="gap-5 rounded-2xl border border-border p-5 sm:p-7">
+    <Card
+      className={
+        navigation
+          ? 'gap-4 rounded-2xl border border-border p-4 sm:gap-5 sm:p-6'
+          : 'gap-5 rounded-2xl border border-border p-5 sm:p-7'
+      }
+    >
       <div className="flex items-center gap-3">
-        <Icon className="size-5 text-brand" aria-hidden />
-        <Heading level={2} size="md">
-          {title}
-        </Heading>
+        {navigation ? (
+          <Button
+            ref={backButton}
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label="Back to wallet"
+            disabled={navigation.busy}
+            onClick={navigation.back}
+          >
+            <ArrowLeft />
+          </Button>
+        ) : (
+          <Icon className="size-5 text-brand" aria-hidden />
+        )}
+        <div className="min-w-0 flex-1">
+          <Heading level={2} size="md">
+            {title}
+          </Heading>
+          {navigation?.balance}
+        </div>
+        {navigation && (
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            aria-label="Lock wallet"
+            disabled={navigation.busy}
+            onClick={navigation.lock}
+          >
+            <LockKeyhole />
+          </Button>
+        )}
       </div>
+      {navigation?.notices}
       {children}
     </Card>
   );
@@ -64,11 +127,19 @@ export function useWalletTask() {
 }
 export type WalletTask = ReturnType<typeof useWalletTask>;
 
-export function Detail({ label, value }: { label: string; value: string }) {
+export function Detail({ label, value, compact = false }: { label: string; value: string; compact?: boolean }) {
   return (
-    <div className="grid gap-1 border-b border-border pb-2">
+    <div
+      className={
+        compact
+          ? 'grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-baseline gap-3 border-b border-border py-1.5'
+          : 'grid gap-1 border-b border-border pb-2'
+      }
+    >
       <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
-      <dd className="text-sm wrap-anywhere">{value}</dd>
+      <dd className={compact ? 'text-right text-sm font-medium wrap-anywhere tabular-nums' : 'text-sm wrap-anywhere'}>
+        {value}
+      </dd>
     </div>
   );
 }

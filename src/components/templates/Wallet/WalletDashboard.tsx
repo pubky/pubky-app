@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Activity, Network, ReceiveRequest } from '@beignet/wallet-core';
 import { QueryClient, useQuery } from '@tanstack/react-query';
 import {
@@ -93,6 +93,16 @@ export function WalletDashboard({
   task: WalletTask;
 }) {
   const [view, setView] = useState<View>(recipient ? 'send' : 'overview');
+  const lastAction = useRef<'send' | 'receive' | null>(null);
+  const sendButton = useRef<HTMLButtonElement>(null);
+  const receiveButton = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (view !== 'overview' || !lastAction.current) return;
+    const button = lastAction.current === 'send' ? sendButton : receiveButton;
+    button.current?.focus({ preventScroll: true });
+    button.current?.scrollIntoView?.({ block: 'nearest' });
+    lastAction.current = null;
+  }, [view]);
   const [phrase, setPhrase] = useState('');
   // Discard wallet balances, invoice details and request status with the unlocked screen.
   const [queries] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } }));
@@ -150,10 +160,117 @@ export function WalletDashboard({
     void snapshot.refetch();
   };
   const switchTo = (next: View) => {
+    if (next === 'overview' && (view === 'send' || view === 'receive')) lastAction.current = view;
     setPhrase('');
     task.clearError();
     setView(next);
   };
+  const notices = (
+    <>
+      {notes.size > 0 && (
+        <ul className="grid gap-1 rounded-xl bg-background p-3 text-sm text-muted-foreground">
+          {Array.from(notes, (note) => (
+            <li key={note}>
+              {note === 'Wallet setup is not finished. Check Settings.'
+                ? 'Lightning setup is incomplete.'
+                : walletMessage(note)}
+            </li>
+          ))}
+        </ul>
+      )}
+      {snapshot.isError && (
+        <p role="status" className="text-sm text-muted-foreground">
+          Could not refresh the wallet. {data ? 'Showing the last balance.' : 'Try refreshing.'}
+        </p>
+      )}
+      {data &&
+        (!data.primary.connected ||
+          (data.primary.setup && data.primary.setup !== 'ready') ||
+          data.primary.setupError) && (
+          <div className="flex flex-wrap items-center gap-2 border-t border-border pt-4 text-sm text-muted-foreground">
+            <Zap className="size-4" />{' '}
+            {data.primary.connected ? 'Lightning setup needs attention' : 'Lightning disconnected'}
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={task.busy}
+              onClick={() =>
+                task.run(async () => {
+                  await session.client.retrySetup();
+                  refresh();
+                })
+              }
+            >
+              Reconnect
+            </Button>
+            {data.primary.setupError && <p className="basis-full">{walletMessage(data.primary.setupError)}</p>}
+          </div>
+        )}
+    </>
+  );
+  const navigation = {
+    back: () => switchTo('overview'),
+    lock,
+    busy: task.busy,
+    balance: data && (
+      <p className="flex flex-wrap items-baseline gap-x-1.5 text-xs text-muted-foreground">
+        {view === 'send' ? 'Available to send' : 'Total balance'}
+        <span className="font-medium text-foreground tabular-nums">
+          {view === 'send' ? (
+            bitcoinAmount(data.balance.availableSats)
+          ) : (
+            <WalletBalance amount={data.balance.totalSats} />
+          )}
+        </span>
+        <span className="border-l border-border pl-1.5">{network}</span>
+      </p>
+    ),
+    notices: (
+      <>
+        {notices}
+        {view === 'send' && needsPaymentReview && (
+          <Button
+            type="button"
+            disabled={task.busy}
+            variant="outline"
+            size="sm"
+            className="self-start"
+            onClick={() => switchTo('overview')}
+          >
+            Check previous payment in Activity
+          </Button>
+        )}
+      </>
+    ),
+  };
+  if (view === 'send')
+    return (
+      <WalletSend
+        client={session.client}
+        navigation={navigation}
+        activity={data?.activity}
+        sendPayment={(review) => session.send(review)}
+        network={network}
+        recipient={recipient}
+        task={task}
+        refresh={refresh}
+      />
+    );
+  if (view === 'receive')
+    return (
+      <WalletReceive
+        client={session.client}
+        navigation={navigation}
+        task={task}
+        request={request}
+        setRequest={setRequest}
+        receipt={tracking.receipt}
+        receivedWhileAway={!!request?.paymentHash && away.has(request.paymentHash)}
+        unavailable={tracking.unavailable}
+        refresh={refresh}
+        newBitcoinAddress={() => session.newBitcoinAddress(network)}
+      />
+    );
   return (
     <>
       <Card className="gap-6 rounded-2xl border border-border p-5 sm:p-7">
@@ -201,14 +318,10 @@ export function WalletDashboard({
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button variant={view === 'send' ? 'brand' : 'default'} disabled={task.busy} onClick={() => switchTo('send')}>
+          <Button ref={sendButton} variant="default" disabled={task.busy} onClick={() => switchTo('send')}>
             <ArrowUpRight /> Send
           </Button>
-          <Button
-            variant={view === 'receive' ? 'brand' : 'default'}
-            disabled={task.busy}
-            onClick={() => switchTo('receive')}
-          >
+          <Button ref={receiveButton} variant="default" disabled={task.busy} onClick={() => switchTo('receive')}>
             <ArrowDownLeft /> Receive
           </Button>
           <Button
@@ -230,68 +343,8 @@ export function WalletDashboard({
             <KeyRound />
           </Button>
         </div>
-        {notes.size > 0 && (
-          <ul className="grid gap-1 rounded-xl bg-background p-3 text-sm text-muted-foreground">
-            {Array.from(notes, (note) => (
-              <li key={note}>
-                {note === 'Wallet setup is not finished. Check Settings.'
-                  ? 'Lightning setup is incomplete.'
-                  : walletMessage(note)}
-              </li>
-            ))}
-          </ul>
-        )}
-        {snapshot.isError && (
-          <p role="status" className="text-sm text-muted-foreground">
-            Could not refresh the wallet. {data ? 'Showing the last balance.' : 'Try refreshing.'}
-          </p>
-        )}
-        {data && (
-          <div className="flex flex-wrap items-center gap-2 border-t border-border pt-4 text-sm text-muted-foreground">
-            <Zap className="size-4" /> {data.primary.connected ? 'Lightning connected' : 'Lightning disconnected'}
-            {(!data.primary.connected || data.primary.setup !== 'ready') && (
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={task.busy}
-                onClick={() =>
-                  task.run(async () => {
-                    await session.client.retrySetup();
-                    refresh();
-                  })
-                }
-              >
-                Reconnect
-              </Button>
-            )}
-            {data.primary.setupError && <p className="basis-full">{walletMessage(data.primary.setupError)}</p>}
-          </div>
-        )}
+        {notices}
       </Card>
-      {view === 'send' && (
-        <WalletSend
-          client={session.client}
-          activity={data?.activity}
-          sendPayment={(review) => session.send(review)}
-          network={network}
-          recipient={recipient}
-          task={task}
-          refresh={refresh}
-        />
-      )}
-      {view === 'receive' && (
-        <WalletReceive
-          client={session.client}
-          task={task}
-          request={request}
-          setRequest={setRequest}
-          receipt={tracking.receipt}
-          receivedWhileAway={!!request?.paymentHash && away.has(request.paymentHash)}
-          unavailable={tracking.unavailable}
-          refresh={refresh}
-          newBitcoinAddress={() => session.newBitcoinAddress(network)}
-        />
-      )}
       {view === 'backup' && ringBacked && (
         <WalletPanel title="Pubky Ring recovery" icon={KeyRound}>
           <p className="text-sm text-muted-foreground">

@@ -1,0 +1,56 @@
+diff --git a/node_modules/@beignet/portable-engine/dist/portable.mjs b/node_modules/@beignet/portable-engine/dist/portable.mjs
+--- a/node_modules/@beignet/portable-engine/dist/portable.mjs
++++ b/node_modules/@beignet/portable-engine/dist/portable.mjs
+@@ -218160,11 +218160,16 @@
+    * less than the ack window left.
+    */
+   async jitInvoiceAt(lspPubkey, opts, amountMsat, timeoutMs) {
++    if (opts.maxAmountSats !== void 0 && amountMsat !== void 0) {
++      throw new BeignetError("INVALID_PARAMS", "A funding limit is only valid for an open-amount invoice");
++    }
++    const maxAmountSats = opts.maxAmountSats === void 0 ? void 0 : requirePositiveSafeInteger(opts.maxAmountSats, "maxAmountSats");
+     let result;
+     try {
+       result = await this.node.createJitInvoice({
+         lspPubkeyHex: lspPubkey,
+         amountMsat,
++        ...(maxAmountSats === void 0 ? {} : { maxAmountMsat: BigInt(maxAmountSats) * 1000n }),
+         description: opts.description || "",
+         ...opts.expirySecs !== void 0 ? { expiry: opts.expirySecs } : {},
+         targetRemainingInboundSat: BigInt(
+@@ -218198,6 +218203,7 @@
+       paymentHash: result.paymentHash.toString("hex"),
+       paymentSecret: result.paymentSecret.toString("hex"),
+       amountSats: opts.amountSats || void 0,
++      ...(maxAmountSats === void 0 ? {} : { maxAmountSats }),
+       lspPubkey,
+       flatFeeSat: Number(result.flatFeeSat),
+       feePpm: result.feePpm,
+diff --git a/node_modules/@beignet/portable-engine/dist/portable.cjs b/node_modules/@beignet/portable-engine/dist/portable.cjs
+--- a/node_modules/@beignet/portable-engine/dist/portable.cjs
++++ b/node_modules/@beignet/portable-engine/dist/portable.cjs
+@@ -218172,11 +218172,16 @@
+    * less than the ack window left.
+    */
+   async jitInvoiceAt(lspPubkey, opts, amountMsat, timeoutMs) {
++    if (opts.maxAmountSats !== void 0 && amountMsat !== void 0) {
++      throw new BeignetError("INVALID_PARAMS", "A funding limit is only valid for an open-amount invoice");
++    }
++    const maxAmountSats = opts.maxAmountSats === void 0 ? void 0 : requirePositiveSafeInteger(opts.maxAmountSats, "maxAmountSats");
+     let result;
+     try {
+       result = await this.node.createJitInvoice({
+         lspPubkeyHex: lspPubkey,
+         amountMsat,
++        ...(maxAmountSats === void 0 ? {} : { maxAmountMsat: BigInt(maxAmountSats) * 1000n }),
+         description: opts.description || "",
+         ...opts.expirySecs !== void 0 ? { expiry: opts.expirySecs } : {},
+         targetRemainingInboundSat: BigInt(
+@@ -218210,6 +218215,7 @@
+       paymentHash: result.paymentHash.toString("hex"),
+       paymentSecret: result.paymentSecret.toString("hex"),
+       amountSats: opts.amountSats || void 0,
++      ...(maxAmountSats === void 0 ? {} : { maxAmountSats }),
+       lspPubkey,
+       flatFeeSat: Number(result.flatFeeSat),
+       feePpm: result.feePpm,

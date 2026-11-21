@@ -11,3 +11,5 @@ bash vendor/rebuild-portable.sh
 ```
 
 The expected SHA-256 is `14292b27e6f4f9a21caa2fd16ab81fcb3865a549bd6b8b72d5bdd8539bf2f766`.
+
+Pubky applies two local patches at install time for first Lightning invoices with a payer-chosen amount. The wallet client quotes a funding limit and the fee schedule. The portable adapter passes that limit to the engine's existing just-in-time invoice API and returns it for verification. The BOLT11 invoice leaves the payment amount open. An incoming payment determines how much liquidity the primary provides. The checked-in archive and pinned upstream source commits are the inputs to these patches.

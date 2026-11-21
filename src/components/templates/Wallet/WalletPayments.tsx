@@ -29,25 +29,33 @@ import {
   WalletDrainAvailable,
   type WalletMaximum,
 } from '@/libs/wallet/sendPayment';
-import { Detail, WalletPanel, type WalletTask, Warnings } from './WalletPanel';
+import { Detail, type WalletNavigation, WalletPanel, type WalletTask, Warnings } from './WalletPanel';
 import { reviewedRecipientAmount, SendReceipt, type SendSubmission, WalletReceipt } from './WalletReceipt';
 import { WalletScanner } from './WalletScanner';
 
-type PaymentProps = { client: WalletClientInterface; task: WalletTask; refresh: () => void };
+type PaymentProps = {
+  client: WalletClientInterface;
+  task: WalletTask;
+  refresh: () => void;
+  navigation?: WalletNavigation;
+};
 
 function AmountField({
   value,
   onChange,
   disabled,
+  payerChooses = false,
 }: {
   value: string;
   onChange: (value: string) => void;
   disabled: boolean;
+  payerChooses?: boolean;
 }) {
   return (
     <div className="grid gap-2">
       <Label htmlFor="payment-amount">
-        Amount <span className="sr-only">in bitcoin</span> (optional)
+        Amount <span className="sr-only">in bitcoin</span>
+        {!payerChooses && ' (optional)'}
       </Label>
       <div className="relative">
         <span
@@ -58,6 +66,7 @@ function AmountField({
         </span>
         <Input
           id="payment-amount"
+          aria-describedby={payerChooses ? 'receive-amount-hint' : undefined}
           className="pl-8"
           disabled={disabled}
           inputMode="numeric"
@@ -67,12 +76,40 @@ function AmountField({
           onChange={(e) => onChange(e.target.value)}
         />
       </div>
+      {payerChooses && (
+        <p id="receive-amount-hint" className="text-sm text-muted-foreground">
+          Leave blank or enter 0 to let the sender choose how much to pay.
+        </p>
+      )}
     </div>
+  );
+}
+
+function PaymentCode({ label, value, preview = false }: { label: string; value: string; preview?: boolean }) {
+  return (
+    <details className="w-full min-w-0 rounded-lg border border-border px-3 py-2 text-sm">
+      <summary className="cursor-pointer rounded-sm text-muted-foreground focus-visible:outline-2 focus-visible:outline-ring">
+        View {label}
+        {preview && value.length > 24 && (
+          <span aria-hidden className="ml-2 font-mono text-xs">
+            {value.slice(0, 10)}…{value.slice(-8)}
+          </span>
+        )}
+      </summary>
+      <Textarea
+        aria-label={label}
+        value={value}
+        readOnly
+        spellCheck={false}
+        className="mt-2 max-h-28 min-h-16 font-mono text-xs wrap-anywhere"
+      />
+    </details>
   );
 }
 
 export function WalletSend({
   client,
+  navigation,
   sendPayment,
   activity,
   network,
@@ -152,41 +189,53 @@ export function WalletSend({
     setExpired(false);
     task.clearError();
   }
+  function leaveReview(next: () => void) {
+    if (review?.payment.method === 'drain') {
+      void task.run(async () => {
+        await client.cancelDrain(review.payment.id);
+        next();
+      });
+    } else next();
+  }
   return (
-    <WalletPanel title={review ? 'Review payment' : 'Send bitcoin'} icon={ArrowUpRight}>
+    <WalletPanel
+      title={review ? 'Review payment' : 'Send bitcoin'}
+      icon={ArrowUpRight}
+      navigation={navigation && { ...navigation, back: () => leaveReview(navigation.back) }}
+    >
       {review ? (
         <>
-          <dl className="grid gap-3">
-            {review.recipient && <Detail label="Pubky recipient" value={review.recipient} />}
-            <Detail
-              label={review.recipient ? "Payment details from the recipient's homeserver" : 'Destination'}
-              value={review.destination}
-            />
-            {review.payment.destination !== review.destination && (
-              <Detail label="Paying" value={review.payment.destination} />
+          <dl>
+            {review.recipient && <Detail compact label="Pubky recipient" value={review.recipient} />}
+            {review.payment.route === 'bitcoin' && (
+              <Detail compact label="Bitcoin address" value={review.payment.destination} />
             )}
-            {review.payment.description && <Detail label="Description" value={review.payment.description} />}
+            {review.payment.description && <Detail compact label="Description" value={review.payment.description} />}
             <Detail
+              compact
               label="Payment method"
               value={review.payment.route === 'lightning' ? 'Lightning' : 'Bitcoin on-chain'}
             />
             {review.payment.drain && (
               <>
                 <Detail
+                  compact
                   label="Estimated channel closing fee"
                   value={bitcoinAmount(review.payment.drain.closeFeeSats)}
                 />
-                <Detail label="Estimated sweep fee" value={bitcoinAmount(review.payment.drain.sweepFeeSats)} />
+                <Detail compact label="Estimated sweep fee" value={bitcoinAmount(review.payment.drain.sweepFeeSats)} />
               </>
             )}
             <Detail
+              compact
               label={review.payment.minRecipientSats != null ? 'Recipient gets at least' : 'Recipient amount'}
               value={reviewedRecipientAmount(review.payment)}
             />
             {review.payment.estimatedFeeSats != null && (
-              <Detail label="Estimated routing fee" value={bitcoinAmount(review.payment.estimatedFeeSats)} />
+              <Detail compact label="Estimated routing fee" value={bitcoinAmount(review.payment.estimatedFeeSats)} />
             )}
             <Detail
+              compact
               label={review.payment.feeLabel || 'Fee'}
               value={
                 review.payment.maxFeeMsat
@@ -195,6 +244,7 @@ export function WalletSend({
               }
             />
             <Detail
+              compact
               label={
                 review.payment.method === 'drain'
                   ? 'Estimated total'
@@ -209,24 +259,28 @@ export function WalletSend({
               }
             />
             {review.payment.max && review.payment.keptSats != null && (
-              <Detail label="Kept in channels" value={keptAmount(review.payment.keptSats, review.payment.keptReason)} />
+              <Detail
+                compact
+                label="Kept in channels"
+                value={keptAmount(review.payment.keptSats, review.payment.keptReason)}
+              />
             )}
           </dl>
+          {review.payment.route === 'lightning' && (
+            <PaymentCode label="Lightning invoice" value={review.payment.destination} preview />
+          )}
+          {review.destination !== review.payment.destination && (
+            <PaymentCode
+              label={review.recipient ? "recipient's original payment request" : 'original payment request'}
+              value={review.destination}
+            />
+          )}
           <Warnings items={review.payment.warnings} />
           <div className="flex flex-wrap gap-2">
             <Button variant="brand" disabled={task.busy} onClick={() => task.run(send)}>
               {task.busy ? 'Sending…' : review.payment.method === 'drain' ? 'Confirm wallet drain' : 'Confirm payment'}
             </Button>
-            <Button
-              variant="outline"
-              disabled={task.busy}
-              onClick={() =>
-                task.run(async () => {
-                  if (review.payment.method === 'drain') await client.cancelDrain(review.payment.id);
-                  setReview(null);
-                })
-              }
-            >
+            <Button variant="outline" disabled={task.busy} onClick={() => leaveReview(() => setReview(null))}>
               Edit
             </Button>
           </div>
@@ -242,7 +296,7 @@ export function WalletSend({
         </>
       ) : (
         <form
-          className="grid gap-4"
+          className="grid gap-3"
           onSubmit={(e) => {
             e.preventDefault();
             setExpired(false);
@@ -337,8 +391,22 @@ export function WalletSend({
   );
 }
 
+function receiveAmount(input: string) {
+  if (input.trim() === '') return undefined;
+  const sats = parseSats(input);
+  return sats === 0 ? undefined : sats;
+}
+
+function receiveFeeTerms(flatFeeSats: number, feePpm: number) {
+  if (!feePpm) return bitcoinAmount(flatFeeSats);
+  const percent = (feePpm / 1_000_000).toLocaleString('en-US', { style: 'percent', maximumFractionDigits: 4 });
+  const rate = `${percent} of the payment`;
+  return flatFeeSats ? `${bitcoinAmount(flatFeeSats)} + ${rate}` : rate;
+}
+
 export function WalletReceive({
   client,
+  navigation,
   task,
   refresh,
   request,
@@ -355,11 +423,12 @@ export function WalletReceive({
   receivedWhileAway?: boolean;
   newBitcoinAddress: () => Promise<string>;
 }) {
-  const [deposit, setDeposit] = useState<{ address: string; uri: string } | null>(null);
+  const [deposit, setDeposit] = useState<{ address: string; uri: string; amountSats?: number } | null>(null);
   const [copied, setCopied] = useState(false);
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [quote, setQuote] = useState<ReceiveQuote | null>(null);
+  const jitFee = quote?.jitFee;
   async function issue() {
     if (!quote) return;
     try {
@@ -370,12 +439,9 @@ export function WalletReceive({
     }
   }
   return (
-    <WalletPanel title="Receive bitcoin" icon={ArrowDownLeft}>
+    <WalletPanel title="Receive bitcoin" icon={ArrowDownLeft} navigation={navigation}>
       {deposit ? (
-        <div className="flex flex-col items-start gap-4">
-          <p className="text-sm text-muted-foreground">
-            This address receives on-chain bitcoin. Deposits appear in your wallet after network sync.
-          </p>
+        <div className="grid w-full min-w-0 justify-items-start gap-3">
           {deposit.uri.length <= 2900 && (
             <QRCodeSVG
               title="Bitcoin deposit QR code"
@@ -383,33 +449,39 @@ export function WalletReceive({
               size={208}
               level="L"
               marginSize={4}
-              className="rounded-xl"
+              className="size-48 justify-self-center rounded-xl sm:size-52"
             />
           )}
-          <Detail label="Bitcoin address" value={deposit.address} />
-          {amount && <Detail label="Requested amount" value={bitcoinAmount(parseSats(amount))} />}
-          <Button
-            variant="outline"
-            disabled={task.busy}
-            onClick={() =>
-              task.run(async () => {
-                await copyToClipboard({ text: deposit.uri });
-                setCopied(true);
-              })
-            }
-          >
-            <Copy />
-            {copied ? 'Copied' : 'Copy Bitcoin request'}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => {
-              setDeposit(null);
-              setCopied(false);
-            }}
-          >
-            New request
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              disabled={task.busy}
+              onClick={() =>
+                task.run(async () => {
+                  await copyToClipboard({ text: deposit.uri });
+                  setCopied(true);
+                })
+              }
+            >
+              <Copy />
+              {copied ? 'Copied' : 'Copy Bitcoin request'}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDeposit(null);
+                setCopied(false);
+              }}
+            >
+              New request
+            </Button>
+          </div>
+          <dl className="w-full">
+            <Detail label="Bitcoin address" value={deposit.address} />
+            {deposit.amountSats != null && (
+              <Detail compact label="Requested amount" value={bitcoinAmount(deposit.amountSats)} />
+            )}
+          </dl>
         </div>
       ) : request ? (
         <RequestCode
@@ -426,14 +498,29 @@ export function WalletReceive({
         />
       ) : quote ? (
         <>
-          <dl className="grid gap-3">
+          <dl>
             <Detail
+              compact
               label="Requested amount"
-              value={quote.amountSats === null ? 'Any amount' : bitcoinAmount(quote.amountSats)}
+              value={quote.amountSats === null ? 'Sender chooses' : bitcoinAmount(quote.amountSats)}
             />
-            <Detail label="Receive fee" value={bitcoinAmount(quote.feeSats)} />
-            {quote.netSats !== null && <Detail label="You receive" value={bitcoinAmount(quote.netSats)} />}
-            {quote.description && <Detail label="Description" value={quote.description} />}
+            {jitFee && (
+              <Detail compact label="Lightning payment limit" value={bitcoinAmount(jitFee.maxReceivableSats)} />
+            )}
+            {jitFee && (jitFee.flatFeeSats > 0 || jitFee.feePpm > 0) ? (
+              <>
+                <Detail
+                  compact
+                  label="Fee if the primary adds capacity"
+                  value={receiveFeeTerms(jitFee.flatFeeSats, jitFee.feePpm)}
+                />
+                <Detail compact label="Maximum receive fee" value={bitcoinAmount(jitFee.maxFeeSats)} />
+              </>
+            ) : (
+              <Detail compact label="Receive fee" value={bitcoinAmount(quote.feeSats)} />
+            )}
+            {quote.netSats !== null && <Detail compact label="You receive" value={bitcoinAmount(quote.netSats)} />}
+            {quote.description && <Detail compact label="Description" value={quote.description} />}
           </dl>
           <Warnings items={quote.warnings} />
           <div className="flex flex-wrap gap-2">
@@ -454,15 +541,15 @@ export function WalletReceive({
         </>
       ) : (
         <form
-          className="grid gap-4"
+          className="grid gap-3"
           onSubmit={(e) => {
             e.preventDefault();
             void task.run(async () => {
-              setQuote(await client.quoteReceive({ amountSats: amount || undefined, description }));
+              setQuote(await client.quoteReceive({ amountSats: receiveAmount(amount), description }));
             });
           }}
         >
-          <AmountField value={amount} onChange={setAmount} disabled={task.busy} />
+          <AmountField payerChooses value={amount} onChange={setAmount} disabled={task.busy} />
           <div className="grid gap-2">
             <Label htmlFor="payment-description">Description (optional)</Label>
             <Input
@@ -472,26 +559,26 @@ export function WalletReceive({
               onChange={(e) => setDescription(e.target.value)}
             />
           </div>
-          <Button type="submit" className="justify-self-start" variant="brand" disabled={task.busy}>
-            {task.busy ? 'Preparing request…' : 'Review request'}
-          </Button>
-          <Button
-            type="button"
-            className="justify-self-start"
-            variant="outline"
-            disabled={task.busy}
-            onClick={() =>
-              task.run(async () => {
-                const amountSats = amount ? parseSats(amount) : undefined;
-                if (amountSats === 0)
-                  throw new WalletError('Enter an amount greater than zero or leave it blank.', 'INVALID_AMOUNT');
-                const address = await newBitcoinAddress();
-                setDeposit({ address, uri: buildBip21({ address, amountSats, message: description }) });
-              })
-            }
-          >
-            Receive on-chain
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit" className="justify-self-start" variant="brand" disabled={task.busy}>
+              {task.busy ? 'Preparing request…' : 'Review request'}
+            </Button>
+            <Button
+              type="button"
+              className="justify-self-start"
+              variant="outline"
+              disabled={task.busy}
+              onClick={() =>
+                task.run(async () => {
+                  const amountSats = receiveAmount(amount);
+                  const address = await newBitcoinAddress();
+                  setDeposit({ address, amountSats, uri: buildBip21({ address, amountSats, message: description }) });
+                })
+              }
+            >
+              Receive on-chain
+            </Button>
+          </div>
         </form>
       )}
     </WalletPanel>
@@ -532,6 +619,12 @@ function RequestCode({
   }
   const payload = unified ? request.uri : request.bolt11;
   const qr = unified ? payload : request.bolt11.toUpperCase();
+  const shareable = (!phase || phase === 'waiting') && !expired;
+  const newRequest = (
+    <Button variant="outline" onClick={reset}>
+      New request
+    </Button>
+  );
   return (
     <>
       <p
@@ -560,12 +653,8 @@ function RequestCode({
             receivedWhileAway={receivedWhileAway}
           />
         ) : (
-          (!phase || phase === 'waiting') &&
-          !expired && (
-            <div className="flex w-full flex-col items-start gap-4">
-              <p className="text-sm text-muted-foreground">
-                Keep this wallet open and unlocked while waiting for payment.
-              </p>
+          shareable && (
+            <div className="grid w-full min-w-0 justify-items-start gap-3">
               {request.uri && request.bolt11 && request.uri !== request.bolt11 && (
                 <div className="flex flex-wrap gap-2" role="group" aria-label="Request format">
                   <Button
@@ -599,35 +688,36 @@ function RequestCode({
                   size={208}
                   level="L"
                   marginSize={4}
-                  className="rounded-xl"
+                  className="size-48 justify-self-center rounded-xl sm:size-52"
                 />
               )}
-              <div className="grid w-full gap-2">
-                <Label htmlFor="receive-code">{unified ? 'Payment request' : 'Lightning invoice'}</Label>
-                <Textarea id="receive-code" readOnly value={payload} className="max-h-24 font-mono text-xs" />
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  disabled={task.busy}
+                  onClick={() =>
+                    task.run(async () => {
+                      await copyToClipboard({ text: payload });
+                      setCopied(true);
+                    })
+                  }
+                >
+                  <Copy />
+                  {copied ? 'Copied' : 'Copy request'}
+                </Button>
+                {newRequest}
               </div>
-              <Button
-                variant="outline"
-                disabled={task.busy}
-                onClick={() =>
-                  task.run(async () => {
-                    await copyToClipboard({ text: payload });
-                    setCopied(true);
-                  })
-                }
-              >
-                <Copy />
-                {copied ? 'Copied' : 'Copy request'}
-              </Button>
-              <p className="text-xs text-muted-foreground">Expires {new Date(request.expiresAt).toLocaleString()}</p>
               <Warnings items={request.warnings} />
+              <p className="text-xs text-muted-foreground">
+                Keep your wallet open and unlocked. Expires{' '}
+                {new Date(request.expiresAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}.
+              </p>
+              <PaymentCode label={unified ? 'Payment request' : 'Lightning invoice'} value={payload} />
             </div>
           )
         )}
       </motion.div>
-      <Button className="self-start" variant="outline" onClick={reset}>
-        New request
-      </Button>
+      {!shareable && <div>{newRequest}</div>}
     </>
   );
 }

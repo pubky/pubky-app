@@ -1,0 +1,229 @@
+diff --git a/node_modules/@beignet/wallet-core/src/index.d.ts b/node_modules/@beignet/wallet-core/src/index.d.ts
+--- a/node_modules/@beignet/wallet-core/src/index.d.ts
++++ b/node_modules/@beignet/wallet-core/src/index.d.ts
+@@ -367,6 +367,8 @@
+   id: string;
+   amountSats: number | null;
+   description: string;
++  /** When the payer chooses the amount and new capacity is needed, feeSats is a maximum. */
++  jitFee?: { flatFeeSats: number; feePpm: number; maxFeeSats: number; maxReceivableSats: number };
+   feeSats: number;
+   netSats: number | null;
+   expiresAt: number;
+@@ -383,6 +385,7 @@
+   paymentHash: string;
+   amountSats: number | null;
+   description: string;
++  /** For an amountless JIT request, the opening fee ceiling. Activity reports settlement. */
+   feeSats: number;
+   expiresAt: number;
+   warnings: string[];
+diff --git a/node_modules/@beignet/wallet-core/src/index.js b/node_modules/@beignet/wallet-core/src/index.js
+--- a/node_modules/@beignet/wallet-core/src/index.js
++++ b/node_modules/@beignet/wallet-core/src/index.js
+@@ -249,6 +249,15 @@
+         999999n) /
+         1000000n,
+   );
++// Beignet 0.43.6 prices and authorizes an amountless JIT intent at this ceiling.
++// The actual opening fee applies to the amount the payer delivers.
++const AMOUNTLESS_JIT_MAX_SATS = 1_000_000;
++const AMOUNTLESS_JIT_QUOTE_AMOUNTS = [null, 100_000, 50_000, 10_000, 1_000];
++// The pinned engine returns a reason for a named primary and joins per-primary
++// reasons on a ranked decline. Only resize when every refusal is about funding.
++const fundingSizeRefusal = (message) => typeof message === "string" && message.split("; ").every((part) =>
++  /(?:^|: JIT_REFUSED LSP declined the JIT receive: )the provider (?:funds at most [0-9]+ sats for one receive|does not hold enough on-chain funds to front this receive right now|has reached its lifetime funding budget)$/.test(part),
++);
+ const jitReceiveError = (error, stage) =>
+   error?.code === "JIT_TIMEOUT"
+     ? new WalletError(
+@@ -3130,42 +3139,66 @@
+     );
+     let feeSats = 0;
+     let feePolicy;
++    let maxReceivableSats;
+     const warnings = [];
+     if (plan.kind === "jit") {
+-      requires(
+-        amount != null,
+-        "Enter an amount so your primary node can quote the receive fee.",
+-        "AMOUNT_REQUIRED",
+-      );
+-      const query = `?${target ? `lspPubkey=${encodeURIComponent(target)}&` : ""}amountSats=${amount}&targetRemainingInboundSat=${INBOUND_HEADROOM_SATS}`;
++      const jitTarget = target ?? (amount == null && keys.length === 1 ? keys[0] : undefined);
++      const amounts = amount == null ? AMOUNTLESS_JIT_QUOTE_AMOUNTS : [amount];
+       let quote;
+-      try {
+-        quote = await this._get("/jit/quote" + query);
+-      } catch (error) {
+-        throw jitReceiveError(error, "quote");
++      let pricedAmount;
++      for (const candidate of amounts) {
++        const query = `?${jitTarget ? `lspPubkey=${encodeURIComponent(jitTarget)}&` : ""}${candidate == null ? "" : `amountSats=${candidate}&`}targetRemainingInboundSat=${INBOUND_HEADROOM_SATS}`;
++        const canResize = amount == null && candidate !== amounts[amounts.length - 1];
++        try {
++          quote = await this._get("/jit/quote" + query);
++        } catch (error) {
++          this._assertEpoch(epoch);
++          if (amount == null && error?.code === "NO_PRIMARY_AVAILABLE" && fundingSizeRefusal(error.message)) {
++            if (canResize) continue;
++            throw new WalletError(`${error.message}. Enter a fixed amount to check capacity for that payment.`, error.code, error.status);
++          }
++          throw jitReceiveError(error, "quote");
++        }
++        this._assertEpoch(epoch);
++        if (amount == null && quote?.accepted === false && fundingSizeRefusal(quote.reason)) {
++          if (canResize) continue;
++          throw new WalletError(`${quote.reason}. Enter a fixed amount to check capacity for that payment.`, "RECEIVE_UNAVAILABLE");
++        }
++        pricedAmount = candidate;
++        break;
+       }
+       if (PUBKEY_RE.test(text(quote?.lspPubkey))) steered = { peer: text(quote.lspPubkey).toLowerCase(), skipped: quote.skipped };
+-      else if (target) steered = { peer: target };
++      else if (jitTarget) steered = { peer: jitTarget };
+       requires(
+-        quote.accepted === true && quote.withinCeilings === true,
+-        quote.reason ||
++        quote?.accepted === true && quote.withinCeilings === true,
++        quote?.reason ||
+           "The primary node cannot provide capacity for this amount within your fee limit.",
+         "RECEIVE_UNAVAILABLE",
+       );
+       feeSats = integerField(
+-        quote.feeSats ?? receiveFee(amount, quote.flatFeeSat, quote.feePpm),
++        amount == null ? quote.feeSats : quote.feeSats ?? receiveFee(amount, quote.flatFeeSat, quote.feePpm),
+         "receive fee",
+       );
+       feePolicy = {
+         maxFlatFeeSat: integerField(quote.flatFeeSat, "receive fee"),
+         maxFeePpm: integerField(quote.feePpm, "receive fee rate"),
+       };
++      if (amount == null) {
++        maxReceivableSats = pricedAmount ?? AMOUNTLESS_JIT_MAX_SATS;
++        requires(
++          quote.amountSats === pricedAmount && PUBKEY_RE.test(text(quote.lspPubkey)) &&
++          (jitTarget ? steered.peer === jitTarget : keys.includes(steered.peer)) &&
++          feeSats === receiveFee(maxReceivableSats, feePolicy.maxFlatFeeSat, feePolicy.maxFeePpm),
++          "The primary returned inconsistent amountless receive terms. Review a new request.",
++          "INVALID_RESPONSE",
++        );
++      }
+       requires(
+-        feeSats < amount,
++        feeSats < (amount ?? maxReceivableSats),
+         "The receive fee would use the entire amount. Request more sats.",
+         "RECEIVE_FEE_TOO_HIGH",
+       );
+-      if (feeSats > 0)
++      if (amount != null && feeSats > 0)
+         warnings.push(
+           `${formatSats(
+             feeSats,
+@@ -3194,6 +3227,9 @@
+       description: receiveDescription(description),
+       feeSats,
+       netSats: amount == null ? null : amount - feeSats,
++      ...(amount == null && feePolicy ? {
++        jitFee: { flatFeeSats: feePolicy.maxFlatFeeSat, feePpm: feePolicy.maxFeePpm, maxFeeSats: feeSats, maxReceivableSats },
++      } : {}),
+       expiresAt: this._now() + 60000,
+       warnings,
+       ...(mode === "offline" ? { mode: "offline", ...(offlineQuote.concurrentVersion ? { concurrentVersion: offlineQuote.concurrentVersion } : {}) } : {}),
+@@ -3301,6 +3337,7 @@
+               // agree on the peer and its fee (steered or named).
+               lspPubkey: held.peer ?? held.rec.lfbw.primaryPubkey,
+               targetRemainingInboundSat: INBOUND_HEADROOM_SATS,
++              ...(quote.jitFee ? { maxAmountSats: quote.jitFee.maxReceivableSats } : {}),
+               // Beignet 0.15.0 collects an opening fee two ways. `skim` takes it
+               // out of the delivery, which is what quoteReceive priced and what
+               // netSats reports. `hop` instead bills the sender through the
+@@ -3347,12 +3384,27 @@
+       "The created request has expired. Create a new receive request.",
+       "INVOICE_EXPIRED",
+     );
+-    const actualFee =
++    if (quote.jitFee) {
++      requires(
++        text(invoice.lspPubkey).toLowerCase() === held.peer && invoice.feeMode === "skim" &&
++          invoice.maxAmountSats === quote.jitFee.maxReceivableSats,
++        "The primary changed the amountless receive terms. Do not share this request.",
++        "FEE_CHANGED",
++      );
++      requires(
++        integerField(invoice.flatFeeSat, "receive fee") <= held.feePolicy.maxFlatFeeSat &&
++          integerField(invoice.feePpm, "receive fee rate") <= held.feePolicy.maxFeePpm,
++        "The primary raised an opening fee term. Do not share this request.",
++        "FEE_CHANGED",
++      );
++    }
++    // For an amountless request the registry stores the maximum, never a fee paid.
++    const requestFee =
+       held.plan === "jit"
+-        ? receiveFee(amount, invoice.flatFeeSat, invoice.feePpm)
++        ? receiveFee(amount ?? quote.jitFee.maxReceivableSats, invoice.flatFeeSat, invoice.feePpm)
+         : 0;
+     requires(
+-      actualFee <= quote.feeSats,
++      requestFee <= quote.feeSats,
+       "The primary node changed its fee. This request was created but should not be shared; review a new quote.",
+       "FEE_CHANGED",
+     );
+@@ -3367,6 +3419,12 @@
+     let funding;
+     let fundingExpires;
+     const warnings = [...quote.warnings];
++    if (quote.jitFee)
++      warnings.push(`The sender can pay up to ${formatSats(quote.jitFee.maxReceivableSats)} sats over Lightning.`);
++    if (quote.jitFee && requestFee > 0)
++      warnings.push(
++        `If new capacity is needed, the opening fee is ${formatSats(invoice.flatFeeSat)} sats plus ${formatSats(invoice.feePpm)} ppm of the payment, up to ${formatSats(requestFee)} sats.`,
++      );
+     if (lightningOnly)
+       warnings.push(
+         "This request accepts Lightning. Bitcoin receiving will be available again after an existing Bitcoin receive address is used.",
+@@ -3416,7 +3474,7 @@
+       paymentHash: decoded.paymentHash,
+       amountSats: amount,
+       description: quote.description,
+-      feeSats: actualFee,
++      feeSats: requestFee,
+       expiresAt,
+       warnings,
+       demo: false,
+diff --git a/node_modules/@beignet/wallet-core/test/wallet.test.js b/node_modules/@beignet/wallet-core/test/wallet.test.js
+--- a/node_modules/@beignet/wallet-core/test/wallet.test.js
++++ b/node_modules/@beignet/wallet-core/test/wallet.test.js
+@@ -988,15 +988,23 @@
+ test("receive without inbound requires online primary and quoted fee policy is capped with exact ceil rounding", async () => {
+   const { client, calls } = fixture({
+     "/channels": [],
+-    "/jit/quote": {
+-      accepted: true,
+-      withinCeilings: true,
+-      flatFeeSat: 10,
+-      feePpm: 101,
+-      feeSats: 12,
+-    },
+-  });
+-  await assert.rejects(client.quoteReceive({}), { code: "AMOUNT_REQUIRED" });
++    "/jit/quote": (_body, query) => {
++      const amount = new URLSearchParams(query).get("amountSats");
++      return {
++        accepted: true,
++        withinCeilings: true,
++        lspPubkey: PK,
++        amountSats: amount === null ? null : Number(amount),
++        flatFeeSat: 10,
++        feePpm: 101,
++        feeSats: amount === null ? 111 : 12,
++      };
++    },
++  });
++  const open = await client.quoteReceive({});
++  assert.equal(open.amountSats, null);
++  assert.equal(open.netSats, null);
++  assert.equal(open.jitFee.maxFeeSats, 111);
+   const quote = await client.quoteReceive({ amountSats: 10000 });
+   assert.equal(quote.netSats, 9988);
+   const request = await client.receive(quote);
