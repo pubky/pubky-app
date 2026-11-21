@@ -17,7 +17,6 @@ import { WalletDashboard } from './WalletDashboard';
 import { WalletOpening } from './WalletOpening';
 import { RecoveryWords, useWalletTask, WalletPanel, type WalletTask } from './WalletPanel';
 import { type RingSetupMode, WalletRingSetup } from './WalletRingSetup';
-import { useWalletTimings, WalletTimings } from './WalletTimings';
 
 type ActiveWallet = { id: string; network: Network; session: WalletSession };
 type Stage =
@@ -37,13 +36,11 @@ export function WalletAccount({
   recipient,
   reset,
   renderReady,
-  showTimings = false,
 }: {
   account: string;
   recipient?: string;
   reset: () => void;
   renderReady?: (wallet: UnlockedWallet) => ReactNode;
-  showTimings?: boolean;
 }) {
   const live = useRef<WalletSession | null>(null);
   const connecting = useRef(false);
@@ -55,19 +52,6 @@ export function WalletAccount({
   const [notice, setNotice] = useState('');
   const [interrupted, setInterrupted] = useState<'legacy' | 'payment' | null>(null);
   const task = useWalletTask();
-  const { begin, record, readings } = useWalletTimings(showTimings);
-  const spinnerAt = useRef<number | null>(null);
-  const showingStartup = stage.kind === 'wallet' && stage.status === 'syncing';
-  useEffect(() => {
-    if (!record) return;
-    if (showingStartup) {
-      spinnerAt.current = performance.now();
-      record({ phase: 'spinner-shown' });
-    } else if (spinnerAt.current !== null) {
-      record({ phase: 'spinner-cleared', durationMs: performance.now() - spinnerAt.current });
-      spinnerAt.current = null;
-    }
-  }, [showingStartup, record]);
   useEffect(() => {
     if (window.top !== window.self) {
       setStage({ kind: 'framed' });
@@ -75,16 +59,11 @@ export function WalletAccount({
     }
     let session: WalletSession;
     try {
-      session = new WalletSession(
-        account,
-        (balance) => {
-          if (live.current !== session) return;
-          record?.({ phase: 'vault-unlocked' });
-          setLastBalance(balance);
-          setStage({ kind: 'opening' });
-        },
-        record,
-      );
+      session = new WalletSession(account, (balance) => {
+        if (live.current !== session) return;
+        setLastBalance(balance);
+        setStage({ kind: 'opening' });
+      });
     } catch {
       setNotice('This browser could not start the wallet worker.');
       setStage({ kind: 'unavailable' });
@@ -112,7 +91,7 @@ export function WalletAccount({
         .then(() => held?.release())
         .catch(() => undefined);
     };
-  }, [account, record]);
+  }, [account]);
 
   async function holdDevice(
     session: WalletSession,
@@ -147,7 +126,6 @@ export function WalletAccount({
     if (live.current !== wallet.session || connecting.current) return;
     connecting.current = true;
     setStage({ ...wallet, kind: 'wallet', status: 'syncing' });
-    record?.({ phase: 'engine-requested' });
     try {
       await wallet.session.client.startWallet();
       if (live.current === wallet.session) setStage({ ...wallet, kind: 'wallet', status: 'ready' });
@@ -179,12 +157,8 @@ export function WalletAccount({
     if (binding) {
       if (binding.network !== network) throw new Error('The Ring wallet and this Bitcoin network do not match.');
       setCheckingDevice(true);
-      const leaseStart = record && performance.now();
-      record?.({ phase: 'lease-start' });
       try {
         await holdDevice(session, network, binding.deviceId, 'open');
-        if (live.current === session && leaseStart !== undefined)
-          record?.({ phase: 'lease', durationMs: performance.now() - leaseStart });
       } finally {
         if (live.current === session) setCheckingDevice(false);
       }
@@ -205,7 +179,6 @@ export function WalletAccount({
   async function unlock(password: string) {
     const session = live.current;
     if (!session) return;
-    begin();
     let defaults;
     try {
       defaults = await session.open(password);
@@ -217,7 +190,6 @@ export function WalletAccount({
       throw error;
     }
     if (live.current !== session) return;
-    record?.({ phase: 'vault-open' });
     let records: WalletRecord[];
     try {
       records = await session.client.listWallets();
@@ -277,7 +249,6 @@ export function WalletAccount({
     ));
   return (
     <>
-      {showTimings && <WalletTimings readings={readings} />}
       {task.error && (
         <p role="alert" className="rounded-xl border border-destructive/50 p-4 text-sm text-foreground">
           {task.error}
@@ -449,7 +420,6 @@ export function WalletAccount({
             session={stage.session}
             connection={stage.status}
             connectionNotice={connectionNotice}
-            recordTiming={record}
             walletId={stage.id}
             ringBacked={ringBacked === true}
             interrupted={interrupted}

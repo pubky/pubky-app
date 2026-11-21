@@ -52,8 +52,6 @@ The grant endpoint is public and permits transport to the two fixed upstreams. U
 
 ## Staging and locked posts
 
-To time a normal unlock, open `/wallet?timing=1` in the same browser profile that holds the wallet. Unlock as usual. **Unlock timings** shows elapsed time from pressing Unlock, including Ring device access, Bitcoin sync and Lightning reconnection. On a funded channel it also records when the channel can accept a payment. Reviewing a Lightning invoice adds the time required to obtain its quote. **Copy timings** copies stage names and durations. The report stays in memory for this unlock and clears on lock.
-
 The hosted wallet uses Bitcoin mainnet with Chicory mobile’s Iroh primary and TLS Electrum. Pubky identities, posts and Locks use the Pubky staging services. The network badge in Wallet identifies the network that holds the money.
 
 On a return visit, the visible password screen prepares two short-lived Electrum connections for the network check and the wallet scan. On the hosted mainnet relay they can also begin public network checks, including reading the Bitcoin genesis header and negotiating the Electrum protocol. The engine validates the replies from those connections. Wallet addresses and balances are queried after unlock and, for Ring wallets, the device check. The wallet starts opening its fixed Lightning relay connection as soon as engine startup is authorized, while restoring the node and checking Bitcoin. Beignet authenticates the peer. The dashboard rereads the wallet when the primary connects or disconnects. Payment review uses the live wallet.

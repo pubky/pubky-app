@@ -167,69 +167,6 @@ it('delivers primary status hints only to listeners for the active, unlocked wal
   expect(listener).toHaveBeenCalledOnce();
 });
 
-it('opts into worker timings per unlock, validates their fields, and stops delivery when access changes', async () => {
-  const workers: TestWorker[] = [];
-  class TestWorker {
-    onmessage?: (event: { data: unknown }) => void;
-    requests: Request[] = [];
-    constructor() {
-      workers.push(this);
-    }
-    postMessage(request: Request) {
-      this.requests.push(request);
-      queueMicrotask(() => this.onmessage?.({ data: { id: request.id, result: null } }));
-    }
-    timing(payload: object) {
-      this.onmessage?.({ data: { event: 'startup-timing', ...payload } });
-    }
-    terminate() {}
-  }
-  vi.stubGlobal('Worker', TestWorker);
-  const normal = new WalletSession(auth.currentUserPubky);
-  await normal.open('vault password');
-  expect(workers[0].requests.at(-1)).not.toHaveProperty('notifyStartupTiming');
-  await normal.close();
-  const record = vi.fn();
-  const session = new WalletSession(auth.currentUserPubky, undefined, record);
-  await session.open('vault password');
-  const worker = workers[1];
-  expect(worker.requests.at(-1)).toMatchObject({ operation: 'open', notifyStartupTiming: true });
-  const span = { phase: 'node-restore', durationMs: 123 };
-  worker.timing({ ...span, account: 'private', detail: 'sensitive' });
-  worker.timing({ phase: 'first-primary-connected', account: 'secret', durationMs: 'invalid' });
-  worker.timing({ phase: 'routing-graph-restored' });
-  worker.timing({ phase: 'routing-graph-restored', durationMs: 205 });
-  worker.timing({ phase: 'unrecognized' });
-  worker.timing({ phase: 'first-lightning-review' });
-  worker.timing({ phase: 'initial-sync' });
-  worker.timing({ phase: 'initial-sync', durationMs: -1 });
-  worker.timing({ phase: 'initial-sync', durationMs: Infinity });
-  worker.timing({ phase: 'initial-sync', durationMs: 'secret' });
-  expect(record.mock.calls).toEqual([
-    [span],
-    [{ phase: 'first-primary-connected' }],
-    [{ phase: 'routing-graph-restored' }],
-    [{ phase: 'routing-graph-restored', durationMs: 205 }],
-  ]);
-  session.guardRingDevice(() => {
-    throw new Error('Lease lost');
-  });
-  worker.timing(span);
-  session.guardRingDevice(() => {});
-  const generation = auth.generation;
-  try {
-    auth.generation = 'another generation';
-    worker.timing(span);
-  } finally {
-    auth.generation = generation;
-  }
-  const closing = session.close();
-  worker.timing(span);
-  await closing;
-  worker.timing(span);
-  expect(record).toHaveBeenCalledTimes(4);
-});
-
 it.each(['current', 'other account', 'signout', 'sync', 'new generation', 'lock'])(
   'delivers local unlock only to the pending open for its current signed-in owner (%s)',
   async (condition) => {

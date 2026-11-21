@@ -197,7 +197,7 @@ function unpack(blob) {
   return files;
 }
 
-export async function unlockVolume(store, account, password, beginSave) {
+export async function unlockVolume(store, account, password) {
   const sealed = store.read();
   if (typeof password !== 'string' || !password.length || (!sealed && password.length < 12)) {
     throw failure('Use a wallet password of at least 12 characters.', 'WALLET_PASSWORD');
@@ -234,7 +234,6 @@ export async function unlockVolume(store, account, password, beginSave) {
     if (!available) throw failure('Reopen the wallet to access its storage.');
   };
   const save = () => {
-    const finishTiming = beginSave?.();
     let plain;
     try {
       plain = pack(files);
@@ -251,7 +250,6 @@ export async function unlockVolume(store, account, password, beginSave) {
       throw error;
     } finally {
       plain?.fill(0);
-      finishTiming?.();
     }
   };
   return {

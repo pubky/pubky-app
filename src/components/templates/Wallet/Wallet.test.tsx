@@ -159,33 +159,6 @@ async function unlock() {
 }
 
 describe('Pubky wallet', () => {
-  it('copies only local timings for an opt-in unlock and a successful Lightning review', async () => {
-    const user = userEvent.setup();
-    const start = Promise.withResolvers<void>();
-    wallet.startWallet.mockReturnValueOnce(start.promise);
-    render(<Wallet recipient="receiver" showTimings />);
-    const copy = await screen.findByRole('button', { name: 'Copy timings' });
-    expect(copy).toBeDisabled();
-    wallet.open.mockImplementationOnce(async () => {
-      wallet.unlocked?.(null);
-      return { network: 'regtest' };
-    });
-    await unlock();
-    await screen.findByText('Connecting to Bitcoin and Lightning…');
-    await act(async () => start.resolve());
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Review payment' })).toBeEnabled());
-    await user.click(screen.getByRole('button', { name: 'Review payment' }));
-    await screen.findByRole('button', { name: 'Confirm payment' });
-    await user.click(copy);
-    const report = await navigator.clipboard.readText();
-    expect(report).toMatch(/^0 ms +Unlock pressed/m);
-    expect(report).toMatch(/\d+ ms +Local vault decrypted/);
-    expect(report).toMatch(/Bitcoin and Lightning spinner disappeared \(\d+ ms in step\)/);
-    expect(report).toMatch(/\d+ ms +Lightning payment review completed \(\d+ ms in step\)/);
-    expect(report).not.toMatch(/receiver|destination|₿|Coffee|review-1|account-one|example password/);
-    expect(wallet.send).not.toHaveBeenCalled();
-  });
-
   it('shows the encrypted last balance during sync and replaces it with the verified total once ready', async () => {
     let finishStart!: () => void;
     wallet.startWallet.mockImplementation(
@@ -205,7 +178,6 @@ describe('Pubky wallet', () => {
       activity: [],
     });
     render(<Wallet />);
-    expect(screen.queryByRole('button', { name: 'Copy timings' })).toBeNull();
     const password = await screen.findByLabelText('Password', { exact: true });
     expect(screen.queryByText('₿4,200')).toBeNull();
     fireEvent.change(password, { target: { value: 'example password' } });

@@ -15,19 +15,6 @@ import { useAuthStore } from '@/stores/auth/auth.store';
 export type OfflineReceiveDraft = { id: string; amountSats: number; description: string; peer?: string };
 export type WalletDefaults = { network: Network; primaryUri: string; electrum: ElectrumServer };
 export type LastWalletBalance = { walletId: string; network: Network; totalSats: number; updatedAt: number };
-const workerSpans = [
-  'engine-start',
-  'node-restore',
-  'electrum-verification',
-  'initial-sync',
-  'routing-graph-restored',
-  'vault-writes',
-] as const;
-const workerMilestones = ['first-primary-connected', 'first-channel-usable'] as const;
-type WorkerStartupPhase = (typeof workerSpans)[number] | (typeof workerMilestones)[number];
-export type WalletStartupPhase = WorkerStartupPhase | 'lease' | 'first-lightning-review';
-export type WalletStartupTiming = { phase: WalletStartupPhase; durationMs?: number };
-type TimingEvent = { event: 'startup-timing'; phase: WorkerStartupPhase; durationMs?: number };
 type UnlockedEvent = { id: number; event: 'unlocked'; account: string; balance: LastWalletBalance | null };
 type PrimaryChangeEvent = { event: 'primary-change'; account: string };
 type Reply = { id: number; result?: unknown; error?: { code?: string; status?: number; message: string } };
@@ -55,7 +42,6 @@ export class WalletSession {
   constructor(
     private readonly account: string,
     private readonly onUnlocked?: (lastBalance: LastWalletBalance | null) => void,
-    private readonly onStartupTiming?: (timing: WalletStartupTiming) => void,
   ) {
     const { session, generation } = useAuthStore.getState();
     this.ownsAccount = () => {
@@ -70,30 +56,7 @@ export class WalletSession {
       );
     };
     this.worker = new Worker('/wallet-engine/worker.js', { type: 'module', name: 'Pubky wallet' });
-    this.worker.onmessage = ({ data }: MessageEvent<Reply | UnlockedEvent | PrimaryChangeEvent | TimingEvent>) => {
-      if ('event' in data && data.event === 'startup-timing') {
-        if (!this.onStartupTiming || !this.worker || this.closing || !this.ownsAccount()) return;
-        try {
-          this.assertRingDevice?.();
-        } catch {
-          return;
-        }
-        const { phase, durationMs } = data;
-        if (
-          workerMilestones.some((value) => value === phase) ||
-          (phase === 'routing-graph-restored' && durationMs === undefined)
-        )
-          this.onStartupTiming({ phase });
-        else if (
-          workerSpans.some((value) => value === phase) &&
-          typeof durationMs === 'number' &&
-          Number.isSafeInteger(durationMs) &&
-          durationMs >= 0
-        ) {
-          this.onStartupTiming({ phase, durationMs });
-        }
-        return;
-      }
+    this.worker.onmessage = ({ data }: MessageEvent<Reply | UnlockedEvent | PrimaryChangeEvent>) => {
       if ('event' in data && data.event === 'primary-change') {
         if (data.account !== this.account) return;
         try {
@@ -172,14 +135,7 @@ export class WalletSession {
           if (!discovery) this.assertRingDevice();
         }
         worker.postMessage(
-          {
-            id,
-            operation,
-            account: this.account,
-            payload,
-            ...(notifyUnlocked ? { notifyUnlocked } : {}),
-            ...(operation === 'open' && this.onStartupTiming ? { notifyStartupTiming: true } : {}),
-          },
+          { id, operation, account: this.account, payload, ...(notifyUnlocked ? { notifyUnlocked } : {}) },
           transfer,
         );
       } catch (error) {
