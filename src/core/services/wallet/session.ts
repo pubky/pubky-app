@@ -12,10 +12,18 @@ import {
 } from '@beignet/wallet-core';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
+export type PrimaryConnectionIssue =
+  | 'ownership-pending'
+  | 'ownership-changed'
+  | 'handshake-timeout'
+  | 'handshake-closed'
+  | 'protocol-mismatch'
+  | 'relay-unavailable';
 export type OfflineReceiveDraft = { id: string; amountSats: number; description: string; peer?: string };
 export type WalletDefaults = { network: Network; primaryUri: string; electrum: ElectrumServer };
 export type LocalUnlockScope = { network: Network; deviceId: string };
 export type LocalRingUnlock = LocalUnlockScope & { passwordAvailable: boolean };
+export type ChannelBalanceHold = 'imported-held' | 'funding-missing' | 'held';
 export type LastWalletBalance = { walletId: string; network: Network; totalSats: number; updatedAt: number };
 type UnlockedEvent = { id: number; event: 'unlocked'; account: string; balance: LastWalletBalance | null };
 type PrimaryChangeEvent = { event: 'primary-change'; account: string };
@@ -242,6 +250,28 @@ export class WalletSession {
     if (!id || (expected !== undefined && expected !== id) || this.closing || !this.ownsAccount()) throw locked();
     this.assertRingDevice?.();
     return id;
+  }
+
+  async primaryConnectionIssue(walletId: string): Promise<PrimaryConnectionIssue | null> {
+    this.selectedWallet(walletId);
+    const issue = await this.call<PrimaryConnectionIssue | null>('primary-connection-issue', { walletId });
+    this.selectedWallet(walletId);
+    return issue;
+  }
+
+  /** The snapshot's single hold note also includes resolved channels. Only inspect the local rows when it appears. */
+  async channelBalanceHold(walletId: string): Promise<ChannelBalanceHold | null> {
+    this.selectedWallet(walletId);
+    const rows = await this.call<{ state: string; restoreRecencyUnproven?: boolean; fundingUnaccounted?: boolean }[]>(
+      'request',
+      { method: 'GET', path: `/wallets/${encodeURIComponent(walletId)}/api/channels` },
+    );
+    this.selectedWallet(walletId);
+    if (!Array.isArray(rows) || rows.some((row) => !row || typeof row.state !== 'string')) return 'held';
+    const live = rows.filter((row) => !['CLOSED', 'FORCE_CLOSED', 'DROPPED'].includes(row.state));
+    if (live.some((row) => row.restoreRecencyUnproven === true)) return 'imported-held';
+    if (live.some((row) => row.fundingUnaccounted === true)) return 'funding-missing';
+    return null;
   }
 
   /** Read completed receipts from the unlocked vault before the first live snapshot. */

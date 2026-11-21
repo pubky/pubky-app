@@ -14,6 +14,8 @@ const wallet = vi.hoisted(() => ({
   inspect: vi.fn(),
   rememberBalance: vi.fn(),
   savedActivity: vi.fn(),
+  channelBalanceHold: vi.fn(),
+  primaryConnectionIssue: vi.fn(),
   awayReceipts: vi.fn(),
   unlocked: undefined as ((preview: LastWalletBalance | null) => void) | undefined,
   progress: undefined as ((value: WalletStartProgress) => void) | undefined,
@@ -93,6 +95,8 @@ vi.mock('@/services/wallet/session', () => ({
     }
     rememberBalance = wallet.rememberBalance;
     savedActivity = wallet.savedActivity;
+    channelBalanceHold = wallet.channelBalanceHold;
+    primaryConnectionIssue = wallet.primaryConnectionIssue;
     onPrimaryChange = wallet.onPrimaryChange;
     awayReceipts = wallet.awayReceipts;
     loadOfflineReceiveDraft = wallet.loadOfflineReceiveDraft;
@@ -159,6 +163,8 @@ beforeEach(() => {
   wallet.onPrimaryChange.mockReturnValue(() => {});
   wallet.rememberBalance.mockResolvedValue(undefined);
   wallet.savedActivity.mockResolvedValue([]);
+  wallet.channelBalanceHold.mockResolvedValue(null);
+  wallet.primaryConnectionIssue.mockResolvedValue(null);
   wallet.awayReceipts.mockResolvedValue([]);
   wallet.getConfig.mockResolvedValue({ offlineReceiveAvailable: true });
   wallet.loadOfflineReceiveDraft.mockResolvedValue(null);
@@ -353,6 +359,33 @@ describe('Pubky wallet', () => {
     fireEvent.change(screen.getByLabelText('Pay to'), { target: { value: 'lnbcrt1payment' } });
     expect(screen.getByRole('button', { name: 'Review payment' })).toBeEnabled();
   });
+
+  it.each([
+    ['funding-missing', 'Waiting for channel funding'],
+    ['unavailable', 'Some Lightning funds are on hold'],
+    [null, null],
+  ])(
+    'shows the live channel hold without repeating an engine note or warning on closed history (%s)',
+    async (hold, title) => {
+      if (hold === 'unavailable') wallet.channelBalanceHold.mockRejectedValue(new Error('private diagnostic'));
+      else wallet.channelBalanceHold.mockResolvedValue(hold);
+      wallet.snapshot.mockResolvedValue({
+        wallet: record,
+        primary: { connected: true },
+        balance: { totalSats: 4300, availableSats: 300, pendingSats: 0 },
+        notes: ['Some funds are held while the wallet verifies its latest state. Still in your total.'],
+        activity: [],
+      });
+      render(<Wallet />);
+      await unlock();
+      expect(await screen.findByRole('group', { name: '₿4,300' })).toBeVisible();
+      if (title) expect(screen.getByText(title)).toBeVisible();
+      else expect(screen.queryByText(/on hold|waiting for channel funding/i)).toBeNull();
+      expect(wallet.channelBalanceHold).toHaveBeenCalledWith(record.id);
+      expect(screen.queryByText(/still in your total|private diagnostic/i)).toBeNull();
+      expect(screen.getByText('₿300')).toBeVisible();
+    },
+  );
 
   it('shows the encrypted last balance during sync and replaces it with the verified total once ready', async () => {
     let finishStart!: () => void;
@@ -862,7 +895,7 @@ describe('Pubky wallet', () => {
       act(() => {
         if (typeof grace === 'function') grace();
       });
-      expect(screen.getByText(error)).toBeVisible();
+      expect(screen.getByText(error === genericSetupError ? /will retry automatically/i : error)).toBeVisible();
       expect(screen.getByRole('button', { name: 'Reconnect' })).toBeEnabled();
     } finally {
       timer.mockRestore();
@@ -900,6 +933,94 @@ describe('Pubky wallet', () => {
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Reconnect' })).toBeNull());
     expect(wallet.retrySetup).toHaveBeenCalledOnce();
     expect(screen.queryByText('Lightning connected')).toBeNull();
+  });
+
+  it('trusts the live peer over a failed setup left in the wallet record', async () => {
+    wallet.snapshot.mockResolvedValue({
+      wallet: record,
+      balance: { totalSats: 7000, availableSats: 7000, pendingSats: 0 },
+      activity: [],
+      primary: { connected: true, setup: 'failed', setupError: genericSetupError },
+    });
+    render(<Wallet />);
+    await unlock();
+    await screen.findByText('₿7,000');
+    expect(screen.queryByText(/connection failed|connecting to Lightning/i)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Reconnect' })).toBeNull();
+    expect(wallet.primaryConnectionIssue).not.toHaveBeenCalled();
+  });
+
+  it('opens a fresh connection automatically after a funded unlock fails and restores the available balance', async () => {
+    const base = { wallet: record, activity: [], balance: { totalSats: 18000, availableSats: 0, pendingSats: 0 } };
+    wallet.snapshot.mockResolvedValue({
+      ...base,
+      primary: { connected: false, setup: 'failed', setupError: genericSetupError },
+    });
+    wallet.retrySetup.mockImplementationOnce(async () => {
+      wallet.snapshot.mockResolvedValue({
+        ...base,
+        balance: { ...base.balance, availableSats: 18000 },
+        primary: { connected: true, setup: 'ready' },
+      });
+    });
+    render(<Wallet />);
+    await unlock();
+    await waitFor(() => expect(wallet.retrySetup).toHaveBeenCalledOnce(), { timeout: 3000 });
+    await waitFor(() => expect(screen.queryByText(/connecting to Lightning/i)).toBeNull());
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+    expect(await screen.findByText('₿18,000')).toBeVisible();
+    expect(wallet.send).not.toHaveBeenCalled();
+  });
+
+  it('keeps an ownership refusal out of the reconnect loop', async () => {
+    wallet.primaryConnectionIssue.mockResolvedValue('ownership-changed');
+    wallet.snapshot.mockResolvedValue({
+      wallet: record,
+      balance: { totalSats: 7000, availableSats: 0, pendingSats: 0 },
+      activity: [],
+      primary: { connected: false, setup: 'failed', setupError: genericSetupError },
+    });
+    render(<Wallet />);
+    await unlock();
+    await screen.findByText(/continue on the device where you most recently recovered it/i);
+    expect(screen.queryByRole('button', { name: 'Reconnect' })).toBeNull();
+    act(() => window.dispatchEvent(new Event('online')));
+    expect(wallet.retrySetup).not.toHaveBeenCalled();
+  });
+
+  it('reconnects once when internet returns and keeps the payment draft open', async () => {
+    const base = { wallet: record, balance: { totalSats: 9000, availableSats: 0, pendingSats: 0 }, activity: [] };
+    wallet.snapshot.mockResolvedValue({ ...base, primary: { connected: true, setup: 'ready' } });
+    render(<Wallet />);
+    await unlock();
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+    fireEvent.change(screen.getByLabelText('Pay to'), { target: { value: 'pubkyreceiver' } });
+    wallet.snapshot.mockResolvedValue({
+      ...base,
+      primary: { connected: false, setup: 'failed', setupError: genericSetupError },
+    });
+    act(() => wallet.onPrimaryChange.mock.calls[0][0]());
+    await screen.findByRole('button', { name: 'Reconnect' });
+    let finish!: () => void;
+    wallet.retrySetup.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    act(() => window.dispatchEvent(new Event('offline')));
+    expect(await screen.findByText(/you’re offline/i)).toBeVisible();
+    act(() => {
+      window.dispatchEvent(new Event('online'));
+      window.dispatchEvent(new Event('online'));
+    });
+    expect(await screen.findByText('Reconnecting to Lightning…')).toBeVisible();
+    expect(wallet.retrySetup).toHaveBeenCalledOnce();
+    wallet.snapshot.mockResolvedValue({ ...base, primary: { connected: true, setup: 'ready' } });
+    act(() => finish());
+    await waitFor(() => expect(screen.queryByText('Reconnecting to Lightning…')).toBeNull());
+    expect(screen.getByLabelText('Pay to')).toHaveValue('pubkyreceiver');
+    expect(wallet.send).not.toHaveBeenCalled();
   });
 
   it('offers a watched on-chain deposit without asking the primary for inbound liquidity', async () => {

@@ -26,12 +26,15 @@ let owner;
 let transition;
 let closing = false;
 let renewTimer;
+let refreshingGrant;
 let background = false;
 let grantAbort;
 let openingGrant;
 let startupScan;
+let channelReadiness;
 let activeProgress;
 let primaryConnected = false;
+let primaryDialIssue = null;
 let transport;
 let compiledDatabase;
 let connectionIssue;
@@ -48,6 +51,38 @@ const handoffClose = createHandoffClose();
 let sending = false;
 let previousPaymentMarker = 0;
 const busy = () => Object.assign(new Error('Another wallet operation is running.'), { code: 'WALLET_BUSY' });
+
+// Only the local dialer's fixed errors qualify. A peer's warning, error text,
+// and disconnect reason can contain arbitrary data and never feed this function.
+function dialIssue(message, primaryUri) {
+  const [key, address] = primaryUri.split('@');
+  // BeignetNode wraps transport failures with this primary's address. Its own
+  // connection deadline produces an unwrapped diagnostic instead.
+  const prefix = `Failed to connect to ${key.slice(0, 16)}…@${address}: `;
+  const reason = message.startsWith(prefix) ? message.slice(prefix.length) : message;
+  const deadline = /^connectPeer timed out after \d+ms \(is (.+) the peer's P2P address\?\)$/.exec(message);
+  if (reason === 'Handshake timeout' || reason === 'Connection timeout' || deadline?.[1] === address)
+    return 'handshake-timeout';
+  if (
+    reason === 'Connection closed during handshake' ||
+    reason === 'Socket closed before read completed' ||
+    reason === 'Connection closed while draining buffered frames'
+  )
+    return 'handshake-closed';
+  if (
+    reason === 'Unable to connect to transport relay' ||
+    reason === `Primary node connection is unavailable at ${address}. Check the address, port, and network.`
+  )
+    return 'relay-unavailable';
+  if (
+    reason === 'Act 2 ephemeral key is not a valid curve point' ||
+    reason === 'Peer networks share no chain with ours' ||
+    /^Unsupported handshake version: \d{1,3}$/.test(reason) ||
+    /^Expected init message \(type 16\), got type \d{1,5}$/.test(reason)
+  )
+    return 'protocol-mismatch';
+  return null;
+}
 
 function watchSlowStart(id) {
   let phase = 'opening';
@@ -168,23 +203,29 @@ function sameDeployment(left, right) {
   );
 }
 
-function renew(grant) {
-  const delay = Math.max(1000, Math.min(240000, (grant.expiresAt - Date.now()) * 0.7));
-  renewTimer = setTimeout(async () => {
+function renew(grant, delay = Math.max(1000, Math.min(240000, (grant.expiresAt - Date.now()) * 0.7))) {
+  clearTimeout(renewTimer);
+  renewTimer = setTimeout(() => void refreshGrant(grant).catch(() => {}), delay);
+}
+
+function refreshGrant(grant) {
+  if (refreshingGrant) return refreshingGrant;
+  refreshingGrant = (async () => {
+    let retryDelay = 10000;
     try {
       const next = await connection();
-      if (closing || handoffStopped || grantAbort?.signal.aborted) return;
+      rejectIfClosing();
       // Never move an existing wallet's authenticated peer to a different route.
-      if (!sameDeployment(next, grant)) throw configurationError();
+      if (handoffStopped || activeGrant !== grant || !sameDeployment(next, grant)) throw configurationError();
       grant.token = next.token;
       grant.expiresAt = next.expiresAt;
-    } catch {
-      // Established sockets continue. The relay verifies expiry on every new dial.
-      if (!closing && !handoffStopped) renewTimer = setTimeout(() => renew(grant), 10000);
-      return;
+      retryDelay = undefined;
+    } finally {
+      refreshingGrant = undefined;
+      if (!closing && !handoffStopped && activeGrant === grant) renew(grant, retryDelay);
     }
-    renew(grant);
-  }, delay);
+  })();
+  return refreshingGrant;
 }
 
 function rejectIfClosing() {
@@ -283,11 +324,10 @@ async function open(account, password, onUnlocked, localUnlock) {
     const active = () => grant && activeGrant === grant && !closing && !handoffStopped && owner === account;
     const extensions = [...(startupScan?.nodeOptions.extensions ?? []), handoffClose.extension];
     if (primaryKey) {
-      extensions.push(
-        primaryChannelReadiness(primaryKey, () => {
-          if (active()) self.postMessage({ event: 'primary-change', account });
-        }),
-      );
+      channelReadiness = primaryChannelReadiness(primaryKey, () => {
+        if (active()) self.postMessage({ event: 'primary-change', account });
+      });
+      extensions.push(channelReadiness);
     }
     engine = await createPortableRuntime({
       nodeOptions: extensions.length ? { extensions } : undefined,
@@ -296,12 +336,16 @@ async function open(account, password, onUnlocked, localUnlock) {
       electrum: defaults.electrum,
       socketFactory: relay?.socketFactory ?? offline,
       onDiagnostic({ phase, message }) {
+        if (active() && (phase === 'primary-connect' || phase === 'primary-redial')) {
+          primaryDialIssue = dialIssue(message, grant.primaryUri);
+        }
         if (
           (phase === 'peer:connect' || phase === 'peer:disconnect') &&
           active() &&
           message.split(' ', 1)[0].toLowerCase() === primaryKey
         ) {
           primaryConnected = phase === 'peer:connect';
+          if (primaryConnected) primaryDialIssue = null;
           activeProgress?.update();
           // A hint to reread verified wallet state. No diagnostic payload leaves the worker.
           self.postMessage({ event: 'primary-change', account });
@@ -314,6 +358,7 @@ async function open(account, password, onUnlocked, localUnlock) {
         const createdNode = phase === 'engine-perf' && message.startsWith('create ');
         if (createdNode && active()) {
           primaryConnected = false;
+          primaryDialIssue = null;
           activeProgress?.update('scanning');
         }
         if (createdNode && relay && transport === relay && !closing && !background) {
@@ -375,7 +420,9 @@ async function close() {
   await stopEngine();
   activeStore = undefined;
   startupScan = undefined;
+  channelReadiness = undefined;
   primaryConnected = false;
+  primaryDialIssue = null;
   volume?.close();
   volume = undefined;
   awayReceipts = undefined;
@@ -433,7 +480,12 @@ async function handle({ id, operation, account, payload, notifyUnlocked, notifyS
     background = !!payload;
     awayReceipts?.setHidden(background);
     if (background) discardIdleSockets();
-    engine?.setAppBackgrounded(background);
+    else if (activeGrant && activeGrant.expiresAt - Date.now() < 15000) {
+      // A suspended browser may wake after its ticket expires. Renew before
+      // Beignet resumes its redial timers, then respect any newer visibility event.
+      await refreshGrant(activeGrant).catch(() => {});
+    }
+    if (!closing && !handoffStopped) engine?.setAppBackgrounded(background);
     return;
   }
   if (operation === 'prepare-local-unlock') {
@@ -526,13 +578,7 @@ async function handle({ id, operation, account, payload, notifyUnlocked, notifyS
       key: payload?.key,
       network: payload?.network,
       mode: payload?.mode,
-      verify: async () => {
-        const next = await connection();
-        rejectIfClosing();
-        if (owner !== account || !sameDeployment(next, activeGrant)) throw configurationError();
-        activeGrant.token = next.token;
-        activeGrant.expiresAt = next.expiresAt;
-      },
+      verify: () => refreshGrant(activeGrant),
     });
     try {
       return await ringOperation;
@@ -540,7 +586,12 @@ async function handle({ id, operation, account, payload, notifyUnlocked, notifyS
       ringOperation = undefined;
     }
   }
-  if (operation === 'request') {
+  const inspectPrimary = operation === 'primary-connection-issue';
+  if (inspectPrimary) {
+    if (typeof payload?.walletId !== 'string' || !/^[0-9a-f]{32}$/.test(payload.walletId)) throw configurationError();
+    payload = { method: 'GET', path: `/wallets/${payload.walletId}/api/recovery/status` };
+  }
+  if (operation === 'request' || inspectPrimary) {
     // A recovery-only session cannot mutate wallet or channel state.
     if (
       connectionIssue &&
@@ -567,6 +618,12 @@ async function handle({ id, operation, account, payload, notifyUnlocked, notifyS
     let progress;
     try {
       const start = payload.method === 'POST' && /^\/api\/wallets\/([0-9a-f]{32})\/start$/.exec(payload.path);
+      // A transport ticket may have been evicted even before expiry. Explicit
+      // reconnects always get a fresh ticket before opening another socket.
+      if (payload.method === 'POST' && /^\/api\/wallets\/[0-9a-f]{32}\/lfbw\/(?:setup|retry)$/.test(payload.path)) {
+        await refreshGrant(activeGrant);
+        rejectIfClosing();
+      }
       if (start && notifyStartProgress === true && !activeProgress) {
         progress = watchSlowStart(id);
         activeProgress = progress;
@@ -575,6 +632,16 @@ async function handle({ id, operation, account, payload, notifyUnlocked, notifyS
       // with node restoration and leave the authenticated Lightning handshake to Beignet.
       if (start && !background) transport?.preparePeer();
       const result = await engine.request(payload);
+      if (payload.method === 'GET' && /^\/wallets\/[0-9a-f]{32}\/api\/channels$/.test(payload.path) &&
+          !closing && !handoffStopped && !background && activeGrant) {
+        channelReadiness?.observeFunding(result);
+      }
+      if (inspectPrimary) {
+        if (result.state === 'fenced' || result.node?.fenced === true || result.node?.gate === 'fenced')
+          return 'ownership-changed';
+        if (result.node?.startupRepairPending === true || result.node?.gate === 'quarantined') return 'ownership-pending';
+        return primaryDialIssue;
+      }
       if (startupScan && start) {
         // Confirmation can outlast the engine's initial-sync mark while the Bitcoin scan settles.
         progress?.update('scanning');

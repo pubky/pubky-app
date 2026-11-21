@@ -15,6 +15,34 @@ vi.mock('@/stores/auth/auth.store', () => ({ useAuthStore: { getState: () => aut
 
 afterEach(() => vi.unstubAllGlobals());
 
+it.each([
+  { rows: [{ state: 'NORMAL', fundingUnaccounted: true }], expected: 'funding-missing' },
+  { rows: [{ state: 'AWAITING_REESTABLISH', restoreRecencyUnproven: true }], expected: 'imported-held' },
+  {
+    rows: ['CLOSED', 'DROPPED', 'FORCE_CLOSED'].map((state) => ({ state, restoreRecencyUnproven: true })),
+    expected: null,
+  },
+  { rows: [{ state: 'NORMAL' }], expected: null },
+  { rows: [{}], expected: 'held' },
+])('projects the current wallet’s local channel rows into a balance hold ($expected)', async ({ rows, expected }) => {
+  const walletId = 'a'.repeat(32);
+  const channelPath = `/wallets/${walletId}/api/channels`;
+  class TestWorker {
+    onmessage?: (event: { data: unknown }) => void;
+    postMessage(request: Request & { payload?: { path?: string } }) {
+      const result = request.payload?.path === channelPath ? rows : null;
+      this.onmessage?.({ data: { id: request.id, result } });
+    }
+    terminate() {}
+  }
+  vi.stubGlobal('Worker', TestWorker);
+  const session = new WalletSession(auth.currentUserPubky);
+  session.client.selectWallet(walletId);
+  await expect(session.channelBalanceHold(walletId)).resolves.toBe(expected);
+  await expect(session.channelBalanceHold('b'.repeat(32))).rejects.toMatchObject({ code: 'WALLET_CLOSED' });
+  await session.close();
+});
+
 it('waits for the durable send marker and clears it only for known outcomes', async () => {
   const operations: unknown[] = [];
   let accept!: () => void;

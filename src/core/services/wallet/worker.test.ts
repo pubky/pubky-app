@@ -392,6 +392,22 @@ it('coalesces progress on a slow start using only the Bitcoin phase and authenti
   expect(primaryChanged).toHaveBeenCalledOnce();
 });
 
+it('only supplies foreground wallet channel reads to the funding watcher', async () => {
+  const extension = vi.mocked(primaryChannelReadiness).mock.results.at(-1)!.value;
+  const observe = vi.spyOn(extension, 'observeFunding');
+  const read = { method: 'GET', path: `/wallets/${walletId}/api/channels` };
+  const rows = [{ state: 'NORMAL', channelId: 'a'.repeat(64), fundingUnaccounted: true }];
+  fixture.engine.request.mockResolvedValue(rows);
+  await request('request', { method: 'GET', path: '/api/wallets' });
+  expect(observe).not.toHaveBeenCalled();
+  const result = await request('request', read);
+  expect(result.result).toEqual(rows);
+  expect(observe.mock.calls).toEqual([[rows]]);
+  await request('visibility', true);
+  await request('request', read);
+  expect(observe).toHaveBeenCalledOnce();
+});
+
 it('opens the fixed peer transport before the foreground engine start, after access checks', async () => {
   const start = { method: 'POST', path: '/api/wallets/' + walletId + '/start' };
   expect((await request('request', start, 'other')).error).toBeDefined();
@@ -424,6 +440,100 @@ it('replaces a nearly expired prefetch and cancels an outstanding ticket on lock
   expect(signal.aborted).toBe(true);
   expect(fixture.unlock).not.toHaveBeenCalled();
   expect(fixture.createRuntime).not.toHaveBeenCalled();
+});
+
+const reconnect = { method: 'POST', path: '/api/wallets/' + walletId + '/lfbw/setup', body: {} };
+
+it('reports only local dial categories and authoritative ownership evidence for the unlocked wallet', async () => {
+  const [{ onDiagnostic }] = fixture.createRuntime.mock.lastCall!;
+  const inspect = () => request('primary-connection-issue', { walletId });
+  const key = grant.primaryUri.split('@')[0];
+  const prefix = 'Failed to connect to ' + key.slice(0, 16) + '…@test:1: ';
+  const running = { state: 'running', node: { gate: 'disabled' } };
+  for (const [message, issue] of [
+    [prefix + 'Handshake timeout', 'handshake-timeout'],
+    ["connectPeer timed out after 10000ms (is test:1 the peer's P2P address?)", 'handshake-timeout'],
+    [prefix + 'Connection closed during handshake', 'handshake-closed'],
+    [prefix + 'Primary node connection is unavailable at test:1. Check the address, port, and network.', 'relay-unavailable'],
+    [prefix + 'Expected init message (type 16), got type 17', 'protocol-mismatch'],
+    [prefix + 'Remote warning: writer ownership is not confirmed', null],
+  ] as const) {
+    fixture.engine.request.mockResolvedValueOnce(running);
+    onDiagnostic({ phase: 'primary-connect', message });
+    expect((await inspect()).result).toBe(issue);
+  }
+  onDiagnostic({ phase: 'peer:warning', message: 'Connection closed during handshake' });
+  fixture.engine.request.mockResolvedValueOnce(running);
+  expect((await inspect()).result).toBeNull();
+  onDiagnostic({ phase: 'primary-connect', message: prefix + 'Socket closed before read completed' });
+  for (const node of [{ gate: 'quarantined' }, { startupRepairPending: true }]) {
+    fixture.engine.request.mockResolvedValueOnce({ state: 'running', node });
+    expect((await inspect()).result).toBe('ownership-pending');
+  }
+  fixture.engine.request.mockResolvedValueOnce({ state: 'fenced', node: null });
+  expect((await inspect()).result).toBe('ownership-changed');
+  onDiagnostic({ phase: 'peer:connect', message: key });
+  fixture.engine.request.mockResolvedValueOnce(running);
+  expect((await inspect()).result).toBeNull();
+  expect(fixture.engine.request.mock.lastCall).toEqual([{ method: 'GET', path: '/wallets/' + walletId + '/api/recovery/status' }]);
+  fixture.engine.request.mockClear();
+  expect((await request('primary-connection-issue', { walletId: '../another-wallet' })).error).toBeDefined();
+  expect((await request('primary-connection-issue', { walletId }, 'another account')).error).toBeDefined();
+  expect(fixture.engine.request).not.toHaveBeenCalled();
+});
+
+it('renews a potentially evicted relay ticket before retrying Lightning, and rejects a changed route', async () => {
+  fixture.engine.request.mockClear();
+  fetchGrant.mockResolvedValueOnce(Response.json({ ...grant, peerUrl: 'wss://elsewhere.invalid/peer' }));
+  expect((await request('request', reconnect)).error?.code).toBe('WALLET_CONFIGURATION');
+  expect(fixture.engine.request).not.toHaveBeenCalled();
+  const ticket = Promise.withResolvers<Response>();
+  fetchGrant.mockReturnValueOnce(ticket.promise);
+  const retry = request('request', reconnect);
+  expect(fixture.engine.request).not.toHaveBeenCalled();
+  ticket.resolve(Response.json({ ...grant, token: 'b'.repeat(32) }));
+  expect((await retry).error).toBeUndefined();
+  expect(fixture.engine.request).toHaveBeenCalledExactlyOnceWith(reconnect);
+});
+
+it('shares ticket renewal between a waking wallet and its reconnect and respects a second background event', async () => {
+  await request('visibility', true);
+  const now = vi.spyOn(Date, 'now').mockReturnValue(grant.expiresAt + 1000);
+  try {
+    const ticket = Promise.withResolvers<Response>();
+    fetchGrant.mockClear().mockReturnValueOnce(ticket.promise);
+    fixture.engine.setAppBackgrounded.mockClear();
+    const visible = request('visibility', false);
+    const retry = request('request', reconnect);
+    expect(fetchGrant).toHaveBeenCalledOnce();
+    expect(fixture.engine.setAppBackgrounded).not.toHaveBeenCalled();
+    expect(fixture.engine.request).not.toHaveBeenCalled();
+    await request('visibility', true);
+    ticket.resolve(Response.json({ ...grant, expiresAt: Date.now() + 300000, token: 'b'.repeat(32) }));
+    expect((await visible).error).toBeUndefined();
+    expect((await retry).error).toBeUndefined();
+    expect(fixture.engine.setAppBackgrounded).not.toHaveBeenCalledWith(false);
+    expect(fixture.engine.request).toHaveBeenCalledWith(reconnect);
+  } finally {
+    now.mockRestore();
+  }
+});
+
+it('reissues a failed renewal after ten seconds even when the previous ticket still has minutes left', async () => {
+  await freshWorker();
+  vi.useFakeTimers();
+  try {
+    fetchGrant.mockImplementation(async () => Response.json({ ...grant, expiresAt: Date.now() + 900000 }));
+    expect((await request('open', 'vault password')).error).toBeUndefined();
+    fetchGrant.mockRejectedValueOnce(new Error('network offline'));
+    await vi.advanceTimersByTimeAsync(240000);
+    expect(fetchGrant).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(fetchGrant).toHaveBeenCalledTimes(3);
+    await request('close');
+  } finally {
+    vi.useRealTimers();
+  }
 });
 
 it('retries a failed prefetch when the user unlocks', async () => {

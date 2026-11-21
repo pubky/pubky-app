@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { WalletRecoveryStatus } from '@beignet/wallet-core';
 import { QueryClient } from '@tanstack/react-query';
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { expect, it, vi } from 'vitest';
 import { useWalletRecovery, WalletRecoveryNotice } from './WalletRecoveryStatus';
 
@@ -49,7 +49,9 @@ it.each<[Partial<WalletRecoveryStatus>, string, boolean]>([
     'Restored Lightning funds are on hold',
     false,
   ],
-  [{ channels: [{ ...channel, fundingUnidentified: true }, channel] }, 'Some Lightning funds are on hold', false],
+  [{ channels: [{ ...channel, fundingUnidentified: true }, channel] }, 'Checking the channel funding', false],
+  [{ channels: [{ ...channel, status: 'local_data_loss' }] }, 'Channel recovery needs your Lightning peer', false],
+  [{ mode: 'quorum', channels: [{ ...channel, status: 'quarantined' }] }, 'Some Lightning funds are on hold', false],
   [{ importComplete: true }, 'Lightning backup restored', false],
 ])('renders the recovery state without exposing channel or diagnostic details', async (overrides, title, blocked) => {
   const read = vi.fn().mockResolvedValue({ ...running, ...overrides });
@@ -77,4 +79,15 @@ it('keeps ordinary unlock responsive while the local recovery check is in flight
   expect(screen.getByRole('button', { name: 'Pay' })).toBeEnabled();
   await act(async () => result.resolve(running));
   expect(screen.queryByRole('status')).toBeNull();
+});
+
+it.each([
+  { ...channel, status: 'quarantined' },
+  { ...channel, status: 'force_closing', restoreRecencyUnproven: true },
+])('keeps an ordinary peer handshake or an already closing channel out of recovery notices', async (row) => {
+  // An imported flag surviving in a closing row or a transient peer disconnect alone is not a live channel hold.
+  const read = vi.fn().mockResolvedValue({ ...running, channels: [row] });
+  render(<Recovery read={read} />);
+  await waitFor(() => expect(screen.queryByRole('status')).toBeNull());
+  expect(screen.getByRole('button', { name: 'Pay' })).toBeEnabled();
 });

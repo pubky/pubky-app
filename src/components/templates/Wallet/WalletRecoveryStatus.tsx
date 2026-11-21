@@ -3,7 +3,7 @@
 import { type ReactNode, useState } from 'react';
 import type { WalletRecoveryStatus } from '@beignet/wallet-core';
 import { QueryClient, useQuery } from '@tanstack/react-query';
-import type { WalletSession } from '@/services/wallet/session';
+import type { ChannelBalanceHold, WalletSession } from '@/services/wallet/session';
 
 type RecoveryState =
   | 'ready'
@@ -14,8 +14,9 @@ type RecoveryState =
   | 'restart'
   | 'refused'
   | 'unavailable'
-  | 'imported-held'
-  | 'held';
+  | 'funding-check'
+  | 'peer-recovery'
+  | ChannelBalanceHold;
 
 function recoveryState(status: WalletRecoveryStatus, recovering: boolean): RecoveryState {
   if (status.state === 'fenced') return 'fenced';
@@ -26,24 +27,23 @@ function recoveryState(status: WalletRecoveryStatus, recovering: boolean): Recov
     return status.autoApply.phase === 'settling' || status.capsuleCount > 0 ? 'verifying' : 'waiting';
   }
   if (recovering && status.state === 'disabled') return 'unavailable';
-  if (status.channels.some((row) => row.restoreRecencyUnproven || row.status === 'restore_recency_unproven')) {
+  // Force-closing channels are already represented in the balance awaiting on-chain settlement.
+  const channels = status.channels.filter((row) => row.status !== 'force_closing');
+  if (channels.some((row) => row.restoreRecencyUnproven || row.status === 'restore_recency_unproven')) {
     return 'imported-held';
   }
   if (
-    status.channels.some(
-      (row) =>
-        row.fundingUnidentified ||
-        [
-          'quarantined',
-          'state_uncertain',
-          'local_data_loss',
-          'reestablish_recency_unproven',
-          'reestablish_secret_missing',
-        ].includes(row.status),
+    channels.some((row) =>
+      ['state_uncertain', 'local_data_loss', 'reestablish_recency_unproven', 'reestablish_secret_missing'].includes(
+        row.status,
+      ),
     )
   ) {
-    return 'held';
+    return 'peer-recovery';
   }
+  if (channels.some((row) => row.fundingUnidentified)) return 'funding-check';
+  // In peer-storage mode the engine also reports an ordinary reconnect handshake as quarantined.
+  if (status.mode !== 'peer-storage' && channels.some((row) => row.status === 'quarantined')) return 'held';
   return 'ready';
 }
 
@@ -74,7 +74,8 @@ export function useWalletRecovery(
     query.isError && (!query.data || query.data.state === 'ready')
       ? 'unavailable'
       : (query.data?.state ?? (recovering ? 'checking' : 'ready'));
-  const heldChannels = state === 'held' || state === 'imported-held';
+  const heldChannels =
+    state === 'held' || state === 'imported-held' || state === 'funding-check' || state === 'peer-recovery';
   return {
     state,
     heldChannels,
@@ -122,11 +123,28 @@ export function WalletRecoveryNotice({ state, restored = false }: { state: Recov
       break;
     case 'imported-held':
       title = 'Restored Lightning funds are on hold';
-      detail = 'The backup could be missing newer payments. Only the amount shown as available can be spent.';
+      detail =
+        'The backup could be missing newer payments. Ask your Lightning peer to close the affected channel from its latest state. Keep this wallet’s site data so it can track the settlement.';
+      break;
+    case 'funding-missing':
+      title = 'Waiting for channel funding';
+      detail =
+        'The wallet can’t find this channel’s funding transaction on Bitcoin or in the mempool. It checks again automatically. The affected balance is unavailable for payments.';
+      break;
+    case 'funding-check':
+      title = 'Checking the channel funding';
+      detail =
+        'The wallet is watching a possible funding output on Bitcoin. It can identify this channel’s funds once the output is spent. Keep this browser’s wallet data.';
+      break;
+    case 'peer-recovery':
+      title = 'Channel recovery needs your Lightning peer';
+      detail =
+        'Keep this wallet online so the peer can provide missing updates or settle the channel on Bitcoin. The affected balance is unavailable for payments.';
       break;
     case 'held':
       title = 'Some Lightning funds are on hold';
-      detail = 'The wallet could not verify every channel. Only the amount shown as available can be spent.';
+      detail =
+        'The wallet could not verify the affected channel. Keep this browser’s wallet data. It will check again automatically.';
       break;
     case 'ready':
       title = 'Lightning backup restored';

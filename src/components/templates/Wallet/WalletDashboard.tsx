@@ -2,7 +2,7 @@
 
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import type { Activity, Network, ReceiveRequest, WalletSnapshot } from '@beignet/wallet-core';
-import { QueryClient, useQuery } from '@tanstack/react-query';
+import { QueryClient, useMutation, useQuery } from '@tanstack/react-query';
 import {
   Activity as ActivityIcon,
   ArrowDownLeft,
@@ -22,7 +22,7 @@ import { Card } from '@/atoms/Card/Card';
 import { Dialog, DialogContent, DialogTrigger } from '@/atoms/Dialog/Dialog';
 import { Spinner } from '@/atoms/Spinner/Spinner';
 import { bitcoinAmount, lightningAmount, walletMessage } from '@/libs/wallet/amount';
-import type { LastWalletBalance, WalletSession } from '@/services/wallet/session';
+import type { LastWalletBalance, PrimaryConnectionIssue, WalletSession } from '@/services/wallet/session';
 import { useReceiveTracker } from './useReceiveTracker';
 import { SavedBalance } from './WalletOpening';
 import { RecoveryWords, WalletPanel, type WalletTask } from './WalletPanel';
@@ -79,7 +79,17 @@ function canRetryPrimary(error?: string) {
   );
 }
 
+const connectionDetails: Record<PrimaryConnectionIssue, string> = {
+  'ownership-pending': 'This browser is waiting to verify ownership of the Lightning wallet. Keep it open.',
+  'ownership-changed': 'Lock this wallet and continue on the device where you most recently recovered it.',
+  'handshake-timeout': 'The Lightning handshake timed out. The wallet will try a fresh connection.',
+  'handshake-closed': 'The connection closed before the Lightning handshake finished. The wallet will try again.',
+  'protocol-mismatch': 'The wallet and its Lightning peer could not agree on a compatible connection.',
+  'relay-unavailable': 'This browser lost its connection to the wallet relay. The wallet will try again.',
+};
+
 type View = 'overview' | 'send' | 'receive' | 'backup';
+const channelHoldNote = 'Some funds are held while the wallet verifies its latest state. Still in your total.';
 
 export function WalletDashboard({
   session,
@@ -187,25 +197,29 @@ export function WalletDashboard({
           firstReadAt: number;
           connectedOnce: boolean;
         }>(queryKey);
-        const [activityChecked, away] = await Promise.all([
+        const [activityChecked, away, balanceHold, primaryIssue] = await Promise.all([
           interrupted ? session.activityIncludesChannelSends(live.activity).catch(() => false) : false,
           live.wallet?.id === walletId && live.wallet.network === network
             ? session.awayReceipts(walletId, live.activity, live.primary.connected).catch(() => previous?.away ?? [])
             : [],
+          live.notes?.includes(channelHoldNote)
+            ? session.channelBalanceHold(walletId).catch(() => 'held' as const)
+            : null,
+          !live.primary.connected && live.primary.setup === 'failed'
+            ? session.primaryConnectionIssue(walletId).catch(() => null)
+            : null,
         ]);
         const newReceipt = away.some((hash) => !previous?.away.includes(hash));
         const settledAt = newReceipt ? Date.now() : (previous?.settledAt ?? 0);
         return {
           ...live,
           firstReadAt: previous?.firstReadAt ?? Date.now(),
-          connectedOnce:
-            previous?.connectedOnce ||
-            (live.primary.connected &&
-              (!live.primary.setup || live.primary.setup === 'ready') &&
-              !live.primary.setupError),
+          connectedOnce: previous?.connectedOnce || live.primary.connected,
           entries: keepActivityOrder(live.activity, previous?.entries),
           activityChecked,
           away,
+          balanceHold,
+          primaryIssue,
           settledAt,
         };
       },
@@ -287,9 +301,12 @@ export function WalletDashboard({
     };
   }, [network, queries, canUseWallet, recovery.imported, session, walletId]);
   const data = recovery.blocked ? undefined : snapshot.data;
-  const showLiveBalance = !!data && (data.balance.totalSats !== 0 || (recovery.checked && !recovery.heldChannels));
+  const heldChannels = recovery.heldChannels || !!data?.balanceHold;
+  const noticeState =
+    recovery.state === 'ready' || recovery.state === 'held' ? (data?.balanceHold ?? recovery.state) : recovery.state;
+  const showLiveBalance = !!data && (data.balance.totalSats !== 0 || (recovery.checked && !heldChannels));
   const savedBalance =
-    lastBalance?.totalSats === 0 && !showLiveBalance && (recovering || recovery.blocked || recovery.heldChannels)
+    lastBalance?.totalSats === 0 && !showLiveBalance && (recovering || recovery.blocked || heldChannels)
       ? null
       : lastBalance;
   const entries = data?.entries ?? savedActivity.data?.map((row) => ({ key: row.id, row }));
@@ -327,23 +344,111 @@ export function WalletDashboard({
         (note) =>
           !note.endsWith(
             ' sats are in a transfer that has not confirmed yet. You can send now. Bitcoin address payments complete after confirmation.',
-          ) &&
-          !(
-            recovery.heldChannels &&
-            note === 'Some funds are held while the wallet verifies its latest state. Still in your total.'
-          ),
+          ) && note !== channelHoldNote,
       )
       .map(walletMessage),
   );
   // The engine includes the generic setup note even during an ordinary peer handshake.
   notes.delete('Wallet setup is not finished. Check Settings.');
   const primary = data?.primary;
-  const setupError = primary?.setup !== 'pending' ? primary?.setupError : undefined;
-  const setupFailed = primary?.setup === 'failed' || !!setupError;
+  // The setup result is persisted. The authenticated peer list is live.
+  const setupError = !primary?.connected && primary?.setup !== 'pending' ? primary?.setupError : undefined;
+  const setupFailed = !primary?.connected && (primary?.setup === 'failed' || !!setupError);
+  const [online, setOnline] = useState(true);
+  const triedFreshConnection = useRef(false);
+  const {
+    mutate: redial,
+    isPending: reconnecting,
+    error: reconnectError,
+  } = useMutation(
+    {
+      mutationKey: ['primary-reconnect', walletId],
+      mutationFn: () => {
+        triedFreshConnection.current = true;
+        return session.client.retrySetup();
+      },
+      retry: false,
+      onSettled: async () => {
+        await Promise.all([
+          queries.invalidateQueries({ queryKey: ['wallet-recovery', walletId] }),
+          queries.invalidateQueries({ queryKey: ['wallet', walletId] }),
+        ]);
+      },
+    },
+    queries,
+  );
+  useEffect(() => {
+    setOnline(navigator.onLine);
+    const offline = () => setOnline(false);
+    const backOnline = () => {
+      setOnline(true);
+      const current = queries.getQueryData<WalletSnapshot & { primaryIssue?: PrimaryConnectionIssue }>([
+        'wallet',
+        walletId,
+        recovery.imported,
+      ]);
+      if (!canUseWallet || document.hidden || !current || current.primary.connected) return;
+      const issue = current.primaryIssue;
+      if (issue === 'ownership-pending' || issue === 'ownership-changed') return;
+      if (!queries.isMutating({ mutationKey: ['primary-reconnect', walletId] })) redial();
+    };
+    window.addEventListener('offline', offline);
+    window.addEventListener('online', backOnline);
+    return () => {
+      window.removeEventListener('offline', offline);
+      window.removeEventListener('online', backOnline);
+    };
+  }, [queries, walletId, recovery.imported, canUseWallet, redial]);
+  const issue = data?.primaryIssue;
+  const ownershipIssue = issue === 'ownership-pending' || issue === 'ownership-changed';
+  useEffect(() => {
+    if (primary?.connected) triedFreshConnection.current = false;
+    // A failed startup can keep using a relay pass that has been evicted. Try one
+    // newly authorized dial, then leave continued backoff to the Lightning engine.
+    if (
+      !recovery.checked ||
+      !canUseWallet ||
+      !online ||
+      !setupFailed ||
+      triedFreshConnection.current ||
+      ownershipIssue ||
+      issue === 'protocol-mismatch' ||
+      !(canRetryPrimary(setupError) || issue || setupError?.includes('could not be authenticated'))
+    )
+      return;
+    const timer = window.setTimeout(() => {
+      if (
+        document.hidden ||
+        triedFreshConnection.current ||
+        queries.isMutating({ mutationKey: ['primary-reconnect', walletId] })
+      )
+        return;
+      redial();
+    }, 750);
+    return () => window.clearTimeout(timer);
+  }, [
+    recovery.checked,
+    canUseWallet,
+    online,
+    setupFailed,
+    primary?.connected,
+    issue,
+    ownershipIssue,
+    setupError,
+    redial,
+    queries,
+    walletId,
+  ]);
+  const fallbackDetail =
+    setupError && !setupError.startsWith('Primary setup could not complete.')
+      ? walletMessage(setupError)
+      : 'The wallet could not finish connecting to Lightning. It will retry automatically.';
   const firstReadAt = data?.firstReadAt;
   const warmingPrimary =
     !!data &&
     !data.connectedOnce &&
+    !ownershipIssue &&
+    issue !== 'protocol-mismatch' &&
     (!primary?.connected || primary.setup === 'pending' || setupFailed) &&
     (!setupFailed || canRetryPrimary(setupError));
   const [startupWaitElapsed, setStartupWaitElapsed] = useState(false);
@@ -373,7 +478,7 @@ export function WalletDashboard({
   const notices = (
     <>
       {connectionNotice}
-      {ready && <WalletRecoveryNotice state={recovery.state} restored={recovering && recovery.imported} />}
+      {ready && <WalletRecoveryNotice state={noticeState} restored={recovering && recovery.imported} />}
       {notes.size > 0 && (
         <ul className="grid gap-1 rounded-xl bg-background p-3 text-sm text-muted-foreground">
           {Array.from(notes, (note) => (
@@ -386,10 +491,22 @@ export function WalletDashboard({
           Could not refresh the wallet. {data ? 'Showing the last balance.' : 'Try refreshing.'}
         </p>
       )}
-      {warmingPrimary && !startupWaitElapsed ? (
-        <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Spinner size="sm" aria-hidden className="motion-reduce:animate-none" /> Connecting to Lightning…
+      {ownershipIssue ? (
+        <p role="status" className="text-sm text-muted-foreground">
+          {connectionDetails[issue]}
         </p>
+      ) : primary && !online ? (
+        <p role="status" className="text-sm text-muted-foreground">
+          You’re offline. Lightning will reconnect when you’re back online.
+        </p>
+      ) : primary && !primary.connected && reconnecting ? (
+        <div role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Spinner size="sm" aria-hidden className="motion-reduce:animate-none" /> Reconnecting to Lightning…
+        </div>
+      ) : warmingPrimary && !startupWaitElapsed ? (
+        <div role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Spinner size="sm" aria-hidden className="motion-reduce:animate-none" /> Connecting to Lightning…
+        </div>
       ) : primary && (setupFailed || !primary.connected || slowConnection) ? (
         <div className="flex flex-wrap items-center gap-2 border-t border-border pt-4 text-sm text-muted-foreground">
           <Zap className="size-4" />{' '}
@@ -398,20 +515,18 @@ export function WalletDashboard({
             : slowConnection
               ? 'Still connecting to Lightning…'
               : 'Lightning disconnected'}
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={task.busy}
-            onClick={() =>
-              task.run(async () => {
-                await session.client.retrySetup();
-                refresh();
-              })
-            }
-          >
+          <Button size="sm" variant="outline" disabled={task.busy} onClick={() => redial()}>
             Reconnect
           </Button>
-          {setupError && <p className="basis-full">{walletMessage(setupError)}</p>}
+          {(reconnectError || setupFailed) && (
+            <p className="basis-full">
+              {reconnectError
+                ? walletMessage(reconnectError.message)
+                : issue
+                  ? connectionDetails[issue]
+                  : fallbackDetail}
+            </p>
+          )}
         </div>
       ) : null}
     </>
@@ -454,7 +569,7 @@ export function WalletDashboard({
   if (view === 'send')
     return (
       <WalletSend
-        ready={canUseWallet}
+        ready={canUseWallet && !ownershipIssue}
         client={session.client}
         navigation={navigation}
         activity={data?.activity}
@@ -468,7 +583,7 @@ export function WalletDashboard({
   if (view === 'receive')
     return (
       <WalletReceive
-        ready={canUseWallet}
+        ready={canUseWallet && !ownershipIssue}
         client={session.client}
         navigation={navigation}
         task={task}
@@ -527,7 +642,7 @@ export function WalletDashboard({
             </p>
           ) : savedBalance ? (
             <SavedBalance balance={savedBalance} />
-          ) : recovery.blocked || (data && recovery.heldChannels) ? (
+          ) : recovery.blocked || (data && heldChannels) ? (
             <p className="mt-1 text-muted-foreground">Balance awaiting verification</p>
           ) : !ready ? (
             <div aria-label="Balance pending" className="mt-2 h-9 w-36 rounded bg-secondary" />
@@ -537,9 +652,7 @@ export function WalletDashboard({
             <p>Balance unavailable</p>
           )}
           {showLiveBalance &&
-            (data.balance.availableSats !== data.balance.totalSats ||
-              data.balance.pendingSats > 0 ||
-              recovery.heldChannels) && (
+            (data.balance.availableSats !== data.balance.totalSats || data.balance.pendingSats > 0 || heldChannels) && (
               <dl className="mt-4 flex flex-wrap gap-x-6 gap-y-3 text-sm">
                 <div>
                   <dt className="text-muted-foreground">Available to send</dt>
@@ -609,9 +722,10 @@ export function WalletDashboard({
               className="self-start"
               disabled={
                 !canUseWallet ||
+                ownershipIssue ||
                 task.busy ||
                 !recovery.checked ||
-                recovery.heldChannels ||
+                heldChannels ||
                 !snapshot.isSuccess ||
                 !!interrupted ||
                 !!data?.activity.some(

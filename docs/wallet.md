@@ -48,6 +48,8 @@ On Vercel, the included `/peer` and `/electrum` Node functions serve the relay o
 
 A primary using Chicory's relay-only Iroh link accepts its full `<lightning-key>@iroh:<endpoint-id>?relay=<encoded-https-origin>` as `WALLET_PRIMARY_URI`. The relay opens an authenticated Iroh stream for the selected endpoint. The browser authenticates the selected Lightning key over BOLT8 inside that stream. Connections can reopen when the hosted function duration expires.
 
+On a failed Lightning connection, the wallet requests a fresh relay pass and retries once before returning to the engine’s normal retry schedule. Reconnect also renews the pass. A live authenticated peer connection takes precedence over an older setup error. Wallet recovery and the available balance still reflect what the engine has verified for each channel.
+
 The grant endpoint is public and permits transport to the two fixed upstreams. Use your proxy’s connection and rate limits for a public deployment. A static page host alone cannot run the relay. The fork can be listed in the Vibes registry once it has a stable reachable HTTPS deployment.
 
 ## Staging and locked posts
