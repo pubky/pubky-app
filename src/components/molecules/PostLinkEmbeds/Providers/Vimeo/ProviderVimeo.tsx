@@ -5,7 +5,8 @@ import { HMS_TIMESTAMP_REGEX } from '@/libs/utils/utils.constants';
 import { extractVimeoVideoId, VIMEO_DOMAINS } from '@/libs/utils/videoUrl';
 import { PlayerProvider } from '@/molecules/ResourcePlayer/resourcePlayer.utils';
 import { VIDEO_EMBED_PROPS } from '../Provider.constants';
-import type { EmbedData, EmbedProvider } from '../Provider.types';
+import type { EmbedData, EmbedProvider, EmbedRenderOptions } from '../Provider.types';
+import { withAutoplay } from '../Provider.utils';
 
 /**
  * Extract timestamp from Vimeo URL
@@ -84,19 +85,20 @@ export const Vimeo: EmbedProvider = {
    * Render Vimeo iframe embed with responsive aspect ratio wrapper
    * Following Vimeo's official embed pattern
    */
-  renderEmbed: (embedData: EmbedData) => {
+  renderEmbed: (embedData: EmbedData, options?: EmbedRenderOptions) => {
     // Type guard: ensure we have a URL type
     if (embedData.type !== 'url') return null;
 
     const embedUrl = embedData.value;
     const videoId = extractVideoIdFromEmbedUrl(embedUrl);
+    const src = options?.autoplay ? withAutoplay(embedUrl) : embedUrl;
 
     return (
       <Container data-testid="vimeo-aspect-ratio-wrapper" className="relative pt-[56.25%]">
         <Iframe
           {...VIDEO_EMBED_PROPS}
           sandbox={`${VIDEO_EMBED_PROPS.sandbox} allow-popups-to-escape-sandbox`}
-          src={embedUrl}
+          src={src}
           title={`Vimeo video ${videoId}`}
           data-testid="Vimeo video player"
           height="auto"

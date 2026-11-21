@@ -1,11 +1,17 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useOgMetadata } from '@/hooks/useOgMetadata/useOgMetadata';
+import { useSettingsStore } from '@/stores/settings/settings.store';
+import { defaultMediaPreferences } from '@/stores/settings/settings.types';
 import { asInvalid } from '@/test-utils/type-assertions';
 import type { EmbedData } from '../../Providers/Provider.types';
 import { GenericPreview } from './GenericPreview';
 import { GenericResourcePreview } from './GenericResourcePreview';
 import { Generic } from './ProviderGeneric';
+
+// A video or audio file shows its player right away with platform embeds up front on; the default
+// (off) waits for Play on (`GenericPreview.test.tsx`).
+beforeEach(() => useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: true } }));
 
 // Mock the hooks module
 vi.mock('@/hooks/useOgMetadata/useOgMetadata', () => ({

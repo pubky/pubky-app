@@ -14,7 +14,7 @@ vi.mock('../nextjs.utils', async (importOriginal) => {
 vi.mock('../og-metadata/og-metadata', () => ({ SAFE_OG_METADATA_DISPATCHER: { guarded: true } }));
 
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00]);
-const PRIVATE_HOSTS = new Set(['internal.example', '10.0.0.5', '169.254.169.254']);
+const PRIVATE_HOSTS = new Set(['internal.example', 'internal.cdn.example', '10.0.0.5', '169.254.169.254']);
 
 const mockFetch = vi.fn<(url: URL, init: RequestInit & { dispatcher?: unknown }) => Promise<Response>>();
 
@@ -60,11 +60,39 @@ describe('NextJsFaviconService.fetch', () => {
   });
 
   it('checks every redirect hop and stops at one to a private address', async () => {
-    mockFetch.mockResolvedValueOnce(redirect('https://169.254.169.254/latest/meta-data'));
+    mockFetch.mockResolvedValueOnce(redirect('https://internal.cdn.example/latest/meta-data'));
 
     await expect(NextJsFaviconService.fetch(new URL('https://cdn.example/favicon.ico'))).resolves.toBeNull();
-    expect(mockCheckDnsSafety).toHaveBeenCalledWith('169.254.169.254');
+    expect(mockCheckDnsSafety).toHaveBeenCalledWith('internal.cdn.example');
     expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ['another site', 'https://evil.example/favicon.ico'],
+    ['an IP address', 'https://169.254.169.254/latest/meta-data'],
+    ['plain http', 'http://www.example.com/favicon.ico'],
+    ['another port', 'https://www.example.com:8443/favicon.ico'],
+  ])('follows no redirect to %s', async (_case, location) => {
+    mockFetch.mockResolvedValueOnce(redirect(location));
+
+    await expect(NextJsFaviconService.fetch(new URL('https://example.com/favicon.ico'))).resolves.toBeNull();
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('follows a redirect within the site, to its www host or another subdomain', async () => {
+    mockFetch
+      .mockResolvedValueOnce(redirect('https://www.example.com/favicon.ico'))
+      .mockResolvedValueOnce(redirect('https://static.example.com/icons/favicon.png'))
+      .mockResolvedValueOnce(image(PNG));
+
+    const icon = await NextJsFaviconService.fetch(new URL('https://example.com/favicon.ico'));
+
+    expect(icon?.contentType).toBe('image/png');
+    expect(mockFetch.mock.calls.map(([url]) => String(url))).toEqual([
+      'https://example.com/favicon.ico',
+      'https://www.example.com/favicon.ico',
+      'https://static.example.com/icons/favicon.png',
+    ]);
   });
 
   it('follows a public redirect, and refuses non-web schemes and credentials in one', async () => {

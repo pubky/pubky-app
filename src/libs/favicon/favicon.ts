@@ -40,6 +40,16 @@ export function getParentDomain(hostname: string): string | null {
   return parent.join('.');
 }
 
+/**
+ * The site a host belongs to: its parent domains climbed as far as `getParentDomain` goes
+ * (`open.spotify.com` → `spotify.com`, `news.bbc.co.uk` → `bbc.co.uk`).
+ */
+export function getFaviconSite(hostname: string): string {
+  let site = hostname.toLowerCase().replace(/\.$/, '');
+  for (let parent = getParentDomain(site); parent; parent = getParentDomain(site)) site = parent;
+  return site;
+}
+
 /** Whether `host` is `domain` or one of its subdomains (`tycho.bandcamp.com` is `bandcamp.com`'s). */
 export function isOnDomain(host: string, domain: string): boolean {
   return host === domain || host.endsWith(`.${domain}`);
@@ -70,21 +80,28 @@ const AMAZON_MUSIC_HOSTS: ReadonlySet<string> = new Set(
 );
 const AMAZON_MUSIC_ICON = 'https://m.media-amazon.com/images/G/01/music/logo/1.0/smile_256x256.png';
 
-/** Where a host's icon is when it is not at its `/favicon.ico`, else `null`. */
-export function getFaviconOverride(host: string | null): string | null {
+/**
+ * For a host whose icon is not at its `/favicon.ico`, the domain its icon is known under (the
+ * listed domain for any of its subdomains, so `<artist>.bandcamp.com` all share `bandcamp.com`'s
+ * one icon; an Amazon Music country site itself), else `null`.
+ */
+export function getFaviconOverrideDomain(host: string | null): string | null {
   if (!host) return null;
   const name = host.toLowerCase();
-  if (AMAZON_MUSIC_HOSTS.has(name)) return AMAZON_MUSIC_ICON;
-  const domain = Object.keys(FAVICON_OVERRIDES).find((key) => isOnDomain(name, key));
-  return domain ? FAVICON_OVERRIDES[domain] : null;
+  if (AMAZON_MUSIC_HOSTS.has(name)) return name;
+  return Object.keys(FAVICON_OVERRIDES).find((key) => isOnDomain(name, key)) ?? null;
 }
 
 /**
- * The address the app's server reads a host's icon from: where `getFaviconOverride` says it is,
- * else `https://<host>/favicon.ico`. Only these addresses are ever read for an icon.
+ * The address the app's server reads a host's icon from: where the site's own pages name it for
+ * the hosts above (`getFaviconOverrideDomain`), else `https://<host>/favicon.ico`. Only these
+ * addresses are ever read for an icon.
  */
 export function getFaviconSource(host: string): string {
-  return getFaviconOverride(host) ?? `https://${host.toLowerCase()}/favicon.ico`;
+  const name = host.toLowerCase();
+  const domain = getFaviconOverrideDomain(name);
+  if (domain && AMAZON_MUSIC_HOSTS.has(domain)) return AMAZON_MUSIC_ICON;
+  return domain ? FAVICON_OVERRIDES[domain] : `https://${name}/favicon.ico`;
 }
 
 /** The app's own address for a host's icon (`/api/favicon?host=<host>`). */

@@ -749,6 +749,20 @@ describe('ResourceDetails', () => {
       expect(screen.queryByTestId('show-embed')).toBeNull();
     });
 
+    it('waits for Show on before loading X’s embed for a card Pinakes is still reading, by default', () => {
+      useSettingsStore.setState({ media: defaultMediaPreferences });
+      onTestFinished(() => {
+        useSettingsStore.setState({ media: upFrontMedia });
+      });
+      read = settled({ ...X_POST, status: 'pending', name: null, description: null });
+      renderDetails(X_URL);
+
+      expect(screen.queryByTestId('native-embed-body')).toBeNull();
+      expect(screen.queryByTestId('twitter-tweet')).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: 'Show on x.com' }));
+      expect(within(screen.getByTestId('native-embed-body')).getByTestId('twitter-tweet')).toBeInTheDocument();
+    });
+
     it('shows X’s embed up front for a card Pinakes is still reading, as in a post', () => {
       read = settled({ ...X_POST, status: 'pending', name: null, description: null });
       renderDetails(X_URL);

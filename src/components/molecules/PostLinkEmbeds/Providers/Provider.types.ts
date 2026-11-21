@@ -30,6 +30,11 @@ export interface EmbedRenderOptions {
   onEmbedError?: () => void;
   /** The embed fills the width of an external resource's frame or card at every size. */
   fill?: boolean;
+  /**
+   * Loaded by the viewer's press on Play on (platform embeds up front off): a video starts on load
+   * where the platform allows (`autoplay=1`), so one press plays it.
+   */
+  autoplay?: boolean;
 }
 
 /** What a platform embed is: a video plays in the card player, a post (an X post) shows in place. */

@@ -161,6 +161,33 @@ describe('PostLinkEmbeds', () => {
     viewport.isVisible = false;
   });
 
+  describe('with the default settings (platform embeds up front off)', () => {
+    beforeEach(() => useSettingsStore.setState({ media: defaultMediaPreferences }));
+
+    it.each([
+      ['YouTube', 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', 'YouTube video player'],
+      ['Vimeo', 'https://vimeo.com/76979871', 'Vimeo video player'],
+    ])('loads a %s link in the text only on Play on, started by that press', (site, link, testId) => {
+      render(<PostLinkEmbeds content={`Watch ${link}`} />);
+
+      expect(document.querySelector('iframe')).toBeNull();
+      expect(screen.queryByTestId(testId)).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: `Play on ${site}` }));
+
+      expect(screen.getByTestId(testId).getAttribute('src')).toContain('autoplay=1');
+      expect(screen.getByRole('button', { name: `Close the ${site} video` })).toBeInTheDocument();
+    });
+
+    it('shows an X post in the text only on Show on', () => {
+      render(<PostLinkEmbeds content="See https://x.com/user/status/1234567890" />);
+
+      expect(document.querySelector('[data-testid^="twitter-tweet"]')).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: 'Show on x.com' }));
+      expect(document.querySelector('[data-testid^="twitter-tweet"]')).not.toBeNull();
+    });
+  });
+
   describe('YouTube URL parsing', () => {
     it('renders YouTube embed for standard youtube.com URL', () => {
       render(<PostLinkEmbeds content="Check out this video: https://www.youtube.com/watch?v=dQw4w9WgXcQ" />);

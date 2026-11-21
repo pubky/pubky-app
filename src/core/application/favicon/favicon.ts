@@ -1,5 +1,6 @@
+import type { TFavicon } from '@/application/favicon/favicon.types';
 import { getFaviconSource } from '@/libs/favicon/favicon';
-import { NextJsFaviconService, type TFavicon } from '@/services/nextjs/favicon/favicon';
+import { NextJsFaviconService } from '@/services/nextjs/favicon/favicon';
 
 /** Icons kept in memory at most: at most `FAVICON_MAX_BYTES` each. */
 const CACHE_ENTRIES = 256;

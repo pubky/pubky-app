@@ -1,7 +1,7 @@
 import { FaviconApplication } from '@/application/favicon/favicon';
+import type { TFavicon } from '@/application/favicon/favicon.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import { FaviconValidators } from '@/pipes/favicon/favicon.validators';
-import type { TFavicon } from '@/services/nextjs/favicon/favicon';
 
 export type TFaviconControllerResult =
   { ok: true; icon: TFavicon } | { ok: false; statusCode: HttpStatusCode.BAD_REQUEST | HttpStatusCode.NOT_FOUND };

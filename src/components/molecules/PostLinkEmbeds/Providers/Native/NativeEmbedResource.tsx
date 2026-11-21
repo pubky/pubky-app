@@ -38,8 +38,11 @@ import { useSlowRead } from '../Generic/useSlowRead';
 import type { EmbedResourceKind } from '../Provider.types';
 import { chooseNativeEmbed, getNativeEmbedCard, getShowPostLabel } from './nativeEmbed.utils';
 
-/** Renders the platform's own embed; `onError` is called when the platform says it cannot show it. */
-export type RenderNativeEmbed = (options: { onError: () => void }) => ReactNode;
+/**
+ * Renders the platform's own embed; `onError` is called when the platform says it cannot show it.
+ * `autoplay`: loaded by the viewer's press on Play on, so a video starts on load.
+ */
+export type RenderNativeEmbed = (options: { onError: () => void; autoplay?: boolean }) => ReactNode;
 
 interface NativeEmbedResourceProps {
   /** The link as written: the post's embed. */
@@ -274,7 +277,7 @@ function NativeEmbedChoice({
         : (body: ReactNode) =>
             isPostOpen && !failed ? (
               <Container overrideDefaults className="min-w-0" data-testid="native-embed-body">
-                {loadsEmbed && renderEmbed({ onError: onEmbedError })}
+                {loadsEmbed && renderEmbed({ onError: onEmbedError, autoplay: true })}
               </Container>
             ) : (
               body
@@ -296,7 +299,7 @@ function NativeEmbedChoice({
       {/* Nothing in the frame's body until the pill opens the embed. */}
       {!isEmbedOnPress || isPostOpen ? (
         <div ref={embedRef} className="min-w-0" data-testid="native-embed-body">
-          {loadsEmbed && renderEmbed({ onError: onEmbedError })}
+          {loadsEmbed && renderEmbed({ onError: onEmbedError, autoplay: isEmbedOnPress })}
         </div>
       ) : null}
     </ResourceEmbedFrame>

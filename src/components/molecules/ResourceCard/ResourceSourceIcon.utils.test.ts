@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { getFaviconOverride, getFaviconUrls, getParentDomain, isDarkFavicon } from './ResourceSourceIcon.utils';
+import { getParentDomain } from '@/libs/favicon/favicon';
+import { getFaviconOverride, getFaviconUrls, isDarkFavicon } from './ResourceSourceIcon.utils';
 
 describe('getFaviconUrls', () => {
   it('tries the parent domain’s favicon after a subdomain’s own', () => {
@@ -46,27 +47,26 @@ describe('getParentDomain', () => {
 });
 
 describe('getFaviconOverride', () => {
-  it('names the icon of a site that has none at /favicon.ico, for its subdomains too', () => {
-    expect(getFaviconOverride('discogs.com')).toBe('https://st.discogs.com/favicon.ico');
-    expect(getFaviconOverride('tycho.bandcamp.com')).toBe('https://s4.bcbits.com/img/favicon/favicon-32x32.png');
-    expect(getFaviconOverride('bandcamp.com')).toBe('https://s4.bcbits.com/img/favicon/favicon-32x32.png');
-    expect(getFaviconOverride('audius.co')).toBe('https://audius.co/favicons/favicon-32x32.png');
+  it('asks the app for the icon of a site that has none at /favicon.ico, one per site for its subdomains', () => {
+    expect(getFaviconOverride('discogs.com')).toBe('/api/favicon?host=discogs.com');
+    expect(getFaviconOverride('tycho.bandcamp.com')).toBe('/api/favicon?host=bandcamp.com');
+    expect(getFaviconOverride('bandcamp.com')).toBe('/api/favicon?host=bandcamp.com');
+    expect(getFaviconOverride('audius.co')).toBe('/api/favicon?host=audius.co');
   });
 
   it('gives mempool.space its own icon, not the Angular logo at its /favicon.ico', () => {
-    const icon = 'https://mempool.space/resources/favicons/favicon-32x32.png';
+    const icon = '/api/favicon?host=mempool.space';
     expect(getFaviconOverride('mempool.space')).toBe(icon);
     expect(getFaviconOverride('MEMPOOL.SPACE')).toBe(icon);
     expect(getFaviconOverride('notmempool.space')).toBeNull();
     expect(getFaviconOverride('mempool.space.evil.example')).toBeNull();
   });
 
-  it('gives Amazon Music its own icon on every country site, not the shop’s', () => {
-    const icon = 'https://m.media-amazon.com/images/G/01/music/logo/1.0/smile_256x256.png';
-    expect(getFaviconOverride('music.amazon.com')).toBe(icon);
-    expect(getFaviconOverride('music.amazon.fr')).toBe(icon);
-    expect(getFaviconOverride('music.amazon.co.uk')).toBe(icon);
-    expect(getFaviconOverride('music.amazon.com.br')).toBe(icon);
+  it('asks for Amazon Music’s own icon on every country site, not the shop’s', () => {
+    expect(getFaviconOverride('music.amazon.com')).toBe('/api/favicon?host=music.amazon.com');
+    expect(getFaviconOverride('music.amazon.fr')).toBe('/api/favicon?host=music.amazon.fr');
+    expect(getFaviconOverride('music.amazon.co.uk')).toBe('/api/favicon?host=music.amazon.co.uk');
+    expect(getFaviconOverride('music.amazon.com.br')).toBe('/api/favicon?host=music.amazon.com.br');
     expect(getFaviconOverride('amazon.fr')).toBeNull();
     expect(getFaviconOverride('music.amazon.evil.example')).toBeNull();
     expect(getFaviconOverride('music.amazon.top')).toBeNull();

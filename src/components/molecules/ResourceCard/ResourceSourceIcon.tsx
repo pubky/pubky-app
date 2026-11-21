@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { BookOpen, FileText, Globe, Link2, MapPin } from 'lucide-react';
 import { Image } from '@/atoms/Image/Image';
 import { AppleMusic, PubkyIcon, XTwitter } from '@/icons';
-import { getFaviconRouteUrl } from '@/libs/favicon/favicon';
 import { cn } from '@/libs/utils/utils';
 import { getLinkHost } from './ResourceCard.utils';
 import { getFaviconOverride, getFaviconUrls, isDarkFavicon } from './ResourceSourceIcon.utils';
@@ -71,8 +70,7 @@ export function ResourceSourceIcon({ uri }: ResourceSourceIconProps) {
   }
 
   const override = getFaviconOverride(host);
-  // The app's server reads the overridden address for the host (`getFaviconSource`).
-  const faviconUrls = override && host ? [getFaviconRouteUrl(host)] : getFaviconUrls(uri);
+  const faviconUrls = override ? [override] : getFaviconUrls(uri);
   const faviconUrl = faviconUrls.find((url) => !failedUrls.includes(url));
 
   if (faviconUrl) {

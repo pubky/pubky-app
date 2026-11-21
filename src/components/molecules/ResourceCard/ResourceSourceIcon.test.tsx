@@ -35,7 +35,7 @@ describe('ResourceSourceIcon', () => {
   });
 
   it.each([
-    ['https://tycho.bandcamp.com/album/dive', expect.stringMatching(/\/api\/favicon\?host=tycho\.bandcamp\.com$/)],
+    ['https://tycho.bandcamp.com/album/dive', expect.stringMatching(/\/api\/favicon\?host=bandcamp\.com$/)],
     ['https://audius.co/artist/track', expect.stringMatching(/\/api\/favicon\?host=audius\.co$/)],
     ['https://music.amazon.fr/albums/B00C0A9E1E', expect.stringMatching(/\/api\/favicon\?host=music\.amazon\.fr$/)],
   ])('shows %s with the icon its pages name, not inverted', (uri, src) => {

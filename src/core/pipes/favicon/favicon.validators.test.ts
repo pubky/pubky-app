@@ -24,6 +24,8 @@ describe('FaviconValidators.validateHost', () => {
     '10.0.0.1',
     '169.254.169.254',
     '0x7f.0.0.1',
+    '1.2.3.0x4',
+    '1.2.3.04',
     '[::1]',
     '::1',
     'example.com:8080',

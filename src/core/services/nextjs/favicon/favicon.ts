@@ -1,4 +1,6 @@
 import type { Dispatcher } from 'undici';
+import type { TFavicon } from '@/application/favicon/favicon.types';
+import { getFaviconSite } from '@/libs/favicon/favicon';
 import { Logger } from '@/libs/logger/logger';
 import { checkDnsSafety, isHttpProtocol } from '../nextjs.utils';
 import { SAFE_OG_METADATA_DISPATCHER } from '../og-metadata/og-metadata';
@@ -17,11 +19,8 @@ const MAX_REDIRECTS = 3;
 const FETCH_HEADERS = {
   'User-Agent':
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-  Accept: 'image/avif,image/webp,image/png,image/x-icon,image/*;q=0.8',
+  Accept: 'image/webp,image/png,image/x-icon,image/*;q=0.8',
 };
-
-/** A site's icon as served from the app's origin: its bytes and the type they are (`sniffImageType`). */
-export type TFavicon = { body: ArrayBuffer; contentType: string };
 
 type FetchInitWithDispatcher = RequestInit & { dispatcher: Dispatcher };
 
@@ -31,8 +30,10 @@ type FetchInitWithDispatcher = RequestInit & { dispatcher: Dispatcher };
  * Every hop goes through the link preview's guards: the host's addresses are checked before the
  * request (`checkDnsSafety`) and the socket is pinned to checked addresses (the link preview's
  * guarded dispatcher), so a private, loopback or link-local address is never reached, also not
- * through a redirect. At most `MAX_REDIRECTS` redirects (`http`/`https` only), `FAVICON_TIMEOUT_MS`
- * for everything, `FAVICON_MAX_BYTES` read at most, and only bytes that are a raster image.
+ * through a redirect. A redirect is followed only on the same site (`getFaviconSite`: `tidal.com` to
+ * `www.tidal.com` or `cdn.tidal.com`), over `https` on its default port, at most `MAX_REDIRECTS`
+ * times, so a read never leaves the address the route names for the host. `FAVICON_TIMEOUT_MS` for
+ * everything, `FAVICON_MAX_BYTES` read at most, and only bytes that are a raster image.
  */
 export class NextJsFaviconService {
   private constructor() {}
@@ -45,9 +46,11 @@ export class NextJsFaviconService {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), FAVICON_TIMEOUT_MS);
     try {
+      const site = getFaviconSite(source.hostname);
       let url = source;
       for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
         if (!isHttpProtocol(url) || url.username || url.password) return null;
+        if (url.protocol !== 'https:' || url.port !== '' || getFaviconSite(url.hostname) !== site) return null;
         const dns = await checkDnsSafety(url.hostname);
         if (!dns.ok) return null;
 

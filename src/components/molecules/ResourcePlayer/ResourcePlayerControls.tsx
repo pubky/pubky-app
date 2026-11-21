@@ -140,7 +140,7 @@ export function PlayerSwitch({
   current: PlayerTarget | null;
   onSelect: (target: PlayerTarget) => void;
   onShowCard: () => void;
-  /** The favicons; off where nothing may load from the services yet. */
+  /** The services' favicons (served by the app, `ResourceSourceIcon`). */
   icons?: boolean;
   surface?: PostActionSurface;
 }) {

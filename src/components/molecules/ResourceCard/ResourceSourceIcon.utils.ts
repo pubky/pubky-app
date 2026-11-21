@@ -1,7 +1,5 @@
-import { getFaviconRouteUrl, getParentDomain, isOnDomain } from '@/libs/favicon/favicon';
+import { getFaviconOverrideDomain, getFaviconRouteUrl, getParentDomain, isOnDomain } from '@/libs/favicon/favicon';
 import { getFaviconUrl } from './ResourceCard.utils';
-
-export { getFaviconOverride, getParentDomain } from '@/libs/favicon/favicon';
 
 /**
  * Where to look for a web link's icon, in order: its host's favicon, then its parent domain's (a
@@ -17,6 +15,17 @@ export function getFaviconUrls(value: string | null | undefined): string[] {
   const { hostname } = new URL(own);
   const parent = getParentDomain(hostname);
   return parent ? [getFaviconRouteUrl(hostname), getFaviconRouteUrl(parent)] : [getFaviconRouteUrl(hostname)];
+}
+
+/**
+ * The app's address for the icon of a host whose icon is not at its `/favicon.ico`
+ * (`getFaviconOverrideDomain`: Discogs, Bandcamp, Audius, mempool.space, Amazon Music), else
+ * `null`. Every subdomain of such a site asks for the site's one icon; the app's server reads it
+ * where the site's pages name it (`getFaviconSource`).
+ */
+export function getFaviconOverride(host: string | null): string | null {
+  const domain = getFaviconOverrideDomain(host);
+  return domain ? getFaviconRouteUrl(domain) : null;
 }
 
 /** Sites whose favicon is too dark for the dark theme (a black or deep violet mark or tile): inverted there. */
