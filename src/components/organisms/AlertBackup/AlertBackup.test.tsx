@@ -1,6 +1,7 @@
 import { Keypair } from '@synonymdev/pubky';
 import { act, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { BROWSER_KEY_DELETION_DATE } from '@/config/auth';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { authInitialState } from '@/stores/auth/auth.types';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
@@ -186,6 +187,17 @@ describe('AlertBackup', () => {
     expect(screen.getByText('Back up your key to Pubky Ring!')).toBeInTheDocument();
     expect(screen.getByTestId('dialog-backup')).toBeInTheDocument();
     expect(screen.getByTestId('dialog-confirm-backup')).toBeInTheDocument();
+  });
+
+  it('says when the key stored in this browser is deleted', () => {
+    useAuthStore.setState({ currentUserPubky: 'account', session: mockSession(), restoreStatus: 'ready' });
+    render(<AlertBackup />);
+
+    expect(
+      screen.getByText(
+        `On ${BROWSER_KEY_DELETION_DATE}, Pubky App deletes the key stored in this browser. Export it to Pubky Ring before then, or you will lose this account.`,
+      ),
+    ).toBeInTheDocument();
   });
 
   it.each([

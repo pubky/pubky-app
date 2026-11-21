@@ -4,7 +4,7 @@
  * AlertBackup
  *
  * Self-contained component that manages its own visibility state.
- * Shows an alert when user has a secret key that needs to be backed up.
+ * Shows an alert when user has a secret key that needs to be backed up, with the date the browser copy is deleted.
  * Hidden for a guest whose only identity is a stored pubky with no account yet.
  * No props needed - manages its own state internally.
  */
@@ -12,6 +12,7 @@ import { useEffect, useState } from 'react';
 import { TriangleAlert } from 'lucide-react';
 import { Container } from '@/atoms/Container/Container';
 import { Typography } from '@/atoms/Typography/Typography';
+import { BROWSER_KEY_DELETION_DATE } from '@/config/auth';
 import { useHasBackupAccount } from '@/hooks/useHasBackupAccount/useHasBackupAccount';
 import { Identity } from '@/libs/identity/identity';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -55,6 +56,9 @@ export const AlertBackup = () => {
       </Container>
       <DialogBackup />
       <DialogConfirmBackup onConfirm={handleDismiss} />
+      <Typography size="sm" className="basis-full text-brand-foreground">
+        {`On ${BROWSER_KEY_DELETION_DATE}, Pubky App deletes the key stored in this browser. Export it to Pubky Ring before then, or you will lose this account.`}
+      </Typography>
       {needsSignIn && (
         <Typography size="sm" className="basis-full text-brand-foreground">
           Export your key to Pubky Ring using Backup, then sign in with Pubky Ring to access your account again. If you
