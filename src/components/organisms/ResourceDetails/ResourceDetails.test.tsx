@@ -410,7 +410,10 @@ describe('ResourceDetails', () => {
       expect(within(card).getByTestId('resource-card-description')).toHaveTextContent(
         mbGroupEnrichedFixture.description!.slice(0, 40),
       );
-      expect(within(card).getByTestId('resource-card-image')).toHaveAttribute('src', mbGroupEnrichedFixture.image);
+      expect(within(within(card).getByTestId('resource-card-image')).getByRole('img')).toHaveAttribute(
+        'src',
+        mbGroupEnrichedFixture.image,
+      );
       const sources = within(card).getByRole('region', { name: 'Sources' });
       const lines = within(sources)
         .getAllByRole('listitem')

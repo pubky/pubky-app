@@ -28,7 +28,6 @@ import {
   getResourceTagsLabel,
   getResourceTarget,
   getResourceTypeLabel,
-  hasWideImage,
   isCardSurfaceClick,
   isWritableResourceUri,
   MAX_LINK_SPELLINGS,
@@ -399,30 +398,6 @@ describe('getResourceTagsLabel', () => {
   it('falls back to the external resource without a typed card', () => {
     expect(getResourceTagsLabel(null)).toBe('Tags on the external resource');
     expect(getResourceTagsLabel({ type: '', type_path: [] })).toBe('Tags on the external resource');
-  });
-});
-
-describe('hasWideImage', () => {
-  it.each([
-    ['VideoObject', ['Thing', 'CreativeWork', 'MediaObject', 'VideoObject']],
-    ['Movie', ['Thing', 'CreativeWork', 'Movie']],
-    ['TVSeries', ['Thing', 'CreativeWork', 'Intangible', 'Series', 'CreativeWorkSeries', 'TVSeries']],
-  ])('shows a %s image as a 16:9 frame', (type, type_path) => {
-    expect(hasWideImage({ type, type_path })).toBe(true);
-  });
-
-  it('reads a wide type from the type_path of a narrower type it has never seen', () => {
-    expect(hasWideImage({ type: 'MusicVideoObject', type_path: ['Thing', 'MediaObject', 'VideoObject'] })).toBe(true);
-  });
-
-  it.each([
-    ['MusicRecording', ['Thing', 'CreativeWork', 'MusicRecording']],
-    ['MusicAlbum', ['Thing', 'CreativeWork', 'MusicPlaylist', 'MusicAlbum']],
-    ['Book', ['Thing', 'CreativeWork', 'Book']],
-    ['City', ['Thing', 'Place', 'AdministrativeArea', 'City']],
-    ['Article', ['Thing', 'CreativeWork', 'Article']],
-  ])('keeps a %s image square', (type, type_path) => {
-    expect(hasWideImage({ type, type_path })).toBe(false);
   });
 });
 

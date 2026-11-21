@@ -110,26 +110,6 @@ export function getDisplayLink(value: string): string {
 }
 
 /**
- * schema.org types whose `image` is a 16:9 frame (a video still, a movie's or series' backdrop):
- * the card shows it as a 16:9 thumbnail, where a square crop would cut it (and any text in it).
- * Every other card (music, books, places, articles) keeps the square.
- */
-const WIDE_IMAGE_TYPES: ReadonlySet<string> = new Set([
-  'VideoObject',
-  'Clip',
-  'Movie',
-  'MovieSeries',
-  'TVSeries',
-  'TVSeason',
-  'TVEpisode',
-]);
-
-/** Whether the card's image is a 16:9 frame, from its `type` or any `type_path` entry. */
-export function hasWideImage(card: Pick<TPinakesCard, 'type' | 'type_path'>): boolean {
-  return (card.type ? [card.type, ...card.type_path] : card.type_path).some((type) => WIDE_IMAGE_TYPES.has(type));
-}
-
-/**
  * The tag bar's label, naming what is tagged with the card's type label (`getResourceTypeLabel`, the
  * badge's words): "Tags on this song", "Tags on this video", "Tags on this FAQ page". Without a
  * type (no card, or an untyped one) it is "Tags on the external resource".

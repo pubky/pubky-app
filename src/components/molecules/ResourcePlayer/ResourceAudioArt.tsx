@@ -8,9 +8,9 @@ import { cn } from '@/libs/utils/utils';
 import { getHttpUrl } from '@/molecules/ResourceCard/ResourceCard.utils';
 
 /**
- * An audio's square cover (an episode's image, else its show's), as the card's image slot shows one
- * (`ResourceCardMedia`): rounded, never stretched. Without one, or when it fails to load, the type's
- * tile with a podcast icon. Decorative: the title next to it names the audio.
+ * An audio's square cover (an episode's image, else its show's): rounded, never stretched. Without
+ * one, or when it fails to load, the type's tile with a podcast icon. Decorative: the title next to
+ * it names the audio.
  */
 export function ResourceAudioArt({ image, className }: { image?: string | null; className?: string }) {
   const url = getHttpUrl(image ?? null);
