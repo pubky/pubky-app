@@ -40,11 +40,22 @@ describe('GET /api/favicon', () => {
     expect(await response.text()).toBe('');
   });
 
+  it('answers 503, never cached, while too many other sites are being read', async () => {
+    mockApplicationFetch.mockResolvedValueOnce('busy');
+    const response = await GET(request('?host=a.example'));
+    expect(response.status).toBe(503);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(response.headers.get('x-content-type-options')).toBe('nosniff');
+    expect(response.headers.get('content-security-policy')).toBe("default-src 'none'; sandbox");
+    expect(await response.text()).toBe('');
+  });
+
   it.each(['', '?host=', '?host=127.0.0.1', '?host=localhost', '?host=a.example:8080', '?url=https://a.example/x.png'])(
     'refuses %s without reading anything',
     async (query) => {
       const response = await GET(request(query));
       expect(response.status).toBe(400);
+      expect(response.headers.get('cache-control')).toBe('public, max-age=86400, s-maxage=86400');
       expect(response.headers.get('x-content-type-options')).toBe('nosniff');
       expect(mockApplicationFetch).not.toHaveBeenCalled();
     },

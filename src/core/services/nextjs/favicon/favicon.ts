@@ -8,7 +8,8 @@ import { isFaviconContentType, readBodyBytes, sniffImageType } from './favicon.u
 
 /**
  * The largest icon served. Most favicons are a few KB, but an ICO holding several sizes is larger:
- * Mixcloud's is 112 KB, Eventbrite's 177 KB. The cache bounds the memory all icons take together.
+ * Mixcloud's is 112 KB, Eventbrite's 177 KB. Memory stays bounded by the application service:
+ * `FAVICON_CACHE_BYTES` for the icons it keeps, `FAVICON_MAX_IN_FLIGHT` for the reads running.
  */
 export const FAVICON_MAX_BYTES = 256 * 1024;
 /** The whole read, every redirect and the body included. */

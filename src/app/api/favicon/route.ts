@@ -9,7 +9,8 @@ import { handleApiError } from '@/libs/api/route-error-handler';
  *
  * The icon is served as the image type its bytes are, never as script or a document: no sniffing,
  * a sandboxing policy, and same-origin use only. Icons change rarely: a day in the browser, a week
- * on the CDN. A host with no icon is cached for an hour, a refused one for a day.
+ * on the CDN. A host with no icon is cached for an hour, a refused one for a day. While too many
+ * other sites are being read the answer is 503, never cached, so the next view asks again.
  */
 const SAFE_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
@@ -19,6 +20,9 @@ const SAFE_HEADERS = {
 const ICON_CACHE = 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400';
 const MISS_CACHE = 'public, max-age=3600, s-maxage=3600';
 const REFUSED_CACHE = 'public, max-age=86400, s-maxage=86400';
+const BUSY_CACHE = 'no-store';
+
+const FAILURE_CACHE: Record<number, string> = { 404: MISS_CACHE, 503: BUSY_CACHE };
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,7 +30,7 @@ export async function GET(request: NextRequest) {
     if (!result.ok) {
       return new NextResponse(null, {
         status: result.statusCode,
-        headers: { ...SAFE_HEADERS, 'Cache-Control': result.statusCode === 404 ? MISS_CACHE : REFUSED_CACHE },
+        headers: { ...SAFE_HEADERS, 'Cache-Control': FAILURE_CACHE[result.statusCode] ?? REFUSED_CACHE },
       });
     }
     return new NextResponse(result.icon.body, {
