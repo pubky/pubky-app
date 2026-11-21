@@ -108,26 +108,67 @@ export function WalletDashboard({
   const [queries] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } }));
   const [request, setRequest] = useState<ReceiveRequest | null>(null);
   const tracking = useReceiveTracker(session.client, queries, walletId, request);
+  const draftKey = ['offline-receive-draft', walletId];
+  const draft = useQuery(
+    {
+      queryKey: draftKey,
+      queryFn: () => session.loadOfflineReceiveDraft(),
+      enabled: view === 'receive',
+      staleTime: Infinity,
+    },
+    queries,
+  );
+  const [openedAt] = useState(Date.now);
+  const lastReturn = useRef(openedAt);
+  useEffect(() => {
+    const onReturn = () => {
+      if (!document.hidden) lastReturn.current = Date.now();
+    };
+    document.addEventListener('visibilitychange', onReturn);
+    return () => document.removeEventListener('visibilitychange', onReturn);
+  }, []);
   const snapshot = useQuery(
     {
       queryKey: ['wallet', walletId],
       queryFn: async ({ queryKey }) => {
         const live = await session.client.snapshot();
-        const previous = queries.getQueryData<{ entries: ActivityEntry[]; away: string[] }>(queryKey);
+        const previous = queries.getQueryData<{ entries: ActivityEntry[]; away: string[]; settledAt: number }>(
+          queryKey,
+        );
         const [activityChecked, away] = await Promise.all([
           interrupted ? session.activityIncludesChannelSends(live.activity).catch(() => false) : false,
           live.wallet?.id === walletId && live.wallet.network === network
             ? session.awayReceipts(walletId, live.activity, live.primary.connected).catch(() => previous?.away ?? [])
             : [],
         ]);
-        return { ...live, entries: keepActivityOrder(live.activity, previous?.entries), activityChecked, away };
+        const newReceipt = away.some((hash) => !previous?.away.includes(hash));
+        const settledAt = newReceipt ? Date.now() : (previous?.settledAt ?? 0);
+        return {
+          ...live,
+          entries: keepActivityOrder(live.activity, previous?.entries),
+          activityChecked,
+          away,
+          settledAt,
+        };
       },
-      refetchInterval: ({ state }) =>
-        state.data?.activity.some((row) => row.kind === 'sent' && row.status === 'pending') ? 4_000 : 15_000,
+      refetchInterval: ({ state: { data } }) => {
+        const now = Date.now();
+        // A connected peer may still be delivering a settlement, and the channel
+        // balance can follow the receipt. Briefly check both on return.
+        if (data && now - data.settledAt < 5_000) return 2_000;
+        if (data && now - lastReturn.current < 60_000) {
+          const waiting = data.activity.some(
+            (row) => row.kind === 'request' && row.status === 'pending' && row.receiveRequest?.offlineReceive,
+          );
+          if (waiting || (data.balance.unresolvedOfflineSlots ?? 0) > 0) return 2_000;
+        }
+        return data?.activity.some((row) => row.kind === 'sent' && row.status === 'pending') ? 4_000 : 15_000;
+      },
     },
     queries,
   );
   const data = snapshot.data;
+  const receivePrimary = data?.primaries?.find((primary) => primary.isReceiveTarget) ?? data?.primary;
   const away = new Set(data?.away);
   const verifiedTotal =
     data?.wallet?.id === walletId && data.wallet.network === network ? data.balance.totalSats : undefined;
@@ -267,6 +308,32 @@ export function WalletDashboard({
         receipt={tracking.receipt}
         receivedWhileAway={!!request?.paymentHash && away.has(request.paymentHash)}
         unavailable={tracking.unavailable}
+        offlineCapacity={data?.balance.offlineReceivableSats}
+        primaryOfflineAvailable={receivePrimary?.offlineReceiveAvailable}
+        primaryConnected={receivePrimary?.connected}
+        offlineDraft={draft.data}
+        offlineDraftReady={draft.isSuccess}
+        reloadOfflineDraft={
+          draft.isError
+            ? async () => {
+                await draft.refetch({ throwOnError: true });
+              }
+            : undefined
+        }
+        discardOfflineDraft={async (id) => {
+          await session.discardOfflineReceiveDraft(id);
+          await draft.refetch({ throwOnError: true });
+        }}
+        issueOffline={async (quote) => {
+          try {
+            const issued = await session.receive(quote);
+            queries.setQueryData(draftKey, null);
+            return issued;
+          } catch (error) {
+            await draft.refetch();
+            throw error;
+          }
+        }}
         refresh={refresh}
         newBitcoinAddress={() => session.newBitcoinAddress(network)}
       />
@@ -415,6 +482,11 @@ export function WalletDashboard({
               <ActivityRow
                 key={key}
                 row={row}
+                checkedAt={snapshot.dataUpdatedAt}
+                showInvoice={(invoice) => {
+                  setRequest(invoice);
+                  switchTo('receive');
+                }}
                 receivedWhileAway={
                   row.kind === 'received' &&
                   row.status === 'completed' &&
@@ -430,8 +502,28 @@ export function WalletDashboard({
   );
 }
 
-function ActivityRow({ row, receivedWhileAway }: { row: Activity; receivedWhileAway: boolean }) {
+function ActivityRow({
+  row,
+  checkedAt,
+  receivedWhileAway,
+  showInvoice,
+}: {
+  row: Activity;
+  checkedAt: number;
+  receivedWhileAway: boolean;
+  showInvoice: (invoice: ReceiveRequest) => void;
+}) {
   const reduced = useReducedMotion();
+  const invoice = row.receiveRequest;
+  const canShowInvoice =
+    invoice?.offlineReceive &&
+    !invoice.demo &&
+    invoice.paymentHash === row.paymentHash &&
+    row.kind === 'request' &&
+    row.status === 'pending' &&
+    row.receiveStatus?.phase === 'waiting' &&
+    !row.receiveStatusUnavailable &&
+    invoice.expiresAt > checkedAt;
   const completed = row.status === 'completed';
   const title =
     !completed && (row.title === 'Payment sent' || row.title === 'Payment received')
@@ -497,6 +589,11 @@ function ActivityRow({ row, receivedWhileAway }: { row: Activity; receivedWhileA
           className="sentry-block w-full motion-reduce:duration-0 motion-reduce:data-[state=closed]:animate-none motion-reduce:data-[state=open]:animate-none sm:max-w-md"
         >
           <ActivityReceipt row={row} receivedWhileAway={receivedWhileAway} />
+          {canShowInvoice && (
+            <Button variant="outline" onClick={() => showInvoice(invoice)}>
+              Show invoice
+            </Button>
+          )}
         </DialogContent>
       </Dialog>
     </li>

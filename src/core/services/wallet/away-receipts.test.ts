@@ -26,8 +26,12 @@ function fixture() {
     read: (path: string) => files.get(path),
     write: vi.fn((path: string, bytes: Uint8Array<ArrayBuffer>) => files.set(path, bytes)),
   };
-  const open = () => createAwayReceipts(volume, false);
-  return { open, volume };
+  let clock = 50_000;
+  const open = () => createAwayReceipts(volume, false, () => clock);
+  const advance = (ms: number) => {
+    clock += ms;
+  };
+  return { open, volume, advance };
 }
 
 it('remembers a verified offline receipt across locks without re-writing unchanged snapshots', () => {
@@ -42,8 +46,8 @@ it('remembers a verified offline receipt across locks without re-writing unchang
   expect(volume.write).toHaveBeenCalledTimes(2);
 });
 
-it('does not relabel historical receipts or payments that settled after a foreground check', () => {
-  const { open } = fixture();
+it('does not relabel historical receipts or payments after foreground reconciliation', () => {
+  const { open, advance } = fixture();
   const first = open();
   const old = 'c'.repeat(64);
   const historical = {
@@ -55,6 +59,7 @@ it('does not relabel historical receipts or payments that settled after a foregr
   expect(first.observe(walletId, [pending, historical])).toEqual([]);
   const returned = open();
   expect(returned.observe(walletId, [pending, historical])).toEqual([]);
+  advance(8_001);
   expect(returned.observe(walletId, [paid, historical])).toEqual([]);
   expect(open().observe(walletId, [paid, historical])).toEqual([]);
 });
@@ -94,4 +99,70 @@ it('leaves the vault untouched for an ordinary payment and rejects another walle
   expect(session.observe(walletId, [{ ...paid, receiveRequest: { ...request, offlineReceive: false } }])).toEqual([]);
   expect(() => session.observe('c'.repeat(32), [pending])).toThrow('do not match');
   expect(volume.write).not.toHaveBeenCalled();
+});
+
+const draft = { id: 'reserved-request-01', amountSats: 6_000, description: 'Lunch', peer: '03' + 'c'.repeat(64) };
+const issued = { ...draft, ...request };
+
+it('tracks a verified invoice before its QR appears and survives closing before the first polling read', () => {
+  const { open, volume, advance } = fixture();
+  const session = open();
+  session.begin(walletId, draft);
+  expect(open().draft(walletId)).toEqual(draft);
+  session.begin(walletId, draft);
+  expect(volume.write).toHaveBeenCalledTimes(1);
+  session.issued(walletId, issued);
+  const returned = open();
+  expect(returned.draft(walletId)).toBeNull();
+  // The first foreground read is connected, but still shows the pre-close invoice.
+  expect(returned.observe(walletId, [pending], true)).toEqual([]);
+  advance(2_000);
+  expect(returned.observe(walletId, [paid])).toEqual([paymentHash]);
+  expect(volume.write).toHaveBeenCalledTimes(3);
+});
+
+it('preserves the reserved request, amount and primary when retrying an interruption', () => {
+  const { open } = fixture();
+  open().begin(walletId, draft);
+  const returned = open();
+  expect(() => returned.begin(walletId, { ...draft, peer: '02' + 'd'.repeat(64) })).toThrow('Resume');
+  expect(() => returned.begin(walletId, { ...draft, amountSats: 7_000 })).toThrow('Resume');
+  expect(() => returned.issued(walletId, { ...issued, offlineReceive: false })).toThrow();
+  expect(() => returned.issued(walletId, { ...issued, peer: '02' + 'd'.repeat(64) })).toThrow();
+  expect(() => returned.discard(walletId, 'changed-id')).toThrow();
+  expect(returned.draft(walletId)).toEqual(draft);
+  returned.discard(walletId, draft.id);
+  expect(open().draft(walletId)).toBeNull();
+});
+
+it('retains the persisted draft if the invoice handoff fails', () => {
+  const { open, volume } = fixture();
+  const session = open();
+  session.begin(walletId, draft);
+  volume.write.mockImplementationOnce(() => {
+    throw new Error('Storage full');
+  });
+  expect(() => session.issued(walletId, issued)).toThrow('Storage full');
+  expect(open().draft(walletId)).toEqual(draft);
+});
+
+it('accepts a late receipt for an invoice that was already expired when the wallet reopened', () => {
+  const { open, advance } = fixture();
+  open().observe(walletId, [pending]);
+  const returned = open();
+  const expired = { ...request, expiresAt: 49_000 };
+  returned.observe(walletId, [{ ...pending, receiveRequest: expired, status: 'expired' }]);
+  advance(120_000);
+  expect(returned.observe(walletId, [{ ...paid, receiveRequest: expired }])).toEqual([paymentHash]);
+});
+
+it('recovers a registered request whose response omits the original primary', () => {
+  const { open } = fixture();
+  const session = open();
+  const description = '🌅'.repeat(128);
+  session.begin(walletId, { ...draft, description });
+  const saved = { ...issued, description, peer: undefined };
+  session.issued(walletId, saved);
+  expect(open().draft(walletId)).toBeNull();
+  expect(open().observe(walletId, [paid])).toEqual([paymentHash]);
 });

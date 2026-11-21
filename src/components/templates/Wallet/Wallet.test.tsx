@@ -29,6 +29,10 @@ const wallet = vi.hoisted(() => ({
   snapshot: vi.fn(),
   prepareSend: vi.fn(),
   retrySetup: vi.fn(),
+  getConfig: vi.fn(),
+  loadOfflineReceiveDraft: vi.fn(),
+  discardOfflineReceiveDraft: vi.fn(),
+  issueOffline: vi.fn(),
   quoteMax: vi.fn(),
   prepareDrain: vi.fn(),
   cancelDrain: vi.fn(),
@@ -67,6 +71,9 @@ vi.mock('@/services/wallet/session', () => ({
     }
     rememberBalance = wallet.rememberBalance;
     awayReceipts = wallet.awayReceipts;
+    loadOfflineReceiveDraft = wallet.loadOfflineReceiveDraft;
+    discardOfflineReceiveDraft = wallet.discardOfflineReceiveDraft;
+    receive = wallet.issueOffline;
     send = wallet.send;
     acknowledgePayment = wallet.acknowledgePayment;
     activityIncludesChannelSends = wallet.activityIncludesChannelSends;
@@ -115,6 +122,9 @@ beforeEach(() => {
   wallet.startWallet.mockResolvedValue(undefined);
   wallet.rememberBalance.mockResolvedValue(undefined);
   wallet.awayReceipts.mockResolvedValue([]);
+  wallet.getConfig.mockResolvedValue({ offlineReceiveAvailable: true });
+  wallet.loadOfflineReceiveDraft.mockResolvedValue(null);
+  wallet.discardOfflineReceiveDraft.mockResolvedValue(undefined);
   wallet.listWallets.mockResolvedValue([record]);
   wallet.createWallet.mockResolvedValue({ ...record, mnemonic: words });
   wallet.snapshot.mockResolvedValue({
@@ -447,6 +457,133 @@ describe('Pubky wallet', () => {
     expect(wallet.receive).not.toHaveBeenCalled();
   });
 
+  it('reviews a fixed offline fee and only says the wallet can close after the invoice is saved', async () => {
+    const quote = {
+      id: 'offline-receive-1234',
+      mode: 'offline',
+      amountSats: 354,
+      feeSats: 4,
+      netSats: 350,
+      description: 'Coffee',
+      expiresAt: Date.now() + 60_000,
+      warnings: [],
+    };
+    const request = {
+      ...quote,
+      offlineReceive: true,
+      bolt11: 'lnbcrt1offline',
+      uri: 'bitcoin:test?lightning=lnbcrt1offline',
+      paymentHash: 'abc',
+    };
+    let finishSaving!: (saved: typeof request) => void;
+    wallet.snapshot.mockResolvedValue({
+      balance: { totalSats: 5000, availableSats: 5000, offlineReceivableSats: 2000 },
+      primary: { connected: true, offlineReceiveAvailable: true },
+      activity: [],
+    });
+    wallet.quoteReceive.mockResolvedValue(quote);
+    wallet.issueOffline.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finishSaving = resolve;
+        }),
+    );
+    wallet.getReceiveStatus.mockResolvedValue({ phase: 'waiting' });
+    render(<Wallet />);
+    await unlock();
+    fireEvent.click(screen.getByRole('button', { name: 'Receive' }));
+    const toggle = await screen.findByRole('switch', { name: 'Receive offline' });
+    await waitFor(() => expect(toggle).toBeEnabled());
+    expect(toggle).not.toBeChecked();
+    fireEvent.click(toggle);
+    expect(screen.queryByText(/let the sender choose/i)).toBeNull();
+    expect(screen.getByText(/Enter ₿354 to ₿2,000/)).toBeVisible();
+    const review = screen.getByRole('button', { name: 'Review request' });
+    const amount = screen.getByLabelText('Amount in bitcoin');
+    for (const value of ['', '0', '353', '2001']) {
+      fireEvent.change(amount, { target: { value } });
+      expect(review).toBeDisabled();
+    }
+    expect(wallet.quoteReceive).not.toHaveBeenCalled();
+    fireEvent.change(amount, { target: { value: '354' } });
+    fireEvent.change(screen.getByLabelText('Description (optional)'), { target: { value: 'Coffee' } });
+    fireEvent.click(review);
+    expect(await screen.findByText('Offline Lightning invoice')).toBeVisible();
+    expect(wallet.quoteReceive).toHaveBeenCalledWith({ mode: 'offline', amountSats: 354, description: 'Coffee' });
+    expect(screen.getByText('Receive fee').nextElementSibling).toHaveTextContent('₿4');
+    expect(screen.getByText('You receive').nextElementSibling).toHaveTextContent('₿350');
+    fireEvent.click(screen.getByRole('button', { name: 'Create request' }));
+    expect(wallet.issueOffline).toHaveBeenCalledWith(quote);
+    expect(screen.queryByText(/You can close your wallet/)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Copy request' })).toBeNull();
+    await act(async () => finishSaving(request));
+    expect(await screen.findByText(/You can close your wallet/)).toBeVisible();
+    expect(screen.queryByText(/Keep your wallet open/)).toBeNull();
+    expect(screen.getByText('₿354')).toBeVisible();
+    expect(screen.getByLabelText('Lightning invoice')).toHaveValue(request.bolt11);
+    expect(screen.queryByRole('button', { name: 'Unified request' })).toBeNull();
+    expect(wallet.receive).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'New request' }));
+    expect(await screen.findByRole('switch', { name: 'Receive offline' })).not.toBeChecked();
+    expect(screen.getByText(/let the sender choose how much to pay/)).toBeVisible();
+  });
+
+  it('resumes an interrupted offline request at its original primary even when its capacity is reserved', async () => {
+    const draft = { id: 'offline-receive-1234', amountSats: 1200, description: 'Lunch', peer: 'peer' };
+    wallet.loadOfflineReceiveDraft.mockResolvedValue(draft);
+    wallet.snapshot.mockResolvedValue({
+      balance: { totalSats: 0, availableSats: 0, offlineReceivableSats: 0 },
+      primary: { connected: true },
+      activity: [],
+    });
+    wallet.quoteReceive.mockResolvedValue({
+      ...draft,
+      mode: 'offline',
+      feeSats: 10,
+      netSats: 1190,
+      expiresAt: Date.now() + 60_000,
+      warnings: [],
+    });
+    wallet.issueOffline.mockRejectedValue(new Error('The primary did not respond.'));
+    render(<Wallet />);
+    await unlock();
+    fireEvent.click(screen.getByRole('button', { name: 'Receive' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Resume offline request' }));
+    const expected = { mode: 'offline', requestId: draft.id, peer: draft.peer, amountSats: 1200, description: 'Lunch' };
+    expect(wallet.quoteReceive).toHaveBeenLastCalledWith(expected);
+    fireEvent.click(await screen.findByRole('button', { name: 'Create request' }));
+    expect(await screen.findByText('The primary did not respond.')).toBeVisible();
+    expect(screen.queryByText(/You can close your wallet/)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Resume offline request' }));
+    expect(await screen.findByRole('button', { name: 'Create request' })).toBeEnabled();
+    expect(wallet.quoteReceive).toHaveBeenCalledTimes(2);
+    expect(wallet.quoteReceive).toHaveBeenLastCalledWith(expected);
+    expect(wallet.receive).not.toHaveBeenCalled();
+    expect(wallet.discardOfflineReceiveDraft).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { available: false, capacity: 1000, reason: /primary does not offer offline/ },
+    { available: true, capacity: 0, reason: /no room for an offline payment/ },
+  ])(
+    'keeps ordinary Lightning available when offline support is $available and capacity is $capacity',
+    async ({ available, capacity, reason }) => {
+      wallet.snapshot.mockResolvedValue({
+        balance: { totalSats: 0, availableSats: 0, offlineReceivableSats: capacity },
+        primary: { connected: true, offlineReceiveAvailable: available },
+        activity: [],
+      });
+      render(<Wallet />);
+      await unlock();
+      fireEvent.click(screen.getByRole('button', { name: 'Receive' }));
+      const hint = await screen.findByText(reason);
+      expect(hint).toBeVisible();
+      expect(screen.getByRole('switch', { name: 'Receive offline' })).toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Review request' })).toBeEnabled();
+      expect(screen.getByRole('button', { name: 'Receive on-chain' })).toBeEnabled();
+    },
+  );
+
   it('shows the receive fee before creating the request, then tracks the invoice', async () => {
     const quote = {
       id: 'q',
@@ -720,7 +857,19 @@ describe('Pubky wallet', () => {
     };
     const otherHash = 'cd'.repeat(32);
     const activity = [
-      incoming,
+      {
+        ...incoming,
+        address: 'bcrt1fallback',
+        receiveRequest: { offlineReceive: true, address: 'bcrt1fallback', amountSats: 850 },
+        receiveStatus: {
+          method: 'lightning',
+          phase: 'completed',
+          receivedSats: 850,
+          confirmedSats: 850,
+          pendingSats: 0,
+          txids: [],
+        },
+      },
       { ...incoming, id: `payment:${otherHash}`, reference: otherHash, paymentHash: otherHash, amountSats: 600 },
     ];
     wallet.snapshot.mockResolvedValue({
@@ -740,6 +889,58 @@ describe('Pubky wallet', () => {
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText('Received while you were away')).toBeVisible();
     expect(within(dialog).getByText('₿850')).toBeVisible();
+    expect(within(dialog).getByText('Payment method').nextElementSibling).toHaveTextContent('Lightning');
+    expect(within(dialog).queryByText('Bitcoin address')).toBeNull();
+    expect(within(dialog).queryByText('bcrt1fallback')).toBeNull();
+  });
+
+  it('reopens the original unpaid offline invoice from Activity after unlocking', async () => {
+    const paymentHash = 'ab'.repeat(32);
+    const request = {
+      id: 'offline-receive-1234',
+      offlineReceive: true,
+      amountSats: 750,
+      feeSats: 0,
+      description: 'Tea',
+      bolt11: 'lnbcrt1savedoffline',
+      uri: 'bitcoin:test?lightning=lnbcrt1savedoffline',
+      paymentHash,
+      expiresAt: Date.now() + 60_000,
+      warnings: [],
+      demo: false,
+    };
+    const receiveStatus = { phase: 'waiting', receivedSats: 0, confirmedSats: 0, pendingSats: 0, txids: [] };
+    wallet.getReceiveStatus.mockResolvedValue(receiveStatus);
+    wallet.snapshot.mockResolvedValue({
+      wallet: record,
+      primary: { connected: true },
+      balance: { totalSats: 0, availableSats: 0, pendingSats: 0 },
+      activity: [
+        {
+          id: request.id,
+          kind: 'request',
+          title: 'Payment request',
+          status: 'pending',
+          description: request.description,
+          timestamp: Date.now(),
+          amountSats: 750,
+          feeSats: 0,
+          reference: paymentHash,
+          paymentHash,
+          receiveRequest: request,
+          receiveStatus,
+        },
+      ],
+    });
+    render(<Wallet />);
+    await unlock();
+    fireEvent.click(await screen.findByRole('button', { name: /₿750/ }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Show invoice' }));
+    expect(await screen.findByLabelText('Lightning invoice')).toHaveValue(request.bolt11);
+    expect(screen.getByText(/You can close your wallet/)).toBeVisible();
+    expect(wallet.quoteReceive).not.toHaveBeenCalled();
+    expect(wallet.issueOffline).not.toHaveBeenCalled();
   });
 
   it('updates authoritative balance and Activity when an invoice settles after leaving Receive', async () => {

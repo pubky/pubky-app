@@ -13,12 +13,13 @@ import type {
   WalletClientInterface,
 } from '@beignet/wallet-core';
 import { buildBip21, parseSats, WalletError } from '@beignet/wallet-core';
-import { ArrowDownLeft, ArrowUpRight, Copy, Zap } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, Copy, Moon, Zap } from 'lucide-react';
 import { motion, useReducedMotion } from 'motion/react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Button } from '@/atoms/Button/Button';
 import { Input } from '@/atoms/Input/Input';
 import { Label } from '@/atoms/Label/Label';
+import { Switch } from '@/atoms/Switch/Switch';
 import { Textarea } from '@/atoms/Textarea/Textarea';
 import { copyToClipboard } from '@/libs/utils/utils';
 import { bitcoinAmount, lightningAmount } from '@/libs/wallet/amount';
@@ -29,6 +30,7 @@ import {
   WalletDrainAvailable,
   type WalletMaximum,
 } from '@/libs/wallet/sendPayment';
+import type { OfflineReceiveDraft } from '@/services/wallet/session';
 import { Detail, type WalletNavigation, WalletPanel, type WalletTask, Warnings } from './WalletPanel';
 import { reviewedRecipientAmount, SendReceipt, type SendSubmission, WalletReceipt } from './WalletReceipt';
 import { WalletScanner } from './WalletScanner';
@@ -45,17 +47,21 @@ function AmountField({
   onChange,
   disabled,
   payerChooses = false,
+  offlineHint,
 }: {
   value: string;
   onChange: (value: string) => void;
   disabled: boolean;
   payerChooses?: boolean;
+  offlineHint?: string;
 }) {
+  const hint =
+    offlineHint ?? (payerChooses ? 'Leave blank or enter 0 to let the sender choose how much to pay.' : null);
   return (
     <div className="grid gap-2">
       <Label htmlFor="payment-amount">
         Amount <span className="sr-only">in bitcoin</span>
-        {!payerChooses && ' (optional)'}
+        {!payerChooses && !offlineHint && ' (optional)'}
       </Label>
       <div className="relative">
         <span
@@ -66,7 +72,8 @@ function AmountField({
         </span>
         <Input
           id="payment-amount"
-          aria-describedby={payerChooses ? 'receive-amount-hint' : undefined}
+          aria-describedby={hint ? 'receive-amount-hint' : undefined}
+          required={!!offlineHint}
           className="pl-8"
           disabled={disabled}
           inputMode="numeric"
@@ -76,9 +83,9 @@ function AmountField({
           onChange={(e) => onChange(e.target.value)}
         />
       </div>
-      {payerChooses && (
+      {hint && (
         <p id="receive-amount-hint" className="text-sm text-muted-foreground">
-          Leave blank or enter 0 to let the sender choose how much to pay.
+          {hint}
         </p>
       )}
     </div>
@@ -404,6 +411,9 @@ function receiveFeeTerms(flatFeeSats: number, feePpm: number) {
   return flatFeeSats ? `${bitcoinAmount(flatFeeSats)} + ${rate}` : rate;
 }
 
+// The smallest fixed amount the engine can hold for an offline receive.
+const MIN_OFFLINE_SATS = 354;
+
 export function WalletReceive({
   client,
   navigation,
@@ -415,6 +425,14 @@ export function WalletReceive({
   unavailable,
   receivedWhileAway = false,
   newBitcoinAddress,
+  offlineCapacity,
+  primaryConnected,
+  primaryOfflineAvailable,
+  offlineDraft,
+  offlineDraftReady = true,
+  reloadOfflineDraft,
+  discardOfflineDraft,
+  issueOffline,
 }: PaymentProps & {
   request: ReceiveRequest | null;
   setRequest: (request: ReceiveRequest | null) => void;
@@ -422,15 +440,113 @@ export function WalletReceive({
   unavailable: boolean;
   receivedWhileAway?: boolean;
   newBitcoinAddress: () => Promise<string>;
+  offlineCapacity?: number;
+  primaryConnected?: boolean;
+  primaryOfflineAvailable?: boolean | null;
+  offlineDraft?: OfflineReceiveDraft | null;
+  offlineDraftReady?: boolean;
+  reloadOfflineDraft?: () => Promise<void>;
+  discardOfflineDraft: (id: string) => Promise<void>;
+  issueOffline: (quote: ReceiveQuote) => Promise<ReceiveRequest>;
 }) {
   const [deposit, setDeposit] = useState<{ address: string; uri: string; amountSats?: number } | null>(null);
   const [copied, setCopied] = useState(false);
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [quote, setQuote] = useState<ReceiveQuote | null>(null);
+  const [expiredQuote, setExpiredQuote] = useState<ReceiveQuote | null>(null);
+  useEffect(() => {
+    if (quote?.mode !== 'offline') return;
+    const timer = window.setTimeout(
+      () => setExpiredQuote(quote),
+      Math.min(2_147_483_647, Math.max(0, quote.expiresAt - Date.now())),
+    );
+    return () => window.clearTimeout(timer);
+  }, [quote]);
+  const [offline, setOffline] = useState(false);
+  const [useOnline, setUseOnline] = useState(false);
+  const [attemptedDraft, setAttemptedDraft] = useState<OfflineReceiveDraft | null>(null);
+  const [hostSupport, setHostSupport] = useState<'checking' | 'available' | 'unavailable' | 'error'>('checking');
+  const [check, setCheck] = useState(0);
+  useEffect(() => {
+    let active = true;
+    Promise.resolve()
+      .then(() => client.getConfig())
+      .then((config) => {
+        if (active) setHostSupport(config.offlineReceiveAvailable ? 'available' : 'unavailable');
+      })
+      .catch(() => {
+        if (active) setHostSupport('error');
+      });
+    return () => {
+      active = false;
+    };
+  }, [client, check]);
+  const pending = offlineDraft ?? attemptedDraft;
+  const canReceiveOffline =
+    offlineDraftReady &&
+    hostSupport === 'available' &&
+    primaryConnected !== false &&
+    primaryOfflineAvailable !== false &&
+    (offlineCapacity === undefined || offlineCapacity >= MIN_OFFLINE_SATS);
+  let switchHint = 'Accept a Lightning payment while your wallet is closed.';
+  if (!offlineDraftReady)
+    switchHint = reloadOfflineDraft
+      ? 'Could not check for a saved offline request.'
+      : 'Checking for a saved offline request…';
+  else if (hostSupport === 'checking') switchHint = 'Checking offline support…';
+  else if (hostSupport === 'error') switchHint = 'Could not check offline support.';
+  else if (hostSupport === 'unavailable') switchHint = 'This browser wallet does not support offline receiving.';
+  else if (primaryConnected === false) switchHint = 'Reconnect to your primary to prepare an offline invoice.';
+  else if (primaryOfflineAvailable === false) switchHint = 'Your primary does not offer offline receiving.';
+  else if (!canReceiveOffline)
+    switchHint = 'There is no room for an offline payment right now. You can still receive with the wallet open.';
+  const offlineRange =
+    offlineCapacity === undefined || offlineCapacity < MIN_OFFLINE_SATS
+      ? `Enter at least ${bitcoinAmount(MIN_OFFLINE_SATS)}. Your primary will check available capacity.`
+      : `Enter ${bitcoinAmount(MIN_OFFLINE_SATS)} to ${bitcoinAmount(offlineCapacity)} for an offline invoice.`;
+  const offlineAmountValid =
+    /^\d+$/.test(amount) &&
+    Number.isSafeInteger(Number(amount)) &&
+    Number(amount) >= MIN_OFFLINE_SATS &&
+    (offlineCapacity === undefined || Number(amount) <= offlineCapacity);
   const jitFee = quote?.jitFee;
+  async function reviewOffline(amountSats: number, note: string, draft?: OfflineReceiveDraft) {
+    const next = await client.quoteReceive({
+      mode: 'offline',
+      amountSats,
+      description: note,
+      ...(draft && { requestId: draft.id, ...(draft.peer && { peer: draft.peer }) }),
+    });
+    if (next.mode !== 'offline' || next.amountSats !== amountSats) {
+      throw new Error('Your primary could not confirm an offline quote for this amount.');
+    }
+    if (draft && (next.id !== draft.id || (draft.peer && next.peer !== draft.peer))) {
+      throw new Error('Could not match this quote to your saved offline request.');
+    }
+    setQuote(next);
+  }
   async function issue() {
     if (!quote) return;
+    if (quote.mode === 'offline' && quote.amountSats !== null) {
+      const draft = { id: quote.id, amountSats: quote.amountSats, description: quote.description, peer: quote.peer };
+      if (quote.expiresAt <= Date.now()) {
+        await reviewOffline(draft.amountSats, draft.description, draft);
+        return;
+      }
+      setAttemptedDraft(draft);
+      try {
+        const issued = await issueOffline(quote);
+        if (!issued.offlineReceive || !issued.bolt11)
+          throw new Error('Could not verify the offline invoice. Check Activity before retrying.');
+        setRequest(issued);
+        setAttemptedDraft(null);
+        refresh();
+      } finally {
+        setQuote(null);
+      }
+      return;
+    }
     try {
       setRequest(await client.receive(quote));
       refresh();
@@ -492,12 +608,23 @@ export function WalletReceive({
           unavailable={unavailable}
           receivedWhileAway={receivedWhileAway}
           reset={() => {
+            if (request.offlineReceive) {
+              setOffline(false);
+              setUseOnline(false);
+              setAmount('');
+              setDescription('');
+            }
             setRequest(null);
             task.clearError();
           }}
         />
       ) : quote ? (
         <>
+          {quote.mode === 'offline' && (
+            <p className="flex items-center gap-2 text-sm font-medium">
+              <Moon aria-hidden className="size-4 text-brand" /> Offline Lightning invoice
+            </p>
+          )}
           <dl>
             <Detail
               compact
@@ -525,7 +652,13 @@ export function WalletReceive({
           <Warnings items={quote.warnings} />
           <div className="flex flex-wrap gap-2">
             <Button variant="brand" disabled={task.busy} onClick={() => task.run(issue)}>
-              {task.busy ? 'Creating request…' : 'Create request'}
+              {quote === expiredQuote
+                ? task.busy
+                  ? 'Refreshing quote…'
+                  : 'Refresh quote'
+                : task.busy
+                  ? 'Creating request…'
+                  : 'Create request'}
             </Button>
             <Button
               variant="outline"
@@ -535,21 +668,76 @@ export function WalletReceive({
                 task.clearError();
               }}
             >
-              Edit
+              {pending && quote.mode === 'offline' ? 'Back' : 'Edit'}
             </Button>
           </div>
         </>
+      ) : pending && !useOnline ? (
+        <div className="grid gap-3">
+          <div>
+            <p className="font-semibold">Unfinished offline request</p>
+            <p className="mt-1 text-2xl font-semibold tabular-nums">{bitcoinAmount(pending.amountSats)}</p>
+            {pending.description && <p className="text-sm wrap-anywhere">{pending.description}</p>}
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Your primary may have reserved capacity. Resume this request to check the same invoice.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="brand"
+              disabled={task.busy}
+              onClick={() => task.run(() => reviewOffline(pending.amountSats, pending.description, pending))}
+            >
+              {task.busy ? 'Checking request…' : 'Resume offline request'}
+            </Button>
+            <Button
+              variant="outline"
+              disabled={task.busy}
+              onClick={() => {
+                setUseOnline(true);
+                setOffline(false);
+                task.clearError();
+              }}
+            >
+              Receive online
+            </Button>
+            <Button
+              variant="ghost"
+              disabled={task.busy}
+              onClick={() =>
+                task.run(async () => {
+                  await discardOfflineDraft(pending.id);
+                  setAttemptedDraft(null);
+                  setOffline(false);
+                })
+              }
+            >
+              Stop retrying
+            </Button>
+          </div>
+        </div>
       ) : (
         <form
           className="grid gap-3"
           onSubmit={(e) => {
             e.preventDefault();
             void task.run(async () => {
-              setQuote(await client.quoteReceive({ amountSats: receiveAmount(amount), description }));
+              if (offline) {
+                if (!canReceiveOffline || !offlineAmountValid || pending) return;
+                await reviewOffline(Number(amount), description);
+              } else {
+                setQuote(await client.quoteReceive({ amountSats: receiveAmount(amount), description }));
+              }
             });
           }}
         >
-          <AmountField payerChooses value={amount} onChange={setAmount} disabled={task.busy} />
+          <AmountField
+            payerChooses={!offline}
+            offlineHint={offline ? offlineRange : undefined}
+            value={amount}
+            onChange={setAmount}
+            disabled={task.busy}
+          />
           <div className="grid gap-2">
             <Label htmlFor="payment-description">Description (optional)</Label>
             <Input
@@ -559,25 +747,81 @@ export function WalletReceive({
               onChange={(e) => setDescription(e.target.value)}
             />
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button type="submit" className="justify-self-start" variant="brand" disabled={task.busy}>
-              {task.busy ? 'Preparing request…' : 'Review request'}
-            </Button>
+          {pending ? (
             <Button
               type="button"
-              className="justify-self-start"
               variant="outline"
+              className="justify-self-start"
               disabled={task.busy}
-              onClick={() =>
-                task.run(async () => {
-                  const amountSats = receiveAmount(amount);
-                  const address = await newBitcoinAddress();
-                  setDeposit({ address, amountSats, uri: buildBip21({ address, amountSats, message: description }) });
-                })
-              }
+              onClick={() => setUseOnline(false)}
             >
-              Receive on-chain
+              Resume offline request
             </Button>
+          ) : (
+            <div className="flex items-center gap-3 rounded-lg border border-border px-3 py-2">
+              <Moon aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+              <div className="min-w-0 flex-1">
+                <Label htmlFor="receive-offline">Receive offline</Label>
+                <p id="receive-offline-hint" className="text-xs text-muted-foreground">
+                  {switchHint}
+                </p>
+                {(reloadOfflineDraft || hostSupport === 'error') && (
+                  <button
+                    type="button"
+                    disabled={task.busy}
+                    className="rounded-sm text-xs underline focus-visible:outline-2 focus-visible:outline-ring"
+                    onClick={() => {
+                      if (reloadOfflineDraft) void task.run(reloadOfflineDraft);
+                      else {
+                        setHostSupport('checking');
+                        setCheck((n) => n + 1);
+                      }
+                    }}
+                  >
+                    Check again
+                  </button>
+                )}
+              </div>
+              <Switch
+                id="receive-offline"
+                type="button"
+                aria-describedby="receive-offline-hint"
+                checked={offline}
+                disabled={task.busy || (!offline && !canReceiveOffline)}
+                onCheckedChange={(enabled) => {
+                  setOffline(enabled);
+                  setUseOnline(!enabled);
+                  task.clearError();
+                }}
+              />
+            </div>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="submit"
+              className="justify-self-start"
+              variant="brand"
+              disabled={task.busy || (offline && (!canReceiveOffline || !offlineAmountValid))}
+            >
+              {task.busy ? 'Preparing request…' : 'Review request'}
+            </Button>
+            {!offline && (
+              <Button
+                type="button"
+                className="justify-self-start"
+                variant="outline"
+                disabled={task.busy}
+                onClick={() =>
+                  task.run(async () => {
+                    const amountSats = receiveAmount(amount);
+                    const address = await newBitcoinAddress();
+                    setDeposit({ address, amountSats, uri: buildBip21({ address, amountSats, message: description }) });
+                  })
+                }
+              >
+                Receive on-chain
+              </Button>
+            )}
           </div>
         </form>
       )}
@@ -601,7 +845,7 @@ function RequestCode({
   reset: () => void;
 }) {
   const reduced = useReducedMotion();
-  const [unified, setUnified] = useState(!request.bolt11);
+  const [unified, setUnified] = useState(!request.offlineReceive && !request.bolt11);
   const [copied, setCopied] = useState(false);
   const [expired, setExpired] = useState(() => request.expiresAt <= Date.now());
   useEffect(() => {
@@ -618,6 +862,12 @@ function RequestCode({
     if (phase === 'pending') message = 'Payment pending';
   }
   const payload = unified ? request.uri : request.bolt11;
+  const expiry = new Date(request.expiresAt);
+  const expiryLabel = expiry.toLocaleString(undefined, {
+    ...(expiry.toDateString() !== new Date().toDateString() && { month: 'short', day: 'numeric' }),
+    hour: 'numeric',
+    minute: '2-digit',
+  });
   const qr = unified ? payload : request.bolt11.toUpperCase();
   const shareable = (!phase || phase === 'waiting') && !expired;
   const newRequest = (
@@ -655,7 +905,17 @@ function RequestCode({
         ) : (
           shareable && (
             <div className="grid w-full min-w-0 justify-items-start gap-3">
-              {request.uri && request.bolt11 && request.uri !== request.bolt11 && (
+              {request.offlineReceive && (
+                <div className="justify-self-center text-center">
+                  <p className="flex items-center justify-center gap-1.5 text-sm text-muted-foreground">
+                    <Moon aria-hidden className="size-4" /> Offline Lightning invoice
+                  </p>
+                  {request.amountSats != null && (
+                    <p className="text-2xl font-semibold tabular-nums">{bitcoinAmount(request.amountSats)}</p>
+                  )}
+                </div>
+              )}
+              {!request.offlineReceive && request.uri && request.bolt11 && request.uri !== request.bolt11 && (
                 <div className="flex flex-wrap gap-2" role="group" aria-label="Request format">
                   <Button
                     size="sm"
@@ -709,8 +969,10 @@ function RequestCode({
               </div>
               <Warnings items={request.warnings} />
               <p className="text-xs text-muted-foreground">
-                Keep your wallet open and unlocked. Expires{' '}
-                {new Date(request.expiresAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}.
+                {request.offlineReceive
+                  ? 'You can close your wallet. Reopen it to see your receipt and balance once paid.'
+                  : 'Keep your wallet open and unlocked.'}{' '}
+                Expires <time dateTime={expiry.toISOString()}>{expiryLabel}</time>.
               </p>
               <PaymentCode label={unified ? 'Payment request' : 'Lightning invoice'} value={payload} />
             </div>

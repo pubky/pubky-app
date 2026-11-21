@@ -4,12 +4,15 @@ import {
   EmbeddedWalletClient,
   type Network,
   parsePayment,
+  type ReceiveQuote,
+  type ReceiveRequest,
   type SendResult,
   type SendReview,
   WalletError,
 } from '@beignet/wallet-core';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
+export type OfflineReceiveDraft = { id: string; amountSats: number; description: string; peer?: string };
 export type WalletDefaults = { network: Network; primaryUri: string; electrum: ElectrumServer };
 export type LastWalletBalance = { walletId: string; network: Network; totalSats: number; updatedAt: number };
 type UnlockedEvent = { id: number; event: 'unlocked'; account: string; balance: LastWalletBalance | null };
@@ -25,6 +28,7 @@ export class WalletSession {
   private worker?: Worker;
   private counter = 0;
   private closing = false;
+  private offlineOperation = false;
   private closeAttempt?: Promise<void>;
   private assertRingDevice?: () => void;
   private readonly ownsAccount: () => boolean;
@@ -156,6 +160,73 @@ export class WalletSession {
     if (!this.ownsAccount() || this.client.connection.walletId !== walletId) throw locked();
     this.assertRingDevice?.();
     await this.call('remember-balance', { walletId, network, totalSats });
+  }
+
+  private offlineWallet(expected?: string): string {
+    const id = this.client.connection.walletId;
+    if (!id || (expected && expected !== id) || this.closing || !this.ownsAccount()) throw locked();
+    this.assertRingDevice?.();
+    return id;
+  }
+
+  async loadOfflineReceiveDraft(): Promise<OfflineReceiveDraft | null> {
+    const walletId = this.offlineWallet();
+    const draft = await this.call<OfflineReceiveDraft | null>('offline-draft', { walletId });
+    this.offlineWallet(walletId);
+    return draft;
+  }
+
+  async receive(quote: ReceiveQuote): Promise<ReceiveRequest> {
+    const walletId = this.offlineWallet();
+    if (quote.mode !== 'offline') return this.client.receive(quote);
+    if (this.offlineOperation) throw new WalletError('An offline request is being prepared.', 'RECEIVE_BUSY');
+    this.offlineOperation = true;
+    try {
+      await this.call('begin-offline-receive', { walletId, draft: quote });
+      this.offlineWallet(walletId);
+      const request = await this.client.receive(quote);
+      this.offlineWallet(walletId);
+      await this.call('finish-offline-receive', { walletId, request });
+      this.offlineWallet(walletId);
+      return request;
+    } finally {
+      this.offlineOperation = false;
+    }
+  }
+
+  async discardOfflineReceiveDraft(id: string): Promise<void> {
+    const walletId = this.offlineWallet();
+    if (this.offlineOperation) throw new WalletError('An offline request is being prepared.', 'RECEIVE_BUSY');
+    this.offlineOperation = true;
+    try {
+      const [registry, reservations] = await Promise.all([
+        this.call<{ requests: ReceiveRequest[] }>('request', {
+          method: 'GET',
+          path: `/wallets/${walletId}/api/receive/requests`,
+        }),
+        this.call<{ requests: { id: string; channelId?: string; done?: boolean }[] }>('request', {
+          method: 'GET',
+          path: `/wallets/${walletId}/api/receive/offline`,
+        }),
+      ]);
+      this.offlineWallet(walletId);
+      if (!Array.isArray(registry?.requests) || !Array.isArray(reservations?.requests))
+        throw new WalletError('Reconnect to check the saved offline request.', 'RECEIVE_UNAVAILABLE');
+      const saved = registry.requests.find((request) => request.id === id);
+      if (saved) {
+        // Registered invoices remain payable and visible in Activity. Preserve their receipt tracking.
+        await this.call('finish-offline-receive', { walletId, request: saved });
+        return;
+      }
+      if (reservations.requests.some((job) => job.id === id && job.channelId && !job.done))
+        throw new WalletError(
+          'This reservation is still active. Resume the saved request or wait for it to finish.',
+          'RECEIVE_PENDING',
+        );
+      await this.call('discard-offline-draft', { walletId, id });
+    } finally {
+      this.offlineOperation = false;
+    }
   }
 
   async awayReceipts(walletId: string, activity: Activity[], primaryConnected: boolean): Promise<string[]> {

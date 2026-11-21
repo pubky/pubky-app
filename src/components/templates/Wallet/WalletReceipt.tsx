@@ -174,12 +174,14 @@ function ReceiptDetails({ payment }: { payment: Activity | SendResult }) {
   );
   const hash = payment.paymentHash || incoming?.paymentHash;
   const address = row?.address || payment.drain?.address;
+  const offlineInvoice = row?.receiveRequest?.offlineReceive === true;
   const showFee = !row || row.kind === 'sent' || row.feeKnown;
   const knownFee = payment.feeKnown || payment.payAll;
   const feePaid = payment.status === 'completed' && (!row || row.kind === 'sent');
   return (
     <dl className="grid gap-2">
       {row && <Detail label="Date" value={new Date(row.timestamp).toLocaleString()} />}
+      {offlineInvoice && incoming?.method === 'lightning' && <Detail label="Payment method" value="Lightning" />}
       {incoming?.phase === 'partial' && row?.receiveRequest?.amountSats != null && (
         <Detail
           label="Amount remaining"
@@ -198,7 +200,9 @@ function ReceiptDetails({ payment }: { payment: Activity | SendResult }) {
           }
         />
       )}
-      {address && <Detail label="Bitcoin address" value={address} />}
+      {address && (!offlineInvoice || incoming?.method === 'bitcoin') && (
+        <Detail label="Bitcoin address" value={address} />
+      )}
       {Array.from(txids, (txid) => (
         <Detail key={txid} label="Transaction ID" value={txid} />
       ))}

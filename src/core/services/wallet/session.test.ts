@@ -1,4 +1,4 @@
-import { type SendReview, WalletError } from '@beignet/wallet-core';
+import { type ReceiveQuote, type ReceiveRequest, type SendReview, WalletError } from '@beignet/wallet-core';
 import { afterEach, expect, it, vi } from 'vitest';
 import { WalletSession } from './session';
 
@@ -195,3 +195,90 @@ it.each(['current', 'other account', 'signout', 'sync', 'new generation', 'lock'
     await (close ?? session.close());
   },
 );
+
+const offlineQuote: ReceiveQuote = {
+  id: 'offline-request-01',
+  mode: 'offline',
+  amountSats: 6_000,
+  description: 'Lunch',
+  feeSats: 0,
+  netSats: 6_000,
+  expiresAt: Date.now() + 60_000,
+  warnings: [],
+};
+const offlineRequest: ReceiveRequest = {
+  ...offlineQuote,
+  amountSats: 6_000,
+  uri: 'lnbcrt1...',
+  bolt11: 'lnbcrt1...',
+  paymentHash: 'b'.repeat(64),
+  offlineReceive: true,
+  demo: false,
+};
+
+type WorkerCall = Request & { payload: { path?: string; request?: ReceiveRequest } };
+function offlineSession(handler: (request: WorkerCall) => unknown) {
+  class TestWorker {
+    onmessage?: (event: { data: unknown }) => void;
+    async postMessage(req: WorkerCall) {
+      try {
+        const result = await handler(req);
+        this.onmessage?.({ data: { id: req.id, result } });
+      } catch (err) {
+        this.onmessage?.({ data: { id: req.id, error: { message: (err as Error).message } } });
+      }
+    }
+    terminate() {}
+  }
+  vi.stubGlobal('Worker', TestWorker);
+  const session = new WalletSession(auth.currentUserPubky);
+  session.client.selectWallet('a'.repeat(32));
+  return session;
+}
+
+it('records the draft before contacting the primary and releases the QR only after durable tracking', async () => {
+  const operations: string[] = [];
+  let release!: () => void;
+  const committed = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const session = offlineSession((req) => {
+    operations.push(req.operation);
+    if (req.operation === 'finish-offline-receive') return committed;
+  });
+  const received = vi.spyOn(session.client, 'receive').mockImplementation(async () => {
+    expect(operations).toEqual(['begin-offline-receive']);
+    return offlineRequest;
+  });
+  let shown = false;
+  const pending = session.receive(offlineQuote).then((invoice) => {
+    shown = true;
+    return invoice;
+  });
+  await vi.waitFor(() => expect(received).toHaveBeenCalledOnce());
+  expect(operations).toEqual(['begin-offline-receive', 'finish-offline-receive']);
+  expect(shown).toBe(false);
+  await expect(session.discardOfflineReceiveDraft(offlineQuote.id)).rejects.toMatchObject({ code: 'RECEIVE_BUSY' });
+  release();
+  await expect(pending).resolves.toEqual(offlineRequest);
+  await session.close();
+});
+
+it('leaves an unresolved reservation resumable and preserves registered invoices when retries are dismissed', async () => {
+  let registered = false;
+  const op = vi.fn((req: WorkerCall) => {
+    if (req.payload?.path?.endsWith('/receive/requests')) return { requests: registered ? [offlineRequest] : [] };
+    if (req.payload?.path?.endsWith('/receive/offline'))
+      return { requests: [{ id: offlineQuote.id, channelId: 'channel' }] };
+  });
+  const session = offlineSession(op);
+  await expect(session.discardOfflineReceiveDraft(offlineQuote.id)).rejects.toMatchObject({ code: 'RECEIVE_PENDING' });
+  expect(op.mock.calls.some(([req]) => req.operation === 'discard-offline-draft')).toBe(false);
+  registered = true;
+  await session.discardOfflineReceiveDraft(offlineQuote.id);
+  expect(op.mock.calls.at(-1)?.[0]).toMatchObject({
+    operation: 'finish-offline-receive',
+    payload: { request: offlineRequest },
+  });
+  await session.close();
+});

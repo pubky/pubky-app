@@ -322,6 +322,10 @@ async function handle({ id, operation, account, payload, notifyUnlocked }) {
     return;
   }
   if (operation === 'remember-balance') return rememberBalance(volume, payload);
+  if (operation === 'offline-draft') return awayReceipts.draft(payload.walletId);
+  if (operation === 'begin-offline-receive') return awayReceipts.begin(payload.walletId, payload.draft);
+  if (operation === 'finish-offline-receive') return awayReceipts.issued(payload.walletId, payload.request);
+  if (operation === 'discard-offline-draft') return awayReceipts.discard(payload.walletId, payload.id);
   if (operation === 'away-receipts')
     return awayReceipts.observe(payload.walletId, payload.rows, payload.primaryConnected);
   if (operation === 'ring-binding') return ringBinding(volume);
