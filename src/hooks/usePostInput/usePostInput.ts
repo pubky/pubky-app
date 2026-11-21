@@ -170,9 +170,10 @@ export function usePostInput({
   const { undoRepost } = useUndoRepost(isCollectionShare, { outlivesOwner: true });
 
   // Article edits show only the cover in the attachment strip — inline media
-  // lives in the body. Where the cover is and what each `attachment:{n}` names
-  // depends on the stored shape (the envelope's `cover_image`, or a 0.x
-  // article's slot 0 under the slot-0 rule): `resolveArticleCover` says.
+  // lives in the body. Where the cover is depends on the stored shape (the
+  // envelope's `cover_image`, or a 0.x article's slot 0 under the slot-0
+  // rule); each `attachment:{n}` names the attachment at that slot, as stored:
+  // `resolveArticleCover` says.
   const editArticleLocated =
     variant === POST_INPUT_VARIANT.EDIT && editIsArticle
       ? resolveArticleCover({ content: editContent ?? '', attachments: editAttachmentUris })

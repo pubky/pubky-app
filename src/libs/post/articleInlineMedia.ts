@@ -16,10 +16,11 @@ import { parseArticleContent } from './articleContent';
  * their canonical homeserver media URI (`pubky://{author}/pub/social/v1/files/{hash}.{ext}`).
  * Published bodies reference slots of `post.attachments` instead
  * (`![alt](attachment:{n})`), so the body never persists a host-specific CDN
- * URL, and readers resolve each slot's type from its file metadata. The cover
- * is no slot: it lives in the envelope's `cover_image` (ADR-0023 as amended by
- * ADR-0027), and `resolveArticleCover` says what each slot names for every
- * stored shape. `serializeArticleBody` converts composer → published form on
+ * URL, and readers resolve each slot's type from its file metadata. A slot
+ * names the attachment at that index, as stored. The cover lives in the
+ * envelope's `cover_image` (ADR-0023 as amended by ADR-0027) or, where the
+ * envelope has none, at slot 0 under the slot-0 rule; `resolveArticleCover`
+ * says which. `serializeArticleBody` converts composer → published form on
  * create/save; `deserializeArticleBody` converts published → composer form
  * when opening an article for edit.
  *
