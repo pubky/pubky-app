@@ -7,7 +7,7 @@ describe('PrivacyPolicyPage', () => {
     render(<PrivacyPolicyPage />);
 
     expect(screen.getByRole('heading', { level: 1, name: 'Privacy Policy' })).toBeInTheDocument();
-    expect(screen.getByText('Effective Date: January 29, 2026')).toBeInTheDocument();
+    expect(screen.getByText('Effective Date: November 18, 2026')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 2, name: '12. YOUR PRIVACY RIGHTS' })).toHaveAttribute(
       'id',
       'your-privacy-rights',
