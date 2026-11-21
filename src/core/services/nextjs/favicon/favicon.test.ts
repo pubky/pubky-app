@@ -14,6 +14,7 @@ vi.mock('../nextjs.utils', async (importOriginal) => {
 vi.mock('../og-metadata/og-metadata', () => ({ SAFE_OG_METADATA_DISPATCHER: { guarded: true } }));
 
 const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00]);
+const ICO = new Uint8Array([0x00, 0x00, 0x01, 0x00, 0x05, 0x00]);
 const PRIVATE_HOSTS = new Set(['internal.example', 'internal.cdn.example', '10.0.0.5', '169.254.169.254']);
 
 const mockFetch = vi.fn<(url: URL, init: RequestInit & { dispatcher?: unknown }) => Promise<Response>>();
@@ -136,6 +137,23 @@ describe('NextJsFaviconService.fetch', () => {
   it('serves nothing for an error answer', async () => {
     mockFetch.mockResolvedValueOnce(new Response(PNG, { status: 404, headers: { 'content-type': 'image/png' } }));
     await expect(NextJsFaviconService.fetch(new URL('https://a.example/favicon.ico'))).resolves.toBeNull();
+  });
+
+  it.each([
+    ['Mixcloud’s', 111_784],
+    ['Eventbrite’s', 177_412],
+    ['the cap', FAVICON_MAX_BYTES],
+  ])('serves a multi-size ICO as large as %s, declared and streamed', async (_case, size) => {
+    const ico = new Uint8Array(size);
+    ico.set(ICO);
+    mockFetch.mockResolvedValueOnce(
+      image(ico, { 'content-type': 'image/vnd.microsoft.icon', 'content-length': String(size) }),
+    );
+
+    const icon = await NextJsFaviconService.fetch(new URL('https://www.mixcloud.com/favicon.ico'));
+
+    expect(icon?.contentType).toBe('image/x-icon');
+    expect(icon?.body.byteLength).toBe(size);
   });
 
   it('refuses an icon larger than the cap, declared or streamed', async () => {

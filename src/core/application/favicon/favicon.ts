@@ -2,8 +2,10 @@ import type { TFavicon } from '@/application/favicon/favicon.types';
 import { getFaviconOverrideDomain, getFaviconSource } from '@/libs/favicon/favicon';
 import { NextJsFaviconService } from '@/services/nextjs/favicon/favicon';
 
-/** Icons kept in memory at most: at most `FAVICON_MAX_BYTES` each. */
-const CACHE_ENTRIES = 256;
+/** Hosts kept in memory at most, with or without an icon. */
+export const FAVICON_CACHE_ENTRIES = 256;
+/** Bytes of icons kept in memory at most, all hosts together (each at most `FAVICON_MAX_BYTES`). */
+export const FAVICON_CACHE_BYTES = 16 * 1024 * 1024;
 /** How long a read icon is served without asking the site again. */
 const HIT_TTL_MS = 24 * 60 * 60 * 1000;
 /** How long a host without an icon is not asked again. */
@@ -15,14 +17,16 @@ type TCacheEntry = { icon: TFavicon | null; expires: number };
  * Favicon application service: one host's icon for the `/api/favicon` route, read from the site
  * (`NextJsFaviconService`) at the address `getFaviconSource` names for it.
  *
- * Reads are kept in a small in-memory cache, bounded by entry count (oldest used first out), so a
- * page full of cards from the same sites asks each site once a day; a host with no icon is asked
- * again after an hour. Concurrent requests for one host share one read.
+ * Reads are kept in a small in-memory cache, bounded by entry count and by the icons' total bytes
+ * (oldest used first out), so a page full of cards from the same sites asks each site once a day;
+ * a host with no icon is asked again after an hour. Concurrent requests for one host share one read.
  */
 export class FaviconApplication {
   private constructor() {}
 
   private static readonly cache = new Map<string, TCacheEntry>();
+  /** Bytes of the icons in `cache`. */
+  private static cacheBytes = 0;
   private static readonly inFlight = new Map<string, Promise<TFavicon | null>>();
 
   /**
@@ -34,10 +38,10 @@ export class FaviconApplication {
     const host = getFaviconOverrideDomain(requested) ?? requested;
     const cached = FaviconApplication.cache.get(host);
     if (cached) {
-      FaviconApplication.cache.delete(host);
+      FaviconApplication.forget(host);
       if (cached.expires > Date.now()) {
         // Most recently used goes last, so the oldest used is evicted first.
-        FaviconApplication.cache.set(host, cached);
+        FaviconApplication.keep(host, cached);
         return cached.icon;
       }
     }
@@ -58,15 +62,34 @@ export class FaviconApplication {
   /** Empties the cache (tests). */
   static clearCache(): void {
     FaviconApplication.cache.clear();
+    FaviconApplication.cacheBytes = 0;
     FaviconApplication.inFlight.clear();
   }
 
   private static remember(host: string, icon: TFavicon | null): void {
-    FaviconApplication.cache.set(host, { icon, expires: Date.now() + (icon ? HIT_TTL_MS : MISS_TTL_MS) });
-    while (FaviconApplication.cache.size > CACHE_ENTRIES) {
+    FaviconApplication.forget(host);
+    FaviconApplication.keep(host, { icon, expires: Date.now() + (icon ? HIT_TTL_MS : MISS_TTL_MS) });
+    while (
+      FaviconApplication.cache.size > FAVICON_CACHE_ENTRIES ||
+      FaviconApplication.cacheBytes > FAVICON_CACHE_BYTES
+    ) {
       const oldest = FaviconApplication.cache.keys().next().value;
       if (oldest === undefined) break;
-      FaviconApplication.cache.delete(oldest);
+      FaviconApplication.forget(oldest);
     }
+  }
+
+  /** Adds an entry as the most recently used one. */
+  private static keep(host: string, entry: TCacheEntry): void {
+    FaviconApplication.cache.set(host, entry);
+    FaviconApplication.cacheBytes += entry.icon?.body.byteLength ?? 0;
+  }
+
+  /** Removes an entry, if there is one. */
+  private static forget(host: string): void {
+    const entry = FaviconApplication.cache.get(host);
+    if (!entry) return;
+    FaviconApplication.cache.delete(host);
+    FaviconApplication.cacheBytes -= entry.icon?.body.byteLength ?? 0;
   }
 }

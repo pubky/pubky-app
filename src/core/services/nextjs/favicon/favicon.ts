@@ -6,8 +6,11 @@ import { checkDnsSafety, isHttpProtocol } from '../nextjs.utils';
 import { SAFE_OG_METADATA_DISPATCHER } from '../og-metadata/og-metadata';
 import { isFaviconContentType, readBodyBytes, sniffImageType } from './favicon.utils';
 
-/** The largest icon served: real favicons are a few KB, the largest common ones ~40 KB. */
-export const FAVICON_MAX_BYTES = 64 * 1024;
+/**
+ * The largest icon served. Most favicons are a few KB, but an ICO holding several sizes is larger:
+ * Mixcloud's is 112 KB, Eventbrite's 177 KB. The cache bounds the memory all icons take together.
+ */
+export const FAVICON_MAX_BYTES = 256 * 1024;
 /** The whole read, every redirect and the body included. */
 const FAVICON_TIMEOUT_MS = 5_000;
 const MAX_REDIRECTS = 3;

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { FaviconApplication } from './favicon';
+import { FAVICON_CACHE_BYTES, FAVICON_CACHE_ENTRIES, FaviconApplication } from './favicon';
 
 const { mockServiceFetch } = vi.hoisted(() => ({ mockServiceFetch: vi.fn() }));
 
@@ -8,6 +8,9 @@ vi.mock('@/services/nextjs/favicon/favicon', () => ({
 }));
 
 const ICON = { body: new Uint8Array([1, 2, 3]).buffer, contentType: 'image/png' };
+/** `FAVICON_MAX_BYTES`: the largest icon the service serves. */
+const LARGEST_ICON = 256 * 1024;
+const largestIcon = () => ({ body: new ArrayBuffer(LARGEST_ICON), contentType: 'image/x-icon' });
 
 beforeEach(() => {
   FaviconApplication.clearCache();
@@ -77,5 +80,37 @@ describe('FaviconApplication.fetch', () => {
     expect(mockServiceFetch).toHaveBeenCalledTimes(257);
     await FaviconApplication.fetch('h1.example');
     expect(mockServiceFetch).toHaveBeenCalledTimes(258);
+  });
+
+  it('keeps the icons’ bytes within the budget, letting the least recently used go first', async () => {
+    const fit = FAVICON_CACHE_BYTES / LARGEST_ICON;
+    expect(fit).toBeLessThan(FAVICON_CACHE_ENTRIES);
+    mockServiceFetch.mockImplementation(async () => largestIcon());
+    for (let index = 0; index < fit; index++) await FaviconApplication.fetch(`h${index}.example`);
+    await FaviconApplication.fetch('h0.example');
+    expect(mockServiceFetch).toHaveBeenCalledTimes(fit);
+
+    // One more of the largest icons: the least recently used one (h1) goes, h0 stays.
+    await FaviconApplication.fetch(`h${fit}.example`);
+    await FaviconApplication.fetch('h0.example');
+    expect(mockServiceFetch).toHaveBeenCalledTimes(fit + 1);
+    await FaviconApplication.fetch('h1.example');
+    expect(mockServiceFetch).toHaveBeenCalledTimes(fit + 2);
+  });
+
+  it('counts a replaced or expired icon’s bytes once', async () => {
+    vi.useFakeTimers();
+    const fit = FAVICON_CACHE_BYTES / LARGEST_ICON;
+    mockServiceFetch.mockImplementation(async () => largestIcon());
+    // The same host read again after its day: still one icon's bytes, not two.
+    for (let round = 0; round < 3; round++) {
+      await FaviconApplication.fetch('again.example');
+      vi.advanceTimersByTime(24 * 60 * 60 * 1000 + 1);
+    }
+    expect(mockServiceFetch).toHaveBeenCalledTimes(3);
+    // Room is left for `fit` more icons, all kept.
+    for (let index = 0; index < fit; index++) await FaviconApplication.fetch(`h${index}.example`);
+    for (let index = 0; index < fit; index++) await FaviconApplication.fetch(`h${index}.example`);
+    expect(mockServiceFetch).toHaveBeenCalledTimes(3 + fit);
   });
 });
