@@ -442,8 +442,8 @@ describe('ResourceCard', () => {
       fireEvent.click(lightbox);
       // The lightbox's images are the card's in React only: one failing there leaves the card's image as it is.
       fireEvent.error(within(lightbox).getAllByRole('img')[0]);
-      // (The dialog hides the page from the accessibility tree meanwhile.)
-      expect(slot.querySelector('img')).toHaveAttribute('src', ARTICLE.image);
+      expect(screen.getByTestId('resource-card-image')).toBe(slot);
+      expect(screen.queryByTestId('resource-card-type-tile')).not.toBeInTheDocument();
       expect(mockPush).not.toHaveBeenCalled();
       expect(open).not.toHaveBeenCalled();
       expect(onPostClick).not.toHaveBeenCalled();
@@ -463,14 +463,31 @@ describe('ResourceCard', () => {
       expect(mockPush).not.toHaveBeenCalled();
     });
 
-    it('never shows a small image larger than it is', () => {
+    it.each([
+      [64, '64px'],
+      [1200, '1200px'],
+    ])('never shows an image %ipx wide larger than it is, nor wider than a post’s media', (width, maxWidth) => {
       render(<ResourceCard card={ARTICLE} href={ARTICLE.uri} />);
-      expect(screen.getByTestId('resource-card-image').style.maxWidth).toBe('');
-      Object.defineProperty(cardImage(), 'naturalWidth', { value: 64 });
+      const fit = screen.getByTestId('resource-card-image-fit');
+      expect(fit.style.maxWidth).toBe('');
+      Object.defineProperty(cardImage(), 'naturalWidth', { value: width });
 
       fireEvent.load(cardImage());
 
-      expect(screen.getByTestId('resource-card-image').style.maxWidth).toBe('64px');
+      expect(fit.style.maxWidth).toBe(maxWidth);
+      expect(screen.getByTestId('resource-card-image')).toHaveClass('max-w-2xl');
+      expect(screen.getByTestId('resource-card-image').style.maxWidth).toBe('');
+    });
+
+    it('takes no size from the lightbox’s images', async () => {
+      render(<ResourceCard card={ARTICLE} href={ARTICLE.uri} />);
+      fireEvent.click(cardImage());
+      const lightboxImage = within(await screen.findByRole('dialog')).getAllByRole('img')[0];
+      Object.defineProperty(lightboxImage, 'naturalWidth', { value: 64 });
+
+      fireEvent.load(lightboxImage);
+
+      expect(screen.getByTestId('resource-card-image-fit').style.maxWidth).toBe('');
     });
 
     it('gives the image’s place to a player or embed that stands in the body', () => {

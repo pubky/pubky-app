@@ -41,9 +41,14 @@ export function ResourceCardMedia({ imageUrl, name, dimmed, onImageError }: Reso
       }}
       // At most as wide as a post's media, in the middle of a wide card (a feed's Wide layout, the page).
       className={cn('mx-auto w-full max-w-2xl', dimmed && 'opacity-60')}
-      style={naturalWidth ? { maxWidth: naturalWidth } : undefined}
     >
-      <PostAttachmentsImagesAndVideos imagesAndVideos={[{ type: 'image/*', name, urls: { main: imageUrl } }]} />
+      <Container
+        overrideDefaults
+        data-testid="resource-card-image-fit"
+        style={naturalWidth ? { maxWidth: naturalWidth } : undefined}
+      >
+        <PostAttachmentsImagesAndVideos imagesAndVideos={[{ type: 'image/*', name, urls: { main: imageUrl } }]} />
+      </Container>
     </Container>
   );
 }

@@ -33,7 +33,7 @@ import { getNearestTypes } from './ResourceCard.utils';
 
 /**
  * The icon that stands for a schema.org type, nearest ancestor wins (`CafeOrCoffeeShop` →
- * `Place`): what a card without an image shows in the image's place.
+ * `Place`): what a card without an image shows left of its text.
  */
 const TYPE_ICONS: Readonly<Record<string, LucideIcon>> = {
   MusicRecording: Music,
