@@ -19,10 +19,14 @@ export interface UseUnlockedContentResult {
   applyUnlockedContent: (content: TUnlockedContent) => void;
   /** The current post's attachments as object-URL media, revoked on change/unmount. */
   media: AttachmentConstructed[];
-  /** `unlockedPost` is on screen while these attachments' bytes still download; empty once they are in `media`. */
+  /**
+   * `unlockedPost` is on screen while these attachments' bytes still download, or an SVG among them is
+   * still drawn; empty once they are in `media`.
+   */
   pendingAttachments: PendingAttachment[];
   /**
-   * Text and the bytes this view shows (a preview's cover, or all of them) are on screen. False while a
+   * Text and the bytes this view shows (a preview's cover, or all of them) are here, though an SVG among
+   * them may still be drawn. False while a
    * cached post's bytes are pending or could not be read: that post is not "received", so a paid
    * reader's purchase recovery may still run.
    */

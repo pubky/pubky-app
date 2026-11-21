@@ -1,11 +1,16 @@
 'use client';
 
-import { type Dispatch, type SetStateAction, useEffect, useState } from 'react';
+import { type Dispatch, type SetStateAction, useEffect, useRef, useState } from 'react';
 import { LocksController } from '@/controllers/locks/locks';
 import { useSessionNeedsUpgrade } from '@/hooks/useSessionNeedsUpgrade/useSessionNeedsUpgrade';
 import { Logger } from '@/libs/logger/logger';
 import { getArticlePreviewSlots } from '@/libs/post/articleInlineMedia';
-import { clearIfFilled, toPendingAttachments, toUnlockedMedia } from '@/libs/utils/unlockedMedia';
+import {
+  clearIfFilled,
+  toDisplayableAttachments,
+  toPendingAttachments,
+  toUnlockedMedia,
+} from '@/libs/utils/unlockedMedia';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
 import { toast } from '@/molecules/Toaster/toast';
@@ -49,7 +54,9 @@ async function readContent({
     setUnlockedPost({ content: cached.content, kind: cached.kind, attachments: null });
     // A lost file (404) is dropped here and already reported; the rest renders without a warning —
     // this read runs on every card that shows the post, so a toast would repeat on every visit.
-    const attachments = await LocksController.fetchReplicatedAttachments({ post: cached, preview }).catch(() => null);
+    const attachments = await LocksController.fetchReplicatedAttachments({ post: cached, preview })
+      .then(toDisplayableAttachments)
+      .catch(() => null);
     if (isCancelled()) return;
     if (attachments) {
       setMedia(toUnlockedMedia(attachments));
@@ -61,12 +68,12 @@ async function readContent({
   if (isCancelled()) return;
   try {
     const remote = await fetchRemote();
+    if (!remote) return;
+    const attachments = await toDisplayableAttachments(remote.attachments);
     if (isCancelled()) return;
-    if (remote) {
-      setMedia(toUnlockedMedia(remote.attachments));
-      setUnlockedPost(remote.post);
-      setHasCompleteContent(true);
-    }
+    setMedia(toUnlockedMedia(attachments));
+    setUnlockedPost(remote.post);
+    setHasCompleteContent(true);
   } finally {
     // Also on failure: the cached text may be on screen, and nothing else will end its skeletons.
     if (!isCancelled()) setPendingAttachments(clearIfFilled);
@@ -97,9 +104,12 @@ export function useUnlockedContent({
   const { pubky: authorId } = parseCompositeId(postId);
   const [unlockedPost, setUnlockedPost] = useState<GuardedPost | null>(null);
   const [media, setMedia] = useState<AttachmentConstructed[]>([]);
-  // Set with a cached post's text and cleared once its bytes arrive (or cannot).
+  // Set while a cached post's bytes download or a fresh unlock's SVGs are drawn; cleared once they are in
+  // `media` (or cannot be).
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
   const [hasCompleteContent, setHasCompleteContent] = useState(false);
+  // Ends when the content below resets, so a fresh unlock still being drawn then is dropped.
+  const contentScope = useRef({ live: true });
   // Until the replica read settles, "no content" means "not known yet". Callers that would act on
   // its absence — re-downloading a purchase, say — have to be able to tell the two apart.
   const [isReplicaReadPending, setIsReplicaReadPending] = useState(true);
@@ -139,7 +149,10 @@ export function useUnlockedContent({
   // Content belongs to one post read by one account: a different post, account or session starts
   // from nothing, so the previous post's text and media never show under the new one.
   useEffect(() => {
+    const scope = { live: true };
+    contentScope.current = scope;
     return () => {
+      scope.live = false;
       setUnlockedPost(null);
       setMedia(clearIfFilled);
       setPendingAttachments(clearIfFilled);
@@ -236,18 +249,24 @@ export function useUnlockedContent({
 
   // Swap in a fresh unlock, then replicate it into the reader's /priv so later reads need no unlock.
   // Best-effort: a failed replication writes no completion marker, so the next unlock just retries.
-  // Bytes → object URLs here; only post + URLs go to state, so the raw bytes are GC'd once this returns.
+  // Bytes → object URLs here; only post + URLs go to state, so the raw bytes are GC'd once they land.
   const applyUnlockedContent = (content: TUnlockedContent) => {
     // Replication needs every file, but a preview keeps only the blobs it renders.
     const previewSlots = preview ? getArticlePreviewSlots(content.post) : null;
-    setMedia(
-      toUnlockedMedia(
-        previewSlots ? content.attachments.filter(({ slot }) => previewSlots.includes(slot)) : content.attachments,
-      ),
-    );
-    setPendingAttachments(clearIfFilled);
+    const shown = previewSlots
+      ? content.attachments.filter(({ slot }) => previewSlots.includes(slot))
+      : content.attachments;
+    // The post shows at once, so the reader who just paid never sees the lock card while an SVG is drawn.
     setUnlockedPost(content.post);
+    setPendingAttachments(shown.map(({ slot, contentType }) => ({ slot, type: contentType })));
+    // The bytes are already here; a recovery would only download them again.
     setHasCompleteContent(true);
+    const scope = contentScope.current;
+    void toDisplayableAttachments(shown).then((attachments) => {
+      if (!scope.live) return;
+      setMedia(toUnlockedMedia(attachments));
+      setPendingAttachments(clearIfFilled);
+    });
     // A dropped attachment is a permanent data error already reported to Sentry. Warn the reader who
     // just paid, once, but keep rendering the rest of the post.
     if (content.attachments.length < (content.post.attachments?.length ?? 0)) {
