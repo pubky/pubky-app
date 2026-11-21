@@ -942,6 +942,43 @@ describe('usePostInput', () => {
       );
     });
 
+    it('preserves the one attachment of an envelope-cover article whose reference names the slot past it', async () => {
+      mockIsArticle = true;
+      // The composer body after the seed removed the reference nothing resolves
+      mockContent = 'Text with ';
+      mockArticleTitle = 'Title';
+      const cover = 'pubky://user/pub/pubky.app/files/COVER';
+      const only = 'pubky://user/pub/pubky.app/files/ONLY';
+      mockUseAttachmentsMetadata.mockReturnValue({ files: [], isLoading: false });
+
+      const { result } = renderHook(() =>
+        usePostInput({
+          variant: 'edit',
+          editPostId: 'post-to-edit-id',
+          editAttachmentUris: [only],
+          editIsArticle: true,
+          // `attachment:1` names no file: the one attachment is slot 0 (the shape the rc.1 migrator wrote)
+          editContent: JSON.stringify({ title: 'Title', body: 'Text with ![a](attachment:1)', cover_image: cover }),
+        }),
+      );
+
+      // No slot is referenced, so no row is read for the attachment as inline media
+      expect(mockUseAttachmentsMetadata).not.toHaveBeenCalledWith({ fileUris: [only] });
+
+      await act(async () => {
+        await result.current.handleSubmit();
+      });
+
+      // The file the body never showed rides through the save, or the save would drop it from the post
+      expect(mockEdit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          originalAttachmentUris: [only],
+          originalCoverUri: cover,
+          preservedAttachmentUris: [only],
+        }),
+      );
+    });
+
     it('submits edit with empty content when new attachments were added', async () => {
       mockContent = '';
       mockAttachments = [new File(['test'], 'test.png', { type: 'image/png' })];
