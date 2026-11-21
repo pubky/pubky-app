@@ -186,17 +186,22 @@ describe('Pubky wallet', () => {
     expect(screen.queryByText('Last verified balance')).toBeNull();
   });
 
-  it('shows a single balance when every unit is available to send', async () => {
+  it('shows a single spendable balance without the unconfirmed channel funding notice', async () => {
     wallet.snapshot.mockResolvedValue({
       balance: { totalSats: 5000, availableSats: 5000, pendingSats: 0 },
       primary: { connected: true },
       activity: [],
+      notes: [
+        '5,000 sats are in a transfer that has not confirmed yet. You can send now. Bitcoin address payments complete after confirmation.',
+      ],
     });
     render(<Wallet />);
     await unlock();
     expect(await screen.findByText('₿5,000')).toBeVisible();
     expect(screen.queryByText('Available to send')).not.toBeInTheDocument();
     expect(screen.queryByText('Pending')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Bitcoin address payments complete after confirmation/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('list')).not.toBeInTheDocument();
   });
 
   it('shows the spendable amount and channel hold when only part of the balance can be sent', async () => {

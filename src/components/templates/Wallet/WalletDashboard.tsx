@@ -194,7 +194,14 @@ export function WalletDashboard({
   const unavailable = data
     ? Math.max(0, data.balance.totalSats - data.balance.availableSats - data.balance.pendingSats)
     : 0;
-  const notes = new Set(data?.notes ?? []);
+  const notes = new Set(
+    data?.notes?.filter(
+      (note) =>
+        !note.endsWith(
+          ' sats are in a transfer that has not confirmed yet. You can send now. Bitcoin address payments complete after confirmation.',
+        ),
+    ),
+  );
   const needsRecovery = data?.balance.pending?.erroredSats ?? 0;
   if (needsRecovery > 0) notes.add(`${bitcoinAmount(needsRecovery)} need recovery attention before they can be spent.`);
   const refresh = () => {
