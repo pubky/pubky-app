@@ -93,7 +93,10 @@ and checks the first bytes before the path: a file that starts with an XML decla
 an unlock the app shows a PNG drawing of the SVG, never the SVG itself: an unlocked file's object URL
 is on the app origin, so an SVG opened from it in a new tab would run its scripts there. The upload
 clean-up is not enough on its own, because a lock made by another client may skip it. An SVG that
-the browser cannot draw is not shown.
+the browser cannot draw is not shown. Nor is a file whose type in the lock file is not one `type/subtype`:
+a list such as `image/png,image/svg+xml` would get an SVG past the check. Only an image, video, audio
+or PDF file gets an object URL, the kinds the app shows: the post spec also allows types such as
+`text/html`, which would open as a page on the app origin.
 
 _Lock limits._ The Lock Server takes 10 resources per lock, the locked post being one of them, and
 10,000,000 bytes per file. It refuses a lock only after its files were uploaded, so a draft over the
