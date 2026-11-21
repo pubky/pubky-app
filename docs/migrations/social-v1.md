@@ -292,7 +292,7 @@ kind helper `src/core/services/local/post/post.helpers.ts`, every `vi.mock('pubk
 
 Follow-ups (not in PR-F): `pubky-social-specs` and `pubky-social-migrator` could join the `pubky-sdk` group in
 `.github/dependabot.yml` (a CI task; the e2e port only removed `pubky-app-specs` from it); the `@synonymdev/pubky` chunk (3.4 MB
-since SDK 0.16) is over `maximumFileSizeToCacheInBytes` (3 MiB), so it is left out of the precache, on `dev` too;
+since SDK 0.16, 3.5 MB with 0.18.0) is over `maximumFileSizeToCacheInBytes` (3 MiB), so it is left out of the precache, on `dev` too;
 `src/core/utils/pubky-app-spec-feed-mappers.ts` keeps its old file name although it maps `pubky-social-specs` values.
 
 ## Bookmarks (PR-B3, ADR-0028)
@@ -572,9 +572,10 @@ After dev-sync 3 (2026-11-09):
 - From the last human review of #3140 (2026-11-18), none blocking: an image added while editing an article is stored
   without its file name (`PostController.commitEdit`'s article path passes no names); a tab focus during a running
   migration spends the recovery cooldown before it knows there is a retry to do; the Bookmarks count on `/collections`
-  counts a bookmarked collection whose post is not cached as a post until it hydrates, so it can start high and drop
-  (a count that waits needs every bookmark hydrated, which the Followed Collections walk does not guarantee); a post
-  delete's reference scan grows with the author's post count (part of _Media lifetime in v1_ below).
+  counted a bookmarked collection whose post is not cached as a post until it hydrated, so it could start high and
+  drop (done: the count now waits for a `by_ids` pass over every bookmarked post that is not cached, ADR-0028,
+  amendment of 2026-11-19); a post delete's reference scan grows with the author's post count (part of _Media
+  lifetime in v1_ below).
 - `dev`'s IndexedDB recovery (#3129) can upgrade an old build's freshly recreated database in place (ADR-0019, residual
   of 2026-11-18); the guard is an upgrade that only aborts.
 - `AuthController.completeAuthenticatedSession`'s boolean result has no reader since `dev` removed the phrase sign-in.

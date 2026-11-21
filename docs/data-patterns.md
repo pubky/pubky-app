@@ -281,6 +281,18 @@ are plain JSON under the app's private namespace (`src/config/app-files.ts`).
 | `/priv/app.pubky/v1/`   | `settings.json` and the notification read cursor `last_read.json` (`APP_PRIVATE_PATH`) | app-private files, read by this app only                                                         |
 | `/pub/pubky.app/` (0.x) | what a 0.x client wrote; the migrator copies the social objects, not the app files     | read only as a fallback (`listPrefix(pubky, 'legacy')`); never written; deleted with the account |
 
+**Names.** Every name the app builds under these trees is made of unreserved characters only (`A-Za-z0-9-_.~`):
+the ids `pubky-social-specs` builds (Crockford base32 ids, z-base-32 keys, a bookmark's base64url target or `~` and
+a hash, an extension from the media type table), fixed file names, and for a lock this app publishes the Lock
+Server's id and the UUIDs of its guarded files. `@synonymdev/pubky` sends such a path as written. Since 0.18.0 it
+percent-encodes every other byte once; a session call of 0.16.2 and 0.17.1 sent some of those bytes unescaped and
+escaped the rest twice, so a file an older build wrote under such a name can be stored under its escaped name and is
+then not found at the plain one. Never put user text, a file name or a raw media type in a path segment, and treat a
+listed entry as the name itself: nothing is decoded. `spec.contract.test.ts` pins the alphabet of the built paths
+and `homeserver.storage.contract.test.ts` what the SDK sends for them. The one place an unchecked name from someone
+else is written is the reader's Locks directories, which reuse the lock id and the attachment names of the
+creator's post (`GuardedContentParser`): a lock published by another client could carry other characters there.
+
 **Profile.** `ProfileController.commitCreate` builds the profile with `UserNormalizer.to` (`buildUser`) and PUTs
 `built.body` with `putBlob`. An edit (`ProfileApplication.commitUpdate` / `commitUpdateStatus`) is a fenced
 read-modify-write of the stored object: `getFreshBytes(buildUri(pubky, 'user'))` → `decodeObject` →
