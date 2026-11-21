@@ -237,6 +237,13 @@ describe('SettingsNormalizer', () => {
       expect(result.updatedAt).toBeLessThanOrEqual(after);
     });
 
+    it('reads platform embeds up front as off when a file has no value for it, and keeps a stored one', () => {
+      expect(defaultMediaPreferences.embedsUpFront).toBe(false);
+      expect(SettingsNormalizer.from({ media: { playerOrder: ['tidal'] } }).media.embedsUpFront).toBe(false);
+      expect(SettingsNormalizer.from({ media: { embedsUpFront: true } }).media.embedsUpFront).toBe(true);
+      expect(SettingsNormalizer.from({ media: { embedsUpFront: false } }).media.embedsUpFront).toBe(false);
+    });
+
     it('fills the media defaults a file written before them lacks', () => {
       expect(SettingsNormalizer.from({ media: { embedsUpFront: false } }).media).toEqual({
         ...defaultMediaPreferences,
@@ -324,7 +331,7 @@ describe('SettingsNormalizer', () => {
       expect(JSON.parse(JSON.stringify(settings)).media).toEqual({
         playerOrder: [],
         hiddenPlayers: [],
-        embedsUpFront: true,
+        embedsUpFront: false,
         languages: ['de', 'fr'],
       });
       expect(SettingsNormalizer.from(settings).media).toEqual(media);

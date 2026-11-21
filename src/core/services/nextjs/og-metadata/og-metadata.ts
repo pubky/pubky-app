@@ -87,9 +87,10 @@ class OgMetadataBlockedIpError extends Error {
  * The global `fetch` runs on the Undici bundled with Node (7.x on Node 24), which dispatches with
  * the legacy handler API that the `undici` package's v8 `Agent` rejects (`invalid onRequestStart
  * method`). `Dispatcher1Wrapper` adapts legacy handlers and passes v8 handlers through unchanged, so
- * the guarded `Agent` keeps working whichever Undici major Node bundles.
+ * the guarded `Agent` keeps working whichever Undici major Node bundles. Also used by the favicon
+ * route (`NextJsFaviconService`), so both read external sites through the same guard.
  */
-const SAFE_OG_METADATA_DISPATCHER: Dispatcher = new Dispatcher1Wrapper(
+export const SAFE_OG_METADATA_DISPATCHER: Dispatcher = new Dispatcher1Wrapper(
   new Agent({
     connect: { lookup: safeOgMetadataLookup },
   }),

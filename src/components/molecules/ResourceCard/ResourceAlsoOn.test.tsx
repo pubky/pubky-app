@@ -126,7 +126,7 @@ describe('ResourceAlsoOn', () => {
     expect(tidal).not.toHaveAttribute('target');
     expect(within(tidal).getByTestId('resource-source-favicon')).toHaveAttribute(
       'src',
-      'https://tidal.com/favicon.ico',
+      expect.stringMatching(/\/api\/favicon\?host=tidal\.com$/),
     );
   });
 

@@ -11,6 +11,11 @@ import { defaultMediaPreferences } from '@/stores/settings/settings.types';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { ResourceItem } from './ResourceItem';
 
+// These cases are for platform embeds up front (Settings, Links & Media) turned on; the default
+// is off (`defaultMediaPreferences`): a card, nothing loaded from the platform before Play.
+const upFrontMedia = { ...defaultMediaPreferences, embedsUpFront: true };
+beforeEach(() => useSettingsStore.setState({ media: upFrontMedia }));
+
 const mocks = vi.hoisted(() => ({
   card: vi.fn(),
   pauseBoxes: [] as HTMLElement[],
@@ -175,7 +180,7 @@ describe('ResourceItem', () => {
       also_on: [],
     };
     const setMedia = (media: Partial<typeof defaultMediaPreferences>) =>
-      useSettingsStore.setState({ media: { ...defaultMediaPreferences, ...media } });
+      useSettingsStore.setState({ media: { ...upFrontMedia, ...media } });
     const read = (data: TPinakesResourceDetail | null) =>
       mocks.card.mockImplementation((uri: string | null) => ({
         data: uri ? data : null,

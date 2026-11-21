@@ -9,6 +9,11 @@ import { useSettingsStore } from '@/stores/settings/settings.store';
 import { defaultMediaPreferences } from '@/stores/settings/settings.types';
 import { PostLinkEmbeds } from './PostLinkEmbeds';
 
+// These cases are for platform embeds up front (Settings, Links & Media) turned on; the default
+// is off (`defaultMediaPreferences`): a card, nothing loaded from the platform before Play.
+const upFrontMedia = { ...defaultMediaPreferences, embedsUpFront: true };
+beforeEach(() => useSettingsStore.setState({ media: upFrontMedia }));
+
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock('@/atoms/Container/Container', () => {
   return {
@@ -1115,8 +1120,7 @@ describe('PostLinkEmbeds', () => {
 
   describe('a platform the viewer removed from Players', () => {
     const VIDEO = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
-    const hide = (hiddenPlayers: string[]) =>
-      useSettingsStore.setState({ media: { ...defaultMediaPreferences, hiddenPlayers } });
+    const hide = (hiddenPlayers: string[]) => useSettingsStore.setState({ media: { ...upFrontMedia, hiddenPlayers } });
 
     afterEach(() => {
       hide([]);

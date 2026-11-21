@@ -477,14 +477,14 @@ describe('SearchResourceFilters', () => {
       const section = screen.getByTestId('filter-resource-service');
       expect(within(section).getAllByText('Amazon Music')).toHaveLength(1);
       const amazon = screen.getByRole('button', { name: 'Amazon Music, 2 links' });
-      // The service's own icon, as the cards show it (Amazon Music's names its own address)
+      // The service's own icon, as the cards show it (Amazon Music's: the app's server reads its own address)
       expect(within(amazon).getByTestId('resource-source-favicon')).toHaveAttribute(
         'src',
-        expect.stringContaining('media-amazon.com'),
+        expect.stringMatching(/\/api\/favicon\?host=music\.amazon\./),
       );
       expect(
         within(screen.getByTestId('resource-service-open.spotify.com')).getByTestId('resource-source-favicon'),
-      ).toHaveAttribute('src', 'https://open.spotify.com/favicon.ico');
+      ).toHaveAttribute('src', expect.stringMatching(/\/api\/favicon\?host=open\.spotify\.com$/));
       fireEvent.click(amazon);
       expect(mocks.setFilters).toHaveBeenLastCalledWith({ hosts: ['music.amazon.co.uk', 'music.amazon.com'] });
       unmount();

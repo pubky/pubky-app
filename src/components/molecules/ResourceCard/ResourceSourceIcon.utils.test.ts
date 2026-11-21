@@ -4,19 +4,19 @@ import { getFaviconOverride, getFaviconUrls, getParentDomain, isDarkFavicon } fr
 describe('getFaviconUrls', () => {
   it('tries the parent domain’s favicon after a subdomain’s own', () => {
     expect(getFaviconUrls('https://open.qobuz.com/album/0888880696069')).toEqual([
-      'https://open.qobuz.com/favicon.ico',
-      'https://qobuz.com/favicon.ico',
+      '/api/favicon?host=open.qobuz.com',
+      '/api/favicon?host=qobuz.com',
     ]);
     expect(getFaviconUrls('https://www.deezer.com/album/1441464')).toEqual([
-      'https://www.deezer.com/favicon.ico',
-      'https://deezer.com/favicon.ico',
+      '/api/favicon?host=www.deezer.com',
+      '/api/favicon?host=deezer.com',
     ]);
   });
 
   it('asks only the host itself when there is no parent to try', () => {
-    expect(getFaviconUrls('https://tidal.com/album/2178485')).toEqual(['https://tidal.com/favicon.ico']);
-    expect(getFaviconUrls('https://bbc.co.uk/news')).toEqual(['https://bbc.co.uk/favicon.ico']);
-    expect(getFaviconUrls('https://192.168.1.10/a')).toEqual(['https://192.168.1.10/favicon.ico']);
+    expect(getFaviconUrls('https://tidal.com/album/2178485')).toEqual(['/api/favicon?host=tidal.com']);
+    expect(getFaviconUrls('https://bbc.co.uk/news')).toEqual(['/api/favicon?host=bbc.co.uk']);
+    expect(getFaviconUrls('https://192.168.1.10/a')).toEqual(['/api/favicon?host=192.168.1.10']);
   });
 
   it('asks nothing for a URI that is not a web link', () => {

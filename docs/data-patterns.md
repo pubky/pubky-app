@@ -487,7 +487,7 @@ end, a selected pin's card; its `geo:` entry ("Default maps app") shows on Andro
 - Nothing loads before a map is on screen (`ResourceMap`: no tile, and no library unless a search's Map button
   started it on hover or focus), and the map is removed when it leaves the screen or its card goes away, so a feed
   never holds one WebGL context per card. Until the style is read the box shows a loading skeleton; the pins go on
-  then, before the tiles. A viewer with platform embeds up front off gets "Show map" first. Every request goes out without credentials or a referrer (`toPrivateMapRequest`),
+  then, before the tiles. With platform embeds up front off (the default) a viewer gets "Show map" first. Every request goes out without credentials or a referrer (`toPrivateMapRequest`),
   and nothing of the resource or the viewer is put into a tile address or an "Open in Maps" link.
 - The library, its stylesheet and its worker file are one lazily imported unit (`src/libs/maps/maplibre.runtime.ts`),
   kept out of the service worker's precache (`docs/pwa.md`, _Precache diet_).

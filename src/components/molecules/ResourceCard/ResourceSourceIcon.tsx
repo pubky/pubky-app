@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { BookOpen, FileText, Globe, Link2, MapPin } from 'lucide-react';
 import { Image } from '@/atoms/Image/Image';
 import { AppleMusic, PubkyIcon, XTwitter } from '@/icons';
+import { getFaviconRouteUrl } from '@/libs/favicon/favicon';
 import { cn } from '@/libs/utils/utils';
 import { getLinkHost } from './ResourceCard.utils';
 import { getFaviconOverride, getFaviconUrls, isDarkFavicon } from './ResourceSourceIcon.utils';
@@ -51,7 +52,8 @@ interface ResourceSourceIconProps {
 }
 
 /**
- * The site's own favicon (`https://<host>/favicon.ico`, or where `getFaviconOverride` says it is,
+ * The site's own favicon, served by the app (`getFaviconRouteUrl`: its server reads
+ * `https://<host>/favicon.ico`, or where `getFaviconOverride` says it is,
  * inverted for the dark ones, `isDarkFavicon`) for a web link, then, unless overridden, its parent domain's
  * when the host's own fails (`open.qobuz.com` → `qobuz.com`), a globe when none loads, and an icon
  * for the kind of identifier (`isbn:`, `doi:`, `pubky://`) otherwise. A few services whose favicon
@@ -69,7 +71,8 @@ export function ResourceSourceIcon({ uri }: ResourceSourceIconProps) {
   }
 
   const override = getFaviconOverride(host);
-  const faviconUrls = override ? [override] : getFaviconUrls(uri);
+  // The app's server reads the overridden address for the host (`getFaviconSource`).
+  const faviconUrls = override && host ? [getFaviconRouteUrl(host)] : getFaviconUrls(uri);
   const faviconUrl = faviconUrls.find((url) => !failedUrls.includes(url));
 
   if (faviconUrl) {
@@ -82,7 +85,7 @@ export function ResourceSourceIcon({ uri }: ResourceSourceIconProps) {
         width={ICON_SIZE}
         height={ICON_SIZE}
         data-testid="resource-source-favicon"
-        // Asked from the site itself: it learns the viewer's IP, not which page or post they are on.
+        // Served by the app (`/api/favicon`): the site never learns the viewer's IP or page.
         referrerPolicy="no-referrer"
         // Inverted for the dark theme; the hue turned back, so a coloured mark keeps its colour.
         className={cn('size-4 shrink-0 rounded-sm', isDarkFavicon(host) && 'dark:hue-rotate-180 dark:invert')}

@@ -5,9 +5,16 @@ import { getPlayableEpisodes } from '@/molecules/ResourceCard/ResourceCard.utils
 import { ResourceEpisodes } from '@/molecules/ResourceCard/ResourceEpisodes';
 import musicFixture from '@/services/pinakes/fixtures/by-uri.music-recording.json';
 import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
+import { useSettingsStore } from '@/stores/settings/settings.store';
+import { defaultMediaPreferences } from '@/stores/settings/settings.types';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { PlayerFrom, PlayerHost } from './PlayerHost';
 import { useCardPlayer } from './useCardPlayer';
+
+// These cases are for platform embeds up front (Settings, Links & Media) turned on; the default
+// is off (`defaultMediaPreferences`): a card, nothing loaded from the platform before Play.
+const upFrontMedia = { ...defaultMediaPreferences, embedsUpFront: true };
+beforeEach(() => useSettingsStore.setState({ media: upFrontMedia }));
 
 const push = vi.hoisted(() => vi.fn());
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));

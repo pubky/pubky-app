@@ -46,7 +46,11 @@ export interface MediaPreferences {
   playerOrder: string[];
   /** Player ids the viewer removed: no player or embed loads from them. Default none. */
   hiddenPlayers: string[];
-  /** A link's platform embed shows up front instead of our card. Default on. */
+  /**
+   * A link's platform embed shows up front instead of our card. Default off: our card shows, and a
+   * platform's player, embed or map loads only once its Play or Show on is pressed. A viewer who
+   * turns it on keeps it (a stored `true` is read as it is).
+   */
   embedsUpFront: boolean;
   /**
    * The viewer's Players for one kind of resource each (`PlayerCategory`: `music`, `podcasts`,
@@ -135,7 +139,7 @@ export const defaultPrivacyPreferences: PrivacyPreferences = {
 export const defaultMediaPreferences: MediaPreferences = {
   playerOrder: [],
   hiddenPlayers: [],
-  embedsUpFront: true,
+  embedsUpFront: false,
 };
 
 function getStrings(value: unknown): string[] | undefined {

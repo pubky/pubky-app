@@ -29,7 +29,7 @@ interface ProviderMenuProps {
   current: PlayerTarget | null;
   onSelect: (target: PlayerTarget) => void;
   trigger: ReactNode;
-  /** Each row's favicon; off where nothing may load from the services yet (platform embeds off). */
+  /** Each row's favicon (served by the app, `ResourceSourceIcon`). */
   icons?: boolean;
   /** The menu's accessible name: what picking a row does. */
   label: string;
