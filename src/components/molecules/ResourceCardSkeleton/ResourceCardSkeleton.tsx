@@ -34,8 +34,9 @@ function SkeletonPiece({ className }: { className?: string }) {
 }
 
 /**
- * Loading state of `ResourceCard`, in its frame: type and source on top, image and title beside
- * it, then the bottom zone (the tags' "+", then the action buttons, as on a post).
+ * Loading state of `ResourceCard`, in its frame: type and source on top, a square in the type
+ * tile's place and the title beside it, then the bottom zone (the tags' "+", then the action
+ * buttons, as on a post).
  * In a post it is announced as busy ("Loading link preview"). A card that is the item itself or
  * sits in a quoted post (`ResourceSurfaceProvider` `card`) loads on the post card's surface, as the
  * large card does.

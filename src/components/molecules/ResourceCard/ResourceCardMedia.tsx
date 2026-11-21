@@ -1,5 +1,6 @@
 'use client';
 
+import { type SyntheticEvent, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { Container } from '@/atoms/Container/Container';
 import { cn } from '@/libs/utils/utils';
@@ -19,24 +20,38 @@ interface ResourceCardMediaProps {
 /**
  * The card's image, under its text, shown as a post shows its one image (`PostAttachmentsImagesAndVideos`): whole,
  * in its own shape up to the post's height, and a tap opens the same lightbox, with pinch and double-tap zoom. A
- * press on the image never opens the resource page (`data-resource-controls`).
+ * press on the image never opens the resource page (`data-resource-controls`). Never wider than the image itself, so
+ * a small one (a site's logo as its link's preview) is not blown up.
  */
 export function ResourceCardMedia({ imageUrl, name, dimmed, onImageError }: ResourceCardMediaProps) {
+  const [loaded, setLoaded] = useState<{ url: string; width: number } | null>(null);
+  const naturalWidth = loaded?.url === imageUrl ? loaded.width : null;
   return (
     <Container
       overrideDefaults
       data-resource-controls
       data-testid="resource-card-image"
-      // An image's `error` does not bubble in the DOM, but React's does: the post's image reports a failure here.
+      // An image's `load` and `error` do not bubble in the DOM, but React's do: the post's image reports here.
+      onLoad={(event) => {
+        const image = getOwnImage(event);
+        if (image && image.naturalWidth > 0) setLoaded({ url: imageUrl, width: image.naturalWidth });
+      }}
       onError={(event) => {
-        if (event.target instanceof HTMLImageElement) onImageError(imageUrl);
+        if (getOwnImage(event)) onImageError(imageUrl);
       }}
       // At most as wide as a post's media, in the middle of a wide card (a feed's Wide layout, the page).
       className={cn('mx-auto w-full max-w-2xl', dimmed && 'opacity-60')}
+      style={naturalWidth ? { maxWidth: naturalWidth } : undefined}
     >
       <PostAttachmentsImagesAndVideos imagesAndVideos={[{ type: 'image/*', name, urls: { main: imageUrl } }]} />
     </Container>
   );
+}
+
+/** The card's own image, not one of the lightbox's: those are in its React tree, but outside this element. */
+function getOwnImage(event: SyntheticEvent<HTMLElement>): HTMLImageElement | null {
+  const { target, currentTarget } = event;
+  return target instanceof HTMLImageElement && currentTarget.contains(target) ? target : null;
 }
 
 interface ResourceCardTypeTileProps {

@@ -93,10 +93,9 @@ const DETAIL_ICON_SIZE = 14;
  * The title opens the resource's page (in a new tab where links may not navigate), and so does a
  * click on the card outside its controls (`ResourceCardFrame`); a tap on the image opens it in the
  * post's lightbox. The header's source is the one link out (none on a `missing` card). A player or
- * embed in the body (`isBodyReplaced`) is its own set of controls, as the episode's audio is.
- * The `large` card heads the resource page, lists every fact
- * under "Details" (not while an X post's embed is its body, `isBodyReplaced`) and is no
- * click-through.
+ * embed in the body (`isBodyReplaced`) is its own set of controls, as the episode's audio is, and
+ * takes the image's place too. The `large` card heads the resource page, lists every fact under
+ * "Details" (not while an X post's embed is its body, `isBodyReplaced`) and is no click-through.
  * Only `http(s)` values become links, images or audio.
  */
 export function ResourceCard({

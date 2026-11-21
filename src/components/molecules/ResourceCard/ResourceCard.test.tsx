@@ -414,7 +414,21 @@ describe('ResourceCard', () => {
     });
 
     it('opens the image in the post’s lightbox on a tap, never the resource page', async () => {
-      render(<ResourceCard card={ARTICLE} href={ARTICLE.uri} />);
+      const open = vi.spyOn(window, 'open').mockReturnValue(null);
+      const onPostClick = vi.fn();
+      render(
+        <div onClick={onPostClick}>
+          <ResourceCard card={ARTICLE} href={ARTICLE.uri} />
+        </div>,
+      );
+      const slot = screen.getByTestId('resource-card-image');
+      expect(slot).toHaveAttribute('data-resource-controls');
+
+      // Around the image, and a middle click on it, open nothing either.
+      fireEvent.click(slot);
+      fireEvent(cardImage(), new MouseEvent('auxclick', { bubbles: true, cancelable: true, button: 1 }));
+      expect(mockPush).not.toHaveBeenCalled();
+      expect(open).not.toHaveBeenCalled();
 
       fireEvent.click(cardImage());
 
@@ -426,8 +440,55 @@ describe('ResourceCard', () => {
           .map((img) => img.getAttribute('src')),
       ).toContain(ARTICLE.image);
       fireEvent.click(lightbox);
+      // The lightbox's images are the card's in React only: one failing there leaves the card's image as it is.
+      fireEvent.error(within(lightbox).getAllByRole('img')[0]);
+      // (The dialog hides the page from the accessibility tree meanwhile.)
+      expect(slot.querySelector('img')).toHaveAttribute('src', ARTICLE.image);
       expect(mockPush).not.toHaveBeenCalled();
+      expect(open).not.toHaveBeenCalled();
+      expect(onPostClick).not.toHaveBeenCalled();
       expect(card()).toHaveAttribute('data-click-through', 'true');
+    });
+
+    it('opens the lightbox where links may not navigate too, as a post’s image does', async () => {
+      render(
+        <PostPreviewNavigableProvider navigable={false}>
+          <ResourceCard card={ARTICLE} href={ARTICLE.uri} />
+        </PostPreviewNavigableProvider>,
+      );
+
+      fireEvent.click(cardImage());
+
+      expect(await screen.findByRole('dialog')).toBeInTheDocument();
+      expect(mockPush).not.toHaveBeenCalled();
+    });
+
+    it('never shows a small image larger than it is', () => {
+      render(<ResourceCard card={ARTICLE} href={ARTICLE.uri} />);
+      expect(screen.getByTestId('resource-card-image').style.maxWidth).toBe('');
+      Object.defineProperty(cardImage(), 'naturalWidth', { value: 64 });
+
+      fireEvent.load(cardImage());
+
+      expect(screen.getByTestId('resource-card-image').style.maxWidth).toBe('64px');
+    });
+
+    it('gives the image’s place to a player or embed that stands in the body', () => {
+      const wrap = (body: React.ReactNode) => <div data-testid="wrapped">{body}</div>;
+      const { rerender } = render(<ResourceCard card={ARTICLE} href={ARTICLE.uri} renderBody={wrap} />);
+      expect(screen.getByTestId('wrapped')).toContainElement(screen.getByTestId('resource-card-image'));
+
+      rerender(
+        <ResourceCard
+          card={ARTICLE}
+          href={ARTICLE.uri}
+          renderBody={() => <div data-testid="player" />}
+          isBodyReplaced
+        />,
+      );
+
+      expect(screen.getByTestId('player')).toBeInTheDocument();
+      expect(screen.queryByTestId('resource-card-image')).not.toBeInTheDocument();
     });
 
     it('dims the image of an object that is gone', () => {
