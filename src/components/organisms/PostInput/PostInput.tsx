@@ -34,7 +34,7 @@ import { getComposerDissolveVariants } from '@/libs/motion/composerMotion';
 import { parseArticleContent } from '@/libs/post/articleContent';
 import { resolveArticleCover } from '@/libs/post/articleCover';
 import { deserializeArticleBody } from '@/libs/post/articleInlineMedia';
-import { areLockAttachmentsWithinLimit, hasSvgAttachment } from '@/libs/post/lockAttachments';
+import { areLockAttachmentsWithinLimit } from '@/libs/post/lockAttachments';
 import { getLockTeaserMaxLength, isLockTeaserWithinLimit } from '@/libs/post/lockTeaser';
 import { canSubmitPost, cn, getEnforcedCharacterCount, resolveUserDisplayName } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
@@ -245,11 +245,6 @@ export function PostInput({
   };
 
   const refuseFilesForLock = (files: File[]) => {
-    // TODO:[Locks] #2683 — temporary, until a locked SVG renders after an unlock.
-    if (hasSvgAttachment(files)) {
-      toast({ variant: 'error', description: 'Locked content cannot include SVG images yet.' });
-      return true;
-    }
     // The Lock Server refuses an oversized lock only after its files were uploaded, which orphans them.
     if (!areLockAttachmentsWithinLimit(files)) {
       toast({ variant: 'error', description: LOCK_LIMITS_MESSAGE });

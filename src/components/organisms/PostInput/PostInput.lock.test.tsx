@@ -414,64 +414,18 @@ describe('PostInput lock wiring', () => {
     });
   });
 
-  // TODO:[Locks] #2683 — this whole describe covers the temporary SVG guard; delete it with the guard.
-  describe('SVG files', () => {
-    const NO_SVG = 'Locked content cannot include SVG images yet.';
-    const svg = new File(['<svg />'], 'drawing.svg', { type: 'image/svg+xml' });
-    const png = new File(['x'], 'pic.png', { type: 'image/png' });
-
-    const expectRefused = () => {
-      expect(mocks.toast).toHaveBeenCalledWith({ variant: 'error', description: NO_SVG });
-      expect(screen.getByTestId('lock-switch')).toHaveAttribute('data-checked', 'false');
-      expect(screen.queryByTestId('lock-dialog')).not.toBeInTheDocument();
-    };
-
-    it('refuses the switch for a post that attaches an SVG', () => {
-      renderComposer();
-      act(() => {
-        mocks.composer.setContent('post body');
-        mocks.composer.setAttachments([png, svg]);
-      });
-
-      fireEvent.click(screen.getByTestId('lock-switch'));
-
-      expectRefused();
+  // A locked SVG is stored with its image type and shown as a PNG after an unlock (#2683).
+  it('turns the switch on for a post that attaches an SVG', () => {
+    renderComposer();
+    act(() => {
+      mocks.composer.setContent('post body');
+      mocks.composer.setAttachments([new File(['<svg />'], 'drawing.svg', { type: 'image/svg+xml' })]);
     });
 
-    it('refuses the switch for an article with an SVG in its body', () => {
-      mocks.serializeArticleForLock.mockReturnValue({ body: 'serialized', inlineFiles: [svg] });
-      renderComposer();
-      act(() => {
-        mocks.composer.setIsArticle(true);
-        mocks.composer.setArticleTitle('Essay');
-        mocks.composer.setContent('article body');
-      });
+    fireEvent.click(screen.getByTestId('lock-switch'));
 
-      fireEvent.click(screen.getByTestId('lock-switch'));
-
-      expectRefused();
-    });
-
-    it('says nothing about an SVG while the creator has not asked for a lock', () => {
-      renderComposer();
-      act(() => {
-        mocks.composer.setContent('post body');
-        mocks.composer.setAttachments([svg]);
-      });
-
-      expect(screen.getByTestId('lock-switch')).toBeEnabled();
-      expect(mocks.toast).not.toHaveBeenCalled();
-    });
-
-    it('leaves the announcement alone: its SVG is a public attachment, which renders', async () => {
-      renderComposer();
-      await configureLock();
-
-      act(() => mocks.composer.setAttachments([svg]));
-
-      expect(mocks.toast).not.toHaveBeenCalled();
-      expect(screen.getByTestId('post-button')).toBeEnabled();
-    });
+    expect(mocks.toast).not.toHaveBeenCalled();
+    expect(screen.getByTestId('lock-switch')).toHaveAttribute('data-checked', 'true');
   });
 
   describe('locking an article with body images', () => {
