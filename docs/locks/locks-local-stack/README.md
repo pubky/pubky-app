@@ -121,8 +121,8 @@ the npm SDK records no source commit, and Paykit compiles its own copy of `locks
 
 Why these versions:
 
-1. The Pubky clients (the app, both servers and the `examples/js-sdk` helpers use `pubky` `0.16.2`)
-   need the homeserver write-lock API. Homeserver v0.11 fails with `acquire Pubky write lock`.
+1. The Pubky clients (both servers and the `examples/js-sdk` helpers use `pubky` `0.16.2`; the app pins
+   `@synonymdev/pubky` `0.18.0`, which this recipe has not been re-run with) need the homeserver write-lock API. Homeserver v0.11 fails with `acquire Pubky write lock`.
    v0.15.0 is the version this recipe has run with. Homeserver v0.16.2 matches the clients' version,
    and Paykit's README names it as the minimum for shared-state recovery with GCS storage, which the
    local file-storage testnet does not use. Moving the testnet to v0.16.2 is to confirm.

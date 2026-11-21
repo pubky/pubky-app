@@ -42,6 +42,42 @@ bound, as does the feed write's fenced re-read of the stored copy (ADR-0014, `do
 DELETEs held under the locks are not bounded: they rely on `HomeserverService`'s retry policy and the browser's
 connection timeout.
 
+Amended — 2026-11-19 (the Bookmarks count on a cold cache, a follow-up of the last review of #3140): a bookmark whose
+post is not cached counts as a post, so after any cold start (a new device, a sign-in, a recreated database; every
+migrated account once) the count began too high by the number of followed collections not hydrated yet and dropped
+while the Followed Collections walk hydrated them, and it stayed too high for an account following more collections
+than that walk's window holds, where the walk stops. The surfaces that show the count now classify every bookmark
+first. `useBookmarksCollectionSummary` reads `BookmarkController.getMissingPostIds()`, the bookmarked posts without
+cached details, through `useLocalFirstQuery`; a miss runs `BookmarkController.fetchMissingPosts()`, which hands those
+ids to `PostStreamApplication.fetchMissingPostsInBatches`: sequential `by_ids` batches of `NEXUS_STREAM_MAX_LIMIT`
+through `fetchMissingPostsFromNexus`, ended by the first batch that fails. The controller orchestrates the two
+domains, because `BookmarkApplication` calls no other Application (ADR-0009), and holds what belongs to the session:
+the guard, the rerun and the pass in flight, which the callers of one viewer session share. The pass carries the
+`captureViewerSession()` guard: once its session ends it stores no post or user row. When the same account goes on
+under another session, the pass runs again under that one before it resolves, at most twice per call: a hard load of
+`/collections` or of a collection page renders from the stored pubky while the session is still being restored, and
+the restore would otherwise drop the answers and leave the too-high count for that mount.
+
+The count is read only after that pass has settled, whether it succeeded or failed, so when the bookmark rows are in
+place at mount the first number shown is the settled one. (Rows that land under a mounted hook, the listing after a
+database recreation, can show the unclassified count for one render before the gate sees the miss; that is left for a
+follow-up.) A followed collection still counts as a post in four cases: Nexus does not serve it, its batch failed, the
+session was replaced more often than the pass runs again, or the session was lost, not replaced, while the pass was
+out (a re-authentication or a removed session keeps the stored pubky and leaves nothing to run again under; the
+unclassified count then stays for that mount). A post Nexus does not serve (for example a note its author deleted; a
+`by_ids` request for it answers 200 with an empty list) stays uncached and keeps counting as a post, as the Bookmarks
+list shows it (a "Post not found." card). It also keeps the gate a miss, so on every mount of a page that shows the
+count one `by_ids` batch per 50 such bookmarks goes out before the badge appears, answered from the query cache when
+the answer to the same request arrived less than 20 seconds ago. A batch that fails ends the pass, so an outage holds
+the count, on such a mount as well, for the retries of one batch (about 7 s for a 502, 503, 504 or a network error; a
+500 is not retried), not of every batch; what was not fetched counts as a post, and the next mount asks again. One
+case does not settle: TanStack pauses a retry whose back-off ends while the tab is hidden and resumes it only through
+a mounted query client, and no Nexus query client is mounted, so the pass waits and the badge stays hidden until the
+page is loaded again, where the count used to be shown at once. That limit predates this change, holds for every Nexus
+read and is left to a change in `src/libs/query-client`. When every bookmarked post is cached there is no miss and no
+request. The pass adds no store, coordinator, config value or schema change, and runs only on the pages that show the
+count (`/collections`, the Bookmarks page, a collection page).
+
 Part of the `pubky-social-specs` 1.x migration (`docs/migrations/social-v1.md`, decisions D7 and D17). Retires the
 bookmark removal protection (`recentUnbookmarks`, `BOOKMARK_REMOVAL_PROTECTION_MS`) and adds a leaf fetch to the two
 root-node orchestrators of ADR-0009.
@@ -106,7 +142,10 @@ field is ignored.**
   and staleness branches are removed; `isBookmarkStream` (exact id `timeline:bookmarks:all`) still skips the mute
   filter (#1804) and keeps deleted posts for their placeholders. The posts feed drops collections on read, as before.
 - **Count**: `BookmarkController.getCount()` counts the rows whose cached post is not a collection (a post not
-  cached yet counts); `useBookmarksCollectionSummary` reads it with `useLiveQuery`, so it is local and live.
+  cached yet counts); `useBookmarksCollectionSummary` reads it with `useLiveQuery`, so it is local and live, and
+  only once every bookmarked post is cached or `BookmarkController.fetchMissingPosts()` has settled (the amendment
+  of 2026-11-19), so a followed collection that is not cached yet is shown as a post only when that pass could not
+  cache it.
   `LocalBookmarkService.persist` no longer touches `user_counts`.
 - **Followed Collections** walks `timeline:bookmarks:all` for the hydration side effect and keeps its live query
   (`bookmarks` × `post_details.kind === 'collection'`). A slice may hydrate only posts, so the walk goes on by
@@ -138,6 +177,13 @@ field is ignored.**
   stream is a follow-up, and a private stream has the same session-lease exposure as the mutes one (ADR-0014,
   pubky/pubky-homeserver#798): it waits until the SDK bounds that lease or the team accepts the exposure.
 - The first bootstrap on a device costs one GET per bookmark; later ones only GET new filenames.
+- The first visit on a cold cache to a page that shows the count asks Nexus for every bookmarked post not cached yet
+  (`by_ids`, batches of `NEXUS_STREAM_MAX_LIMIT`, one after another, each followed by the requests for its file
+  details, authors and repost originals), and the count appears once those answers are stored instead of at once. The
+  Followed Collections walk asks for the same posts on those pages: a post one of them stored before the other read
+  its misses is not asked for again, and requests in flight for the same viewer share their pending ids
+  (`nexus.by-ids.ts`); the pass adds the tail the walk skips once its window is full. An account with bookmarks Nexus
+  does not serve pays one `by_ids` batch per 50 of them on every mount of such a page, whatever else is cached.
 - The 0.x copy of an un-bookmarked post stays on the homeserver and in Nexus until Nexus stops indexing
   `/pub/pubky.app/bookmarks/`; it is invisible in the app.
 - Followed Collections hydrates through the stream of all bookmarks, posts included: to fill a page with
@@ -176,6 +222,8 @@ Compare hydrated post details against the bookmarks. A new feature (D4) with its
   `src/core/utils/sync-lock.ts` (`withSyncLock`, shared with `FeedApplication`)
 - `src/core/application/stream/posts/post.ts` (`getBookmarkStreamSlice`, the bookmark guards in
   `fetchStreamFromNexus` and `prepareStreamForInitialLoad`)
+- `src/core/controllers/bookmark/bookmark.ts` (`getMissingPostIds`, `fetchMissingPosts`),
+  `PostStreamApplication.fetchMissingPostsInBatches`
 - `src/hooks/useBookmarksCollectionSummary`, `src/components/organisms/Collections/FollowedCollections`
 
 ## Related Decisions
