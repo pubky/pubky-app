@@ -42,25 +42,42 @@ export function getParentDomain(hostname: string): string | null {
 
 /**
  * Hosting domains whose subdomains are each someone else's site (`<user>.github.io`): there, a
- * host's site is the host itself (without `www.`), never the hosting domain.
+ * host's site is the host itself (without `www.`), never the hosting domain. A best-effort subset
+ * of the public suffix list's private section (the large ones); add to it as needed.
  */
 const SHARED_HOSTING_DOMAINS: readonly string[] = [
+  'amazonaws.com',
+  'amplifyapp.com',
   'appspot.com',
+  'azurestaticapps.net',
   'azurewebsites.net',
   'blogspot.com',
   'cloudfront.net',
+  'deno.dev',
   'firebaseapp.com',
   'fly.dev',
   'github.io',
   'gitlab.io',
   'glitch.me',
   'herokuapp.com',
+  'itch.io',
+  'myshopify.com',
   'neocities.org',
   'netlify.app',
+  'ngrok-free.app',
+  'ngrok.io',
   'onrender.com',
   'pages.dev',
+  'r2.dev',
+  'readthedocs.io',
+  'substack.com',
+  'surge.sh',
+  'tumblr.com',
   'vercel.app',
   'web.app',
+  'webflow.io',
+  'wixsite.com',
+  'wordpress.com',
   'workers.dev',
 ];
 

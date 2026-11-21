@@ -68,16 +68,17 @@ describe('NextJsFaviconService.fetch', () => {
   });
 
   it.each([
-    ['another site', 'https://evil.example/favicon.ico'],
-    ['an IP address', 'https://169.254.169.254/latest/meta-data'],
-    ['plain http', 'http://www.example.com/favicon.ico'],
-    ['another port', 'https://www.example.com:8443/favicon.ico'],
-    ['another tenant of a shared hosting domain', 'https://mallory.github.io/x.png'],
-  ])('follows no redirect to %s', async (_case, location) => {
+    ['another site', 'https://example.com/favicon.ico', 'https://evil.example/favicon.ico'],
+    ['an IP address', 'https://example.com/favicon.ico', 'https://169.254.169.254/latest/meta-data'],
+    ['plain http', 'https://example.com/favicon.ico', 'http://www.example.com/favicon.ico'],
+    ['another port', 'https://example.com/favicon.ico', 'https://www.example.com:8443/favicon.ico'],
+    [
+      'another tenant of a shared hosting domain',
+      'https://alice.github.io/favicon.ico',
+      'https://mallory.github.io/x.png',
+    ],
+  ])('follows no redirect to %s', async (_case, source, location) => {
     mockFetch.mockResolvedValueOnce(redirect(location));
-    const source = location.includes('github.io')
-      ? 'https://alice.github.io/favicon.ico'
-      : 'https://example.com/favicon.ico';
 
     await expect(NextJsFaviconService.fetch(new URL(source))).resolves.toBeNull();
     expect(mockFetch).toHaveBeenCalledTimes(1);

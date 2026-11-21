@@ -188,6 +188,7 @@ describe('PostLinkEmbeds', () => {
     });
 
     it('loads a post’s own YouTube embed only on Play on where Pinakes is not configured', () => {
+      vi.mocked(isPinakesConfigured).mockReturnValue(false);
       render(<PostLinkEmbeds url="https://www.youtube.com/watch?v=dQw4w9WgXcQ" />);
 
       expect(document.querySelector('iframe')).toBeNull();
