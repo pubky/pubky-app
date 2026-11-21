@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { FAVICON_BUSY } from '@/application/favicon/favicon.types';
 import { GET } from './route';
 
 const { mockApplicationFetch } = vi.hoisted(() => ({ mockApplicationFetch: vi.fn() }));
@@ -41,7 +42,7 @@ describe('GET /api/favicon', () => {
   });
 
   it('answers 503, never cached, while too many other sites are being read', async () => {
-    mockApplicationFetch.mockResolvedValueOnce('busy');
+    mockApplicationFetch.mockResolvedValueOnce(FAVICON_BUSY);
     const response = await GET(request('?host=a.example'));
     expect(response.status).toBe(503);
     expect(response.headers.get('cache-control')).toBe('no-store');

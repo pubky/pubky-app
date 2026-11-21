@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { FaviconController } from '@/controllers/favicon/favicon';
+import { FaviconController, type TFaviconControllerResult } from '@/controllers/favicon/favicon';
 import { handleApiError } from '@/libs/api/route-error-handler';
+import { HttpStatusCode } from '@/libs/http/http.types';
 
 /**
  * A site's icon, served from the app's origin: cards and service menus show site icons without
@@ -22,7 +23,12 @@ const MISS_CACHE = 'public, max-age=3600, s-maxage=3600';
 const REFUSED_CACHE = 'public, max-age=86400, s-maxage=86400';
 const BUSY_CACHE = 'no-store';
 
-const FAILURE_CACHE: Record<number, string> = { 404: MISS_CACHE, 503: BUSY_CACHE };
+type TFailureStatus = Extract<TFaviconControllerResult, { ok: false }>['statusCode'];
+const FAILURE_CACHE: Record<TFailureStatus, string> = {
+  [HttpStatusCode.BAD_REQUEST]: REFUSED_CACHE,
+  [HttpStatusCode.NOT_FOUND]: MISS_CACHE,
+  [HttpStatusCode.SERVICE_UNAVAILABLE]: BUSY_CACHE,
+};
 
 export async function GET(request: NextRequest) {
   try {
@@ -30,7 +36,7 @@ export async function GET(request: NextRequest) {
     if (!result.ok) {
       return new NextResponse(null, {
         status: result.statusCode,
-        headers: { ...SAFE_HEADERS, 'Cache-Control': FAILURE_CACHE[result.statusCode] ?? REFUSED_CACHE },
+        headers: { ...SAFE_HEADERS, 'Cache-Control': FAILURE_CACHE[result.statusCode] },
       });
     }
     return new NextResponse(result.icon.body, {

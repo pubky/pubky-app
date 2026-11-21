@@ -183,6 +183,15 @@ describe('NextJsFaviconService.fetch', () => {
     await expect(pending).resolves.toBeNull();
   });
 
+  it('gives up when the address check does not answer in time', async () => {
+    vi.useFakeTimers();
+    mockCheckDnsSafety.mockImplementation(() => new Promise(() => {}));
+    const pending = NextJsFaviconService.fetch(new URL('https://slow-dns.example/favicon.ico'));
+    await vi.advanceTimersByTimeAsync(5_000);
+    await expect(pending).resolves.toBeNull();
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
   it('turns a refused connection into no icon', async () => {
     mockFetch.mockRejectedValueOnce(new TypeError('fetch failed'));
     await expect(NextJsFaviconService.fetch(new URL('https://a.example/favicon.ico'))).resolves.toBeNull();

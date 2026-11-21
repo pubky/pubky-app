@@ -49,13 +49,18 @@ export class NextJsFaviconService {
   static async fetch(source: URL): Promise<TFavicon | null> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), FAVICON_TIMEOUT_MS);
+    // The address check does not take a signal: the read's timeout ends the wait for it too.
+    const aborted = new Promise<never>((_resolve, reject) => {
+      controller.signal.addEventListener('abort', () => reject(controller.signal.reason), { once: true });
+    });
+    aborted.catch(() => {});
     try {
       const site = getFaviconSite(source.hostname);
       let url = source;
       for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
         if (!isHttpProtocol(url) || url.username || url.password) return null;
         if (url.protocol !== 'https:' || url.port !== '' || getFaviconSite(url.hostname) !== site) return null;
-        const dns = await checkDnsSafety(url.hostname);
+        const dns = await Promise.race([checkDnsSafety(url.hostname), aborted]);
         if (!dns.ok) return null;
 
         const response = await fetch(url, {

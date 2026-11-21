@@ -62,7 +62,10 @@ export class FaviconApplication {
         FaviconApplication.remember(host, icon);
         return icon;
       })
-      .finally(() => FaviconApplication.inFlight.delete(host));
+      .finally(() => {
+        // A read started after `clearCache` for the same host keeps its own slot.
+        if (FaviconApplication.inFlight.get(host) === promise) FaviconApplication.inFlight.delete(host);
+      });
     FaviconApplication.inFlight.set(host, promise);
     return promise;
   }
