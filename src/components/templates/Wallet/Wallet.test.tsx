@@ -1,4 +1,5 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { WalletError } from '@beignet/wallet-core';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { bech32 } from 'bech32';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -10,6 +11,7 @@ const wallet = vi.hoisted(() => ({
   exists: true,
   inspect: vi.fn(),
   rememberBalance: vi.fn(),
+  awayReceipts: vi.fn(),
   unlocked: undefined as ((preview: LastWalletBalance | null) => void) | undefined,
   ringBinding: vi.fn(),
   ringDeviceId: vi.fn(),
@@ -62,6 +64,7 @@ vi.mock('@/services/wallet/session', () => ({
       wallet.unlocked = onUnlocked;
     }
     rememberBalance = wallet.rememberBalance;
+    awayReceipts = wallet.awayReceipts;
     send = wallet.send;
     acknowledgePayment = wallet.acknowledgePayment;
     activityIncludesChannelSends = wallet.activityIncludesChannelSends;
@@ -109,6 +112,7 @@ beforeEach(() => {
   wallet.acknowledgePayment.mockResolvedValue(undefined);
   wallet.startWallet.mockResolvedValue(undefined);
   wallet.rememberBalance.mockResolvedValue(undefined);
+  wallet.awayReceipts.mockResolvedValue([]);
   wallet.listWallets.mockResolvedValue([record]);
   wallet.createWallet.mockResolvedValue({ ...record, mnemonic: words });
   wallet.snapshot.mockResolvedValue({
@@ -362,6 +366,24 @@ describe('Pubky wallet', () => {
     expect(wallet.cancelDrain).toHaveBeenCalledWith('review-1');
   });
 
+  it.each(['INVALID_REVIEW', 'REVIEW_CHANGED'])(
+    'requests a fresh review after the wallet rejects a quote with %s',
+    async (code) => {
+      wallet.send.mockRejectedValueOnce(new WalletError('Review this payment again before sending.', code));
+      render(<Wallet recipient="pubkyreceiver" />);
+      await unlock();
+      fireEvent.click(screen.getByRole('button', { name: 'Review payment' }));
+      fireEvent.click(await screen.findByRole('button', { name: 'Confirm payment' }));
+      expect(await screen.findByRole('alert')).toHaveTextContent('Review this payment again before sending.');
+      expect(screen.queryByText('Payment status unknown')).toBeNull();
+      expect(screen.getByLabelText('Pay to')).toHaveValue('pubkyreceiver');
+      fireEvent.click(screen.getByRole('button', { name: 'Review payment' }));
+      expect(await screen.findByRole('button', { name: 'Confirm payment' })).toBeVisible();
+      expect(wallet.prepareSend).toHaveBeenCalledTimes(2);
+      expect(wallet.send).toHaveBeenCalledTimes(1);
+    },
+  );
+
   it('never retries a send whose outcome is unknown', async () => {
     wallet.send.mockRejectedValue(new Error('The connection closed.'));
     render(<Wallet recipient="pubkyreceiver" />);
@@ -422,6 +444,156 @@ describe('Pubky wallet', () => {
     await waitFor(() => expect(wallet.getReceiveStatus).toHaveBeenCalledWith(request));
     fireEvent.click(screen.getByRole('button', { name: 'Unified request' }));
     expect(screen.getByLabelText('Payment request')).toHaveValue(request.uri);
+  });
+
+  it('keeps the Activity row, amount and open receipt in place when a submission settles', async () => {
+    const paymentHash = 'fe'.repeat(32);
+    const pending = {
+      id: 'submission:first',
+      kind: 'sent',
+      title: 'Payment sent',
+      description: 'Coffee',
+      status: 'pending',
+      timestamp: Date.UTC(2026, 0, 12),
+      reference: paymentHash,
+      paymentHash,
+      amountSats: 1250,
+      feeSats: 2,
+      feeKnown: true,
+    };
+    const snapshot = {
+      wallet: record,
+      balance: { totalSats: 5000, availableSats: 5000, pendingSats: 0 },
+      primary: { connected: true },
+    };
+    const newer = {
+      ...pending,
+      id: 'another',
+      reference: 'another',
+      paymentHash: '00'.repeat(32),
+      status: 'completed',
+      amountSats: 40,
+      timestamp: pending.timestamp + 1,
+    };
+    wallet.snapshot.mockResolvedValue({ ...snapshot, activity: [newer, pending] });
+    render(<Wallet />);
+    await unlock();
+    const trigger = await screen.findByRole('button', { name: /₿1,250.*pending/i });
+    const list = screen.getByRole('list');
+    expect(list.lastElementChild).toContainElement(trigger);
+    const amount = within(trigger).getByText('−₿1,250');
+    fireEvent.click(trigger);
+    const dialog = await screen.findByRole('dialog', { name: 'Payment receipt' });
+    expect(within(dialog).getByText('Coffee')).toBeVisible();
+    wallet.snapshot.mockResolvedValue({
+      ...snapshot,
+      activity: [
+        { ...pending, id: `payment:${paymentHash}`, status: 'completed', timestamp: newer.timestamp + 1 },
+        newer,
+      ],
+    });
+    // TanStack rechecks the wallet when the tab becomes visible, including while a receipt is open.
+    fireEvent(document, new Event('visibilitychange'));
+    await waitFor(() => expect(within(trigger).getByText('completed')).toBeInTheDocument(), { timeout: 6000 });
+    expect(list.lastElementChild).toContainElement(trigger);
+    expect(list.children).toHaveLength(2);
+    expect(within(trigger).getByText('−₿1,250')).toBe(amount);
+    expect(screen.getByRole('dialog')).toBe(dialog);
+    expect(within(dialog).getByText('Payment sent')).toBeVisible();
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(screen.getByRole('button', { name: /₿1,250.*completed/i })).toBe(trigger);
+    expect(trigger).toHaveFocus();
+    fireEvent.click(trigger);
+    expect(within(await screen.findByRole('dialog')).getByText('Coffee')).toBeVisible();
+  });
+
+  it('keeps separate attempts for the same invoice attached to their own receipts', async () => {
+    const hash = 'ba'.repeat(32);
+    const first = {
+      id: 'submission:first',
+      reference: hash,
+      paymentHash: hash,
+      kind: 'sent',
+      title: 'Payment declined',
+      description: 'First attempt',
+      status: 'failed',
+      amountSats: 120,
+      feeSats: 0,
+      timestamp: 1000,
+    };
+    const retry = {
+      ...first,
+      id: 'submission:retry',
+      title: 'Payment sent',
+      description: 'Second attempt',
+      status: 'pending',
+      timestamp: 2000,
+    };
+    const snapshot = {
+      wallet: record,
+      primary: { connected: true },
+      balance: { totalSats: 300, availableSats: 300, pendingSats: 0 },
+    };
+    wallet.snapshot.mockResolvedValue({ ...snapshot, activity: [retry, first] });
+    render(<Wallet />);
+    await unlock();
+    const declined = await screen.findByRole('button', { name: /₿120.*failed/i });
+    const paying = screen.getByRole('button', { name: /₿120.*pending/i });
+    fireEvent.click(declined);
+    const dialog = await screen.findByRole('dialog');
+    wallet.snapshot.mockResolvedValue({
+      ...snapshot,
+      activity: [{ ...retry, id: `payment:${hash}`, status: 'completed' }, first],
+    });
+    fireEvent(document, new Event('visibilitychange'));
+    await waitFor(() => expect(screen.getByText('completed')).toBeInTheDocument(), { timeout: 6000 });
+    expect(within(dialog).getByText('First attempt')).toBeVisible();
+    expect(within(dialog).getByText('Payment failed')).toBeVisible();
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(screen.getByRole('button', { name: /₿120.*failed/i })).toBe(declined);
+    expect(screen.getByRole('button', { name: /₿120.*completed/i })).toBe(paying);
+    fireEvent.click(paying);
+    expect(within(await screen.findByRole('dialog')).getByText('Second attempt')).toBeVisible();
+  });
+
+  it('shows verified away context in the matching incoming row and its receipt', async () => {
+    const paymentHash = 'ab'.repeat(32);
+    const incoming = {
+      id: `payment:${paymentHash}`,
+      kind: 'received',
+      title: 'Payment received',
+      description: 'Dinner',
+      status: 'completed',
+      timestamp: Date.UTC(2026, 0, 12),
+      reference: paymentHash,
+      paymentHash,
+      amountSats: 850,
+      feeSats: 0,
+    };
+    const otherHash = 'cd'.repeat(32);
+    const activity = [
+      incoming,
+      { ...incoming, id: `payment:${otherHash}`, reference: otherHash, paymentHash: otherHash, amountSats: 600 },
+    ];
+    wallet.snapshot.mockResolvedValue({
+      wallet: record,
+      primary: { connected: true },
+      balance: { totalSats: 1450, availableSats: 1450, pendingSats: 0 },
+      activity,
+    });
+    wallet.awayReceipts.mockResolvedValue([paymentHash]);
+    render(<Wallet />);
+    await unlock();
+    const trigger = await screen.findByRole('button', { name: /₿850/ });
+    expect(wallet.awayReceipts).toHaveBeenCalledWith(record.id, activity, true);
+    expect(within(trigger).getByText('Received while you were away')).toBeVisible();
+    expect(within(screen.getByRole('button', { name: /₿600/ })).queryByText('Received while you were away')).toBeNull();
+    fireEvent.click(trigger);
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Received while you were away')).toBeVisible();
+    expect(within(dialog).getByText('₿850')).toBeVisible();
   });
 
   it('updates authoritative balance and Activity when an invoice settles after leaving Receive', async () => {

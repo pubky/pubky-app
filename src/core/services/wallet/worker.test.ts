@@ -290,6 +290,36 @@ function addWalletRecord() {
   );
 }
 
+it('restores pending observations on unlock and fences receipt reads to their owner', async () => {
+  addWalletRecord();
+  const paymentHash = 'b'.repeat(64);
+  const waiting = {
+    paymentHash,
+    receiveRequest: { offlineReceive: true, paymentHash },
+    kind: 'request',
+    status: 'pending',
+    receiveStatus: { phase: 'waiting' },
+  };
+  const pending = { walletId, rows: [waiting], primaryConnected: true };
+  expect((await request('away-receipts', pending)).result).toEqual([]);
+  await freshWorker();
+  await request('open', 'a local vault password');
+  expect((await request('away-receipts', { ...pending, primaryConnected: false })).result).toEqual([]);
+  const completed = {
+    ...pending,
+    rows: [
+      {
+        ...waiting,
+        kind: 'received',
+        status: 'completed',
+        receiveStatus: { phase: 'completed', method: 'lightning', paymentHash },
+      },
+    ],
+  };
+  expect((await request('away-receipts', completed, 'another account')).error).toBeDefined();
+  expect((await request('away-receipts', completed)).result).toEqual([paymentHash]);
+});
+
 it('remembers only changed canonical totals for the owning registry and reports them before relay startup', async () => {
   expect((await request('remember-balance', balance)).error).toBeDefined();
   addWalletRecord();

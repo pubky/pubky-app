@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import type {
+  Activity,
   KeptReason,
   Network,
   ReceiveQuote,
@@ -20,7 +21,7 @@ import { Input } from '@/atoms/Input/Input';
 import { Label } from '@/atoms/Label/Label';
 import { Textarea } from '@/atoms/Textarea/Textarea';
 import { copyToClipboard } from '@/libs/utils/utils';
-import { bitcoinAmount, lightningAmount, walletMessage } from '@/libs/wallet/amount';
+import { bitcoinAmount, lightningAmount } from '@/libs/wallet/amount';
 import {
   quoteWalletMaximum,
   reviewWalletDrain,
@@ -29,7 +30,7 @@ import {
   type WalletMaximum,
 } from '@/libs/wallet/sendPayment';
 import { Detail, WalletPanel, type WalletTask, Warnings } from './WalletPanel';
-import { WalletReceipt } from './WalletReceipt';
+import { reviewedRecipientAmount, SendReceipt, type SendSubmission, WalletReceipt } from './WalletReceipt';
 import { WalletScanner } from './WalletScanner';
 
 type PaymentProps = { client: WalletClientInterface; task: WalletTask; refresh: () => void };
@@ -73,18 +74,23 @@ function AmountField({
 export function WalletSend({
   client,
   sendPayment,
+  activity,
   network,
   recipient,
   task,
   refresh,
-}: PaymentProps & { sendPayment: (review: SendReview) => Promise<SendResult>; network: Network; recipient?: string }) {
+}: PaymentProps & {
+  sendPayment: (review: SendReview) => Promise<SendResult>;
+  network: Network;
+  recipient?: string;
+  activity?: Activity[];
+}) {
   const [request, setRequest] = useState(recipient || '');
   const [maximum, setMaximum] = useState<WalletMaximum | null>(null);
   const [drainOffer, setDrainOffer] = useState<WalletDrainAvailable | null>(null);
   const [amount, setAmount] = useState('');
   const [review, setReview] = useState<{ payment: SendReview; recipient?: string; destination: string } | null>(null);
-  const [result, setResult] = useState<SendResult | null>(null);
-  const [uncertain, setUncertain] = useState(false);
+  const [submission, setSubmission] = useState<SendSubmission | null>(null);
   const [expired, setExpired] = useState(false);
   async function prepare() {
     try {
@@ -115,17 +121,25 @@ export function WalletSend({
   async function send() {
     if (!review) return;
     const payment = review.payment;
+    const attempt = { review: payment, startedAt: Date.now() };
+    setReview(null);
+    setSubmission(attempt);
     try {
-      setResult(await sendPayment(payment));
+      const result = await sendPayment(payment);
+      setSubmission({ ...attempt, result });
     } catch (err) {
       if (err instanceof Error && 'code' in err && err.code === 'QUOTE_EXPIRED') {
+        setSubmission(null);
         setExpired(true);
         return;
       }
-      setUncertain(true);
+      if (err instanceof WalletError && (err.code === 'INVALID_REVIEW' || err.code === 'REVIEW_CHANGED')) {
+        setSubmission(null);
+        throw err;
+      }
+      setSubmission({ ...attempt, interrupted: true });
       throw err;
     } finally {
-      setReview(null);
       refresh();
     }
   }
@@ -134,8 +148,7 @@ export function WalletSend({
     setDrainOffer(null);
     setAmount('');
     setMaximum(null);
-    setResult(null);
-    setUncertain(false);
+    setSubmission(null);
     setExpired(false);
     task.clearError();
   }
@@ -168,7 +181,7 @@ export function WalletSend({
             )}
             <Detail
               label={review.payment.minRecipientSats != null ? 'Recipient gets at least' : 'Recipient amount'}
-              value={bitcoinAmount(review.payment.minRecipientSats ?? review.payment.amountSats)}
+              value={reviewedRecipientAmount(review.payment)}
             />
             {review.payment.estimatedFeeSats != null && (
               <Detail label="Estimated routing fee" value={bitcoinAmount(review.payment.estimatedFeeSats)} />
@@ -218,47 +231,14 @@ export function WalletSend({
             </Button>
           </div>
         </>
-      ) : result || uncertain ? (
+      ) : submission ? (
         <>
-          <p role="status" className="font-semibold">
-            {uncertain
-              ? 'Payment status unknown'
-              : result!.status === 'completed'
-                ? 'Payment sent'
-                : `Payment ${result!.status}`}
-          </p>
-          <p className="text-sm text-muted-foreground">
-            {uncertain || result?.status === 'uncertain'
-              ? 'Check Activity before trying another payment.'
-              : walletMessage(result?.message ?? '')}
-          </p>
-          {result && (
-            <dl className="grid gap-2">
-              <Detail
-                label={result.status === 'completed' ? 'Recipient received' : 'Payment amount'}
-                value={result.payAll ? lightningAmount(result.payAll.deliveredMsat) : bitcoinAmount(result.amountSats)}
-              />
-              <Detail
-                label={result.feeEstimated ? 'Estimated fee' : 'Fee paid'}
-                value={
-                  result.feeKnown || result.payAll
-                    ? result.payAll
-                      ? lightningAmount(result.payAll.feeMsat)
-                      : bitcoinAmount(result.feeSats)
-                    : 'Not yet reported'
-                }
-              />
-              {(result.txid || result.paymentHash) && (
-                <Detail
-                  label={result.txid ? 'Transaction ID' : 'Payment hash'}
-                  value={result.txid || result.paymentHash || ''}
-                />
-              )}
-            </dl>
+          <SendReceipt submission={submission} activity={activity} />
+          {(submission.result || submission.interrupted) && (
+            <Button variant="outline" className="self-start" onClick={reset}>
+              New payment
+            </Button>
           )}
-          <Button variant="outline" className="self-start" onClick={reset}>
-            New payment
-          </Button>
         </>
       ) : (
         <form
@@ -365,12 +345,14 @@ export function WalletReceive({
   setRequest,
   receipt,
   unavailable,
+  receivedWhileAway = false,
   newBitcoinAddress,
 }: PaymentProps & {
   request: ReceiveRequest | null;
   setRequest: (request: ReceiveRequest | null) => void;
   receipt: ReceiveStatus | undefined;
   unavailable: boolean;
+  receivedWhileAway?: boolean;
   newBitcoinAddress: () => Promise<string>;
 }) {
   const [deposit, setDeposit] = useState<{ address: string; uri: string } | null>(null);
@@ -436,6 +418,7 @@ export function WalletReceive({
           task={task}
           receipt={receipt}
           unavailable={unavailable}
+          receivedWhileAway={receivedWhileAway}
           reset={() => {
             setRequest(null);
             task.clearError();
@@ -520,12 +503,14 @@ function RequestCode({
   receipt,
   task,
   unavailable,
+  receivedWhileAway,
   reset,
 }: {
   request: ReceiveRequest;
   receipt: ReceiveStatus | undefined;
   task: WalletTask;
   unavailable: boolean;
+  receivedWhileAway: boolean;
   reset: () => void;
 }) {
   const reduced = useReducedMotion();
@@ -540,7 +525,8 @@ function RequestCode({
   const [alreadyPaid] = useState(phase === 'completed');
   let message = expired ? 'Request expired' : unavailable ? 'Payment status unavailable' : 'Waiting for payment';
   if (receipt) {
-    if (phase === 'completed') message = `Received ${bitcoinAmount(receipt.receivedSats)}`;
+    if (phase === 'completed')
+      message = `${receivedWhileAway ? 'Received while you were away' : 'Received'} ${bitcoinAmount(receipt.receivedSats)}`;
     if (phase === 'partial') message = `Partially paid: ${bitcoinAmount(receipt.receivedSats)}`;
     if (phase === 'pending') message = 'Payment pending';
   }
@@ -567,7 +553,12 @@ function RequestCode({
         className="relative origin-top"
       >
         {phase === 'completed' && receipt ? (
-          <WalletReceipt receipt={receipt} description={request.description} animateEntrance={!alreadyPaid} />
+          <WalletReceipt
+            receipt={receipt}
+            description={request.description}
+            animateEntrance={!alreadyPaid}
+            receivedWhileAway={receivedWhileAway}
+          />
         ) : (
           (!phase || phase === 'waiting') &&
           !expired && (

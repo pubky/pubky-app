@@ -1,5 +1,6 @@
 import { createPortableRuntime } from '@beignet/portable-engine';
 import { createSqlJsDatabaseFactory } from '@beignet/portable-engine/sqljs';
+import { createAwayReceipts } from './away-receipts.mjs';
 import { lastBalance, rememberBalance } from './balance.mjs';
 import { provisionRingWallet, ringBinding, ringDeviceId } from './ring.mjs';
 import { createStartupScan } from './startup-scan.mjs';
@@ -15,6 +16,7 @@ const configurationError = () =>
   });
 let engine;
 let volume;
+let awayReceipts;
 let activeStore;
 let shutdownFailed = false;
 let owner;
@@ -141,6 +143,7 @@ async function open(account, password, onUnlocked) {
   const store = await openFiles(account);
   try {
     volume = await unlockVolume(store, account, password);
+    awayReceipts = createAwayReceipts(volume, background);
     rejectIfClosing();
     if (onUnlocked) onUnlocked(lastBalance(volume));
     const old = volume.read(profilePath);
@@ -244,6 +247,7 @@ async function close() {
   engine = undefined;
   volume?.close();
   volume = undefined;
+  awayReceipts = undefined;
   owner = undefined;
   activeGrant = undefined;
 }
@@ -261,6 +265,7 @@ async function handle({ id, operation, account, payload, notifyUnlocked }) {
   rejectIfClosing();
   if (operation === 'visibility') {
     background = !!payload;
+    awayReceipts?.setHidden(background);
     if (background) discardIdleSockets();
     engine?.setAppBackgrounded(background);
     return;
@@ -317,6 +322,8 @@ async function handle({ id, operation, account, payload, notifyUnlocked }) {
     return;
   }
   if (operation === 'remember-balance') return rememberBalance(volume, payload);
+  if (operation === 'away-receipts')
+    return awayReceipts.observe(payload.walletId, payload.rows, payload.primaryConnected);
   if (operation === 'ring-binding') return ringBinding(volume);
   if (operation === 'ring-device') return ringDeviceId(volume);
   if (operation === 'ring-wallet') {

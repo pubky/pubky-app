@@ -158,6 +158,13 @@ export class WalletSession {
     await this.call('remember-balance', { walletId, network, totalSats });
   }
 
+  async awayReceipts(walletId: string, activity: Activity[], primaryConnected: boolean): Promise<string[]> {
+    if (!this.ownsAccount() || this.client.connection.walletId !== walletId) throw locked();
+    this.assertRingDevice?.();
+    const rows = activity.filter((row) => row.receiveRequest?.offlineReceive === true);
+    return this.call('away-receipts', { walletId, rows, primaryConnected });
+  }
+
   async send(review: SendReview): Promise<SendResult> {
     if (!this.ownsAccount()) throw locked();
     this.assertRingDevice?.();

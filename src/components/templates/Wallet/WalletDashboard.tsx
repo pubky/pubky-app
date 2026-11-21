@@ -8,13 +8,18 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   Bitcoin,
+  Check,
+  ChevronRight,
+  Clock3,
   KeyRound,
   LockKeyhole,
   RefreshCw,
   Zap,
 } from 'lucide-react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { Button } from '@/atoms/Button/Button';
 import { Card } from '@/atoms/Card/Card';
+import { Dialog, DialogContent, DialogTrigger } from '@/atoms/Dialog/Dialog';
 import { Spinner } from '@/atoms/Spinner/Spinner';
 import { bitcoinAmount, lightningAmount, walletMessage } from '@/libs/wallet/amount';
 import type { LastWalletBalance, WalletSession } from '@/services/wallet/session';
@@ -22,7 +27,45 @@ import { useReceiveTracker } from './useReceiveTracker';
 import { SavedBalance } from './WalletOpening';
 import { RecoveryWords, WalletPanel, type WalletTask } from './WalletPanel';
 import { WalletReceive, WalletSend } from './WalletPayments';
-import { WalletBalance } from './WalletReceipt';
+import { ActivityReceipt, activityReceiptAmount, activityReceiptTitle, WalletBalance } from './WalletReceipt';
+
+type ActivityEntry = { key: string; row: Activity };
+
+// Submissions acquire an engine ID when reconciled. A payment hash alone cannot
+// identify an attempt: two failed or retried submissions can share the same invoice.
+function keepActivityOrder(rows: Activity[], previous: ActivityEntry[] = []) {
+  if (!previous.length) return rows.map((row) => ({ key: row.id, row }));
+  const currentIds = new Set(rows.map((row) => row.id));
+  const byId = new Map(previous.map((entry) => [entry.row.id, entry]));
+  const byReference = new Map<string, ActivityEntry | null>();
+  for (const entry of previous) {
+    if (currentIds.has(entry.row.id)) continue;
+    const ref = entry.row.reference;
+    if (ref) byReference.set(ref, byReference.has(ref) ? null : entry);
+  }
+  const seen = new Set<string>();
+  const repeated = new Set<string>();
+  for (const row of rows) {
+    if (byId.has(row.id)) continue;
+    if (seen.has(row.reference)) repeated.add(row.reference);
+    seen.add(row.reference);
+  }
+  const entries = rows.map((row) => {
+    let match = byId.get(row.id);
+    if (!match && !repeated.has(row.reference) && !row.id.startsWith('submission:')) {
+      const old = byReference.get(row.reference);
+      if (old?.row.id.startsWith('submission:') && old.row.status !== 'failed') match = old;
+    }
+    const key = match && (match.key === row.id || !currentIds.has(match.key)) ? match.key : row.id;
+    return { key, row };
+  });
+  // Fill retained slots in display order. New and backfilled rows take the engine's positions.
+  const byKey = new Map(entries.map((entry) => [entry.key, entry]));
+  const retained = previous.flatMap(({ key }) => byKey.get(key) ?? []);
+  const retainedKeys = new Set(retained.map(({ key }) => key));
+  let index = 0;
+  return entries.map((entry) => (retainedKeys.has(entry.key) ? retained[index++] : entry));
+}
 
 type View = 'overview' | 'send' | 'receive' | 'backup';
 
@@ -58,18 +101,24 @@ export function WalletDashboard({
   const snapshot = useQuery(
     {
       queryKey: ['wallet', walletId],
-      queryFn: async () => {
+      queryFn: async ({ queryKey }) => {
         const live = await session.client.snapshot();
-        const activityChecked = interrupted
-          ? await session.activityIncludesChannelSends(live.activity).catch(() => false)
-          : false;
-        return { ...live, activityChecked };
+        const previous = queries.getQueryData<{ entries: ActivityEntry[]; away: string[] }>(queryKey);
+        const [activityChecked, away] = await Promise.all([
+          interrupted ? session.activityIncludesChannelSends(live.activity).catch(() => false) : false,
+          live.wallet?.id === walletId && live.wallet.network === network
+            ? session.awayReceipts(walletId, live.activity, live.primary.connected).catch(() => previous?.away ?? [])
+            : [],
+        ]);
+        return { ...live, entries: keepActivityOrder(live.activity, previous?.entries), activityChecked, away };
       },
-      refetchInterval: 15_000,
+      refetchInterval: ({ state }) =>
+        state.data?.activity.some((row) => row.kind === 'sent' && row.status === 'pending') ? 4_000 : 15_000,
     },
     queries,
   );
   const data = snapshot.data;
+  const away = new Set(data?.away);
   const verifiedTotal =
     data?.wallet?.id === walletId && data.wallet.network === network ? data.balance.totalSats : undefined;
   const needsPaymentReview =
@@ -222,6 +271,7 @@ export function WalletDashboard({
       {view === 'send' && (
         <WalletSend
           client={session.client}
+          activity={data?.activity}
           sendPayment={(review) => session.send(review)}
           network={network}
           recipient={recipient}
@@ -236,6 +286,7 @@ export function WalletDashboard({
           request={request}
           setRequest={setRequest}
           receipt={tracking.receipt}
+          receivedWhileAway={!!request?.paymentHash && away.has(request.paymentHash)}
           unavailable={tracking.unavailable}
           refresh={refresh}
           newBitcoinAddress={() => session.newBitcoinAddress(network)}
@@ -307,8 +358,17 @@ export function WalletDashboard({
           <p className="text-sm text-muted-foreground">Your payments and requests will appear here.</p>
         ) : (
           <ul className="divide-y divide-border">
-            {data.activity.map((row) => (
-              <ActivityRow key={row.id} row={row} />
+            {data.entries.map(({ key, row }) => (
+              <ActivityRow
+                key={key}
+                row={row}
+                receivedWhileAway={
+                  row.kind === 'received' &&
+                  row.status === 'completed' &&
+                  !!row.paymentHash &&
+                  away.has(row.paymentHash)
+                }
+              />
             ))}
           </ul>
         )}
@@ -317,32 +377,75 @@ export function WalletDashboard({
   );
 }
 
-function ActivityRow({ row }: { row: Activity }) {
-  const Icon = row.kind === 'sent' ? ArrowUpRight : row.kind === 'received' ? ArrowDownLeft : ActivityIcon;
+function ActivityRow({ row, receivedWhileAway }: { row: Activity; receivedWhileAway: boolean }) {
+  const reduced = useReducedMotion();
+  const completed = row.status === 'completed';
+  const title =
+    !completed && (row.title === 'Payment sent' || row.title === 'Payment received')
+      ? activityReceiptTitle(row)
+      : row.title;
+  const Icon = completed
+    ? Check
+    : row.status === 'pending'
+      ? Clock3
+      : row.kind === 'sent'
+        ? ArrowUpRight
+        : ActivityIcon;
   return (
-    <li className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 py-3 first:pt-0 last:pb-0">
-      <span className="rounded-full bg-secondary p-2">
-        <Icon className="size-4" />
-      </span>
-      <div className="min-w-0">
-        <p className="truncate font-semibold">{row.title}</p>
-        <p className="text-xs text-muted-foreground">{new Date(row.timestamp).toLocaleString()}</p>
-        {row.feeKnown && row.kind === 'sent' && (
-          <p className="text-xs text-muted-foreground">
-            {row.feeEstimated ? 'Estimated fee' : 'Fee'}{' '}
-            {row.payAll ? lightningAmount(row.payAll.feeMsat) : bitcoinAmount(row.feeSats)}
-          </p>
-        )}
-      </div>
-      <div className="text-right">
-        <p className="text-sm font-semibold tabular-nums">
-          {row.kind === 'sent' ? '−' : row.kind === 'received' ? '+' : ''}
-          {row.payAll && row.status === 'completed'
-            ? lightningAmount(row.payAll.deliveredMsat)
-            : bitcoinAmount(row.amountSats)}
-        </p>
-        <p className="text-xs text-muted-foreground capitalize">{row.status}</p>
-      </div>
+    <li>
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            className="grid h-auto w-full grid-cols-[auto_minmax(0,1fr)_auto_auto] gap-2 rounded-xl px-1 py-3 text-left whitespace-normal sm:gap-3 sm:px-2"
+          >
+            <span aria-hidden="true" className="grid size-8 place-items-center rounded-full bg-secondary">
+              <AnimatePresence initial={false}>
+                <motion.span
+                  key={completed ? 'completed' : 'open'}
+                  initial={reduced ? false : { scale: 0.85, opacity: 0.4 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: reduced ? 0 : 0.22 }}
+                  className={completed ? 'text-brand' : 'text-muted-foreground'}
+                >
+                  <Icon className="size-4" />
+                </motion.span>
+              </AnimatePresence>
+            </span>
+            <span className="grid min-w-0 gap-0.5">
+              <span className="truncate font-semibold">{title}</span>
+              <span className="text-xs font-normal text-muted-foreground">
+                {new Date(row.timestamp).toLocaleString()}
+              </span>
+              {receivedWhileAway && (
+                <span className="text-xs font-normal text-muted-foreground">Received while you were away</span>
+              )}
+              {row.feeKnown && row.kind === 'sent' && (
+                <span className="text-xs font-normal text-muted-foreground">
+                  {row.feeEstimated ? 'Estimated fee' : 'Fee'}{' '}
+                  {row.payAll ? lightningAmount(row.payAll.feeMsat) : bitcoinAmount(row.feeSats)}
+                </span>
+              )}
+            </span>
+            <span className="grid gap-0.5 text-right">
+              <span className="text-sm font-semibold tabular-nums">
+                {row.kind === 'sent' ? '−' : row.kind === 'received' ? '+' : ''}
+                {activityReceiptAmount(row)}
+              </span>
+              <span className="text-xs font-normal text-muted-foreground capitalize">{row.status}</span>
+            </span>
+            <ChevronRight aria-hidden="true" className="size-4 text-muted-foreground" />
+          </Button>
+        </DialogTrigger>
+        <DialogContent
+          hiddenTitle="Payment receipt"
+          data-sentry-block
+          className="sentry-block w-full motion-reduce:duration-0 motion-reduce:data-[state=closed]:animate-none motion-reduce:data-[state=open]:animate-none sm:max-w-md"
+        >
+          <ActivityReceipt row={row} receivedWhileAway={receivedWhileAway} />
+        </DialogContent>
+      </Dialog>
     </li>
   );
 }
