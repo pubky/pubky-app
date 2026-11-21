@@ -422,10 +422,11 @@ describe('ResourceCard', () => {
         </div>,
       );
       const slot = screen.getByTestId('resource-card-image');
-      expect(slot).toHaveAttribute('data-resource-controls');
+      const fit = screen.getByTestId('resource-card-image-fit');
+      expect(fit).toHaveAttribute('data-resource-controls');
 
-      // Around the image, and a middle click on it, open nothing either.
-      fireEvent.click(slot);
+      // In the image's box around the picture, and a middle click on it, open nothing either.
+      fireEvent.click(fit);
       fireEvent(cardImage(), new MouseEvent('auxclick', { bubbles: true, cancelable: true, button: 1 }));
       expect(mockPush).not.toHaveBeenCalled();
       expect(open).not.toHaveBeenCalled();
@@ -475,8 +476,12 @@ describe('ResourceCard', () => {
       fireEvent.load(cardImage());
 
       expect(fit.style.maxWidth).toBe(maxWidth);
+      expect(fit).toHaveClass('mx-auto');
       expect(screen.getByTestId('resource-card-image')).toHaveClass('max-w-2xl');
       expect(screen.getByTestId('resource-card-image').style.maxWidth).toBe('');
+      // Beside a narrow image is the card's surface: it opens the resource page.
+      fireEvent.click(screen.getByTestId('resource-card-image'));
+      expect(mockPush).toHaveBeenCalledWith(getResourceRoute(ARTICLE.uri));
     });
 
     it('takes no size from the lightbox’s images', async () => {

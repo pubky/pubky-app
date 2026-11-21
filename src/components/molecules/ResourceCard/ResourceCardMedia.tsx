@@ -29,7 +29,6 @@ export function ResourceCardMedia({ imageUrl, name, dimmed, onImageError }: Reso
   return (
     <Container
       overrideDefaults
-      data-resource-controls
       data-testid="resource-card-image"
       // An image's `load` and `error` do not bubble in the DOM, but React's do: the post's image reports here.
       onLoad={(event) => {
@@ -42,9 +41,12 @@ export function ResourceCardMedia({ imageUrl, name, dimmed, onImageError }: Reso
       // At most as wide as a post's media, in the middle of a wide card (a feed's Wide layout, the page).
       className={cn('mx-auto w-full max-w-2xl', dimmed && 'opacity-60')}
     >
+      {/* The image's own box, in the middle: a press in it is the image's, beside it the card's. */}
       <Container
         overrideDefaults
+        data-resource-controls
         data-testid="resource-card-image-fit"
+        className="mx-auto"
         style={naturalWidth ? { maxWidth: naturalWidth } : undefined}
       >
         <PostAttachmentsImagesAndVideos imagesAndVideos={[{ type: 'image/*', name, urls: { main: imageUrl } }]} />
