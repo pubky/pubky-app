@@ -1,5 +1,5 @@
 import type { TFavicon } from '@/application/favicon/favicon.types';
-import { getFaviconSource } from '@/libs/favicon/favicon';
+import { getFaviconOverrideDomain, getFaviconSource } from '@/libs/favicon/favicon';
 import { NextJsFaviconService } from '@/services/nextjs/favicon/favicon';
 
 /** Icons kept in memory at most: at most `FAVICON_MAX_BYTES` each. */
@@ -29,7 +29,9 @@ export class FaviconApplication {
    * The icon of a validated host (`FaviconValidators.validateHost`), or `null` when it has none
    * the route may serve.
    */
-  static async fetch(host: string): Promise<TFavicon | null> {
+  static async fetch(requested: string): Promise<TFavicon | null> {
+    // Every subdomain of a site whose icon is listed (`<artist>.bandcamp.com`) is one icon, one entry.
+    const host = getFaviconOverrideDomain(requested) ?? requested;
     const cached = FaviconApplication.cache.get(host);
     if (cached) {
       FaviconApplication.cache.delete(host);

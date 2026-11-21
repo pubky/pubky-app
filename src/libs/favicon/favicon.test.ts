@@ -64,6 +64,13 @@ describe('getFaviconSite', () => {
     expect(getFaviconSite('a.b.example.com.au')).toBe('example.com.au');
     expect(getFaviconSite('tidal.com')).toBe('tidal.com');
   });
+
+  it('keeps each tenant of a shared hosting domain its own site', () => {
+    expect(getFaviconSite('alice.github.io')).toBe('alice.github.io');
+    expect(getFaviconSite('www.alice.github.io')).toBe('alice.github.io');
+    expect(getFaviconSite('bob.github.io')).not.toBe(getFaviconSite('alice.github.io'));
+    expect(getFaviconSite('shop.vercel.app')).toBe('shop.vercel.app');
+  });
 });
 
 describe('getParentDomain', () => {

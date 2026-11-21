@@ -35,7 +35,7 @@ describe('GenericPreview, a link that is a video or audio file', () => {
     const player = container.querySelector(type);
     expect(player).toHaveAttribute('src', url);
     expect(player).toHaveProperty('autoplay', true);
-    expect(screen.getByRole('button', { name: 'Close the cdn.example.com video' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Close the cdn.example.com player' })).toBeInTheDocument();
   });
 
   it('shows the player right away, not started, with platform embeds up front on', () => {

@@ -41,11 +41,39 @@ export function getParentDomain(hostname: string): string | null {
 }
 
 /**
+ * Hosting domains whose subdomains are each someone else's site (`<user>.github.io`): there, a
+ * host's site is the host itself (without `www.`), never the hosting domain.
+ */
+const SHARED_HOSTING_DOMAINS: readonly string[] = [
+  'appspot.com',
+  'azurewebsites.net',
+  'blogspot.com',
+  'cloudfront.net',
+  'firebaseapp.com',
+  'fly.dev',
+  'github.io',
+  'gitlab.io',
+  'glitch.me',
+  'herokuapp.com',
+  'neocities.org',
+  'netlify.app',
+  'onrender.com',
+  'pages.dev',
+  'vercel.app',
+  'web.app',
+  'workers.dev',
+];
+
+/**
  * The site a host belongs to: its parent domains climbed as far as `getParentDomain` goes
- * (`open.spotify.com` → `spotify.com`, `news.bbc.co.uk` → `bbc.co.uk`).
+ * (`open.spotify.com` → `spotify.com`, `news.bbc.co.uk` → `bbc.co.uk`). On a shared hosting
+ * domain, the host itself without `www.` (`www.alice.github.io` → `alice.github.io`).
  */
 export function getFaviconSite(hostname: string): string {
-  let site = hostname.toLowerCase().replace(/\.$/, '');
+  const host = hostname.toLowerCase().replace(/\.$/, '');
+  const hosting = SHARED_HOSTING_DOMAINS.find((domain) => isOnDomain(host, domain));
+  if (hosting) return host.replace(/^www\./, '');
+  let site = host;
   for (let parent = getParentDomain(site); parent; parent = getParentDomain(site)) site = parent;
   return site;
 }

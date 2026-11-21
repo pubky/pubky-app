@@ -186,6 +186,14 @@ describe('PostLinkEmbeds', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Show on x.com' }));
       expect(document.querySelector('[data-testid^="twitter-tweet"]')).not.toBeNull();
     });
+
+    it('loads a post’s own YouTube embed only on Play on where Pinakes is not configured', () => {
+      render(<PostLinkEmbeds url="https://www.youtube.com/watch?v=dQw4w9WgXcQ" />);
+
+      expect(document.querySelector('iframe')).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: 'Play on YouTube' }));
+      expect(screen.getByTestId('YouTube video player').getAttribute('src')).toContain('autoplay=1');
+    });
   });
 
   describe('YouTube URL parsing', () => {

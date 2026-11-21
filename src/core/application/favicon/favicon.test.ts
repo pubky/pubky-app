@@ -48,6 +48,14 @@ describe('FaviconApplication.fetch', () => {
     expect(mockServiceFetch).toHaveBeenCalledTimes(4);
   });
 
+  it('keeps one entry for every subdomain of a site whose icon is listed', async () => {
+    mockServiceFetch.mockResolvedValue(ICON);
+    await FaviconApplication.fetch('a1.bandcamp.com');
+    await FaviconApplication.fetch('a2.bandcamp.com');
+    await FaviconApplication.fetch('bandcamp.com');
+    expect(mockServiceFetch).toHaveBeenCalledTimes(1);
+  });
+
   it('shares one read between concurrent requests for a host', async () => {
     let resolve: (value: typeof ICON) => void = () => {};
     mockServiceFetch.mockReturnValueOnce(new Promise((done) => (resolve = done)));

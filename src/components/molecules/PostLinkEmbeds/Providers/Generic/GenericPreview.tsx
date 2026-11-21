@@ -12,7 +12,6 @@ import { useOgMetadata } from '@/hooks/useOgMetadata/useOgMetadata';
 import { getLinkHost } from '@/molecules/ResourceCard/ResourceCard.utils';
 import { PlayOnPill } from '@/molecules/ResourcePlayer/ResourcePlayerControls';
 import { useSettingsStore } from '@/stores/settings/settings.store';
-import { getShowPostLabel } from '../Native/nativeEmbed.utils';
 import { GenericPreviewSkeleton } from './GenericPreview.skeleton';
 
 interface GenericPreviewProps {
@@ -87,6 +86,7 @@ function MediaPreview({ url, type }: { url: string; type: 'video' | 'audio' }) {
   const embedsUpFront = useSettingsStore((state) => state.media.embedsUpFront);
   const [isOpen, setIsOpen] = useState(false);
   const shows = embedsUpFront || isOpen;
+  const site = getLinkHost(url) ?? url;
   const player =
     type === 'video' ? (
       <Video src={url} autoPlay={!embedsUpFront} className="w-full cursor-auto object-contain" />
@@ -99,7 +99,7 @@ function MediaPreview({ url, type }: { url: string; type: 'video' | 'audio' }) {
       <PlayOnPill
         uri={url}
         isOpen={isOpen}
-        label={getShowPostLabel(getLinkHost(url), isOpen, true)}
+        label={isOpen ? `Close the ${site} player` : `Play on ${site}`}
         aria-expanded={isOpen}
         className="self-start"
         onClick={() => setIsOpen(!isOpen)}
