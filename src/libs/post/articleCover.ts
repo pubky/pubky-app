@@ -78,11 +78,11 @@ export function settleArticleSlotZero(resolved: ResolvedArticleCover, slotZeroIs
  *   nothing paints as a cover, so a PDF or a video at slot 0 never flashes as one. Every reference
  *   indexes `attachments` directly.
  *
- * An article whose cover was promoted while its references kept their 0.x numbers has no rule of
- * its own: it reads as A, each reference one file later. That is every article
- * `pubky-social-migrator` 1.0.0-rc.1 copied, and an rc.2 copy whose references are all
- * reference-style definitions or entity-escaped slots, which the migrator's textual scan does not
- * renumber and this app never wrote (ADR-0023, amended 2026-11-19).
+ * A reference that kept its 0.x number while the cover was promoted has no rule of its own: it
+ * reads as A, one file later. That is every reference of an article `pubky-social-migrator`
+ * 1.0.0-rc.1 copied, and in an rc.2 copy each reference written as a reference-style definition
+ * or with an entity-escaped slot, which the migrator's textual scan does not renumber and this
+ * app never wrote (ADR-0023, amended 2026-11-19).
  *
  * Pure and server-safe.
  */

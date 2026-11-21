@@ -612,8 +612,8 @@ After dev-sync 3 (2026-11-09):
 - The migrator's article scan (`pubky-social-migrator`, 1.0.0-rc.2) reads plain inline destinations only, so it
   promotes a 0.x cover without renumbering a reference written as a reference-style definition or with an
   entity-escaped slot. pubky.app never wrote those spellings, so only a 0.x article another client wrote has them;
-  since rule A′ was removed the reader shows such a copy's references one file later. The repair is in the migrator's
-  scan, not in the reader.
+  since rule A′ was removed the reader shows each such reference one file later, beside the plain references of the
+  same body, which are renumbered and read right. The repair is in the migrator's scan, not in the reader.
 - Migrated articles are served by Nexus in the 0.x content shape on `/v1` (QA-3 F-1, Nexus contract point 24); the app
   renders both shapes through the reader rules, so no change here.
 - Cleanup pass of the `/pub/pubky.app/` copies: not at release (meeting 2026-11-04: no app-side deletion; Nexus clears
@@ -929,7 +929,9 @@ where they changed the app.
   and now reads as rule A, as stored. When every reference of a 0.x article with an
   image at slot 0 is an entity-escaped slot or a reference-style definition, the migrator promotes the cover and
   renumbers nothing, and the reader, which A′ had shifted back, now shows each reference one file later
-  (_Follow-ups_; pubky.app never wrote those spellings). The app's own suites now run the rc.2 migrator on a 0.x
+  (_Follow-ups_; pubky.app never wrote those spellings). In a body that mixes those spellings with plain references
+  the migrator renumbers the plain ones only and the reader shows each of the others one file later; A′ never read
+  such a body right. The app's own suites now run the rc.2 migrator on a 0.x
   article with a cover and inline media, on one whose only reference is above slot 1 and on one whose slot 0 is referenced
   (`homeserver.social-migration.test.ts`), and the Cypress migration test seeds the first and checks the stored copy and
   the rendered article. The re-QA of a migrated article with a cover and inline media the adoption asked for ran as
