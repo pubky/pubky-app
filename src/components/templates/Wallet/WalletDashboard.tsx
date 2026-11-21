@@ -28,6 +28,7 @@ import { SavedBalance } from './WalletOpening';
 import { RecoveryWords, WalletPanel, type WalletTask } from './WalletPanel';
 import { WalletReceive, WalletSend } from './WalletPayments';
 import { ActivityReceipt, activityReceiptAmount, activityReceiptTitle, WalletBalance } from './WalletReceipt';
+import { useWalletRecovery, WalletRecoveryNotice } from './WalletRecoveryStatus';
 
 type ActivityEntry = { key: string; row: Activity };
 
@@ -86,6 +87,9 @@ export function WalletDashboard({
   connectionNotice,
   walletId,
   ringBacked,
+  recovering = false,
+  onMoveWallet,
+  onEnableRingUnlock,
   interrupted,
   onPaymentReviewed,
   lastBalance,
@@ -99,6 +103,9 @@ export function WalletDashboard({
   connectionNotice: ReactNode;
   walletId: string;
   ringBacked: boolean;
+  recovering?: boolean;
+  onMoveWallet?: () => void;
+  onEnableRingUnlock?: () => void;
   interrupted: 'legacy' | 'payment' | null;
   onPaymentReviewed: () => void;
   lastBalance: LastWalletBalance | null;
@@ -122,13 +129,26 @@ export function WalletDashboard({
   const [phrase, setPhrase] = useState('');
   // Discard wallet balances, invoice details and request status with the unlocked screen.
   const [queries] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } }));
+  const recovery = useWalletRecovery(session, queries, walletId, ready, recovering);
+  const canUseWallet = ready && !recovery.blocked;
+  const ringUnlockButton = onEnableRingUnlock && (
+    <Button
+      type="button"
+      variant="outline"
+      className="self-start"
+      disabled={task.busy || !ready}
+      onClick={onEnableRingUnlock}
+    >
+      Enable Ring unlock <KeyRound aria-hidden />
+    </Button>
+  );
   const [request, setRequest] = useState<ReceiveRequest | null>(null);
   const tracking = useReceiveTracker(session.client, queries, walletId, request);
   const savedActivity = useQuery(
     {
       queryKey: ['saved-activity', walletId],
       queryFn: () => session.savedActivity(walletId),
-      enabled: !ready,
+      enabled: !canUseWallet,
       staleTime: Infinity,
     },
     queries,
@@ -138,7 +158,7 @@ export function WalletDashboard({
     {
       queryKey: draftKey,
       queryFn: () => session.loadOfflineReceiveDraft(),
-      enabled: ready && view === 'receive',
+      enabled: canUseWallet && view === 'receive',
       staleTime: Infinity,
     },
     queries,
@@ -154,8 +174,10 @@ export function WalletDashboard({
   }, [ready]);
   const snapshot = useQuery(
     {
-      queryKey: ['wallet', walletId],
-      enabled: ready,
+      // A completed import must read its own balances and activity, even if the
+      // same device had already read an empty snapshot while awaiting its backup.
+      queryKey: ['wallet', walletId, recovery.imported],
+      enabled: canUseWallet,
       queryFn: async ({ queryKey }) => {
         const live = await session.client.snapshot();
         const previous = queries.getQueryData<{
@@ -204,8 +226,8 @@ export function WalletDashboard({
     queries,
   );
   useEffect(() => {
-    if (!ready) return;
-    const queryKey = ['wallet', walletId];
+    if (!canUseWallet) return;
+    const queryKey = ['wallet', walletId, recovery.imported];
     let active = true;
     let queued = false;
     const refreshPrimary = async () => {
@@ -263,13 +285,20 @@ export function WalletDashboard({
       unsubscribe();
       window.clearInterval(timer);
     };
-  }, [network, queries, ready, session, walletId]);
-  const data = snapshot.data;
+  }, [network, queries, canUseWallet, recovery.imported, session, walletId]);
+  const data = recovery.blocked ? undefined : snapshot.data;
+  const showLiveBalance = !!data && (data.balance.totalSats !== 0 || (recovery.checked && !recovery.heldChannels));
+  const savedBalance =
+    lastBalance?.totalSats === 0 && !showLiveBalance && (recovering || recovery.blocked || recovery.heldChannels)
+      ? null
+      : lastBalance;
   const entries = data?.entries ?? savedActivity.data?.map((row) => ({ key: row.id, row }));
   const receivePrimary = data?.primaries?.find((primary) => primary.isReceiveTarget) ?? data?.primary;
   const away = new Set(data?.away);
   const verifiedTotal =
-    data?.wallet?.id === walletId && data.wallet.network === network ? data.balance.totalSats : undefined;
+    showLiveBalance && data.wallet?.id === walletId && data.wallet.network === network
+      ? data.balance.totalSats
+      : undefined;
   const needsPaymentReview =
     interrupted === 'payment' ||
     (interrupted === 'legacy' &&
@@ -293,12 +322,18 @@ export function WalletDashboard({
     ? Math.max(0, data.balance.totalSats - data.balance.availableSats - data.balance.pendingSats)
     : 0;
   const notes = new Set(
-    data?.notes?.filter(
-      (note) =>
-        !note.endsWith(
-          ' sats are in a transfer that has not confirmed yet. You can send now. Bitcoin address payments complete after confirmation.',
-        ),
-    ),
+    data?.notes
+      ?.filter(
+        (note) =>
+          !note.endsWith(
+            ' sats are in a transfer that has not confirmed yet. You can send now. Bitcoin address payments complete after confirmation.',
+          ) &&
+          !(
+            recovery.heldChannels &&
+            note === 'Some funds are held while the wallet verifies its latest state. Still in your total.'
+          ),
+      )
+      .map(walletMessage),
   );
   // The engine includes the generic setup note even during an ordinary peer handshake.
   notes.delete('Wallet setup is not finished. Check Settings.');
@@ -326,7 +361,8 @@ export function WalletDashboard({
   const needsRecovery = data?.balance.pending?.erroredSats ?? 0;
   if (needsRecovery > 0) notes.add(`${bitcoinAmount(needsRecovery)} need recovery attention before they can be spent.`);
   const refresh = () => {
-    if (ready) void snapshot.refetch();
+    if (ready) void recovery.refresh();
+    if (canUseWallet) void snapshot.refetch();
   };
   const switchTo = (next: View) => {
     if (next === 'overview' && (view === 'send' || view === 'receive')) lastAction.current = view;
@@ -337,14 +373,15 @@ export function WalletDashboard({
   const notices = (
     <>
       {connectionNotice}
+      {ready && <WalletRecoveryNotice state={recovery.state} restored={recovering && recovery.imported} />}
       {notes.size > 0 && (
         <ul className="grid gap-1 rounded-xl bg-background p-3 text-sm text-muted-foreground">
           {Array.from(notes, (note) => (
-            <li key={note}>{walletMessage(note)}</li>
+            <li key={note}>{note}</li>
           ))}
         </ul>
       )}
-      {snapshot.isError && (
+      {snapshot.isError && !recovery.blocked && (
         <p role="status" className="text-sm text-muted-foreground">
           Could not refresh the wallet. {data ? 'Showing the last balance.' : 'Try refreshing.'}
         </p>
@@ -383,7 +420,7 @@ export function WalletDashboard({
     back: () => switchTo('overview'),
     lock,
     busy: task.busy,
-    balance: data && (
+    balance: showLiveBalance && (
       <p className="flex flex-wrap items-baseline gap-x-1.5 text-xs text-muted-foreground">
         {view === 'send' ? 'Available to send' : 'Total balance'}
         <span className="font-medium text-foreground tabular-nums">
@@ -417,7 +454,7 @@ export function WalletDashboard({
   if (view === 'send')
     return (
       <WalletSend
-        ready={ready}
+        ready={canUseWallet}
         client={session.client}
         navigation={navigation}
         activity={data?.activity}
@@ -431,7 +468,7 @@ export function WalletDashboard({
   if (view === 'receive')
     return (
       <WalletReceive
-        ready={ready}
+        ready={canUseWallet}
         client={session.client}
         navigation={navigation}
         task={task}
@@ -483,52 +520,67 @@ export function WalletDashboard({
           </Button>
         </div>
         <div>
-          {(data || !lastBalance) && <p className="text-sm text-muted-foreground">Total balance</p>}
-          {data ? (
+          {(showLiveBalance || !savedBalance) && <p className="text-sm text-muted-foreground">Total balance</p>}
+          {showLiveBalance ? (
             <p className="mt-1 text-4xl font-bold tracking-tight tabular-nums sm:text-6xl">
               <WalletBalance amount={data.balance.totalSats} />
             </p>
-          ) : lastBalance ? (
-            <SavedBalance balance={lastBalance} />
+          ) : savedBalance ? (
+            <SavedBalance balance={savedBalance} />
+          ) : recovery.blocked || (data && recovery.heldChannels) ? (
+            <p className="mt-1 text-muted-foreground">Balance awaiting verification</p>
           ) : !ready ? (
             <div aria-label="Balance pending" className="mt-2 h-9 w-36 rounded bg-secondary" />
-          ) : snapshot.isPending ? (
+          ) : snapshot.isPending || !recovery.checked ? (
             <Spinner size="sm" aria-label="Loading balance" />
           ) : (
             <p>Balance unavailable</p>
           )}
-          {data && (data.balance.availableSats !== data.balance.totalSats || data.balance.pendingSats > 0) && (
-            <dl className="mt-4 flex flex-wrap gap-x-6 gap-y-3 text-sm">
-              <div>
-                <dt className="text-muted-foreground">Available to send</dt>
-                <dd className="font-semibold tabular-nums">{bitcoinAmount(data.balance.availableSats)}</dd>
-              </div>
-              {data.balance.pendingSats > 0 && (
+          {showLiveBalance &&
+            (data.balance.availableSats !== data.balance.totalSats ||
+              data.balance.pendingSats > 0 ||
+              recovery.heldChannels) && (
+              <dl className="mt-4 flex flex-wrap gap-x-6 gap-y-3 text-sm">
                 <div>
-                  <dt className="text-muted-foreground">Pending</dt>
-                  <dd className="font-semibold tabular-nums">{bitcoinAmount(data.balance.pendingSats)}</dd>
+                  <dt className="text-muted-foreground">Available to send</dt>
+                  <dd className="font-semibold tabular-nums">{bitcoinAmount(data.balance.availableSats)}</dd>
                 </div>
-              )}
-              {unavailable > 0 && (
-                <div>
-                  <dt className="text-muted-foreground">Unavailable in channels</dt>
-                  <dd className="font-semibold tabular-nums">{bitcoinAmount(unavailable)}</dd>
-                </div>
-              )}
-            </dl>
-          )}
+                {data.balance.pendingSats > 0 && (
+                  <div>
+                    <dt className="text-muted-foreground">Pending</dt>
+                    <dd className="font-semibold tabular-nums">{bitcoinAmount(data.balance.pendingSats)}</dd>
+                  </div>
+                )}
+                {unavailable > 0 && (
+                  <div>
+                    <dt className="text-muted-foreground">Unavailable in channels</dt>
+                    <dd className="font-semibold tabular-nums">{bitcoinAmount(unavailable)}</dd>
+                  </div>
+                )}
+              </dl>
+            )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button ref={sendButton} variant="default" disabled={task.busy} onClick={() => switchTo('send')}>
+          <Button
+            ref={sendButton}
+            variant="default"
+            disabled={task.busy || recovery.blocked}
+            onClick={() => switchTo('send')}
+          >
             <ArrowUpRight /> Send
           </Button>
-          <Button ref={receiveButton} variant="default" disabled={task.busy} onClick={() => switchTo('receive')}>
+          <Button
+            ref={receiveButton}
+            variant="default"
+            disabled={task.busy || recovery.blocked}
+            onClick={() => switchTo('receive')}
+          >
             <ArrowDownLeft /> Receive
           </Button>
           <Button
             size="icon"
             variant="outline"
-            disabled={!ready || task.busy || snapshot.isFetching}
+            disabled={!ready || task.busy || snapshot.isFetching || recovery.refreshing}
             aria-label="Refresh wallet"
             onClick={refresh}
           >
@@ -549,10 +601,29 @@ export function WalletDashboard({
       {view === 'backup' && ringBacked && (
         <WalletPanel title="Pubky Ring recovery" icon={KeyRound}>
           <p className="text-sm text-muted-foreground">
-            Back up your Pubky identity in Ring. To recover on another device, close this wallet, sign in with the same
-            Pubky and choose Recover with Ring. Lightning recovery also needs current channel data from the recovery
-            peer.
+            Back up your Pubky identity in Ring. You’ll need the same identity to open your wallet on another device.
           </p>
+          {onMoveWallet && (
+            <Button
+              variant="outline"
+              className="self-start"
+              disabled={
+                !canUseWallet ||
+                task.busy ||
+                !recovery.checked ||
+                recovery.heldChannels ||
+                !snapshot.isSuccess ||
+                !!interrupted ||
+                !!data?.activity.some(
+                  (row) => row.kind === 'sent' && (row.status === 'pending' || row.status === 'uncertain'),
+                )
+              }
+              onClick={onMoveWallet}
+            >
+              Move to another device <ChevronRight />
+            </Button>
+          )}
+          {ringUnlockButton}
         </WalletPanel>
       )}
       {view === 'backup' && !ringBacked && (
@@ -574,6 +645,7 @@ export function WalletDashboard({
           >
             {phrase ? 'Hide recovery phrase' : 'Reveal recovery phrase'}
           </Button>
+          {ringUnlockButton}
         </WalletPanel>
       )}
       <WalletPanel title={!data && entries?.length ? 'Saved activity' : 'Activity'} icon={ActivityIcon}>
@@ -606,11 +678,13 @@ export function WalletDashboard({
         )}
         {!entries || (!data && entries.length === 0) ? (
           <p className="text-sm text-muted-foreground">
-            {ready
-              ? snapshot.isPending
-                ? 'Loading activity…'
-                : 'Activity unavailable.'
-              : 'Activity will update after sync.'}
+            {recovery.blocked
+              ? 'Activity will update after recovery.'
+              : ready
+                ? snapshot.isPending
+                  ? 'Loading activity…'
+                  : 'Activity unavailable.'
+                : 'Activity will update after sync.'}
           </p>
         ) : entries.length === 0 ? (
           <p className="text-sm text-muted-foreground">Your payments and requests will appear here.</p>

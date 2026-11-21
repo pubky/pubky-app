@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createHash, randomFillSync } from 'node:crypto';
 import { test } from 'node:test';
-import { openFiles, unlockVolume } from '../../src/core/services/wallet/storage.mjs';
+import { inspectFiles, openFiles, unlockVolume, unlockVolumeWithRing } from '../../src/core/services/wallet/storage.mjs';
 
 const account = 'y'.repeat(52);
 const password = 'durable storage integration fixture';
@@ -21,7 +21,7 @@ function filesystem(t) {
       }
       return {
         async getFile() {
-          return { size: files.get(name).length };
+          return { size: files.get(name).length, arrayBuffer: async () => files.get(name).slice().buffer };
         },
         async createSyncAccessHandle() {
           if (locks.has(name)) throw new DOMException('Busy', 'NoModificationAllowedError');
@@ -114,6 +114,84 @@ async function open() {
     throw error;
   }
 }
+
+const localScope = { network: 'regtest', deviceId: '00000000-0000-4000-a000-000000000001' };
+const approval = () => new Uint8Array(32).fill(91);
+
+test('password enrollment leaves wallet slots intact, retains both routes, and excludes the local wrapper from handoff', async (t) => {
+  const { files } = filesystem(t);
+  const first = await open();
+  first.volume.write('/wallet/address', Uint8Array.of(3));
+  const oldHead = files.get('second').slice();
+  await first.volume.enrollLocalUnlock(localScope, approval());
+  assert.deepEqual(files.get('second'), oldHead);
+  assert.equal(Buffer.from(files.get('ring-unlock-v1')).includes(approval()), false);
+  assert.equal(Buffer.from(first.volume.pack()).includes(localScope.deviceId), false);
+  first.volume.close();
+  assert.deepEqual((await inspectFiles(account)).ringUnlock, { ...localScope, passwordAvailable: true });
+  const ring = await openFiles(account);
+  const reopened = await unlockVolumeWithRing(ring, account, localScope, approval(), false);
+  assert.deepEqual(reopened.read('/wallet/address'), Uint8Array.of(3));
+  const wrapper = files.get('ring-unlock-v1').slice();
+  reopened.replaceFiles(new Map([['/wallet/imported', Uint8Array.of(5)]]));
+  assert.deepEqual(files.get('ring-unlock-v1'), wrapper);
+  reopened.close();
+  const viaPassword = await open();
+  assert.deepEqual(viaPassword.volume.read('/wallet/imported'), Uint8Array.of(5));
+  await assert.rejects(viaPassword.volume.enrollLocalUnlock(localScope, approval()), /already has/);
+  viaPassword.volume.close();
+  files.get('ring-unlock-v1')[0] ^= 1;
+  const fallback = await open();
+  assert.deepEqual(fallback.volume.read('/wallet/imported'), Uint8Array.of(5));
+  fallback.volume.close();
+});
+
+test('a Ring-only vault requires the approved local scope and keeps its credential separate from the volume', async (t) => {
+  const { files } = filesystem(t);
+  const first = await openFiles(account);
+  const vault = await unlockVolumeWithRing(first, account, localScope, approval(), true);
+  vault.close(); // A tab closed between writing its local wrapper and creating the wallet.
+  assert.deepEqual(await inspectFiles(account), { exists: false, ringUnlock: { ...localScope, passwordAvailable: false } });
+  const disk = await openFiles(account);
+  await assert.rejects(unlockVolume(disk, account, password), /Use Ring/);
+  await assert.rejects(unlockVolumeWithRing(disk, account, localScope, approval(), true), /already has/);
+  const resumed = await unlockVolumeWithRing(disk, account, localScope, approval(), false);
+  resumed.write('/wallet/address', Uint8Array.of(8));
+  resumed.close();
+  const stored = await openFiles(account);
+  await assert.rejects(unlockVolume(stored, account, password), { code: 'WALLET_PASSWORD' });
+  await assert.rejects(unlockVolumeWithRing(stored, account, { ...localScope, network: 'mainnet' }, approval(), false));
+  await assert.rejects(unlockVolumeWithRing(stored, account, { ...localScope, deviceId: crypto.randomUUID() }, approval(), false));
+  await assert.rejects(unlockVolumeWithRing(stored, 'b'.repeat(52), localScope, approval(), false));
+  await assert.rejects(unlockVolumeWithRing(stored, account, localScope, new Uint8Array(32), false));
+  const wrapper = files.get('ring-unlock-v1');
+  const tampered = JSON.parse(new TextDecoder().decode(wrapper));
+  tampered.passwordAvailable = true;
+  files.set('ring-unlock-v1', new TextEncoder().encode(JSON.stringify(tampered)));
+  await assert.rejects(unlockVolumeWithRing(stored, account, localScope, approval(), false));
+  files.set('ring-unlock-v1', wrapper);
+  const valid = await unlockVolumeWithRing(stored, account, localScope, approval(), false);
+  assert.deepEqual(valid.read('/wallet/address'), Uint8Array.of(8));
+  valid.close();
+});
+
+test('an interrupted wrapper write leaves the password wallet intact and can be enrolled again', async (t) => {
+  const fs = filesystem(t);
+  const original = await open();
+  original.volume.write('/wallet/address', Uint8Array.of(3));
+  fs.fault('ring-unlock-v1', 'partial');
+  await assert.rejects(original.volume.enrollLocalUnlock(localScope, approval()), /interrupted/);
+  original.volume.close();
+  assert.deepEqual(await inspectFiles(account), { exists: true });
+  const retry = await open();
+  assert.deepEqual(retry.volume.read('/wallet/address'), Uint8Array.of(3));
+  await retry.volume.enrollLocalUnlock(localScope, approval());
+  retry.volume.close();
+  const stored = await openFiles(account);
+  const recovered = await unlockVolumeWithRing(stored, account, localScope, approval(), false);
+  assert.deepEqual(recovered.read('/wallet/address'), Uint8Array.of(3));
+  recovered.close();
+});
 
 test('a large legacy wallet retains committed channel changes across crash, compaction and reopen', async (t) => {
   const { files } = filesystem(t);

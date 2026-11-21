@@ -14,6 +14,13 @@ export function walletIdentityScope(network: Network) {
   return `/priv/pubky-wallet/v1/${network}/wallet-key` as const;
 }
 
+export function localWalletUnlockScope(network: Network, deviceId: string) {
+  walletIdentityScope(network);
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(deviceId))
+    throw new WalletKeyApprovalError('Invalid wallet unlock device.');
+  return `/priv/pubky-wallet/v1/${network}/devices/${deviceId}/unlock` as const;
+}
+
 function accountGuard(account: string, signal: AbortSignal) {
   const initial = useAuthStore.getState();
   const session = initial.session;
@@ -87,10 +94,12 @@ export function startWalletKeyApproval(
   network: Network,
   signal: AbortSignal,
   consume: WalletKeyConsumer,
+  localDeviceId?: string,
 ) {
   const assertCurrent = accountGuard(account, signal);
   assertCurrent();
-  const path = walletIdentityScope(network);
+  const path =
+    localDeviceId === undefined ? walletIdentityScope(network) : localWalletUnlockScope(network, localDeviceId);
   // The synchronous SDK API uses a fresh in-memory PoP key. Its delegated alternative writes a key to IndexedDB.
   const flow = GrantAuthFlow.start(`${path}:e`, AuthFlowKind.signin(), {
     clientId: window.location.host + '/wallet',

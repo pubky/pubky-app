@@ -179,7 +179,7 @@ describe('Bitkit checkout funding', () => {
     expect(await screen.findByText('Your transfer to Bitkit completed.')).toBeVisible();
     expect(screen.getByText(/transaction ID approved/)).toBeVisible();
     expect(screen.queryByText(/transaction ID other/)).toBeNull();
-    expect(mocks.locked).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(mocks.locked).toHaveBeenCalledTimes(1));
   });
   it('reopens an existing transfer without a fresh recipient, quote or send', async () => {
     mocks.snapshot.mockResolvedValue({

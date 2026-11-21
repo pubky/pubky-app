@@ -1,0 +1,185 @@
+// The pinned runtime falls back to destroy after a shutdown error and the wallet
+// reports abandoned writes in its stop result. Observe the public instance methods
+// for this close only. All return values and rejections still go to the engine.
+import { sha256 } from '@noble/hashes/sha256';
+
+const uncertain = () =>
+  Object.assign(new Error('The wallet could not verify a clean shutdown.'), {
+    code: 'WALLET_CLOSE_UNCERTAIN',
+  });
+
+function quietChannels(node) {
+  return node
+    .getChannelManager()
+    .listChannels()
+    .every((channel) => {
+      const state = channel.getFullState();
+      return (
+        state.htlcs?.size === 0 &&
+        state.pendingLocalUpdates?.length === 0 &&
+        !state.needsCommitment &&
+        !state.awaitingLocalFeeCommitment &&
+        !state.awaitingClosingSig &&
+        !state.dataLossDetected &&
+        !state.stateUncertain &&
+        !state.restoreRevokedRisk &&
+        !state.restoreRecencyUnproven &&
+        !state.reestablishRecencyUnproven &&
+        !state.reestablishSecretMissing
+      );
+    });
+}
+
+export function createHandoffClose() {
+  let build;
+  let database;
+  let capture;
+  return {
+    extension: {
+      id: 'pubky-handoff',
+      version: '1',
+      api: 1,
+      attach({ wallet, network }) {
+        const current = { wallet, network, started: false, shutdown: false };
+        build = current;
+        return {
+          bind(node) {
+            current.node = node;
+          },
+          start() {
+            current.started = true;
+          },
+          stop(reason) {
+            current.shutdown = reason === 'shutdown';
+          },
+        };
+      },
+    },
+    opened(path, db) {
+      if (/^\/wallet\/(mainnet|testnet|regtest)\.db$/.test(path)) database = { path, db };
+      return db;
+    },
+    // The SQL adapter exports the live SQLite image synchronously for backup.
+    // Only this one-time worker-internal destination intercepts a save.
+    capture(path, bytes) {
+      if (!capture || capture.path !== path) return false;
+      try {
+        capture.digest = sha256(bytes);
+      } finally {
+        bytes.fill(0);
+      }
+      return true;
+    },
+    async close(engine, network) {
+      const current = build;
+      const db = database?.db;
+      if (
+        !current?.started ||
+        current.shutdown ||
+        current.network !== network ||
+        database?.path !== '/wallet/' + network + '.db' ||
+        !current.node ||
+        !db
+      )
+        throw uncertain();
+      const node = current.node;
+      const wallet = current.wallet;
+      const undo = [];
+      let nodeStopped = false;
+      let walletStopped = false;
+      let dbClosed = false;
+      let failed = false;
+      let backup;
+      const failure = () => {
+        failed = true;
+      };
+      function observe(target, name, wrap) {
+        const original = target[name];
+        if (typeof original !== 'function') throw uncertain();
+        const descriptor = Object.getOwnPropertyDescriptor(target, name);
+        target[name] = wrap(original);
+        undo.push(() => {
+          if (descriptor) Object.defineProperty(target, name, descriptor);
+          else delete target[name];
+        });
+      }
+      try {
+        node.on('node:error', failure);
+        observe(
+          node,
+          'gracefulShutdown',
+          (original) =>
+            function (...args) {
+              if (!quietChannels(node)) failure();
+              const result = original.apply(this, args);
+              result
+                .then(() => {
+                  nodeStopped = quietChannels(node);
+                }, failure)
+                .catch(failure);
+              return result;
+            },
+        );
+        observe(
+          wallet,
+          'stop',
+          (original) =>
+            function (...args) {
+              const result = original.apply(this, args);
+              result
+                .then((r) => {
+                  walletStopped = r?.isOk() === true && r.value === 'Wallet stopped.';
+                }, failure)
+                .catch(failure);
+              return result;
+            },
+        );
+        capture = { path: '/pubky/handoff-check/' + crypto.randomUUID() };
+        observe(
+          db,
+          'close',
+          (original) =>
+            function (...args) {
+              try {
+                if (!nodeStopped || !walletStopped || db.inTransaction !== false) failure();
+                const checked = db.prepare('PRAGMA quick_check').pluck().all();
+                if (checked.length !== 1 || checked[0] !== 'ok') failure();
+                const saved = new Set(db.prepare('SELECT channel_id FROM channels').pluck().all());
+                if (
+                  node
+                    .getChannelManager()
+                    .listChannels()
+                    .some((ch) => !saved.has(ch.getChannelId()?.toString('hex')))
+                )
+                  failure();
+                backup = db.backup(capture.path).catch(failure);
+              } catch {
+                failure();
+              }
+              const result = original.apply(this, args);
+              dbClosed = true;
+              return result;
+            },
+        );
+        await engine.close();
+        await backup;
+        if (
+          failed ||
+          build !== current ||
+          !current.shutdown ||
+          !nodeStopped ||
+          !walletStopped ||
+          !dbClosed ||
+          !capture.digest
+        ) {
+          throw uncertain();
+        }
+        return capture.digest;
+      } finally {
+        capture = undefined;
+        node.off('node:error', failure);
+        for (const restore of undo.reverse()) restore();
+      }
+    },
+  };
+}

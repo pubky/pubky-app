@@ -14,6 +14,8 @@ import { useAuthStore } from '@/stores/auth/auth.store';
 
 export type OfflineReceiveDraft = { id: string; amountSats: number; description: string; peer?: string };
 export type WalletDefaults = { network: Network; primaryUri: string; electrum: ElectrumServer };
+export type LocalUnlockScope = { network: Network; deviceId: string };
+export type LocalRingUnlock = LocalUnlockScope & { passwordAvailable: boolean };
 export type LastWalletBalance = { walletId: string; network: Network; totalSats: number; updatedAt: number };
 type UnlockedEvent = { id: number; event: 'unlocked'; account: string; balance: LastWalletBalance | null };
 type PrimaryChangeEvent = { event: 'primary-change'; account: string };
@@ -138,7 +140,7 @@ export class WalletSession {
     if (!worker || (this.closing && operation !== 'close')) return Promise.reject(locked());
     const id = ++this.counter;
     return new Promise((resolve, reject) => {
-      const notifyUnlocked = operation === 'open' && !!this.onUnlocked;
+      const notifyUnlocked = (operation === 'open' || operation === 'open-with-ring') && !!this.onUnlocked;
       const input = payload as { method?: string; path?: string } | undefined;
       const selected = this.onStartProgress && operation === 'request' ? this.client.connection.walletId : undefined;
       const startWalletId =
@@ -174,7 +176,12 @@ export class WalletSession {
   async inspect() {
     await pendingClosures.get(this.account)?.catch(() => {});
     this.onVisibility();
-    return this.call<{ exists: boolean; interrupted?: boolean; paymentNeedsReview?: boolean }>('inspect');
+    return this.call<{
+      exists: boolean;
+      interrupted?: boolean;
+      paymentNeedsReview?: boolean;
+      ringUnlock?: LocalRingUnlock;
+    }>('inspect');
   }
 
   async open(password: string) {
@@ -184,6 +191,29 @@ export class WalletSession {
     await pendingClosures.get(this.account)?.catch(() => {});
     this.onVisibility();
     return this.call<WalletDefaults>('open', password);
+  }
+
+  async prepareLocalUnlock(): Promise<LocalUnlockScope> {
+    await pendingClosures.get(this.account)?.catch(() => {});
+    if (!this.ownsAccount()) throw locked();
+    this.assertRingDevice?.();
+    return this.call('prepare-local-unlock');
+  }
+
+  async openWithRing(key: Uint8Array, scope: LocalUnlockScope, create = false): Promise<WalletDefaults> {
+    if (navigator.storage?.persist) void navigator.storage.persist().catch(() => {});
+    await pendingClosures.get(this.account)?.catch(() => {});
+    this.onVisibility();
+    return this.withRingKey(key, 'open-with-ring', { network: scope.network, deviceId: scope.deviceId, create });
+  }
+
+  async enrollLocalUnlock(key: Uint8Array, scope: LocalUnlockScope): Promise<LocalRingUnlock> {
+    try {
+      this.assertRingDevice?.();
+      return await this.withRingKey(key, 'enroll-local-unlock', { network: scope.network, deviceId: scope.deviceId });
+    } finally {
+      if (key.byteLength) key.fill(0);
+    }
   }
 
   async newBitcoinAddress(network: Network): Promise<string> {
@@ -363,28 +393,63 @@ export class WalletSession {
     return this.call('ring-device');
   }
 
-  ringBinding(): Promise<{ deviceId: string; network: Network } | null> {
+  ringBinding(): Promise<{
+    deviceId: string;
+    network: Network;
+    transferId?: string;
+    mode?: 'create' | 'restore';
+  } | null> {
     return this.call('ring-binding');
   }
 
-  /** Consumes the SDK's scoped key. Transfer a dedicated buffer so a WASM-backed view cannot detach other keys. */
-  async createRingWallet(
+  /** Only an isolated buffer is transferred; the SDK may store the original view in shared WASM memory. */
+  private async withRingKey<T>(
     key: Uint8Array,
-    network: Network,
-    mode: 'create' | 'restore',
-  ): Promise<{ id: string; network: Network }> {
+    operation: string,
+    fields: Record<string, unknown>,
+    transfer: Transferable[] = [],
+  ): Promise<T> {
     if (!(key instanceof Uint8Array) || key.length !== 32) {
       if (key instanceof Uint8Array) key.fill(0);
       throw new WalletError('Ring returned an invalid wallet key.', 'WALLET_RING_KEY');
     }
     const owned = new Uint8Array(key);
     key.fill(0);
-    const result = this.call<{ id: string; network: Network }>('ring-wallet', { key: owned, network, mode }, [
-      owned.buffer,
-    ]);
+    if (!this.ownsAccount()) {
+      owned.fill(0);
+      throw locked();
+    }
+    const result = this.call<T>(operation, { ...fields, key: owned }, [owned.buffer, ...transfer]);
     // A successful transfer detaches the sender. Closed workers and failed postMessage calls keep ownership.
     if (owned.byteLength) owned.fill(0);
     return result;
+  }
+
+  createRingWallet(key: Uint8Array, network: Network, mode: 'create' | 'restore') {
+    return this.withRingKey<{ id: string; network: Network }>(key, 'ring-wallet', { network, mode });
+  }
+
+  exportHandoff(key: Uint8Array, network: Network, transferId: string, sourceDeviceId: string) {
+    this.selectedWallet();
+    if (!this.assertRingDevice || this.offlineOperation) throw locked();
+    this.assertRingDevice();
+    return this.withRingKey<Uint8Array>(key, 'handoff-export', { network, transferId, sourceDeviceId });
+  }
+
+  importHandoff(
+    key: Uint8Array,
+    network: Network,
+    transferId: string,
+    sourceDeviceId: string,
+    targetDeviceId: string,
+    envelope: Uint8Array,
+  ) {
+    return this.withRingKey<{ id: string; network: Network; deviceId: string }>(
+      key,
+      'handoff-import',
+      { network, transferId, sourceDeviceId, targetDeviceId, envelope },
+      [envelope.buffer as ArrayBuffer],
+    );
   }
 
   close(): Promise<void> {

@@ -11,22 +11,49 @@ import { Label } from '@/atoms/Label/Label';
 import { Spinner } from '@/atoms/Spinner/Spinner';
 import { Textarea } from '@/atoms/Textarea/Textarea';
 import { walletMessage } from '@/libs/wallet/amount';
-import { acquireRingDevice } from '@/services/wallet/ring-enrollment';
-import { type LastWalletBalance, WalletSession, type WalletStartProgress } from '@/services/wallet/session';
+import {
+  acquireRingDevice,
+  cancelRingHandoff,
+  claimRingHandoff,
+  inspectRingDevice,
+  type RingDeviceLease,
+  type RingDeviceStatus,
+  RingEnrollmentError,
+} from '@/services/wallet/ring-enrollment';
+import {
+  type LastWalletBalance,
+  type LocalRingUnlock,
+  type LocalUnlockScope,
+  type WalletDefaults,
+  WalletSession,
+  type WalletStartProgress,
+} from '@/services/wallet/session';
 import { WalletDashboard } from './WalletDashboard';
+import { WalletDeviceSwitch } from './WalletDeviceSwitch';
+import { WalletKeyApproval } from './WalletKeyApproval';
 import { WalletOpening } from './WalletOpening';
 import { RecoveryWords, useWalletTask, WalletPanel, type WalletTask } from './WalletPanel';
+import { WalletCheckoutRecovery } from './WalletRecoveryStatus';
 import { type RingSetupMode, WalletRingSetup } from './WalletRingSetup';
 
 type ActiveWallet = { id: string; network: Network; session: WalletSession };
 type Stage =
   | { kind: 'checking' | 'unavailable' | 'framed' }
   | { kind: 'opening' }
-  | { kind: 'password'; exists: boolean }
+  | { kind: 'password'; exists: boolean; showPassword?: boolean }
+  | {
+      kind: 'local-approval';
+      scope: LocalUnlockScope;
+      operation: 'new' | 'unlock' | 'enroll';
+      previous: 'new' | 'existing';
+      active?: ActiveWallet;
+    }
   | { kind: 'empty'; defaults: CreateWalletInput; network: Network }
   | { kind: 'ring'; defaults: CreateWalletInput; network: Network; session: WalletSession; reserved: boolean }
   | { kind: 'backup'; id: string; network: Network; phrase: string }
   | { kind: 'start'; id: string; network: Network }
+  | { kind: 'switch'; session: WalletSession; network: Network; deviceId: string; status: RingDeviceStatus | 'offer' }
+  | { kind: 'switch-result'; result: 'offered' | 'received' | 'kept' | 'incomplete' }
   | ({ kind: 'wallet' } & ActiveWallet &
       (
         | { status: 'syncing'; progress?: WalletStartProgress }
@@ -35,6 +62,17 @@ type Stage =
       ));
 
 export type UnlockedWallet = { session: WalletSession; network: Network; task: WalletTask };
+
+async function closeDevice(session: WalletSession, held: RingDeviceLease | null) {
+  try {
+    await session.close();
+  } catch (error) {
+    // An uncertain engine shutdown must neither give away nor keep renewing the lease.
+    await held?.abandon();
+    throw error;
+  }
+  await held?.release();
+}
 
 function startMessage(progress?: WalletStartProgress) {
   if (!progress) return 'Connecting to Bitcoin and Lightning…';
@@ -57,11 +95,15 @@ export function WalletAccount({
 }) {
   const live = useRef<WalletSession | null>(null);
   const connecting = useRef(false);
+  const ringOpening = useRef(false);
+  const [localUnlock, setLocalUnlock] = useState<LocalRingUnlock>();
   const lease = useRef<Awaited<ReturnType<typeof acquireRingDevice>> | null>(null);
   const [ringBacked, setRingBacked] = useState<boolean | null>(null);
   const [stage, setStage] = useState<Stage>({ kind: 'checking' });
   const [lastBalance, setLastBalance] = useState<LastWalletBalance | null>(null);
   const [checkingDevice, setCheckingDevice] = useState(false);
+  const [recovering, setRecovering] = useState(false);
+  const [progress, setProgress] = useState<number>();
   const [notice, setNotice] = useState('');
   const [interrupted, setInterrupted] = useState<'legacy' | 'payment' | null>(null);
   const task = useWalletTask();
@@ -77,7 +119,7 @@ export function WalletAccount({
         (balance) => {
           if (live.current !== session) return;
           setLastBalance(balance);
-          setStage({ kind: 'opening' });
+          if (!ringOpening.current) setStage({ kind: 'opening' });
         },
         (progress) => {
           if (live.current !== session) return;
@@ -98,7 +140,8 @@ export function WalletAccount({
       (result) => {
         if (live.current !== session) return;
         setInterrupted(result.paymentNeedsReview ? 'payment' : result.interrupted ? 'legacy' : null);
-        setStage({ kind: 'password', exists: result.exists });
+        setLocalUnlock(result.ringUnlock);
+        setStage({ kind: 'password', exists: result.exists || Boolean(result.ringUnlock) });
       },
       (err: unknown) => {
         if (live.current !== session) return;
@@ -110,33 +153,35 @@ export function WalletAccount({
       live.current = null;
       const held = lease.current;
       lease.current = null;
-      void session
-        .close()
-        .then(() => held?.release())
-        .catch(() => undefined);
+      void closeDevice(session, held).catch(() => undefined);
     };
   }, [account]);
 
+  function lostDevice(session: WalletSession) {
+    if (live.current !== session) return;
+    live.current = null;
+    setNotice(
+      'The wallet locked because it could not keep exclusive access to this Ring wallet. Reopen it to reconnect.',
+    );
+    setStage({ kind: 'unavailable' });
+    return session.close();
+  }
   async function holdDevice(
     session: WalletSession,
     network: Network,
     deviceId: string,
     intent: RingSetupMode | 'open',
+    receipt?: string,
   ) {
     if (live.current !== session) throw new Error('Reopen your wallet to continue.');
     if (lease.current) {
       lease.current.assertActive();
       return lease.current;
     }
-    const held = await acquireRingDevice(account, network, deviceId, intent, () => {
-      if (live.current !== session) return;
-      live.current = null;
-      setNotice(
-        'The wallet locked because it could not keep exclusive access to this Ring wallet. Reopen it to reconnect.',
-      );
-      setStage({ kind: 'unavailable' });
-      return session.close();
-    });
+    const lost = () => lostDevice(session);
+    const held = receipt
+      ? await acquireRingDevice(account, network, deviceId, intent, lost, receipt)
+      : await acquireRingDevice(account, network, deviceId, intent, lost);
     if (live.current !== session) {
       await held.release();
       throw new Error('Reopen your wallet to continue.');
@@ -171,6 +216,106 @@ export function WalletAccount({
     reset();
   }
 
+  async function switchDevice(
+    session: WalletSession,
+    network: Network,
+    deviceId: string,
+    status: RingDeviceStatus | 'offer',
+    key: Uint8Array,
+    assertApproval: () => void,
+  ) {
+    function current() {
+      assertApproval();
+      if (live.current !== session) throw new RingEnrollmentError('Reopen the wallet to continue.');
+    }
+    function report(completed: number, total: number) {
+      if (live.current === session && total > 0) setProgress(Math.floor((100 * completed) / total));
+    }
+    current();
+    setProgress(undefined);
+    let result: 'offered' | 'received' | 'kept' | 'incomplete' = 'incomplete';
+    let resumeSource: string | undefined;
+    try {
+      if (status === 'offer') {
+        const held = lease.current;
+        if (!held) throw new RingEnrollmentError('Reopen the wallet on this device before moving it.');
+        held.assertActive();
+        const transferId = crypto.randomUUID();
+        const envelope = await session.exportHandoff(key, network, transferId, deviceId);
+        try {
+          current();
+          await held.publishHandoff(transferId, envelope, report);
+          result = 'offered';
+        } finally {
+          envelope.fill(0);
+        }
+      } else if (status.state === 'handoff-ready' && status.sourceDeviceId === deviceId) {
+        await cancelRingHandoff(account, network, deviceId, status.transferId);
+        result = 'kept';
+      } else if (status.state === 'handoff-ready') {
+        const held = await claimRingHandoff(
+          account,
+          network,
+          deviceId,
+          status.transferId,
+          () => lostDevice(session),
+          async (envelope, sourceDeviceId) => {
+            current();
+            if (sourceDeviceId !== status.sourceDeviceId)
+              throw new RingEnrollmentError('The transfer has changed. Reopen the wallet.');
+            const installed = await session.importHandoff(
+              key,
+              network,
+              status.transferId,
+              sourceDeviceId,
+              deviceId,
+              envelope,
+            );
+            if (installed.deviceId !== deviceId || installed.network !== network)
+              throw new RingEnrollmentError('The installed wallet did not match this device.');
+            current();
+          },
+          report,
+        );
+        lease.current = held;
+        result = 'received';
+      } else {
+        throw new RingEnrollmentError('Prepare the transfer on your other device first.');
+      }
+    } catch (error) {
+      if (live.current === session) {
+        setNotice(error instanceof Error ? walletMessage(error.message) : 'Reopen the wallet to check the transfer.');
+        // This refusal is issued before shutdown starts or any transfer is published.
+        if (
+          status === 'offer' &&
+          error instanceof Error &&
+          'code' in error &&
+          error.code === 'WALLET_HANDOFF_PENDING'
+        ) {
+          resumeSource = session.client.connection.walletId ?? undefined;
+        }
+      }
+    } finally {
+      key.fill(0);
+      if (resumeSource && live.current === session) {
+        setProgress(undefined);
+        setStage({ kind: 'wallet', status: 'ready', id: resumeSource, session, network });
+      } else {
+        const held = lease.current;
+        lease.current = null;
+        try {
+          await closeDevice(session, held);
+        } catch {
+          // The homeserver lease expires if shutdown or its acknowledgement is interrupted.
+        }
+        if (live.current === session) {
+          setProgress(undefined);
+          setStage({ kind: 'switch-result', result });
+        }
+      }
+    }
+  }
+
   async function start(session: WalletSession, id: string, network: Network) {
     if (live.current !== session) return;
     session.client.selectWallet(id);
@@ -182,7 +327,15 @@ export function WalletAccount({
       if (binding.network !== network) throw new Error('The Ring wallet and this Bitcoin network do not match.');
       setCheckingDevice(true);
       try {
-        await holdDevice(session, network, binding.deviceId, 'open');
+        await holdDevice(session, network, binding.deviceId, 'open', binding.transferId);
+        setRecovering(binding.mode === 'restore' && !binding.transferId);
+      } catch (error) {
+        if (!(error instanceof RingEnrollmentError) || live.current !== session) throw error;
+        const status = await inspectRingDevice(account, network, binding.deviceId);
+        if (status.state !== 'handoff-ready' && status.state !== 'other-device') throw error;
+        if (live.current === session)
+          setStage({ kind: 'switch', session, network, deviceId: binding.deviceId, status });
+        return;
       } finally {
         if (live.current === session) setCheckingDevice(false);
       }
@@ -209,10 +362,13 @@ export function WalletAccount({
     } catch (error) {
       if (live.current === session) {
         setLastBalance(null);
-        setStage({ kind: 'password', exists: stage.kind === 'password' && stage.exists });
+        setStage({ kind: 'password', exists: stage.kind === 'password' && stage.exists, showPassword: true });
       }
       throw error;
     }
+    await opened(session, defaults);
+  }
+  async function opened(session: WalletSession, defaults: WalletDefaults) {
     if (live.current !== session) return;
     let records: WalletRecord[];
     try {
@@ -227,6 +383,50 @@ export function WalletAccount({
       const binding = await session.ringBinding();
       if (live.current !== session) return;
       setStage({ kind: 'ring', defaults, network: defaults.network, session, reserved: Boolean(binding) });
+    }
+  }
+  async function requestLocalApproval(operation: 'new' | 'unlock' | 'enroll', active?: ActiveWallet) {
+    const session = live.current;
+    if (!session) return;
+    const scope = operation === 'unlock' ? localUnlock : await session.prepareLocalUnlock();
+    if (!scope || live.current !== session) return;
+    setStage({ kind: 'local-approval', scope, operation, previous: operation === 'new' ? 'new' : 'existing', active });
+  }
+
+  async function approvedLocal(key: Uint8Array, assertCurrent: () => void) {
+    if (stage.kind !== 'local-approval') return;
+    const { operation, scope, active } = stage;
+    const session = live.current;
+    if (!session) return;
+    assertCurrent();
+    try {
+      if (operation === 'enroll' && active) {
+        lease.current?.assertActive();
+        const enrolled = await session.enrollLocalUnlock(key, scope);
+        assertCurrent();
+        setLocalUnlock(enrolled);
+        setNotice('Ring unlock is ready on this device. Your password still works.');
+        setStage({ ...active, kind: 'wallet', status: 'ready' });
+      } else {
+        ringOpening.current = true;
+        const defaults = await session.openWithRing(key, scope, operation === 'new');
+        assertCurrent();
+        if (live.current !== session) return;
+        if (operation === 'new') setLocalUnlock({ ...scope, passwordAvailable: false });
+        await opened(session, defaults);
+      }
+    } catch (error) {
+      // The local unlock record can reach disk before a relay failure. A fresh
+      // inspection picks up that credential and never retries a consumed setup intent.
+      const held = lease.current;
+      lease.current = null;
+      await closeDevice(session, held).catch(() => {});
+      if (live.current === session) {
+        setNotice(error instanceof Error ? walletMessage(error.message) : 'Reopen the wallet to check Ring unlock.');
+        setStage({ kind: 'unavailable' });
+      }
+    } finally {
+      ringOpening.current = false;
     }
   }
   async function create(mnemonic?: string) {
@@ -246,7 +446,10 @@ export function WalletAccount({
     setRingBacked(false);
     setStage({ kind: 'start', id: created.id, network: created.network });
     setNotice(created.warnings?.join(' ') || '');
-    if (mnemonic) return start(session, created.id, created.network);
+    if (mnemonic) {
+      setRecovering(true);
+      return start(session, created.id, created.network);
+    }
     const phrase = created.mnemonic || (await session.client.getRecoveryPhrase());
     if (live.current === session) setStage({ kind: 'backup', id: created.id, network: created.network, phrase });
   }
@@ -308,8 +511,127 @@ export function WalletAccount({
           Try again
         </Button>
       )}
-      {stage.kind === 'password' && (
-        <PasswordForm exists={stage.exists} busy={task.busy} submit={(password) => task.run(() => unlock(password))} />
+      {stage.kind === 'password' && !stage.showPassword && (!stage.exists || localUnlock) && (
+        <WalletPanel title={stage.exists ? 'Unlock wallet' : 'Unlock this wallet with Ring'} icon={KeyRound}>
+          <p className="text-sm text-muted-foreground">
+            {stage.exists
+              ? 'Approve in Pubky Ring to open your wallet on this device.'
+              : 'Use Pubky Ring to protect the wallet in this browser. Each unlock needs your approval.'}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="brand"
+              disabled={task.busy}
+              onClick={() => void task.run(() => requestLocalApproval(stage.exists ? 'unlock' : 'new'))}
+            >
+              {stage.exists ? 'Unlock with Ring' : 'Set up with Ring'}
+            </Button>
+            {(!stage.exists || localUnlock?.passwordAvailable) && (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={task.busy}
+                onClick={() => setStage({ ...stage, showPassword: true })}
+              >
+                Use a password instead
+              </Button>
+            )}
+          </div>
+        </WalletPanel>
+      )}
+      {stage.kind === 'password' && (stage.showPassword || (stage.exists && !localUnlock)) && (
+        <PasswordForm
+          exists={stage.exists}
+          busy={task.busy}
+          submit={(password) => task.run(() => unlock(password))}
+          useRing={
+            !stage.exists || localUnlock
+              ? () => void task.run(() => requestLocalApproval(stage.exists ? 'unlock' : 'new'))
+              : undefined
+          }
+        />
+      )}
+      {stage.kind === 'local-approval' && (
+        <WalletKeyApproval
+          account={account}
+          network={stage.scope.network}
+          localDeviceId={stage.scope.deviceId}
+          title={stage.operation === 'unlock' ? 'Unlock with Ring' : 'Set up Ring unlock'}
+          description={
+            stage.operation === 'unlock'
+              ? 'Approve this request in Ring to unlock this browser’s wallet.'
+              : 'Approve the device unlock permission in Ring. It protects the encrypted wallet in this browser.'
+          }
+          workingLabel={stage.operation === 'unlock' ? 'Opening your wallet…' : 'Protecting your wallet…'}
+          onKey={approvedLocal}
+          onCancel={() =>
+            stage.active
+              ? setStage({ ...stage.active, kind: 'wallet', status: 'ready' })
+              : setStage({ kind: 'password', exists: stage.previous === 'existing' })
+          }
+        />
+      )}
+      {stage.kind === 'switch' && (
+        <WalletDeviceSwitch
+          key={stage.status === 'offer' ? 'offer' : stage.status.state}
+          account={account}
+          network={stage.network}
+          action={
+            stage.status === 'offer'
+              ? 'offer'
+              : stage.status.state === 'handoff-ready'
+                ? stage.status.sourceDeviceId === stage.deviceId
+                  ? 'keep'
+                  : 'take'
+                : 'elsewhere'
+          }
+          progress={progress}
+          onApprove={(key, assertCurrent) =>
+            switchDevice(stage.session, stage.network, stage.deviceId, stage.status, key, assertCurrent)
+          }
+          onRefresh={async () => {
+            const status = await inspectRingDevice(account, stage.network, stage.deviceId);
+            if (live.current !== stage.session) return;
+            if (status.state === 'this-device') lock();
+            else setStage({ ...stage, status });
+          }}
+          onClose={() => {
+            const id = stage.session.client.connection.walletId;
+            if (stage.status === 'offer' && id && lease.current) {
+              setStage({ kind: 'wallet', status: 'ready', id, session: stage.session, network: stage.network });
+            } else lock();
+          }}
+        />
+      )}
+      {stage.kind === 'switch-result' && (
+        <WalletPanel
+          title={
+            {
+              offered: 'Ready on your other device',
+              received: 'Wallet moved to this device',
+              kept: 'Wallet kept on this device',
+              incomplete: 'Check your transfer',
+            }[stage.result]
+          }
+          icon={WalletIcon}
+        >
+          <p className="text-sm text-muted-foreground" role="status">
+            {
+              {
+                offered:
+                  'Sign in to the same Pubky account on your other device. Open Wallet and choose “Use wallet on this device”. Payments are paused here.',
+                received: 'Unlock your wallet to reconnect your channels and see your Activity.',
+                kept: 'The transfer was cancelled. You can unlock your wallet here.',
+                incomplete:
+                  'Reopen Wallet to check which device owns it. Keep the wallet data in both browsers until the move finishes.',
+              }[stage.result]
+            }
+          </p>
+          <Button type="button" variant="brand" className="self-start" onClick={lock}>
+            {stage.result === 'offered' ? 'Done' : stage.result === 'incomplete' ? 'Reopen wallet' : 'Unlock wallet'}
+          </Button>
+        </WalletPanel>
       )}
       {stage.kind === 'empty' && (
         <CreateForm
@@ -326,6 +648,11 @@ export function WalletAccount({
           account={account}
           network={stage.network}
           session={stage.session}
+          progress={progress}
+          onHandoff={(status, deviceId, key, assertCurrent) =>
+            switchDevice(stage.session, stage.network, deviceId, status, key, assertCurrent)
+          }
+          localRingOnly={Boolean(localUnlock && !localUnlock.passwordAvailable)}
           onPhrase={
             stage.reserved
               ? undefined
@@ -341,12 +668,7 @@ export function WalletAccount({
                   });
                 }
           }
-          onCancel={() => {
-            void stage.session
-              .close()
-              .then(reset)
-              .catch(() => setNotice('Reopen the wallet to continue.'));
-          }}
+          onCancel={lock}
           onKey={async (key, assertCurrent, mode, deviceId) => {
             const session = stage.session;
             assertCurrent();
@@ -357,6 +679,7 @@ export function WalletAccount({
             if (live.current !== session) return;
             assertCurrent();
             setRingBacked(true);
+            setRecovering(mode === 'restore');
             await task.run(() => start(session, created.id, created.network));
           }}
         />
@@ -433,7 +756,9 @@ export function WalletAccount({
                   before sending it again.
                 </p>
               )}
-              {renderReady({ session: stage.session, network: stage.network, task })}
+              <WalletCheckoutRecovery walletId={stage.id} session={stage.session} recovering={recovering}>
+                {renderReady({ session: stage.session, network: stage.network, task })}
+              </WalletCheckoutRecovery>
             </>
           ) : (
             connectionNotice
@@ -446,6 +771,33 @@ export function WalletAccount({
             connectionNotice={connectionNotice}
             walletId={stage.id}
             ringBacked={ringBacked === true}
+            recovering={recovering}
+            onEnableRingUnlock={
+              !localUnlock && stage.status === 'ready'
+                ? () =>
+                    void task.run(() =>
+                      requestLocalApproval('enroll', { id: stage.id, network: stage.network, session: stage.session }),
+                    )
+                : undefined
+            }
+            onMoveWallet={
+              ringBacked && stage.status === 'ready'
+                ? () =>
+                    void task.run(async () => {
+                      const deviceId = await stage.session.ringDeviceId();
+                      if (live.current !== stage.session) return;
+                      lease.current?.assertActive();
+                      setNotice('');
+                      setStage({
+                        kind: 'switch',
+                        status: 'offer',
+                        deviceId,
+                        session: stage.session,
+                        network: stage.network,
+                      });
+                    })
+                : undefined
+            }
             interrupted={interrupted}
             onPaymentReviewed={() => setInterrupted(null)}
             lastBalance={
@@ -470,10 +822,12 @@ function PasswordForm({
   exists,
   busy,
   submit,
+  useRing,
 }: {
   exists: boolean;
   busy: boolean;
   submit: (value: string) => Promise<void>;
+  useRing?: () => void;
 }) {
   const [password, setPassword] = useState('');
   const [confirmation, setConfirmation] = useState('');
@@ -530,6 +884,11 @@ function PasswordForm({
           {busy ? 'Unlocking this browser…' : exists ? 'Unlock wallet' : 'Continue'} <ArrowRight />
         </Button>
       </form>
+      {useRing && (
+        <Button type="button" variant="ghost" className="self-start" disabled={busy} onClick={useRing}>
+          Use Ring instead
+        </Button>
+      )}
     </WalletPanel>
   );
 }

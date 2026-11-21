@@ -35,7 +35,7 @@ export function useReceiveTracker(
   // balance and activity. Adding an invoice amount here could double-count it or omit fees.
   useEffect(() => {
     if (!phase || phase === 'waiting') return;
-    const snapshot = { queryKey: ['wallet', walletId], exact: true };
+    const snapshot = { queryKey: ['wallet', walletId] };
     const refresh = () => {
       void queries.invalidateQueries(snapshot, { cancelRefetch: false });
     };

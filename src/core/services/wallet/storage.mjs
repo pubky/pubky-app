@@ -1,5 +1,6 @@
 import { gcm } from '@noble/ciphers/aes';
 import { sha256 } from '@noble/hashes/sha256';
+import { localUnlockDescriptor, parseLocalUnlock, unwrapLocalUnlock, wrapLocalUnlock } from './local-unlock.mjs';
 import { checkpointDigest, createOverlay, maxPackedBytes, packFiles, unpackFiles } from './vault-overlay.mjs';
 
 // Each acknowledgement follows two synchronous flushes. Write the inactive
@@ -72,6 +73,20 @@ async function optionalHandle(get) {
   }
 }
 
+async function readLocalUnlock(dir, allowDamaged = false) {
+  const handle = await optionalHandle(() => dir.getFileHandle('ring-unlock-v1'));
+  if (!handle) return null;
+  const file = await handle.getFile();
+  if (!file.size) return null;
+  if (file.size > 1024) {
+    if (allowDamaged) return null;
+    throw failure('The local Ring unlock record is damaged.');
+  }
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  try { return parseLocalUnlock(bytes); }
+  catch (error) { if (allowDamaged) return null; throw error; }
+}
+
 // Inspect only metadata under the journal lease. Unlock always verifies the full committed slot.
 export async function inspectFiles(account) {
   const dir = await optionalHandle(() => walletDirectory(account, false));
@@ -94,8 +109,12 @@ export async function inspectFiles(account) {
     const marker = await fileSize('active');
     // Older builds marked every open wallet with one byte. Two bytes identify
     // a confirmed send whose result has not been acknowledged by the client.
-    if (marker > 1) return { exists, interrupted: true, paymentNeedsReview: true };
-    return { exists, ...(marker ? { interrupted: true } : {}) };
+    // A damaged optional wrapper never prevents using an existing password.
+    const unlock = await readLocalUnlock(dir, true);
+    return {
+      exists, ...(marker ? { interrupted: true } : {}), ...(marker > 1 ? { paymentNeedsReview: true } : {}),
+      ...(unlock ? { ringUnlock: localUnlockDescriptor(unlock) } : {}),
+    };
   } catch (error) {
     throw storageError(error);
   } finally {
@@ -138,6 +157,29 @@ export async function openFiles(account) {
     }
     return {
       read: () => sealed,
+      readLocalUnlock: (allowDamaged) => readLocalUnlock(directory, allowDamaged),
+      async writeLocalUnlock(bytes) {
+        // Only a password-authenticated enrollment or a new empty vault reaches
+        // this writer. A partial failed enrollment can be retried under the journal lease.
+        if (await readLocalUnlock(directory, true)) throw failure('This wallet already has a local Ring unlock record.');
+        const file = await directory.getFileHandle('ring-unlock-v1', { create: true });
+        if (file.createWritable) {
+          const stream = await file.createWritable();
+          try {
+            await stream.write(bytes);
+            await stream.close();
+          } catch (error) {
+            await stream.abort().catch(() => {});
+            throw error;
+          }
+        } else {
+          const handle = await syncHandle(file);
+          try { write(handle, bytes, 0); } finally { handle.close(); }
+        }
+        const saved = await file.getFile();
+        if (saved.size !== bytes.length || !new Uint8Array(await saved.arrayBuffer()).every((b, i) => b === bytes[i]))
+          throw failure('Ring unlock could not be saved on this device.');
+      },
       async openCheckpoint(create) {
         const file = await directory.getFileHandle('checkpoint', { create });
         const handle = await syncHandle(file);
@@ -148,6 +190,7 @@ export async function openFiles(account) {
           clear: () => flushAtLength(handle, 0),
         };
       },
+      paymentNeedsReview: () => active.getSize() !== 0,
       markPayment() {
         const previous = active.getSize();
         write(active, Uint8Array.of(1, 1), 0);
@@ -179,6 +222,9 @@ export async function openFiles(account) {
 
 export async function unlockVolume(store, account, password) {
   const sealed = store.read();
+  if (!sealed && await store.readLocalUnlock?.(true)) {
+    throw failure('Use Ring to unlock this browser’s wallet.', 'WALLET_LOCAL_UNLOCK');
+  }
   if (typeof password !== 'string' || !password.length || (!sealed && password.length < 12)) {
     throw failure('Use a wallet password of at least 12 characters.', 'WALLET_PASSWORD');
   }
@@ -189,6 +235,29 @@ export async function unlockVolume(store, account, password) {
   const key = new Uint8Array(
     await crypto.subtle.deriveBits({ name: 'PBKDF2', salt, iterations: 600000, hash: 'SHA-256' }, material, 256),
   );
+  return openVolume(store, account, key, salt, true);
+}
+
+export async function unlockVolumeWithRing(store, account, scope, ringKey, create) {
+  const sealed = store.read();
+  const record = await store.readLocalUnlock(create && !sealed);
+  if (create) {
+    if (record || sealed) throw failure('This device already has a wallet. Unlock it before enabling Ring.');
+    const key = crypto.getRandomValues(new Uint8Array(32));
+    const salt = crypto.getRandomValues(new Uint8Array(SALT_BYTES));
+    try {
+      const envelope = wrapLocalUnlock(account, scope, ringKey, key, salt, false);
+      await store.writeLocalUnlock(envelope);
+      return await openVolume(store, account, key, salt);
+    } catch (error) { key.fill(0); throw error; }
+  }
+  if (!record) throw failure('This wallet has not enabled Ring unlock.');
+  const { key, salt } = unwrapLocalUnlock(account, scope, ringKey, record, sealed?.subarray(0, SALT_BYTES));
+  return openVolume(store, account, key, salt);
+}
+
+async function openVolume(store, account, key, salt, passwordUnlocked = false) {
+  const sealed = store.read();
   const context = utf8.encode('Pubky wallet v1/' + account);
   let files = new Map();
   let checkpoint;
@@ -317,6 +386,15 @@ export async function unlockVolume(store, account, password) {
     }
   }
   return {
+    async enrollLocalUnlock(scope, ringKey) {
+      check();
+      // Password wallets keep their original KDF and committed slots. The
+      // separate wrapper grants access to this same key after Ring approval.
+      if (!passwordUnlocked || !store.read()) throw failure('Unlock with your wallet password before enabling Ring.');
+      const envelope = wrapLocalUnlock(account, scope, ringKey, key, salt, true);
+      await store.writeLocalUnlock(envelope);
+      return localUnlockDescriptor(parseLocalUnlock(envelope));
+    },
     read(path) {
       check();
       return files.get(path)?.slice() ?? null;
@@ -347,6 +425,30 @@ export async function unlockVolume(store, account, password) {
     list(prefix = '') {
       check();
       return [...files.keys()].filter((path) => path.startsWith(prefix));
+    },
+    pack() {
+      check();
+      return packFiles(files);
+    },
+    // One full head replaces every file. The active slot/checkpoint stays
+    // authoritative until the new slot and its journal digest have flushed.
+    replaceFiles(replacement) {
+      check();
+      try {
+        commit(packFiles(replacement));
+      } catch (error) {
+        available = false;
+        throw error;
+      }
+      for (const bytes of files.values()) bytes.fill(0);
+      files = replacement;
+      headUsesOverlay = false;
+      overlay?.wipe();
+      overlay = undefined;
+      pendingCheckpoint = undefined;
+      try {
+        checkpoint?.clear();
+      } catch {}
     },
     compact() {
       check();

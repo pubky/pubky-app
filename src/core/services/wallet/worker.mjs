@@ -3,10 +3,12 @@ import { createSqlJsDatabaseFactory } from '@beignet/portable-engine/sqljs';
 import { createAwayReceipts } from './away-receipts.mjs';
 import { lastBalance, rememberBalance } from './balance.mjs';
 import { primaryChannelReadiness } from './channel-readiness.mjs';
+import { assertHandoffReady, authorizeHandoff, installHandoff, sealHandoff, verifyHandoffSource } from './handoff.mjs';
+import { createHandoffClose } from './handoff-close.mjs';
 import { provisionRingWallet, ringBinding, ringDeviceId } from './ring.mjs';
 import { createStartupScan } from './startup-scan.mjs';
 import { createStartupSockets } from './startup-sockets.mjs';
-import { inspectFiles, openFiles, unlockVolume } from './storage.mjs';
+import { inspectFiles, openFiles, unlockVolume, unlockVolumeWithRing } from './storage.mjs';
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -36,6 +38,12 @@ let connectionIssue;
 let activeGrant;
 let ringOperation;
 let activeRequests = 0;
+let requestsDrained;
+let handoffStopped = false;
+let engineFilesSealed = false;
+let lateWrite = false;
+let pendingLocalUnlock;
+const handoffClose = createHandoffClose();
 // An unreviewed earlier payment survives a later successful send.
 let sending = false;
 let previousPaymentMarker = 0;
@@ -89,12 +97,31 @@ async function connection() {
   return grant;
 }
 
+// After close, a late engine callback can never write into the source snapshot
+// or a newly installed destination. The worker retains its own OPFS lease.
+function engineVolume(writing = false) {
+  if (engineFilesSealed) {
+    if (writing) lateWrite = true;
+    throw busy();
+  }
+  return volume;
+}
+const engineFiles = {
+  read: (path) => engineVolume().read(path),
+  list: (prefix) => engineVolume().list(prefix),
+  write: (path, bytes) => engineVolume(true).write(path, bytes),
+  remove: (path) => engineVolume(true).remove(path),
+  rename: (from, to) => engineVolume(true).rename(from, to),
+};
+
 // Loading the static SQL module neither opens a database nor reads a wallet file.
 function prepareDatabase() {
   if (!compiledDatabase) {
     compiledDatabase = createSqlJsDatabaseFactory({
-      load: (path) => volume.read(path),
-      save: (path, data) => volume.write(path, data),
+      load: (path) => engineFiles.read(path),
+      save: (path, data) => {
+        if (!handoffClose.capture(path, data)) engineFiles.write(path, data);
+      },
       locateFile: (name) => new URL(name, self.location.href).href,
     });
     void compiledDatabase.catch(() => { compiledDatabase = undefined; });
@@ -146,14 +173,14 @@ function renew(grant) {
   renewTimer = setTimeout(async () => {
     try {
       const next = await connection();
-      if (closing || grantAbort?.signal.aborted) return;
+      if (closing || handoffStopped || grantAbort?.signal.aborted) return;
       // Never move an existing wallet's authenticated peer to a different route.
       if (!sameDeployment(next, grant)) throw configurationError();
       grant.token = next.token;
       grant.expiresAt = next.expiresAt;
     } catch {
       // Established sockets continue. The relay verifies expiry on every new dial.
-      if (!closing) renewTimer = setTimeout(() => renew(grant), 10000);
+      if (!closing && !handoffStopped) renewTimer = setTimeout(() => renew(grant), 10000);
       return;
     }
     renew(grant);
@@ -164,16 +191,53 @@ function rejectIfClosing() {
   if (closing) throw Object.assign(new Error('The wallet is locked.'), { code: 'WALLET_CLOSED' });
 }
 
-async function open(account, password, onUnlocked) {
+function verifyLocalUnlockIntent(account, scope, mode) {
+  const plan = pendingLocalUnlock;
+  if (!plan || plan.account !== account || plan.mode !== mode ||
+      plan.deviceId !== scope?.deviceId || plan.network !== scope?.network) {
+    throw Object.assign(new Error('Start Ring unlock setup again on this device.'), { code: 'WALLET_LOCAL_UNLOCK' });
+  }
+  pendingLocalUnlock = undefined;
+}
+
+async function prepareLocalUnlock(account) {
+  if (engine) {
+    if (account !== owner || !activeGrant || connectionIssue || await activeStore.readLocalUnlock(true)) throw busy();
+  } else {
+    const state = await inspectFiles(account);
+    if (state.exists || state.ringUnlock) throw new Error('Unlock your current wallet before enabling Ring.');
+  }
+  const grant = engine ? activeGrant : await prepareGrant();
+  rejectIfClosing();
+  const scope = { network: grant.network, deviceId: crypto.randomUUID() };
+  pendingLocalUnlock = { ...scope, mode: engine ? 'enroll' : 'create', account };
+  return scope;
+}
+
+async function open(account, password, onUnlocked, localUnlock) {
   prepareDatabase();
   const store = await openFiles(account);
   try {
-    volume = await unlockVolume(store, account, password);
+    if (localUnlock) {
+      const { key, network, create } = localUnlock;
+      if (create) {
+        verifyLocalUnlockIntent(account, localUnlock, 'create');
+        if ((await prepareGrant()).network !== network) throw configurationError();
+      }
+      rejectIfClosing();
+      try {
+        volume = await unlockVolumeWithRing(store, account, localUnlock, key, create === true);
+      } finally { key.fill(0); }
+    } else {
+      volume = await unlockVolume(store, account, password);
+    }
     awayReceipts = createAwayReceipts(volume, background);
     rejectIfClosing();
-    if (onUnlocked) onUnlocked(lastBalance(volume));
+    if (!localUnlock && onUnlocked) onUnlocked(lastBalance(volume));
     const old = volume.read(profilePath);
     const saved = old && JSON.parse(decoder.decode(old));
+    if (localUnlock && saved && saved.network !== localUnlock.network) throw configurationError();
+    if (localUnlock && saved && onUnlocked) onUnlocked(lastBalance(volume));
     const existing = !!volume.read('/wallet/registry.json');
     connectionIssue = undefined;
     let grant;
@@ -199,6 +263,8 @@ async function open(account, password, onUnlocked) {
         'This wallet uses a different Bitcoin network or primary node. You can view your recovery phrase. Reopen with the original relay settings to make payments.';
     }
     const defaults = grant ? profile(grant) : saved;
+    if (localUnlock && defaults.network !== localUnlock.network) throw configurationError();
+    if (localUnlock && !saved && onUnlocked) onUnlocked(lastBalance(volume));
     // A returning wallet can still reveal its phrase when its relay is down.
     const offline = Object.assign(
       () => {
@@ -214,8 +280,8 @@ async function open(account, password, onUnlocked) {
     const fastStart = existing && grant?.network === 'mainnet' && grant.fastElectrumStart === true;
     startupScan = fastStart ? createStartupScan() : undefined;
     const primaryKey = grant?.primaryUri.split('@')[0].toLowerCase();
-    const active = () => grant && activeGrant === grant && !closing && owner === account;
-    const extensions = [...(startupScan?.nodeOptions.extensions ?? [])];
+    const active = () => grant && activeGrant === grant && !closing && !handoffStopped && owner === account;
+    const extensions = [...(startupScan?.nodeOptions.extensions ?? []), handoffClose.extension];
     if (primaryKey) {
       extensions.push(
         primaryChannelReadiness(primaryKey, () => {
@@ -225,8 +291,8 @@ async function open(account, password, onUnlocked) {
     }
     engine = await createPortableRuntime({
       nodeOptions: extensions.length ? { extensions } : undefined,
-      databaseFactory,
-      volume,
+      databaseFactory: (path) => handoffClose.opened(path, databaseFactory(path)),
+      volume: engineFiles,
       electrum: defaults.electrum,
       socketFactory: relay?.socketFactory ?? offline,
       onDiagnostic({ phase, message }) {
@@ -276,7 +342,7 @@ async function open(account, password, onUnlocked) {
   }
 }
 
-async function close() {
+async function stopEngine(handoffNetwork) {
   clearTimeout(renewTimer);
   grantAbort?.abort();
   grantAbort = undefined;
@@ -288,19 +354,28 @@ async function close() {
   try {
     if (shutdownFailed) throw new Error();
     if (engine) {
-      await engine.close();
+      let digest;
+      if (handoffNetwork) digest = await handoffClose.close(engine, handoffNetwork);
+      else await engine.close();
+      if (handoffStopped) engineFilesSealed = true;
       volume.compact();
+      engine = undefined;
+      return digest;
     }
   } catch {
     shutdownFailed = true;
+    if (handoffStopped) engineFilesSealed = true;
     throw Object.assign(new Error('Wallet shutdown was interrupted. Reopen and check Activity.'), {
       code: 'WALLET_CLOSE_UNCERTAIN',
     });
   }
+}
+
+async function close() {
+  await stopEngine();
   activeStore = undefined;
   startupScan = undefined;
   primaryConnected = false;
-  engine = undefined;
   volume?.close();
   volume = undefined;
   awayReceipts = undefined;
@@ -308,9 +383,40 @@ async function close() {
   activeGrant = undefined;
 }
 
+async function handoff(operation, account, payload) {
+  if (sending || activeStore.paymentNeedsReview()) {
+    throw Object.assign(new Error('Review the payment in Activity before moving this wallet.'), { code: 'WALLET_HANDOFF_PENDING' });
+  }
+  if (!activeGrant || connectionIssue || activeGrant.network !== payload?.network) throw configurationError();
+  if (activeRequests) await new Promise((resolve) => { requestsDrained = resolve; });
+  rejectIfClosing();
+  const auth = await authorizeHandoff(account, payload, profile(activeGrant));
+  if (operation === 'handoff-export') {
+    const id = verifyHandoffSource(volume, auth);
+    await assertHandoffReady(engine, id);
+  } else {
+    // Import can replace only an idle runtime. Merely inspecting a stale
+    // vault does not start its Lightning node or give it writer authority.
+    const records = await engine.request({ method: 'GET', path: '/api/wallets' });
+    if (!Array.isArray(records) || records.some((record) => record.status !== 'stopped')) throw busy();
+  }
+  rejectIfClosing();
+  handoffStopped = true;
+  const digest = await stopEngine(operation === 'handoff-export' ? auth.network : undefined);
+  rejectIfClosing();
+  if (operation === 'handoff-import') {
+    return installHandoff(volume, auth, payload.targetDeviceId, payload.envelope, rejectIfClosing);
+  }
+  const envelope = await sealHandoff(volume, auth, digest);
+  rejectIfClosing();
+  if (lateWrite) throw Object.assign(new Error('Wallet shutdown was interrupted.'), { code: 'WALLET_CLOSE_UNCERTAIN' });
+  return envelope;
+}
+
 async function handle({ id, operation, account, payload, notifyUnlocked, notifyStartProgress }) {
   if (operation === 'close') {
     closing = true;
+    requestsDrained?.();
     discardIdleSockets();
     grantAbort?.abort();
     // Opening and provisioning each finish their own cleanup before the lease is released.
@@ -319,6 +425,10 @@ async function handle({ id, operation, account, payload, notifyUnlocked, notifyS
     return;
   }
   rejectIfClosing();
+  if (handoffStopped) {
+    if (operation === 'ring-binding' && account === owner && !ringOperation) return ringBinding(volume);
+    throw busy();
+  }
   if (operation === 'visibility') {
     background = !!payload;
     awayReceipts?.setHidden(background);
@@ -326,13 +436,18 @@ async function handle({ id, operation, account, payload, notifyUnlocked, notifyS
     engine?.setAppBackgrounded(background);
     return;
   }
-  if (operation === 'inspect' || operation === 'open') {
+  if (operation === 'prepare-local-unlock') {
+    if (transition || ringOperation) throw busy();
+    transition = prepareLocalUnlock(account);
+    try { return await transition; } finally { transition = undefined; }
+  }
+  if (operation === 'inspect' || operation === 'open' || operation === 'open-with-ring') {
     if (engine || transition) throw new Error('The wallet is already opening.');
     transition =
-      operation === 'open'
-        ? open(account, payload, notifyUnlocked === true
+      operation !== 'inspect'
+        ? open(account, operation === 'open' ? payload : undefined, notifyUnlocked === true
           ? (balance) => self.postMessage({ id, event: 'unlocked', account, balance })
-          : undefined)
+          : undefined, operation === 'open-with-ring' ? payload : undefined)
         : (async () => {
             prepareDatabase();
             const state = await inspectFiles(account);
@@ -359,6 +474,20 @@ async function handle({ id, operation, account, payload, notifyUnlocked, notifyS
   }
   if (!engine || account !== owner) throw new Error('Unlock this wallet first.');
   if (ringOperation) throw busy();
+  if (operation === 'enroll-local-unlock') {
+    if (!activeGrant || connectionIssue || activeGrant.network !== payload?.network) throw configurationError();
+    verifyLocalUnlockIntent(account, payload, 'enroll');
+    ringOperation = volume.enrollLocalUnlock(payload, payload.key);
+    try { return await ringOperation; } finally { ringOperation = undefined; }
+  }
+  if (operation === 'handoff-export' || operation === 'handoff-import') {
+    ringOperation = handoff(operation, account, payload);
+    try {
+      return await ringOperation;
+    } finally {
+      ringOperation = undefined;
+    }
+  }
   if (operation === 'begin-send') {
     if (connectionIssue) throw configurationError();
     if (sending) throw busy();
@@ -464,6 +593,10 @@ async function handle({ id, operation, account, payload, notifyUnlocked, notifyS
         activeProgress = undefined;
       }
       activeRequests--;
+      if (!activeRequests && requestsDrained) {
+        requestsDrained();
+        requestsDrained = undefined;
+      }
     }
   }
   if (operation === 'load-activity' || operation === 'save-activity') {
@@ -481,7 +614,9 @@ async function handle({ id, operation, account, payload, notifyUnlocked, notifyS
 
 self.onmessage = async ({ data }) => {
   try {
-    self.postMessage({ id: data.id, result: await handle(data) });
+    const result = await handle(data);
+    if (data.operation === 'handoff-export') self.postMessage({ id: data.id, result }, [result.buffer]);
+    else self.postMessage({ id: data.id, result });
   } catch (error) {
     self.postMessage({
       id: data.id,
@@ -489,7 +624,11 @@ self.onmessage = async ({ data }) => {
         code: error?.code,
         status: error?.status,
         message:
-          data.operation === 'ring-wallet'
+          data.operation === 'handoff-export' || data.operation === 'handoff-import'
+            ? error?.code === 'WALLET_HANDOFF_PENDING'
+              ? 'Review pending wallet activity and recovery before moving this wallet.'
+              : 'The wallet transfer could not finish. Lock and reopen the wallet to check its status.'
+            : data.operation === 'ring-wallet'
             ? 'Ring wallet setup could not finish. Reopen the wallet and check its status.'
             : error instanceof Error
               ? error.message
@@ -497,6 +636,6 @@ self.onmessage = async ({ data }) => {
       },
     });
   } finally {
-    if (data.operation === 'ring-wallet' && data.payload?.key instanceof Uint8Array) data.payload.key.fill(0);
+    if (['open-with-ring', 'enroll-local-unlock', 'ring-wallet', 'handoff-export', 'handoff-import'].includes(data.operation) && data.payload?.key instanceof Uint8Array) data.payload.key.fill(0);
   }
 };

@@ -20,29 +20,42 @@ export function WalletKeyApproval({
   network,
   onKey,
   onCancel,
+  title = 'Approve wallet access',
+  description,
+  workingLabel = 'Preparing your wallet…',
+  progress,
+  localDeviceId,
 }: {
   account: string;
   network: Network;
   onKey: WalletKeyConsumer;
   onCancel: () => void;
+  title?: string;
+  description?: string;
+  workingLabel?: string;
+  progress?: number;
+  localDeviceId?: string;
 }) {
   const [url, setUrl] = useState('');
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
+  const [working, setWorking] = useState(false);
   const live = useRef<AbortController | null>(null);
   const onKeyRef = useRef(onKey);
   useLayoutEffect(() => {
     onKeyRef.current = onKey;
   }, [onKey]);
-  useLayoutEffect(() => () => live.current?.abort(), [account, network, attempt]);
+  useLayoutEffect(() => () => live.current?.abort(), [account, network, attempt, localDeviceId]);
   useEffect(() => {
     const controller = new AbortController();
     live.current = controller;
     setError('');
     setUrl('');
+    setWorking(false);
     function failed(reason: unknown) {
       if (controller.signal.aborted) return;
       setUrl('');
+      setWorking(false);
       setError(
         reason instanceof WalletKeyApprovalError || reason instanceof RingEnrollmentError
           ? reason.message
@@ -50,18 +63,25 @@ export function WalletKeyApproval({
       );
     }
     try {
-      const approval = startWalletKeyApproval(account, network, controller.signal, async (key, assertCurrent) => {
-        assertCurrent();
-        setUrl('');
-        try {
-          await onKeyRef.current(key, assertCurrent);
-        } catch (failure) {
-          if (failure instanceof WalletKeyApprovalError) throw failure;
-          throw new WalletKeyApprovalError(
-            'The wallet could not finish setup after Ring approval. Return to the wallet and try again.',
-          );
-        }
-      });
+      const approval = startWalletKeyApproval(
+        account,
+        network,
+        controller.signal,
+        async (key, assertCurrent) => {
+          assertCurrent();
+          setUrl('');
+          setWorking(true);
+          try {
+            await onKeyRef.current(key, assertCurrent);
+          } catch (failure) {
+            if (failure instanceof WalletKeyApprovalError || failure instanceof RingEnrollmentError) throw failure;
+            throw new WalletKeyApprovalError(
+              'The wallet could not finish setup after Ring approval. Return to the wallet and try again.',
+            );
+          }
+        },
+        localDeviceId,
+      );
       setUrl(approval.authorizationUrl);
       void approval.result.catch(failed);
     } catch (reason) {
@@ -71,13 +91,13 @@ export function WalletKeyApproval({
       controller.abort();
       live.current = null;
     };
-  }, [account, network, attempt]);
+  }, [account, network, attempt, localDeviceId]);
   return (
     <div className="sentry-block" data-sentry-block>
-      <WalletPanel title="Approve wallet access" icon={KeyRound}>
+      <WalletPanel title={title} icon={KeyRound}>
         <p className="text-sm text-muted-foreground">
-          Approve the {network} wallet key with your signed-in identity in Pubky Ring. This gives this browser the key
-          that controls your wallet. Approve only a request you started.
+          {description ??
+            `Approve the ${network} wallet key with your signed-in identity in Pubky Ring. This gives this browser the key that controls your wallet. Approve only a request you started.`}
         </p>
         {url && (
           <>
@@ -105,7 +125,10 @@ export function WalletKeyApproval({
             </p>
           </>
         )}
-        {!url && !error && <p role="status">Preparing your wallet…</p>}
+        {!url && !error && <p role="status">{working ? workingLabel : 'Preparing your wallet…'}</p>}
+        {working && progress !== undefined && (
+          <progress aria-label="Wallet transfer" className="h-1 w-full accent-brand" max={100} value={progress} />
+        )}
         {error && (
           <>
             <p role="alert">{error}</p>
@@ -117,6 +140,7 @@ export function WalletKeyApproval({
         <Button
           type="button"
           variant="outline"
+          disabled={working}
           onClick={() => {
             live.current?.abort();
             onCancel();

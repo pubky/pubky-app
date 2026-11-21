@@ -11,9 +11,12 @@ const fixture = vi.hoisted(() => {
     write: vi.fn((path: string, bytes: Uint8Array) => files.set(path, bytes.slice())),
     list: (prefix: string) => [...files.keys()].filter((path) => path.startsWith(prefix)),
     compact: vi.fn(),
+    enrollLocalUnlock: vi.fn(),
     close: vi.fn(),
   };
   const store = {
+    readLocalUnlock: vi.fn(async () => null),
+    paymentNeedsReview: vi.fn(() => false),
     markPayment: vi.fn(() => 0),
     restorePaymentMarker: vi.fn(),
     clearPayment: vi.fn(),
@@ -26,6 +29,7 @@ const fixture = vi.hoisted(() => {
     store,
     engine,
     unlock: vi.fn(async () => volume),
+    unlockWithRing: vi.fn(async () => volume),
     inspect: vi.fn(async () => ({ exists: false })),
     sockets: { socketFactory: vi.fn(), prepareElectrum: vi.fn(), preparePeer: vi.fn(), close: vi.fn() },
     compile: vi.fn(async () => ({})),
@@ -47,6 +51,7 @@ vi.mock('./storage.mjs', () => ({
   inspectFiles: fixture.inspect,
   openFiles: async () => fixture.store,
   unlockVolume: fixture.unlock,
+  unlockVolumeWithRing: fixture.unlockWithRing,
 }));
 
 const owner = 'y'.repeat(52);
@@ -131,6 +136,42 @@ async function freshWorker() {
   await import('./worker.mjs');
 }
 
+it('opens the verified local Ring wallet for reading when its Bitcoin relay is unavailable', async () => {
+  await freshWorker();
+  fixture.files.set('/pubky/deployment.json', new TextEncoder().encode(JSON.stringify(grant)));
+  fixture.files.set('/wallet/registry.json', Uint8Array.of(7));
+  fetchGrant.mockRejectedValueOnce(new Error('disconnected'));
+  const input = { network: 'regtest', deviceId: crypto.randomUUID(), key: key() };
+  const result = await request('open-with-ring', input, owner, true);
+  expect(result.result).toMatchObject({ network: 'regtest' });
+  expect(unlocked).toHaveBeenCalledOnce();
+  expect(input.key).toEqual(new Uint8Array(32));
+  expect((await request('request', { method: 'POST', path: '/wallets/' + walletId + '/start' })).error?.code)
+    .toBe('WALLET_CONFIGURATION');
+});
+
+it('rejects a returning Ring credential for a different saved network before exposing the wallet', async () => {
+  await freshWorker();
+  fixture.files.set('/pubky/deployment.json', new TextEncoder().encode(JSON.stringify({ ...grant, network: 'mainnet' })));
+  const input = { network: 'regtest', deviceId: crypto.randomUUID(), key: key() };
+  expect((await request('open-with-ring', input, owner, true)).error?.code).toBe('WALLET_CONFIGURATION');
+  expect(unlocked).not.toHaveBeenCalled();
+  expect(input.key).toEqual(new Uint8Array(32));
+});
+
+it('requires the device-specific pending intent before enabling Ring and rejects stale approvals', async () => {
+  const scope = (await request('prepare-local-unlock')).result as { network: string; deviceId: string };
+  const stale = { ...scope, deviceId: crypto.randomUUID(), key: key() };
+  expect((await request('enroll-local-unlock', stale)).error?.code).toBe('WALLET_LOCAL_UNLOCK');
+  expect(stale.key).toEqual(new Uint8Array(32));
+  expect(fixture.volume.enrollLocalUnlock).not.toHaveBeenCalled();
+  const valid = { ...scope, key: key() };
+  expect((await request('enroll-local-unlock', valid)).error).toBeUndefined();
+  expect(valid.key).toEqual(new Uint8Array(32));
+  expect((await request('enroll-local-unlock', { ...scope, key: key() })).error?.code).toBe('WALLET_LOCAL_UNLOCK');
+  expect(fixture.volume.enrollLocalUnlock).toHaveBeenCalledOnce();
+});
+
 it.each(['engine', 'compaction'])('holds the vault lease after an uncertain %s shutdown', async (failure) => {
   const stopped = Promise.withResolvers<void>();
   fixture.engine.close.mockReturnValueOnce(stopped.promise);
@@ -170,6 +211,45 @@ it('marks confirmed sends before allowing submission and preserves an unknown ou
     await request('finish-send', status);
   }
   expect(fixture.store.restorePaymentMarker.mock.calls).toEqual([[2], [0], [0], [0]]);
+});
+
+it('refuses a transfer during payment review and wipes the approval without closing the node', async () => {
+  const input = { ...payload(), sourceDeviceId: crypto.randomUUID(), transferId: crypto.randomUUID() };
+  fixture.store.paymentNeedsReview.mockReturnValueOnce(true);
+  expect((await request('handoff-export', input)).error?.code).toBe('WALLET_HANDOFF_PENDING');
+  expect(input.key).toEqual(new Uint8Array(32));
+  expect(fixture.engine.close).not.toHaveBeenCalled();
+});
+
+it('fences new business while draining an admitted request, and cancels a move when the lease closes', async () => {
+  const held = Promise.withResolvers<object>();
+  fixture.engine.request.mockReturnValueOnce(held.promise);
+  const inflight = request('request', { method: 'GET', path: '/api/wallets' });
+  const input = { ...payload(), sourceDeviceId: crypto.randomUUID(), transferId: crypto.randomUUID() };
+  const move = request('handoff-export', input);
+  expect((await request('begin-send')).error?.code).toBe('WALLET_BUSY');
+  const closed = request('close');
+  held.resolve({});
+  await inflight;
+  expect((await move).error?.code).toBe('WALLET_CLOSED');
+  await closed;
+  expect(input.key).toEqual(new Uint8Array(32));
+});
+
+it('does not install into a running destination and suppresses underlying wallet details', async () => {
+  const input = {
+    ...payload(),
+    sourceDeviceId: crypto.randomUUID(),
+    transferId: crypto.randomUUID(),
+    targetDeviceId: crypto.randomUUID(),
+    envelope: Uint8Array.of(1),
+  };
+  fixture.engine.request.mockResolvedValueOnce([{ id: walletId, status: 'running' }]);
+  const response = await request('handoff-import', input);
+  expect(response.error?.code).toBe('WALLET_BUSY');
+  expect(response.result).toBeUndefined();
+  expect(input.key).toEqual(new Uint8Array(32));
+  expect(fixture.engine.close).not.toHaveBeenCalled();
 });
 
 it('prepares SQL and a fixed relay ticket without unlocking, then reuses both during open', async () => {

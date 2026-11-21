@@ -704,6 +704,21 @@ export class HomeserverService {
     );
   }
 
+  /** Content-addressed ciphertext chunks may replay the same bytes under the current wallet lease. */
+  static async writeHandoffChunk(
+    session: Session,
+    storage: SessionStorage,
+    path: `/priv/${string}`,
+    body: Uint8Array | null,
+    assertCurrent: () => void,
+  ) {
+    return retryHomeserverWrite(
+      body ? HttpMethod.PUT : HttpMethod.DELETE,
+      () => this.withActiveSession(session, () => (body ? storage.putBytes(path, body) : storage.delete(path))),
+      { beforeAttempt: assertCurrent },
+    );
+  }
+
   /**
    * Uploads binary data to the homeserver using PUT.
    *

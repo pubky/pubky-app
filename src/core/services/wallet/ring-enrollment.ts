@@ -5,11 +5,22 @@ import { APP_PRIVATE_PATH } from '@/config/app-files';
 import { hasCapabilities } from '@/libs/auth/capabilities';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { useAuthStore } from '@/stores/auth/auth.store';
+import {
+  describeHandoff,
+  downloadHandoff,
+  handoffManifest,
+  type HandoffProgress,
+  readBoundedFile,
+  retireHandoff,
+  RingEnrollmentError,
+  uploadHandoff,
+} from './handoff-storage';
+
+export { RingEnrollmentError };
 
 type Mode = 'create' | 'restore';
 type Intent = Mode | 'open';
 
-export class RingEnrollmentError extends Error {}
 const httpFailure = z.object({ name: z.literal('RequestError'), data: z.object({ statusCode: z.number() }) });
 
 function safeError(error: unknown) {
@@ -18,6 +29,9 @@ function safeError(error: unknown) {
   const status = failure.success && failure.data.data.statusCode;
   if (status === 423)
     return new RingEnrollmentError('Another device is using this Ring wallet. Close it there and try again.');
+  if (status === 507) return new RingEnrollmentError('Your homeserver needs more storage to save this wallet move.');
+  if (status === 413)
+    return new RingEnrollmentError('The homeserver could not accept a wallet transfer file of this size.');
   if (status === 405 || status === 501)
     return new RingEnrollmentError('This homeserver version does not support wallet device locks.');
   if (status === 401 || status === 403)
@@ -27,12 +41,51 @@ function safeError(error: unknown) {
 
 const device = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
 const networks = z.enum(['mainnet', 'testnet', 'regtest']);
-const marker = z.strictObject({
-  version: z.literal(1),
+const mode = z.enum(['create', 'restore']);
+const legacy = z.strictObject({ version: z.literal(1), network: networks, deviceId: device, mode });
+const owned = z.strictObject({
+  version: z.literal(2),
+  state: z.literal('owned'),
   network: networks,
   deviceId: device,
-  mode: z.enum(['create', 'restore']),
+  mode,
+  transferId: device.nullable(),
+  cleanup: z.strictObject({ transferId: device, manifest: handoffManifest }).optional(),
 });
+const ready = z.strictObject({
+  version: z.literal(2),
+  state: z.literal('ready'),
+  network: networks,
+  deviceId: device,
+  mode,
+  previousTransferId: device.nullable(),
+  transferId: device,
+  manifest: handoffManifest,
+});
+const marker = z.union([legacy, owned, ready]);
+type Marker = z.infer<typeof marker>;
+type Owner = z.infer<typeof legacy> | z.infer<typeof owned>;
+type Ready = z.infer<typeof ready>;
+
+export type RingDeviceStatus =
+  | { state: 'new' }
+  | { state: 'this-device' | 'other-device'; transferId: string | null }
+  | { state: 'handoff-ready'; sourceDeviceId: string; transferId: string };
+
+export type RingDeviceLease = {
+  mode: Mode;
+  release: () => Promise<void>;
+  abandon: () => Promise<void>;
+  assertActive: () => void;
+  publishHandoff: (transferId: string, envelope: Uint8Array, onProgress?: HandoffProgress) => Promise<void>;
+};
+const movePending = () =>
+  new RingEnrollmentError(
+    'A wallet move is waiting. Complete it on the destination or cancel it on the original device.',
+  );
+const changed = () =>
+  new RingEnrollmentError('The wallet device record changed. Reopen the wallet to check its owner.');
+
 const missingFile = z.object({
   name: z.literal('RequestError'),
   data: z.object({ reason: z.literal('Http'), statusCode: z.literal(404) }),
@@ -77,15 +130,19 @@ function context(account: string, network: Network, deviceId: string) {
       state.generation === generation
     );
   };
-  return { session, storage: session.storage, path, current };
+  return { session, storage: session.storage, network, path, current };
 }
 
 async function readMarker(storage: SessionStorage, path: Path, network: Network) {
   let value: unknown;
   try {
-    value = await storage.getJson(path);
+    value = JSON.parse(
+      new TextDecoder('utf-8', { fatal: true }).decode(await readBoundedFile(storage, path, 16 * 1024)),
+    );
   } catch (error) {
     if (missingFile.safeParse(error).success) return null;
+    if (error instanceof SyntaxError || error instanceof TypeError)
+      throw new RingEnrollmentError('The private wallet device record is invalid.');
     throw safeError(error);
   }
   const result = marker.safeParse(value);
@@ -94,19 +151,32 @@ async function readMarker(storage: SessionStorage, path: Path, network: Network)
   return result.data;
 }
 
-export async function ringEnrollment(
+export async function inspectRingDevice(
   account: string,
   network: Network,
   deviceId: string,
-): Promise<'new' | 'this-device' | 'other-device'> {
+): Promise<RingDeviceStatus> {
   const { storage, path, current } = context(account, network, deviceId);
   try {
     const record = await readMarker(storage, path, network);
     if (!current()) throw new RingEnrollmentError('The signed-in Pubky account changed.');
-    return record === null ? 'new' : record.deviceId === deviceId ? 'this-device' : 'other-device';
+    if (!record) return { state: 'new' };
+    if (record.version === 2 && record.state === 'ready')
+      return { state: 'handoff-ready', transferId: record.transferId, sourceDeviceId: record.deviceId };
+    return { state: record.deviceId === deviceId ? 'this-device' : 'other-device', transferId: receipt(record) };
   } finally {
     storage.free();
   }
+}
+
+export async function ringEnrollment(account: string, network: Network, deviceId: string) {
+  const { state } = await inspectRingDevice(account, network, deviceId);
+  if (state === 'handoff-ready') throw movePending();
+  return state;
+}
+
+function receipt(record: Owner) {
+  return record.version === 1 ? null : record.transferId;
 }
 
 function requestTime() {
@@ -131,11 +201,19 @@ function maintainLease(
   let timer: ReturnType<typeof setTimeout>;
   let expiry: ReturnType<typeof setTimeout>;
   let queue: Promise<void> = Promise.resolve();
+  const operations = new Set<Promise<unknown>>();
   let closing: Promise<void> | undefined;
+  let abandoned = false;
+  let stopped: ((success: boolean) => void) | undefined;
   const unsubscribe = useAuthStore.subscribe(() => {
     if (!current()) lose();
   });
-  function finish(lost: boolean) {
+  function finish(reason: 'release' | 'lost' | 'abandon') {
+    if (reason === 'abandon') {
+      abandoned = true;
+      // May be called from the onLost shutdown path itself.
+      stopped?.(false);
+    }
     if (closing) return closing;
     active = false;
     unsubscribe();
@@ -143,16 +221,16 @@ function maintainLease(
     clearTimeout(expiry);
     window.removeEventListener('pageshow', resumed);
     document.removeEventListener('visibilitychange', resumed);
-    let stopped!: (success: boolean) => void;
-    const shutdown = lost
-      ? new Promise<boolean>((resolve) => {
-          stopped = resolve;
-        })
-      : Promise.resolve(true);
-    closing = queue.then(async () => {
+    const shutdown =
+      reason === 'lost'
+        ? new Promise<boolean>((resolve) => {
+            stopped = resolve;
+          })
+        : Promise.resolve(true);
+    closing = Promise.allSettled([queue, ...operations]).then(async () => {
       try {
         // An interrupted shutdown leaves the server lease to expire naturally.
-        if (await shutdown) await storage.unlock(lock);
+        if ((await shutdown) && !abandoned) await storage.unlock(lock);
       } catch (error) {
         throw safeError(error);
       } finally {
@@ -160,24 +238,27 @@ function maintainLease(
         storage.free();
       }
     });
-    if (lost) {
+    if (reason === 'lost') {
       try {
         void Promise.resolve(onLost()).then(
-          () => stopped(true),
-          () => stopped(false),
+          () => stopped?.(true),
+          () => stopped?.(false),
         );
       } catch {
-        stopped(false);
+        stopped?.(false);
       }
     }
     return closing;
   }
   function release() {
-    return finish(false);
+    return finish('release');
+  }
+  function abandon() {
+    return finish('abandon');
   }
   function lose() {
     if (!active) return;
-    void finish(true).catch(() => {});
+    void finish('lost').catch(() => {});
   }
   function expired() {
     return elapsedSince(started) >= usableLifetime;
@@ -238,7 +319,121 @@ function maintainLease(
     void release().catch(() => {});
     throw safeError(error);
   }
-  return { release, run, assertActive };
+  // Long uploads and worker installation can span many renewals. Keep their storage handles
+  // alive until they settle without putting them ahead of a scheduled lock refresh.
+  function track<T>(work: () => Promise<T>) {
+    assertActive();
+    const operation = Promise.resolve().then(() => {
+      assertActive();
+      return work();
+    });
+    operations.add(operation);
+    void operation.then(
+      () => operations.delete(operation),
+      () => operations.delete(operation),
+    );
+    return operation;
+  }
+  return { release, abandon, run, assertActive, track };
+}
+
+async function lockedDevice(account: string, network: Network, id: string, onLost: () => void | Promise<void>) {
+  const ctx = context(account, network, id);
+  const requestedAt = requestTime();
+  let lock: StorageLock;
+  try {
+    lock = await ctx.storage.lock(ctx.path, leaseSeconds);
+  } catch (error) {
+    ctx.storage.free();
+    throw safeError(error);
+  }
+  const lease = maintainLease(ctx.storage, lock, requestedAt, ctx.current, onLost);
+  const read = () => readMarker(ctx.storage, ctx.path, network);
+  // All record transitions use the exclusive server token and do one write attempt.
+  // Decode and compare the entire marker, including the immutable chunk manifest, under that token.
+  async function replace(expected: Marker | null, next: Marker) {
+    await lease.run(async () => {
+      if (JSON.stringify(await read()) !== JSON.stringify(expected)) throw changed();
+      const body = JSON.stringify(marker.parse(next));
+      await HomeserverService.putTextLocked(ctx.session, ctx.storage, lock, body, lease.assertActive);
+      if (JSON.stringify(await read()) !== body) throw changed();
+    });
+  }
+  return { ...ctx, ...lease, read, replace };
+}
+
+type Held = Awaited<ReturnType<typeof lockedDevice>>;
+
+// Call only with an owned marker just read or verified under this exclusive
+// lease. A ready marker has no cleanup job. Keep the bounded job across failed
+// deletes so storage limits cannot strand the next move or prevent local use.
+async function cleanOwner(held: Held, owner: Owner): Promise<Owner> {
+  if (owner.version !== 2 || !owner.cleanup) return owner;
+  const { cleanup, ...clean } = owner;
+  const complete = await held.track(() => retireHandoff({ ...held, transferId: cleanup.transferId }, cleanup.manifest));
+  if (!complete) return owner;
+  await held.replace(owner, clean);
+  return clean;
+}
+
+function ownerLease(held: Held, owner: Owner): RingDeviceLease {
+  let moving = false;
+  function assertActive() {
+    held.assertActive();
+    if (moving) throw movePending();
+  }
+  async function publishHandoff(transferId: string, envelope: Uint8Array, onProgress?: HandoffProgress) {
+    assertActive();
+    if (!device.safeParse(transferId).success || transferId === owner.deviceId || transferId === receipt(owner))
+      throw new RingEnrollmentError('Invalid wallet transfer identifier.');
+    // The caller has already stopped and drained the engine. Never re-enable operations
+    // in this session, including after an ambiguous publish response.
+    moving = true;
+    try {
+      await held.track(async () => {
+        const previous = await cleanOwner(held, owner);
+        if (previous.version === 2 && previous.cleanup)
+          throw new RingEnrollmentError(
+            'Could not clear files from an earlier wallet move. Reopen the wallet to retry.',
+          );
+        const manifest = await describeHandoff(envelope, held.assertActive);
+        const staging: Owner = {
+          version: 2,
+          state: 'owned',
+          network: held.network,
+          deviceId: owner.deviceId,
+          mode: owner.mode,
+          transferId: receipt(owner),
+          cleanup: { transferId, manifest },
+        };
+        await held.replace(previous, staging);
+        try {
+          await uploadHandoff({ ...held, transferId }, envelope, manifest, onProgress);
+        } catch (error) {
+          // Publication has not been attempted, so this owner may safely retire
+          // complete, partial, and missing chunks. Another lease can finish it.
+          await cleanOwner(held, staging).catch(() => {});
+          throw error;
+        }
+        const next: Ready = {
+          version: 2,
+          state: 'ready',
+          network: held.network,
+          deviceId: owner.deviceId,
+          mode: owner.mode,
+          previousTransferId: receipt(owner),
+          transferId,
+          manifest,
+        };
+        // An ambiguous response may mean the ready marker is already live.
+        // Leave its files alone until a new lease observes ownership again.
+        await held.replace(staging, next);
+      });
+    } catch (error) {
+      throw safeError(error);
+    }
+  }
+  return { mode: owner.mode, assertActive, release: held.release, abandon: held.abandon, publishHandoff };
 }
 
 export async function acquireRingDevice(
@@ -247,38 +442,102 @@ export async function acquireRingDevice(
   deviceId: string,
   intent: Intent,
   onLost: () => void | Promise<void>,
-) {
-  const { session, storage, path, current } = context(account, network, deviceId);
-  let lock: StorageLock;
-  const requestedAt = requestTime();
+  installedTransferId: string | null = null,
+): Promise<RingDeviceLease> {
+  const held = await lockedDevice(account, network, deviceId, onLost);
   try {
-    lock = await storage.lock(path, leaseSeconds);
+    const record = await held.run(held.read);
+    if (record?.version === 2 && record.state === 'ready') throw movePending();
+    if (record?.deviceId === deviceId) {
+      if (receipt(record) !== installedTransferId) throw changed();
+      return ownerLease(held, await cleanOwner(held, record));
+    }
+    if (intent === 'open' || (record && intent !== 'restore'))
+      throw new RingEnrollmentError('This wallet device must be explicitly restored before it can open.');
+    if (intent !== 'create' && intent !== 'restore') throw new RingEnrollmentError('Invalid wallet device action.');
+    // Only a fresh local provision can use cold recovery. Never promote a staged handoff using this path.
+    if (installedTransferId !== null) throw changed();
+    const next: Owner =
+      record?.version === 2
+        ? { ...record, deviceId, mode: intent, transferId: null }
+        : { version: 1, network, deviceId, mode: intent };
+    await held.replace(record, next);
+    return ownerLease(held, await cleanOwner(held, next));
   } catch (error) {
-    storage.free();
+    await held.release().catch(() => {});
     throw safeError(error);
   }
-  const lease = maintainLease(storage, lock, requestedAt, current, onLost);
+}
+
+function requireTransfer(record: Marker | null, transferId: string): Ready {
+  if (record?.version !== 2 || record.state !== 'ready' || record.transferId !== transferId) throw changed();
+  return record;
+}
+
+export async function claimRingHandoff(
+  account: string,
+  network: Network,
+  deviceId: string,
+  transferId: string,
+  onLost: () => void | Promise<void>,
+  install: (envelope: Uint8Array, sourceDeviceId: string) => Promise<void>,
+  onProgress?: HandoffProgress,
+): Promise<RingDeviceLease> {
+  const held = await lockedDevice(account, network, deviceId, onLost);
   try {
-    const mode = await lease.run(async () => {
-      const record = await readMarker(storage, path, network);
-      lease.assertActive();
-      if (record?.deviceId === deviceId) return record.mode;
-      if (intent === 'open' || (record && intent !== 'restore')) {
-        throw new RingEnrollmentError('This wallet device must be explicitly restored before it can open.');
+    const from = requireTransfer(await held.run(held.read), transferId);
+    if (from.deviceId === deviceId) throw movePending();
+    const ctx = { ...held, transferId };
+    const envelope = await held.track(() => downloadHandoff(ctx, from.manifest, onProgress));
+    held.assertActive();
+    // The worker verifies the Ring-authenticated envelope and durably installs the local receipt.
+    // Its promise must settle successfully before this browser can become the registered owner.
+    await held.track(async () => {
+      try {
+        await install(envelope, from.deviceId);
+      } catch (error) {
+        if (error instanceof RingEnrollmentError) throw error;
+        throw new RingEnrollmentError(
+          'Could not verify and install this wallet move. Check your Ring identity and available device storage, then try again.',
+        );
       }
-      if (intent !== 'create' && intent !== 'restore') throw new RingEnrollmentError('Invalid wallet device action.');
-      await HomeserverService.putTextLocked(
-        session,
-        storage,
-        lock,
-        JSON.stringify({ version: 1, network, deviceId, mode: intent }),
-        lease.assertActive,
-      );
-      return intent;
     });
-    return { mode, release: lease.release, assertActive: lease.assertActive };
+    const next: Owner = {
+      version: 2,
+      state: 'owned',
+      network,
+      deviceId,
+      mode: from.mode,
+      transferId,
+      cleanup: { transferId, manifest: from.manifest },
+    };
+    await held.replace(from, next);
+    return ownerLease(held, await cleanOwner(held, next));
   } catch (error) {
-    await lease.release().catch(() => {});
+    await held.release().catch(() => {});
     throw safeError(error);
+  }
+}
+
+export async function cancelRingHandoff(account: string, network: Network, deviceId: string, transferId: string) {
+  const held = await lockedDevice(account, network, deviceId, () => {});
+  try {
+    const from = requireTransfer(await held.run(held.read), transferId);
+    if (from.deviceId !== deviceId) throw changed();
+    const next: Owner = {
+      version: 2,
+      state: 'owned',
+      network,
+      deviceId,
+      mode: from.mode,
+      transferId: from.previousTransferId,
+      cleanup: { transferId, manifest: from.manifest },
+    };
+    await held.replace(from, next);
+    await cleanOwner(held, next);
+  } catch (error) {
+    throw safeError(error);
+  } finally {
+    await held.release().catch(() => {});
   }
 }

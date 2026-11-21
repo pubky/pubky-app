@@ -50,7 +50,7 @@ export function packFiles(files) {
   return serialize(entries, size);
 }
 
-function visitEntries(blob, offset, visit) {
+function visitEntries(blob, offset, visit, maxNameBytes = maxPackedBytes) {
   checkSize(blob.length);
   const view = new DataView(blob.buffer, blob.byteOffset, blob.byteLength);
   while (offset < blob.length) {
@@ -58,19 +58,19 @@ function visitEntries(blob, offset, visit) {
     const nameLength = view.getUint32(offset);
     const size = view.getUint32(offset + 4);
     const start = offset + 8 + nameLength;
-    if (!nameLength || start + size > blob.length) throw invalid();
+    if (!nameLength || nameLength > maxNameBytes || start + size > blob.length) throw invalid();
     const path = text.decode(blob.subarray(offset + 8, start));
     visit(path, blob.subarray(start, start + size), 8 + nameLength);
     offset = start + size;
   }
 }
 
-export function unpackFiles(blob) {
+export function unpackFiles(blob, { maxFiles = Infinity, maxNameBytes, views = false } = {}) {
   const files = new Map();
   visitEntries(blob, 0, (path, bytes) => {
-    if (files.has(path)) throw invalid();
-    files.set(path, bytes.slice());
-  });
+    if (files.size >= maxFiles || files.has(path)) throw invalid();
+    files.set(path, views ? bytes : bytes.slice());
+  }, maxNameBytes);
   return files;
 }
 

@@ -22,6 +22,14 @@ const wallet = vi.hoisted(() => ({
   createRingWallet: vi.fn(),
   guardRingDevice: vi.fn(),
   ringEnrollment: vi.fn(),
+  inspectRingDevice: vi.fn(),
+  cancelRingHandoff: vi.fn(),
+  claimRingHandoff: vi.fn(),
+  importHandoff: vi.fn(),
+  exportHandoff: vi.fn(),
+  prepareLocalUnlock: vi.fn(),
+  openWithRing: vi.fn(),
+  enrollLocalUnlock: vi.fn(),
   acquireRingDevice: vi.fn(),
   open: vi.fn(),
   close: vi.fn(),
@@ -48,12 +56,17 @@ const wallet = vi.hoisted(() => ({
   receive: vi.fn(),
   getReceiveStatus: vi.fn(),
   getRecoveryPhrase: vi.fn(),
+  getRecoveryStatus: vi.fn(),
   resolveRecipient: vi.fn(),
 }));
 
 vi.mock('@/services/wallet/ring-enrollment', () => ({
+  RingEnrollmentError: class extends Error {},
   ringEnrollment: wallet.ringEnrollment,
+  inspectRingDevice: wallet.inspectRingDevice,
   acquireRingDevice: wallet.acquireRingDevice,
+  cancelRingHandoff: wallet.cancelRingHandoff,
+  claimRingHandoff: wallet.claimRingHandoff,
 }));
 vi.mock('./WalletKeyApproval', () => ({
   WalletKeyApproval: ({ onKey }: { onKey: (key: Uint8Array, assertCurrent: () => void) => Promise<void> }) => (
@@ -93,6 +106,11 @@ vi.mock('@/services/wallet/session', () => ({
     ringBinding = wallet.ringBinding;
     ringDeviceId = wallet.ringDeviceId;
     createRingWallet = wallet.createRingWallet;
+    importHandoff = wallet.importHandoff;
+    exportHandoff = wallet.exportHandoff;
+    prepareLocalUnlock = wallet.prepareLocalUnlock;
+    openWithRing = wallet.openWithRing;
+    enrollLocalUnlock = wallet.enrollLocalUnlock;
     guardRingDevice = wallet.guardRingDevice;
     newBitcoinAddress = wallet.newBitcoinAddress;
     open = wallet.open;
@@ -121,6 +139,7 @@ beforeEach(() => {
   wallet.exists = true;
   wallet.ringBinding.mockResolvedValue(null);
   wallet.ringEnrollment.mockResolvedValue('new');
+  wallet.inspectRingDevice.mockImplementation(async () => ({ state: await wallet.ringEnrollment(), transferId: null }));
   wallet.inspect.mockImplementation(async () => ({ exists: wallet.exists }));
   wallet.open.mockResolvedValue({
     network: 'regtest',
@@ -131,6 +150,12 @@ beforeEach(() => {
   wallet.activityIncludesChannelSends.mockResolvedValue(true);
   wallet.acknowledgePayment.mockResolvedValue(undefined);
   wallet.startWallet.mockResolvedValue(undefined);
+  wallet.getRecoveryStatus.mockResolvedValue({
+    state: 'running',
+    autoApply: { phase: 'idle' },
+    channels: [],
+    importComplete: false,
+  });
   wallet.onPrimaryChange.mockReturnValue(() => {});
   wallet.rememberBalance.mockResolvedValue(undefined);
   wallet.savedActivity.mockResolvedValue([]);
@@ -165,6 +190,170 @@ async function unlock() {
 }
 
 describe('Pubky wallet', () => {
+  it('requires fresh Ring approval before opening a Ring-only local vault', async () => {
+    const scope = { network: 'regtest', deviceId: '2fc6e567-18a1-4861-8939-e31fa35ae477', passwordAvailable: false };
+    wallet.inspect.mockResolvedValue({ exists: true, ringUnlock: scope });
+    wallet.openWithRing.mockResolvedValue({ network: 'regtest' });
+    render(<Wallet />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Unlock with Ring' }));
+    expect(wallet.openWithRing).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText('Password')).toBeNull();
+    fireEvent.click(await screen.findByRole('button', { name: 'Approve in test Ring' }));
+    expect(await screen.findByText('Total balance')).toBeVisible();
+    expect(wallet.openWithRing).toHaveBeenCalledWith(expect.any(Uint8Array), scope, false);
+    expect(wallet.open).not.toHaveBeenCalled();
+  });
+
+  it('creates a passwordless local vault before requesting a separate wallet key', async () => {
+    wallet.exists = false;
+    const scope = { network: 'regtest', deviceId: '2fc6e567-18a1-4861-8939-e31fa35ae477' };
+    wallet.prepareLocalUnlock.mockResolvedValue(scope);
+    wallet.openWithRing.mockResolvedValue({ network: 'regtest' });
+    wallet.listWallets.mockResolvedValue([]);
+    render(<Wallet />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Set up with Ring' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Approve in test Ring' }));
+    expect(await screen.findByRole('button', { name: 'Create with Ring' })).toBeDisabled();
+    expect(wallet.openWithRing).toHaveBeenCalledWith(expect.any(Uint8Array), scope, true);
+    expect(wallet.createRingWallet).not.toHaveBeenCalled();
+    expect(wallet.open).not.toHaveBeenCalled();
+  });
+
+  it('keeps the password route available after Ring enrollment', async () => {
+    wallet.inspect.mockResolvedValue({
+      exists: true,
+      ringUnlock: { network: 'regtest', deviceId: 'local', passwordAvailable: true },
+    });
+    render(<Wallet />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Use a password instead' }));
+    await unlock();
+    expect(await screen.findByText('Total balance')).toBeVisible();
+    expect(wallet.open).toHaveBeenCalledOnce();
+    expect(wallet.openWithRing).not.toHaveBeenCalled();
+  });
+
+  it('reinspects a partially created Ring credential before retrying setup', async () => {
+    const scope = { network: 'regtest', deviceId: '2fc6e567-18a1-4861-8939-e31fa35ae477' };
+    wallet.inspect
+      .mockResolvedValueOnce({ exists: false })
+      .mockResolvedValue({ exists: false, ringUnlock: { ...scope, passwordAvailable: false } });
+    wallet.prepareLocalUnlock.mockResolvedValue(scope);
+    wallet.openWithRing.mockRejectedValueOnce(new Error('Relay unavailable')).mockResolvedValue({ network: 'regtest' });
+    render(<Wallet />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Set up with Ring' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Approve in test Ring' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Try again' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Unlock with Ring' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Approve in test Ring' }));
+    expect(await screen.findByText('Total balance')).toBeVisible();
+    expect(wallet.openWithRing.mock.calls.map((call) => call[2])).toEqual([true, false]);
+    expect(wallet.prepareLocalUnlock).toHaveBeenCalledOnce();
+  });
+
+  it('offers a ready handoff before peer recovery and waits for ownership before reporting success', async () => {
+    wallet.exists = false;
+    wallet.listWallets.mockResolvedValue([]);
+    wallet.ringDeviceId.mockResolvedValue('destination');
+    const status = { state: 'handoff-ready', transferId: 'transfer', sourceDeviceId: 'source' };
+    wallet.inspectRingDevice.mockResolvedValue(status);
+    wallet.importHandoff.mockResolvedValue({ id: record.id, network: 'regtest', deviceId: 'destination' });
+    const committed = Promise.withResolvers<void>();
+    wallet.claimRingHandoff.mockImplementation(async (_account, _net, _device, _id, _lost, install) => {
+      await install(Uint8Array.of(1), 'source');
+      await committed.promise;
+      return { release: vi.fn() };
+    });
+    render(<Wallet />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Use a password instead' }));
+    fireEvent.change(await screen.findByLabelText('New wallet password'), { target: { value: 'example password' } });
+    fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'example password' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Use wallet on this device' }));
+    expect(wallet.claimRingHandoff).not.toHaveBeenCalled();
+    fireEvent.click(await screen.findByRole('button', { name: 'Approve in test Ring' }));
+    await waitFor(() => expect(wallet.importHandoff).toHaveBeenCalledOnce());
+    expect(screen.queryByText('Wallet moved to this device')).toBeNull();
+    expect(wallet.startWallet).not.toHaveBeenCalled();
+    expect(wallet.createRingWallet).not.toHaveBeenCalled();
+    committed.resolve();
+    expect(await screen.findByText('Wallet moved to this device')).toBeVisible();
+    expect(wallet.startWallet).not.toHaveBeenCalled();
+  });
+  it('waits for recovery evidence on a new phrase import before reading its balance', async () => {
+    const initial = Promise.withResolvers<object>();
+    wallet.exists = false;
+    wallet.listWallets.mockResolvedValue([]);
+    wallet.getRecoveryStatus.mockReturnValue(initial.promise);
+    render(<Wallet />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Use a password instead' }));
+    fireEvent.change(await screen.findByLabelText('New wallet password'), { target: { value: 'example password' } });
+    fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'example password' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Use a recovery phrase instead' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Restore from phrase' }));
+    fireEvent.change(screen.getByLabelText('Recovery phrase'), { target: { value: words } });
+    fireEvent.click(screen.getByRole('checkbox'));
+    fireEvent.click(screen.getByRole('button', { name: 'Restore wallet' }));
+    expect(await screen.findByText('Checking wallet recovery')).toBeVisible();
+    expect(wallet.snapshot).not.toHaveBeenCalled();
+    await act(async () => initial.resolve({ state: 'running', importPending: true, autoApply: { phase: 'idle' } }));
+    expect(await screen.findByText('Waiting for your Lightning backup')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
+  });
+
+  it('keeps a payment link from requesting a quote on a fenced wallet', async () => {
+    wallet.getRecoveryStatus.mockResolvedValue({ state: 'fenced' });
+    render(<Wallet recipient="pubkyreceiver" />);
+    await unlock();
+    expect(await screen.findByText('Another device controls this wallet')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Review payment' })).toBeDisabled();
+    expect(wallet.prepareSend).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Lock wallet' })).toBeEnabled();
+  });
+
+  it('keeps an incomplete import from displaying or saving an empty wallet and resumes with the installed balances', async () => {
+    wallet.getRecoveryStatus.mockResolvedValue({
+      state: 'running',
+      importPending: true,
+      autoApply: { phase: 'idle' },
+      channels: [],
+    });
+    const empty = {
+      wallet: record,
+      primary: { connected: true },
+      activity: [],
+      balance: { totalSats: 0, availableSats: 0, pendingSats: 0 },
+    };
+    wallet.snapshot.mockResolvedValue(empty);
+    render(<Wallet />);
+    await unlock();
+    expect(await screen.findByText('Waiting for your Lightning backup')).toBeVisible();
+    expect(screen.getByText('Balance awaiting verification')).toBeVisible();
+    expect(screen.queryByRole('group', { name: '₿0' })).toBeNull();
+    expect(wallet.rememberBalance).not.toHaveBeenCalledWith(record.id, 'regtest', 0);
+    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Receive' })).toBeDisabled();
+    wallet.getRecoveryStatus.mockResolvedValue({
+      state: 'running',
+      importComplete: true,
+      autoApply: { phase: 'applied' },
+      channels: [{ status: 'active', restoreRecencyUnproven: true }],
+    });
+    wallet.snapshot.mockResolvedValue({
+      ...empty,
+      balance: { totalSats: 4300, availableSats: 300, pendingSats: 0 },
+      notes: ['Some funds are held while the wallet verifies its latest state. Still in your total.'],
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh wallet' }));
+    expect(await screen.findByRole('group', { name: '₿4,300' })).toBeVisible();
+    expect(screen.getByText('Restored Lightning funds are on hold')).toBeVisible();
+    expect(screen.getByText('₿300')).toBeVisible();
+    expect(screen.queryByText(/still in your total/i)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+    fireEvent.change(screen.getByLabelText('Pay to'), { target: { value: 'lnbcrt1payment' } });
+    expect(screen.getByRole('button', { name: 'Review payment' })).toBeEnabled();
+  });
+
   it('shows the encrypted last balance during sync and replaces it with the verified total once ready', async () => {
     let finishStart!: () => void;
     wallet.startWallet.mockImplementation(
@@ -355,6 +544,7 @@ describe('Pubky wallet', () => {
     wallet.exists = false;
     wallet.listWallets.mockResolvedValue([]);
     render(<Wallet />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Use a password instead' }));
     fireEvent.change(await screen.findByLabelText('New wallet password'), { target: { value: 'example password' } });
     expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled();
     fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'example password' } });
@@ -386,10 +576,13 @@ describe('Pubky wallet', () => {
         return record;
       });
       render(<Wallet />);
+      fireEvent.click(await screen.findByRole('button', { name: 'Use a password instead' }));
       fireEvent.change(await screen.findByLabelText('New wallet password'), { target: { value: 'example password' } });
       fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'example password' } });
       fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
       expect(screen.queryByRole('button', { name: 'Create with recovery phrase' })).toBeNull();
+      if (mode === 'restore')
+        fireEvent.click(await screen.findByRole('button', { name: 'I lost access to that device' }));
       expect(await screen.findByRole('button', { name: button })).toBeDisabled();
       if (mode === 'restore') expect(screen.queryByRole('button', { name: 'Create with Ring' })).toBeNull();
       fireEvent.click(screen.getByRole('checkbox'));

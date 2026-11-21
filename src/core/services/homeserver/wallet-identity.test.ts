@@ -2,7 +2,7 @@ import type { Session } from '@synonymdev/pubky';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { asOpaque } from '@/test-utils/type-assertions';
-import { startWalletKeyApproval, walletIdentityScope } from './wallet-identity';
+import { localWalletUnlockScope, startWalletKeyApproval, walletIdentityScope } from './wallet-identity';
 
 const { start, kind } = vi.hoisted(() => ({ start: vi.fn(), kind: vi.fn() }));
 vi.mock('@synonymdev/pubky', async (load) => ({
@@ -91,6 +91,22 @@ it('discards key bytes when the social grant changes during signout', async () =
   ).rejects.toThrow('ended');
   expect(grant.key.every((n) => n === 0)).toBe(true);
   expect(consume).not.toHaveBeenCalled();
+});
+it('requests only the local device unlock permission and rejects a wallet-root approval in its place', async () => {
+  const device = '2fc6e567-18a1-4861-8939-e31fa35ae477';
+  const local = localWalletUnlockScope('mainnet', device);
+  const consume = vi.fn();
+  prepare(sdkSession(account, local));
+  await startWalletKeyApproval(account, 'mainnet', new AbortController().signal, consume, device).result;
+  expect(start.mock.calls.at(-1)?.[0]).toBe(local + ':e');
+  expect(consume).toHaveBeenCalledOnce();
+  consume.mockClear();
+  prepare(sdkSession(account));
+  await expect(
+    startWalletKeyApproval(account, 'mainnet', new AbortController().signal, consume, device).result,
+  ).rejects.toThrow(/exact/);
+  expect(consume).not.toHaveBeenCalled();
+  expect(() => localWalletUnlockScope('mainnet', '../wallet-key')).toThrow();
 });
 it('wipes the key and closes its session if revocation fails', async () => {
   const { grant } = prepare();

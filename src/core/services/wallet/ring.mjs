@@ -6,9 +6,9 @@ import { wordlist } from '@scure/bip39/wordlists/english.js';
 
 const text = new TextEncoder();
 const decoder = new TextDecoder();
-const devicePath = '/pubky/ring-device-v1.json';
-const bindingPath = '/pubky/ring-binding-v1.json';
-const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+export const devicePath = '/pubky/ring-device-v1.json';
+export const bindingPath = '/pubky/ring-binding-v1.json';
+export const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const identity = /^[ybndrfg8ejkmcpqxot1uwisza345h769]{51}[yo]$/;
 const networks = new Set(['mainnet', 'testnet', 'regtest']);
 const modes = new Set(['create', 'restore']);
@@ -32,7 +32,7 @@ export function ringDeviceId(volume) {
   return id;
 }
 
-function bindingRecord(volume) {
+export function bindingRecord(volume) {
   const record = read(volume, bindingPath);
   if (record === undefined) return null;
   if (
@@ -40,6 +40,11 @@ function bindingRecord(volume) {
     record.version !== 1 ||
     !networks.has(record.network) ||
     !modes.has(record.mode) ||
+    (record.transferId !== undefined && !uuid.test(record.transferId)) ||
+    (record.retiredTransfers !== undefined &&
+      (!Array.isArray(record.retiredTransfers) ||
+        record.retiredTransfers.length > 16384 ||
+        record.retiredTransfers.some((id) => !uuid.test(id)))) ||
     !/^[0-9a-f]{64}$/.test(record.commitment) ||
     ringDeviceId(volume) !== record.deviceId
   ) {
@@ -50,7 +55,12 @@ function bindingRecord(volume) {
 
 export function ringBinding(volume) {
   const record = bindingRecord(volume);
-  return record && { deviceId: record.deviceId, network: record.network };
+  return record && {
+    deviceId: record.deviceId,
+    network: record.network,
+    ...(record.mode === 'restore' && { mode: record.mode }),
+    ...(record.transferId && { transferId: record.transferId }),
+  };
 }
 
 /** V1 uses HKDF-SHA256, this fixed UTF-8 salt and a NUL-separated network and bare Pubky. */

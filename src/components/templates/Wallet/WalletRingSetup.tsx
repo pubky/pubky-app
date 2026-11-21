@@ -6,8 +6,9 @@ import { KeyRound } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Checkbox } from '@/atoms/Checkbox/Checkbox';
 import { Spinner } from '@/atoms/Spinner/Spinner';
-import { ringEnrollment, RingEnrollmentError } from '@/services/wallet/ring-enrollment';
+import { inspectRingDevice, type RingDeviceStatus,RingEnrollmentError } from '@/services/wallet/ring-enrollment';
 import type { WalletSession } from '@/services/wallet/session';
+import { WalletDeviceSwitch } from './WalletDeviceSwitch';
 import { WalletKeyApproval } from './WalletKeyApproval';
 import { WalletPanel } from './WalletPanel';
 
@@ -20,22 +21,36 @@ type Props = {
   onCancel: () => void;
   onPhrase?: () => void;
   onKey: (key: Uint8Array, assertCurrent: () => void, mode: RingSetupMode, deviceId: string) => Promise<void>;
+  onHandoff: (status: RingDeviceStatus, deviceId: string, key: Uint8Array, assertCurrent: () => void) => Promise<void>;
+  progress?: number;
+  localRingOnly?: boolean;
 };
 
-export function WalletRingSetup({ account, network, session, onCancel, onPhrase, onKey }: Props) {
-  const [device, setDevice] = useState<{ id: string; state: Awaited<ReturnType<typeof ringEnrollment>> }>();
+export function WalletRingSetup({
+  account,
+  network,
+  session,
+  onCancel,
+  onPhrase,
+  onKey,
+  onHandoff,
+  progress,
+  localRingOnly,
+}: Props) {
+  const [device, setDevice] = useState<{ id: string; status: RingDeviceStatus }>();
   const [error, setError] = useState('');
   const [mode, setMode] = useState<RingSetupMode>();
   const [confirmed, setConfirmed] = useState(false);
   const [approving, setApproving] = useState(false);
+  const [recoverWithoutDevice, setRecoverWithoutDevice] = useState(false);
   useEffect(() => {
     let current = true;
     void (async () => {
       const id = await session.ringDeviceId();
-      const state = await ringEnrollment(account, network, id);
+      const status = await inspectRingDevice(account, network, id);
       if (!current) return;
-      setDevice({ id, state });
-      setMode(state === 'new' ? 'create' : 'restore');
+      setDevice({ id, status });
+      setMode(status.state === 'new' ? 'create' : 'restore');
     })().catch((reason: unknown) => {
       if (current)
         setError(
@@ -49,6 +64,28 @@ export function WalletRingSetup({ account, network, session, onCancel, onPhrase,
     };
   }, [account, network, session]);
 
+  if (
+    device &&
+    (device.status.state === 'handoff-ready' || (device.status.state === 'other-device' && !recoverWithoutDevice))
+  ) {
+    const status = device.status;
+    return (
+      <WalletDeviceSwitch
+        key={status.state}
+        account={account}
+        network={network}
+        progress={progress}
+        action={status.state === 'handoff-ready' ? 'take' : 'elsewhere'}
+        onRefresh={async () =>
+          setDevice({ id: device.id, status: await inspectRingDevice(account, network, device.id) })
+        }
+        onClose={onCancel}
+        onRecover={() => setRecoverWithoutDevice(true)}
+        onApprove={(key, assertCurrent) => onHandoff(status, device.id, key, assertCurrent)}
+      />
+    );
+  }
+
   if (approving && mode && device) {
     return (
       <WalletKeyApproval
@@ -61,12 +98,12 @@ export function WalletRingSetup({ account, network, session, onCancel, onPhrase,
   }
   return (
     <WalletPanel
-      title={device?.state === 'other-device' ? 'Recover your Ring wallet' : 'Wallet with Pubky Ring'}
+      title={device?.status.state === 'other-device' ? 'Recover your Ring wallet' : 'Wallet with Pubky Ring'}
       icon={KeyRound}
     >
       <p className="text-sm text-muted-foreground">
-        Ring can recover your Bitcoin keys from the same Pubky identity. Keep a backup of that identity. Your wallet
-        password protects this browser.
+        Ring can recover your Bitcoin keys from the same Pubky identity. Keep a backup of that identity.
+        {localRingOnly ? ' Ring approval also unlocks this browser.' : ' Your wallet password protects this browser.'}
       </p>
       {error && <p role="alert">{error}</p>}
       {!device && !error && <Spinner aria-label="Checking Ring wallet" />}
@@ -91,7 +128,7 @@ export function WalletRingSetup({ account, network, session, onCancel, onPhrase,
             <Button variant="brand" disabled={!confirmed} onClick={() => setApproving(true)}>
               {mode === 'create' ? 'Create with Ring' : 'Recover with Ring'}
             </Button>
-            {device.state === 'new' && (
+            {device.status.state === 'new' && (
               <Button
                 variant="outline"
                 onClick={() => {

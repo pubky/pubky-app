@@ -63,7 +63,7 @@ test('v1 HKDF fixes the account, network and English BIP39 mapping', async () =>
     const deviceId = ringDeviceId(volume);
     const engine = {
       request: async ({ body }) => {
-        assert.deepEqual(ringBinding(volume), { deviceId, network });
+        assert.deepEqual(ringBinding(volume), { deviceId, network, mode: 'restore' });
         assert.equal(body.mnemonic.split(' ').length, 24);
         assert.equal(createHash('sha256').update(body.mnemonic).digest('hex'), phraseHash);
         assert.equal(body.recoveryAutoApply, true);
