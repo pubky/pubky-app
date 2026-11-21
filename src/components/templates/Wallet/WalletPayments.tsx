@@ -46,23 +46,35 @@ function AmountField({
   value,
   onChange,
   disabled,
-  payerChooses = false,
-  offlineHint,
+  required = false,
+  hint,
+  onSenderChooses,
 }: {
   value: string;
   onChange: (value: string) => void;
   disabled: boolean;
-  payerChooses?: boolean;
-  offlineHint?: string;
+  required?: boolean;
+  hint?: string;
+  onSenderChooses?: () => void;
 }) {
-  const hint =
-    offlineHint ?? (payerChooses ? 'Leave blank or enter 0 to let the sender choose how much to pay.' : null);
   return (
     <div className="grid gap-2">
-      <Label htmlFor="payment-amount">
-        Amount <span className="sr-only">in bitcoin</span>
-        {!payerChooses && !offlineHint && ' (optional)'}
-      </Label>
+      <div className="flex items-center justify-between gap-2">
+        <Label htmlFor="payment-amount">
+          Amount <span className="sr-only">in bitcoin</span>
+          {!required && ' (optional)'}
+        </Label>
+        {onSenderChooses && (
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={onSenderChooses}
+            className="min-h-6 rounded-sm text-sm text-brand underline-offset-2 hover:underline focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-50"
+          >
+            Let sender choose
+          </button>
+        )}
+      </div>
       <div className="relative">
         <span
           aria-hidden
@@ -73,7 +85,7 @@ function AmountField({
         <Input
           id="payment-amount"
           aria-describedby={hint ? 'receive-amount-hint' : undefined}
-          required={!!offlineHint}
+          required={required}
           className="pl-8"
           disabled={disabled}
           inputMode="numeric"
@@ -84,7 +96,7 @@ function AmountField({
         />
       </div>
       {hint && (
-        <p id="receive-amount-hint" className="text-sm text-muted-foreground">
+        <p id="receive-amount-hint" aria-live="polite" className="text-sm text-muted-foreground">
           {hint}
         </p>
       )}
@@ -399,9 +411,13 @@ export function WalletSend({
 }
 
 function receiveAmount(input: string) {
-  if (input.trim() === '') return undefined;
-  const sats = parseSats(input);
-  return sats === 0 ? undefined : sats;
+  if (input === '') return 0;
+  if (input !== input.trim()) return undefined;
+  try {
+    return parseSats(input);
+  } catch {
+    return undefined;
+  }
 }
 
 function receiveFeeTerms(flatFeeSats: number, feePpm: number) {
@@ -464,6 +480,7 @@ export function WalletReceive({
     return () => window.clearTimeout(timer);
   }, [quote]);
   const [offline, setOffline] = useState(false);
+  const [primaryNeedsAmount, setPrimaryNeedsAmount] = useState(false);
   const [useOnline, setUseOnline] = useState(false);
   const [attemptedDraft, setAttemptedDraft] = useState<OfflineReceiveDraft | null>(null);
   const [hostSupport, setHostSupport] = useState<'checking' | 'available' | 'unavailable' | 'error'>('checking');
@@ -505,12 +522,29 @@ export function WalletReceive({
     offlineCapacity === undefined || offlineCapacity < MIN_OFFLINE_SATS
       ? `Enter at least ${bitcoinAmount(MIN_OFFLINE_SATS)}. Your primary will check available capacity.`
       : `Enter ${bitcoinAmount(MIN_OFFLINE_SATS)} to ${bitcoinAmount(offlineCapacity)} for an offline invoice.`;
-  const offlineAmountValid =
-    /^\d+$/.test(amount) &&
-    Number.isSafeInteger(Number(amount)) &&
-    Number(amount) >= MIN_OFFLINE_SATS &&
-    (offlineCapacity === undefined || Number(amount) <= offlineCapacity);
+  const amountSats = receiveAmount(amount);
+  const canReviewAmount =
+    amountSats !== undefined &&
+    amountSats > 0 &&
+    (!offline ||
+      (canReceiveOffline &&
+        !pending &&
+        amountSats >= MIN_OFFLINE_SATS &&
+        (offlineCapacity === undefined || amountSats <= offlineCapacity)));
+  const onlineHint = primaryNeedsAmount
+    ? 'Enter an amount for a Lightning request with this primary.'
+    : amountSats === undefined
+      ? 'Enter a whole number within the Bitcoin supply.'
+      : 'Enter at least ₿1 for a fixed invoice.';
   const jitFee = quote?.jitFee;
+  async function reviewSenderChoice() {
+    try {
+      setQuote(await client.quoteReceive({ amountSats: undefined, description }));
+    } catch (error) {
+      if (!(error instanceof WalletError) || error.code !== 'AMOUNT_REQUIRED') throw error;
+      setPrimaryNeedsAmount(true);
+    }
+  }
   async function reviewOffline(amountSats: number, note: string, draft?: OfflineReceiveDraft) {
     const next = await client.quoteReceive({
       mode: 'offline',
@@ -721,19 +755,19 @@ export function WalletReceive({
           className="grid gap-3"
           onSubmit={(e) => {
             e.preventDefault();
+            if (!canReviewAmount || task.busy) return;
             void task.run(async () => {
-              if (offline) {
-                if (!canReceiveOffline || !offlineAmountValid || pending) return;
-                await reviewOffline(Number(amount), description);
-              } else {
-                setQuote(await client.quoteReceive({ amountSats: receiveAmount(amount), description }));
-              }
+              if (offline) await reviewOffline(amountSats, description);
+              else setQuote(await client.quoteReceive({ amountSats, description }));
             });
           }}
         >
           <AmountField
-            payerChooses={!offline}
-            offlineHint={offline ? offlineRange : undefined}
+            required
+            hint={offline ? offlineRange : onlineHint}
+            onSenderChooses={
+              !offline && !primaryNeedsAmount && amountSats === 0 ? () => void task.run(reviewSenderChoice) : undefined
+            }
             value={amount}
             onChange={setAmount}
             disabled={task.busy}
@@ -799,9 +833,9 @@ export function WalletReceive({
           <div className="flex flex-wrap gap-2">
             <Button
               type="submit"
-              className="justify-self-start"
+              className="justify-self-start disabled:border-border disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
               variant="brand"
-              disabled={task.busy || (offline && (!canReceiveOffline || !offlineAmountValid))}
+              disabled={task.busy || !canReviewAmount}
             >
               {task.busy ? 'Preparing request…' : 'Review request'}
             </Button>
@@ -810,12 +844,17 @@ export function WalletReceive({
                 type="button"
                 className="justify-self-start"
                 variant="outline"
-                disabled={task.busy}
+                disabled={task.busy || amountSats === undefined}
                 onClick={() =>
                   task.run(async () => {
-                    const amountSats = receiveAmount(amount);
+                    if (amountSats === undefined) return;
                     const address = await newBitcoinAddress();
-                    setDeposit({ address, amountSats, uri: buildBip21({ address, amountSats, message: description }) });
+                    const requestedAmount = amountSats || undefined;
+                    setDeposit({
+                      address,
+                      amountSats: requestedAmount,
+                      uri: buildBip21({ address, amountSats: requestedAmount, message: description }),
+                    });
                   })
                 }
               >

@@ -1,4 +1,7 @@
 import type { NextConfig } from 'next';
+import { createHash } from 'node:crypto';
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { z } from 'zod';
 import withSerwistInit from '@serwist/next';
 import { withSentryConfig } from '@sentry/nextjs/config';
@@ -68,6 +71,22 @@ const nextConfig: NextConfig = {
     ];
   },
   webpack: (config, { isServer }) => {
+    // Webpack treats node_modules as versioned. A patch can change the installed
+    // source without changing that version, particularly on a warm Vercel build.
+    if (config.cache?.type === 'filesystem') {
+      const directory = join(config.context, 'patches');
+      const digest = createHash('sha256');
+      for (const file of readdirSync(directory)
+        .filter((name) => name.endsWith('.patch'))
+        .sort()) {
+        digest
+          .update(file)
+          .update('\0')
+          .update(readFileSync(join(directory, file)))
+          .update('\0');
+      }
+      config.cache.version = `${config.cache.version ?? ''}|patches:${digest.digest('hex')}`;
+    }
     if (isServer) {
       config.externals.push('@synonymdev/pubky');
     }
