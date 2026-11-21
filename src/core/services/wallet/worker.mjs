@@ -2,6 +2,7 @@ import { createPortableRuntime } from '@beignet/portable-engine';
 import { createSqlJsDatabaseFactory } from '@beignet/portable-engine/sqljs';
 import { createAwayReceipts } from './away-receipts.mjs';
 import { lastBalance, rememberBalance } from './balance.mjs';
+import { primaryChannelReadiness } from './channel-readiness.mjs';
 import { provisionRingWallet, ringBinding, ringDeviceId } from './ring.mjs';
 import { createStartupScan } from './startup-scan.mjs';
 import { createStartupSockets } from './startup-sockets.mjs';
@@ -27,6 +28,8 @@ let background = false;
 let grantAbort;
 let openingGrant;
 let startupScan;
+let activeProgress;
+let primaryConnected = false;
 let transport;
 let compiledDatabase;
 let connectionIssue;
@@ -37,6 +40,29 @@ let activeRequests = 0;
 let sending = false;
 let previousPaymentMarker = 0;
 const busy = () => Object.assign(new Error('Another wallet operation is running.'), { code: 'WALLET_BUSY' });
+
+function watchSlowStart(id) {
+  let phase = 'opening';
+  let lastPhase;
+  let lastConnected;
+  let timer = setTimeout(publish, 1200);
+  function publish() {
+    timer = undefined;
+    if (closing || (phase === lastPhase && primaryConnected === lastConnected)) return;
+    lastPhase = phase;
+    lastConnected = primaryConnected;
+    self.postMessage({ id, event: 'start-progress', phase, primaryConnected });
+  }
+  return {
+    update(nextPhase = phase) {
+      phase = nextPhase;
+      if (timer === undefined) timer = setTimeout(publish, 300);
+    },
+    stop() {
+      clearTimeout(timer);
+    },
+  };
+}
 
 async function connection() {
   const response = await fetch('/api/wallet/connection', {
@@ -188,8 +214,17 @@ async function open(account, password, onUnlocked) {
     const fastStart = existing && grant?.network === 'mainnet' && grant.fastElectrumStart === true;
     startupScan = fastStart ? createStartupScan() : undefined;
     const primaryKey = grant?.primaryUri.split('@')[0].toLowerCase();
+    const active = () => grant && activeGrant === grant && !closing && owner === account;
+    const extensions = [...(startupScan?.nodeOptions.extensions ?? [])];
+    if (primaryKey) {
+      extensions.push(
+        primaryChannelReadiness(primaryKey, () => {
+          if (active()) self.postMessage({ event: 'primary-change', account });
+        }),
+      );
+    }
     engine = await createPortableRuntime({
-      nodeOptions: startupScan?.nodeOptions,
+      nodeOptions: extensions.length ? { extensions } : undefined,
       databaseFactory,
       volume,
       electrum: defaults.electrum,
@@ -197,18 +232,24 @@ async function open(account, password, onUnlocked) {
       onDiagnostic({ phase, message }) {
         if (
           (phase === 'peer:connect' || phase === 'peer:disconnect') &&
-          !closing &&
-          owner === account &&
-          grant &&
-          activeGrant === grant &&
+          active() &&
           message.split(' ', 1)[0].toLowerCase() === primaryKey
         ) {
+          primaryConnected = phase === 'peer:connect';
+          activeProgress?.update();
           // A hint to reread verified wallet state. No diagnostic payload leaves the worker.
           self.postMessage({ event: 'primary-change', account });
         }
-        if (phase === 'engine-perf' && message.startsWith('initial-sync ')) startupScan?.restoreCadence();
+        if (phase === 'engine-perf' && message.startsWith('initial-sync ')) {
+          startupScan?.restoreCadence();
+          if (active()) activeProgress?.update('finishing');
+        }
         // Replenish an unused transport if restoring the node took long enough for it to expire.
         const createdNode = phase === 'engine-perf' && message.startsWith('create ');
+        if (createdNode && active()) {
+          primaryConnected = false;
+          activeProgress?.update('scanning');
+        }
         if (createdNode && relay && transport === relay && !closing && !background) {
           relay.preparePeer();
         }
@@ -246,7 +287,10 @@ async function close() {
   // lease and any pending payment marker until this worker is terminated.
   try {
     if (shutdownFailed) throw new Error();
-    await engine?.close();
+    if (engine) {
+      await engine.close();
+      volume.compact();
+    }
   } catch {
     shutdownFailed = true;
     throw Object.assign(new Error('Wallet shutdown was interrupted. Reopen and check Activity.'), {
@@ -255,6 +299,7 @@ async function close() {
   }
   activeStore = undefined;
   startupScan = undefined;
+  primaryConnected = false;
   engine = undefined;
   volume?.close();
   volume = undefined;
@@ -263,7 +308,7 @@ async function close() {
   activeGrant = undefined;
 }
 
-async function handle({ id, operation, account, payload, notifyUnlocked }) {
+async function handle({ id, operation, account, payload, notifyUnlocked, notifyStartProgress }) {
   if (operation === 'close') {
     closing = true;
     discardIdleSockets();
@@ -390,13 +435,20 @@ async function handle({ id, operation, account, payload, notifyUnlocked }) {
       });
     }
     activeRequests++;
+    let progress;
     try {
       const start = payload.method === 'POST' && /^\/api\/wallets\/([0-9a-f]{32})\/start$/.exec(payload.path);
+      if (start && notifyStartProgress === true && !activeProgress) {
+        progress = watchSlowStart(id);
+        activeProgress = progress;
+      }
       // The caller has verified the device lease. Overlap the fixed relay dial
       // with node restoration and leave the authenticated Lightning handshake to Beignet.
       if (start && !background) transport?.preparePeer();
       const result = await engine.request(payload);
       if (startupScan && start) {
+        // Confirmation can outlast the engine's initial-sync mark while the Bitcoin scan settles.
+        progress?.update('scanning');
         await startupScan.confirm(() => {
           rejectIfClosing();
           return engine.request({ method: 'POST', path: `/wallets/${start[1]}/api/wallet/refresh`, body: {} });
@@ -407,6 +459,10 @@ async function handle({ id, operation, account, payload, notifyUnlocked }) {
       }
       return result;
     } finally {
+      if (progress) {
+        progress.stop();
+        activeProgress = undefined;
+      }
       activeRequests--;
     }
   }

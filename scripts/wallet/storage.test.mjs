@@ -73,7 +73,7 @@ test('identical files reuse the last durable commit, including after reopening',
 test('inspection uses only metadata and leaves full validation and repair to unlock', async (t) => {
   let present = false;
   let locked = false;
-  const sizes = { journal: 33, first: 80, second: 80, active: 1 };
+  const sizes = { journal: 33, first: 80, second: 80, active: 1, checkpoint: 0 };
   const requests = [];
   const reads = [];
   const storage = {
@@ -129,5 +129,10 @@ test('inspection uses only metadata and leaves full validation and repair to unl
   assert.deepEqual(reads, ['second', 'journal']);
   sizes.journal = 1;
   await assert.rejects(inspectFiles(account), /initialization was interrupted/);
+  assert.equal(locked, false);
+  sizes.first = sizes.second = 0;
+  sizes.checkpoint = 8;
+  await assert.rejects(inspectFiles(account), /initialization was interrupted/);
+  await assert.rejects(openFiles(account), /initialization was interrupted/);
   assert.equal(locked, false);
 });

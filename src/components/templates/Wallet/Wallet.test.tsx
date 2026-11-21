@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { bech32 } from 'bech32';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { LastWalletBalance } from '@/services/wallet/session';
+import type { LastWalletBalance, WalletStartProgress } from '@/services/wallet/session';
 import { Wallet } from './Wallet';
 import { WalletAccount } from './WalletAccount';
 
@@ -16,6 +16,7 @@ const wallet = vi.hoisted(() => ({
   savedActivity: vi.fn(),
   awayReceipts: vi.fn(),
   unlocked: undefined as ((preview: LastWalletBalance | null) => void) | undefined,
+  progress: undefined as ((value: WalletStartProgress) => void) | undefined,
   ringBinding: vi.fn(),
   ringDeviceId: vi.fn(),
   createRingWallet: vi.fn(),
@@ -69,8 +70,13 @@ vi.mock('@/stores/auth/auth.store', () => ({
 }));
 vi.mock('@/services/wallet/session', () => ({
   WalletSession: class {
-    constructor(_account: string, onUnlocked?: (preview: LastWalletBalance | null) => void) {
+    constructor(
+      _account: string,
+      onUnlocked?: (preview: LastWalletBalance | null) => void,
+      onStartProgress?: (value: WalletStartProgress) => void,
+    ) {
       wallet.unlocked = onUnlocked;
+      wallet.progress = onStartProgress;
     }
     rememberBalance = wallet.rememberBalance;
     savedActivity = wallet.savedActivity;
@@ -222,6 +228,12 @@ describe('Pubky wallet', () => {
     const destination = screen.getByLabelText('Pay to');
     fireEvent.change(destination, { target: { value: 'lnbcrt1draft' } });
     const review = screen.getByRole<HTMLButtonElement>('button', { name: 'Review payment' });
+    act(() => wallet.progress?.({ phase: 'scanning', primaryConnected: true }));
+    expect(screen.getByText('Lightning connected. Syncing Bitcoin…')).toBeVisible();
+    act(() => wallet.progress?.({ phase: 'finishing', primaryConnected: false }));
+    expect(screen.getByText('Connecting to Lightning…')).toBeVisible();
+    act(() => wallet.progress?.({ phase: 'finishing', primaryConnected: true }));
+    expect(screen.getByText('Finishing wallet startup…')).toBeVisible();
     expect(review).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Max' })).toBeDisabled();
     fireEvent.submit(review.form!);

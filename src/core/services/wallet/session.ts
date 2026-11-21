@@ -17,6 +17,8 @@ export type WalletDefaults = { network: Network; primaryUri: string; electrum: E
 export type LastWalletBalance = { walletId: string; network: Network; totalSats: number; updatedAt: number };
 type UnlockedEvent = { id: number; event: 'unlocked'; account: string; balance: LastWalletBalance | null };
 type PrimaryChangeEvent = { event: 'primary-change'; account: string };
+export type WalletStartProgress = { phase: 'opening' | 'scanning' | 'finishing'; primaryConnected: boolean };
+type StartProgressEvent = { id: number; event: 'start-progress' } & WalletStartProgress;
 type Reply = { id: number; result?: unknown; error?: { code?: string; status?: number; message: string } };
 
 // A same-tab remount can begin while its previous worker is still flushing.
@@ -36,12 +38,13 @@ export class WalletSession {
   private readonly primaryListeners = new Set<() => void>();
   private pending = new Map<
     number,
-    { resolve(value: unknown): void; reject(error: Error): void; notifyUnlocked?: boolean }
+    { resolve(value: unknown): void; reject(error: Error): void; notifyUnlocked?: boolean; startWalletId?: string }
   >();
 
   constructor(
     private readonly account: string,
     private readonly onUnlocked?: (lastBalance: LastWalletBalance | null) => void,
+    private readonly onStartProgress?: (progress: WalletStartProgress) => void,
   ) {
     const { session, generation } = useAuthStore.getState();
     this.ownsAccount = () => {
@@ -56,7 +59,9 @@ export class WalletSession {
       );
     };
     this.worker = new Worker('/wallet-engine/worker.js', { type: 'module', name: 'Pubky wallet' });
-    this.worker.onmessage = ({ data }: MessageEvent<Reply | UnlockedEvent | PrimaryChangeEvent>) => {
+    this.worker.onmessage = ({
+      data,
+    }: MessageEvent<Reply | UnlockedEvent | PrimaryChangeEvent | StartProgressEvent>) => {
       if ('event' in data && data.event === 'primary-change') {
         if (data.account !== this.account) return;
         try {
@@ -70,6 +75,16 @@ export class WalletSession {
       const waiter = this.pending.get(data.id);
       if (!waiter) return;
       if ('event' in data) {
+        if (data.event === 'start-progress' && waiter.startWalletId) {
+          try {
+            this.selectedWallet(waiter.startWalletId);
+          } catch {
+            return;
+          }
+          if (['opening', 'scanning', 'finishing'].includes(data.phase) && typeof data.primaryConnected === 'boolean')
+            this.onStartProgress?.({ phase: data.phase, primaryConnected: data.primaryConnected });
+          return;
+        }
         if (
           waiter.notifyUnlocked &&
           data.event === 'unlocked' &&
@@ -124,7 +139,11 @@ export class WalletSession {
     const id = ++this.counter;
     return new Promise((resolve, reject) => {
       const notifyUnlocked = operation === 'open' && !!this.onUnlocked;
-      this.pending.set(id, { resolve: (value) => resolve(value as T), reject, notifyUnlocked });
+      const input = payload as { method?: string; path?: string } | undefined;
+      const selected = this.onStartProgress && operation === 'request' ? this.client.connection.walletId : undefined;
+      const startWalletId =
+        selected && input?.method === 'POST' && input.path === `/api/wallets/${selected}/start` ? selected : undefined;
+      this.pending.set(id, { resolve: (value) => resolve(value as T), reject, notifyUnlocked, startWalletId });
       try {
         if (this.assertRingDevice && (operation === 'ring-wallet' || operation === 'request')) {
           const input = payload as { method?: string; path?: string };
@@ -135,7 +154,14 @@ export class WalletSession {
           if (!discovery) this.assertRingDevice();
         }
         worker.postMessage(
-          { id, operation, account: this.account, payload, ...(notifyUnlocked ? { notifyUnlocked } : {}) },
+          {
+            id,
+            operation,
+            account: this.account,
+            payload,
+            ...(notifyUnlocked ? { notifyUnlocked } : {}),
+            ...(startWalletId ? { notifyStartProgress: true } : {}),
+          },
           transfer,
         );
       } catch (error) {

@@ -167,6 +167,51 @@ it('delivers primary status hints only to listeners for the active, unlocked wal
   expect(listener).toHaveBeenCalledOnce();
 });
 
+it('accepts progress only for its pending start, selected wallet and current device', async () => {
+  const sent = vi.fn<(request: Request & { notifyStartProgress?: boolean }) => void>();
+  const workers: TestWorker[] = [];
+  class TestWorker {
+    onmessage?: (event: { data: unknown }) => void;
+    constructor() {
+      workers.push(this);
+    }
+    postMessage(request: Request) {
+      sent(request);
+      if (request.operation === 'close') this.onmessage?.({ data: { id: request.id, result: null } });
+    }
+    terminate() {}
+  }
+  vi.stubGlobal('Worker', TestWorker);
+  const progress = vi.fn();
+  const session = new WalletSession(auth.currentUserPubky, undefined, progress);
+  const walletId = 'e'.repeat(32);
+  session.client.selectWallet(walletId);
+  const start = session.client.startWallet();
+  const req = sent.mock.lastCall![0];
+  expect(req.notifyStartProgress).toBe(true);
+  const [worker] = workers;
+  const event = { id: req.id, event: 'start-progress', phase: 'scanning', primaryConnected: true, detail: 'private' };
+  worker.onmessage?.({ data: { ...event, id: -1 } });
+  worker.onmessage?.({ data: { ...event, phase: 'private' } });
+  worker.onmessage?.({ data: { ...event, primaryConnected: 'unknown' } });
+  session.client.selectWallet('a'.repeat(32));
+  worker.onmessage?.({ data: event });
+  session.client.selectWallet(walletId);
+  session.guardRingDevice(() => {
+    throw new Error('Lease expired');
+  });
+  worker.onmessage?.({ data: event });
+  expect(progress).not.toHaveBeenCalled();
+  session.guardRingDevice(() => {});
+  worker.onmessage?.({ data: event });
+  worker.onmessage?.({ data: { id: req.id, result: {} } });
+  await start;
+  worker.onmessage?.({ data: event });
+  expect(progress.mock.calls).toEqual([[{ phase: 'scanning', primaryConnected: true }]]);
+  expect(sent).toHaveBeenCalledOnce();
+  await session.close();
+});
+
 it.each(['current', 'other account', 'signout', 'sync', 'new generation', 'lock'])(
   'delivers local unlock only to the pending open for its current signed-in owner (%s)',
   async (condition) => {

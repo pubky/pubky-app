@@ -1,5 +1,6 @@
 import { gcm } from '@noble/ciphers/aes';
 import { sha256 } from '@noble/hashes/sha256';
+import { checkpointDigest, createOverlay, maxPackedBytes, packFiles, unpackFiles } from './vault-overlay.mjs';
 
 // Each acknowledgement follows two synchronous flushes. Write the inactive
 // slot, flush its ciphertext, then append its authenticated digest to the log.
@@ -7,13 +8,13 @@ import { sha256 } from '@noble/hashes/sha256';
 const DIGEST_BYTES = 32;
 const SALT_BYTES = 32;
 const NONCE_BYTES = 12;
-const MAX_BYTES = 256 * 1024 * 1024;
+const MAX_BYTES = maxPackedBytes + SALT_BYTES + NONCE_BYTES + 16;
+const CHECKPOINT_MIN_BYTES = 2 * 1024 * 1024;
 const utf8 = new TextEncoder();
-const text = new TextDecoder('utf-8', { fatal: true });
 const failure = (message, code = 'WALLET_STORAGE') => Object.assign(new Error(message), { code });
 
 function read(file, size, at = 0) {
-  if (size > MAX_BYTES) throw failure('This wallet exceeds the browser storage limit.');
+  if (!Number.isSafeInteger(size) || size < 0 || size > MAX_BYTES) throw failure('Invalid wallet storage size.');
   const bytes = new Uint8Array(size);
   for (let i = 0; i < size;) {
     const n = file.read(bytes.subarray(i), { at: at + i });
@@ -87,7 +88,7 @@ export async function inspectFiles(account) {
     const size = journal ? journal.getSize() : 0;
     if (!Number.isSafeInteger(size)) throw failure('This browser cannot read wallet storage synchronously.');
     const exists = size >= DIGEST_BYTES;
-    if (!exists && (await Promise.all(['first', 'second'].map(fileSize))).some(Boolean)) {
+    if (!exists && (await Promise.all(['first', 'second', 'checkpoint'].map(fileSize))).some(Boolean)) {
       throw failure('Wallet initialization was interrupted. The stored data has been preserved.');
     }
     const marker = await fileSize('active');
@@ -126,14 +127,27 @@ export async function openFiles(account) {
       if (!actual.every((v, i) => v === digest[i]) || sealed.length < SALT_BYTES + NONCE_BYTES + 16) {
         throw failure('The committed wallet data is damaged.');
       }
-    } else if (slots.some((file) => file.getSize())) {
-      throw failure('Wallet initialization was interrupted. The stored data has been preserved.');
+    } else {
+      const oldCheckpoint = await optionalHandle(() => directory.getFileHandle('checkpoint'));
+      if (slots.some((file) => file.getSize()) || (oldCheckpoint && (await oldCheckpoint.getFile()).size)) {
+        throw failure('Wallet initialization was interrupted. The stored data has been preserved.');
+      }
     }
     if (size !== pos) {
       flushAtLength(journal, pos);
     }
     return {
       read: () => sealed,
+      async openCheckpoint(create) {
+        const file = await directory.getFileHandle('checkpoint', { create });
+        const handle = await syncHandle(file);
+        files.push(handle);
+        return {
+          read: () => read(handle, handle.getSize()),
+          write: (bytes) => write(handle, bytes, 0),
+          clear: () => flushAtLength(handle, 0),
+        };
+      },
       markPayment() {
         const previous = active.getSize();
         write(active, Uint8Array.of(1, 1), 0);
@@ -163,40 +177,6 @@ export async function openFiles(account) {
   }
 }
 
-// Pack the engine filesystem as binary, so SQLite images never become strings.
-function pack(files) {
-  const entries = [...files].map(([name, bytes]) => [utf8.encode(name), bytes]);
-  const size = entries.reduce((n, [name, bytes]) => n + 8 + name.length + bytes.length, 0);
-  if (size > MAX_BYTES - 60) throw failure('This wallet exceeds the browser storage limit.');
-  const blob = new Uint8Array(size);
-  const view = new DataView(blob.buffer);
-  let offset = 0;
-  for (const [name, bytes] of entries) {
-    view.setUint32(offset, name.length);
-    view.setUint32(offset + 4, bytes.length);
-    blob.set(name, offset + 8);
-    blob.set(bytes, offset + 8 + name.length);
-    offset += 8 + name.length + bytes.length;
-  }
-  return blob;
-}
-
-function unpack(blob) {
-  const files = new Map();
-  const view = new DataView(blob.buffer, blob.byteOffset, blob.byteLength);
-  for (let offset = 0; offset < blob.length;) {
-    const nameBytes = view.getUint32(offset);
-    const size = view.getUint32(offset + 4);
-    const start = offset + 8 + nameBytes;
-    if (!nameBytes || start + size > blob.length) throw failure('Invalid wallet filesystem.');
-    const name = text.decode(blob.subarray(offset + 8, start));
-    if (files.has(name)) throw failure('Invalid wallet filesystem.');
-    files.set(name, blob.slice(start, start + size));
-    offset = start + size;
-  }
-  return files;
-}
-
 export async function unlockVolume(store, account, password) {
   const sealed = store.read();
   if (typeof password !== 'string' || !password.length || (!sealed && password.length < 12)) {
@@ -211,32 +191,75 @@ export async function unlockVolume(store, account, password) {
   );
   const context = utf8.encode('Pubky wallet v1/' + account);
   let files = new Map();
+  let checkpoint;
+  let overlay;
+  let overlayLimit = 0;
+  let pendingCheckpoint;
+  let headUsesOverlay = false;
+  function setBase(baseFiles, digest, size) {
+    overlay?.wipe(new Set(baseFiles.values()));
+    overlay = createOverlay(baseFiles, digest);
+    overlayLimit = Math.max(1024 * 1024, Math.floor(size / 3));
+  }
   if (sealed) {
+    const decryptKey = await crypto.subtle.importKey('raw', key, 'AES-GCM', false, ['decrypt']);
+    const decrypt = async (bytes) => new Uint8Array(await crypto.subtle.decrypt({
+      name: 'AES-GCM',
+      iv: bytes.subarray(SALT_BYTES, SALT_BYTES + NONCE_BYTES),
+      additionalData: context,
+      tagLength: 128,
+    }, decryptKey, bytes.subarray(SALT_BYTES + NONCE_BYTES)));
     let plain;
     try {
-      const decryptKey = await crypto.subtle.importKey('raw', key, 'AES-GCM', false, ['decrypt']);
-      plain = new Uint8Array(await crypto.subtle.decrypt({
-        name: 'AES-GCM',
-        iv: sealed.subarray(SALT_BYTES, SALT_BYTES + NONCE_BYTES),
-        additionalData: context,
-        tagLength: 128,
-      }, decryptKey, sealed.subarray(SALT_BYTES + NONCE_BYTES)));
-      files = unpack(plain);
+      plain = await decrypt(sealed);
     } catch {
       key.fill(0);
       throw failure('Could not unlock this wallet. Check the password and try again.', 'WALLET_PASSWORD');
+    }
+    let basePlain;
+    try {
+      const digest = checkpointDigest(plain);
+      if (digest) {
+        checkpoint = await store.openCheckpoint(false);
+        const saved = checkpoint.read();
+        if (!salt.every((byte, i) => byte === saved[i])) throw failure('Invalid wallet checkpoint.');
+        const actual = new Uint8Array(await crypto.subtle.digest('SHA-256', saved));
+        if (!digest.every((byte, i) => byte === actual[i])) throw failure('Invalid wallet checkpoint.');
+        basePlain = await decrypt(saved);
+        setBase(unpackFiles(basePlain), digest, saved.length);
+        files = overlay.restore(plain);
+        headUsesOverlay = true;
+      } else {
+        files = unpackFiles(plain);
+        if (sealed.length >= CHECKPOINT_MIN_BYTES && store.openCheckpoint) {
+          // The authenticated full head is authoritative if this optional sidecar is unavailable.
+          try {
+            checkpoint = await store.openCheckpoint(true);
+          } catch {
+            checkpoint = undefined;
+          }
+          if (checkpoint) {
+            const originalDigest = new Uint8Array(await crypto.subtle.digest('SHA-256', sealed));
+            setBase(new Map(files), originalDigest, sealed.length);
+            pendingCheckpoint = sealed;
+          }
+        }
+      }
+    } catch {
+      key.fill(0);
+      overlay?.wipe();
+      throw failure('The committed wallet data is damaged.');
     } finally {
       plain?.fill(0);
+      basePlain?.fill(0);
     }
   }
   let available = true;
   const check = () => {
     if (!available) throw failure('Reopen the wallet to access its storage.');
   };
-  const save = () => {
-    let plain;
+  function commit(plain) {
     try {
-      plain = pack(files);
       const nonce = crypto.getRandomValues(new Uint8Array(NONCE_BYTES));
       const cipher = gcm(key, nonce, context).encrypt(plain);
       const bytes = new Uint8Array(salt.length + nonce.length + cipher.length);
@@ -244,14 +267,55 @@ export async function unlockVolume(store, account, password) {
       bytes.set(nonce, salt.length);
       bytes.set(cipher, salt.length + nonce.length);
       store.commit(bytes);
+      return bytes;
+    } finally {
+      plain.fill(0);
+    }
+  }
+  function save() {
+    try {
+      const manifest = overlay?.pack(files, overlayLimit);
+      if (manifest) {
+        if (pendingCheckpoint) {
+          // This can only be replaced when the last journal entry holds a full v1 wallet.
+          try {
+            checkpoint.write(pendingCheckpoint);
+          } catch {
+            // Only the optional sidecar was touched. Continue using full commits for this session.
+            overlay.wipe(new Set(files.values()));
+            overlay = undefined;
+          }
+          pendingCheckpoint = undefined;
+        }
+        if (overlay) {
+          commit(manifest);
+          headUsesOverlay = true;
+          return;
+        }
+        manifest.fill(0);
+      }
+      // Rebase through a durable legacy head first. A crash here never leaves the
+      // journal pointing at an overlay whose checkpoint we have overwritten.
+      const full = commit(packFiles(files));
+      headUsesOverlay = false;
+      if (overlay && full.length >= CHECKPOINT_MIN_BYTES) {
+        setBase(new Map(files), sha256(full), full.length);
+        pendingCheckpoint = full;
+      } else {
+        overlay?.wipe(new Set(files.values()));
+        overlay = undefined;
+        pendingCheckpoint = undefined;
+        // No future manifest can reference this checkpoint in this session.
+        try {
+          checkpoint?.clear();
+        } catch {}
+        checkpoint = undefined;
+      }
     } catch (error) {
-      // An ambiguous commit must fence all reads and writes until reopening.
       available = false;
       throw error;
-    } finally {
-      plain?.fill(0);
     }
-  };
+  }
   return {
     read(path) {
       check();
@@ -284,11 +348,33 @@ export async function unlockVolume(store, account, password) {
       check();
       return [...files.keys()].filter((path) => path.startsWith(prefix));
     },
+    compact() {
+      check();
+      if (headUsesOverlay) {
+        try {
+          commit(packFiles(files));
+        } catch (error) {
+          available = false;
+          throw error;
+        }
+        headUsesOverlay = false;
+      }
+      // The latest full slot is self-contained. A leftover encrypted checkpoint is harmless.
+      try {
+        checkpoint?.clear();
+      } catch {}
+      overlay?.wipe(new Set(files.values()));
+      overlay = undefined;
+      pendingCheckpoint = undefined;
+    },
     close() {
       available = false;
       key.fill(0);
       for (const bytes of files.values()) bytes.fill(0);
       files.clear();
+      overlay?.wipe();
+      overlay = undefined;
+      pendingCheckpoint = undefined;
       store.close();
     },
   };

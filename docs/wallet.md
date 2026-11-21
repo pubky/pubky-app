@@ -62,6 +62,8 @@ Locks delivers a purchase request privately to the reader’s registered Paykit 
 
 ## Storage and recovery
 
+On browsers with a large saved wallet, the worker keeps an encrypted snapshot and saves the database pages that changed. Each update reaches local storage before the engine acknowledges it. If the browser quits unexpectedly, the next unlock verifies the snapshot and restores the last committed update. Locking the wallet normally writes a complete snapshot that older wallet versions can also open.
+
 **Ring recovery.** A compatible Ring signer explicitly approves the one-file scope `/priv/pubky-wallet/v1/<network>/wallet-key:e`. This permission lets the approved browser derive spending keys. Only approve it from the wallet you intend to use. The identity secret stays in Ring. This flow requests a fresh signed approval in memory, revokes its temporary grant, then transfers the scoped key into the wallet worker. The ordinary Pubky sign-in has its own grant. [Ring encryption approvals](https://github.com/pubky/pubky-ring/pull/387)
 
 V1 uses HKDF-SHA256 with the 32-byte scoped key, the UTF-8 salt `pubky.app/bitcoin-wallet/ring-seed/v1` and the UTF-8 network name, a NUL byte and the bare z-base-32 Pubky as the `info` field. The 32-byte result is English BIP39 entropy for Beignet. The same identity and network reproduce the same Bitcoin keys on a new browser. Keep your Ring identity backed up. A second Bitcoin recovery phrase is unnecessary for this option.
@@ -81,7 +83,7 @@ The portable engine is built from Beignet 0.43.6. [Pinned sources and reproducib
 ```sh
 npm run typecheck
 npm test -- src/components/templates/Wallet src/libs/wallet
-node --test scripts/wallet/relay.test.mjs scripts/wallet/tickets.test.mjs
+node --test scripts/wallet/*.test.mjs
 npm run build
 ```
 

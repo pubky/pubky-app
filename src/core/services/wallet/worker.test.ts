@@ -1,5 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { primaryChannelReadiness } from './channel-readiness.mjs';
+import type { WalletStartProgress } from './session';
 import type { createStartupScan } from './startup-scan.mjs';
 
 const fixture = vi.hoisted(() => {
@@ -8,6 +10,7 @@ const fixture = vi.hoisted(() => {
     read: (path: string) => files.get(path)?.slice() ?? null,
     write: vi.fn((path: string, bytes: Uint8Array) => files.set(path, bytes.slice())),
     list: (prefix: string) => [...files.keys()].filter((path) => path.startsWith(prefix)),
+    compact: vi.fn(),
     close: vi.fn(),
   };
   const store = {
@@ -38,6 +41,7 @@ vi.mock('@beignet/portable-engine', () => ({
   createPortableRuntime: fixture.createRuntime,
 }));
 vi.mock('./startup-sockets.mjs', () => ({ createStartupSockets: () => fixture.sockets }));
+vi.mock('./channel-readiness.mjs', { spy: true });
 vi.mock('@beignet/portable-engine/sqljs', () => ({ createSqlJsDatabaseFactory: fixture.compile }));
 vi.mock('./storage.mjs', () => ({
   inspectFiles: fixture.inspect,
@@ -61,19 +65,29 @@ const walletId = 'e'.repeat(32);
 type Reply = { id: number; result?: unknown; error?: { code: string; message: string } };
 type OpenEvent = { id: number; event: 'unlocked'; account: string; balance: unknown };
 type PrimaryEvent = { event: 'primary-change'; account: string };
+type StartProgress = WalletStartProgress & { id: number; event: 'start-progress' };
 type WorkerInput = {
-  data: { id: number; operation: string; account: string; payload: unknown; notifyUnlocked?: boolean };
+  data: {
+    id: number;
+    operation: string;
+    account: string;
+    payload: unknown;
+    notifyUnlocked?: boolean;
+    notifyStartProgress?: boolean;
+  };
 };
 let messageId = 0;
 const waiters = new Map<number, (r: Reply) => void>();
 const unlocked = vi.fn<(event: OpenEvent) => void>();
 const primaryChanged = vi.fn<(event: PrimaryEvent) => void>();
+const progress = vi.fn<(event: StartProgress) => void>();
 const worker = {
   location: { href: 'https://example.invalid/worker.js' },
   onmessage: undefined as undefined | ((msg: WorkerInput) => Promise<void>),
-  postMessage(r: Reply | OpenEvent | PrimaryEvent) {
+  postMessage(r: Reply | OpenEvent | PrimaryEvent | StartProgress) {
     if ('event' in r) {
       if (r.event === 'primary-change') primaryChanged(r);
+      else if (r.event === 'start-progress') progress(r);
       else unlocked(r);
       return;
     }
@@ -81,11 +95,17 @@ const worker = {
     waiters.delete(r.id);
   },
 };
-function request(operation: string, body?: unknown, account = owner, notifyUnlocked = false) {
+function request(
+  operation: string,
+  body?: unknown,
+  account = owner,
+  notifyUnlocked = false,
+  notifyStartProgress = false,
+) {
   const id = ++messageId;
   return new Promise<Reply>((resolve) => {
     waiters.set(id, resolve);
-    void worker.onmessage!({ data: { id, operation, account, payload: body, notifyUnlocked } });
+    void worker.onmessage!({ data: { id, operation, account, payload: body, notifyUnlocked, notifyStartProgress } });
   });
 }
 const fetchGrant = vi.fn();
@@ -110,6 +130,24 @@ async function freshWorker() {
   vi.resetModules();
   await import('./worker.mjs');
 }
+
+it.each(['engine', 'compaction'])('holds the vault lease after an uncertain %s shutdown', async (failure) => {
+  const stopped = Promise.withResolvers<void>();
+  fixture.engine.close.mockReturnValueOnce(stopped.promise);
+  const closing = request('close');
+  expect(fixture.volume.compact).not.toHaveBeenCalled();
+  if (failure === 'engine') stopped.reject(new Error('Node could not finish saving'));
+  else {
+    fixture.volume.compact.mockImplementationOnce(() => {
+      throw new Error('Ambiguous full commit');
+    });
+    stopped.resolve();
+  }
+  expect((await closing).error?.code).toBe('WALLET_CLOSE_UNCERTAIN');
+  expect((await request('close')).error?.code).toBe('WALLET_CLOSE_UNCERTAIN');
+  expect(fixture.volume.compact).toHaveBeenCalledTimes(failure === 'engine' ? 0 : 1);
+  expect(fixture.volume.close).not.toHaveBeenCalled();
+});
 
 it('marks confirmed sends before allowing submission and preserves an unknown outcome across fresh opens', async () => {
   expect(fixture.store.markPayment).not.toHaveBeenCalled();
@@ -219,6 +257,59 @@ it('signals a status reread only for the active primary without exposing peer di
   await request('close');
   onDiagnostic({ phase: 'peer:connect', message: key });
   expect(primaryChanged).toHaveBeenCalledTimes(2);
+});
+
+it('coalesces progress on a slow start using only the Bitcoin phase and authenticated primary status', async () => {
+  const start = { method: 'POST', path: '/api/wallets/' + walletId + '/start' };
+  const [{ onDiagnostic }] = fixture.createRuntime.mock.lastCall!;
+  const [primary, onUsable] = vi.mocked(primaryChannelReadiness).mock.lastCall!;
+  const deferred = Promise.withResolvers<void>();
+  vi.useFakeTimers();
+  try {
+    await request('request', start, owner, false, true);
+    vi.advanceTimersByTime(1500);
+    expect(progress).not.toHaveBeenCalled();
+    fixture.engine.request.mockReturnValueOnce(deferred.promise);
+    const pending = request('request', start, owner, false, true);
+    const id = messageId;
+    vi.advanceTimersByTime(1200);
+    expect(progress.mock.lastCall).toEqual([
+      { id, event: 'start-progress', phase: 'opening', primaryConnected: false },
+    ]);
+    onDiagnostic({ phase: 'engine-perf', message: 'create 123ms' });
+    onDiagnostic({ phase: 'peer:connect', message: '03' + 'b'.repeat(64) });
+    vi.advanceTimersByTime(300);
+    expect(progress.mock.lastCall).toEqual([
+      { id, event: 'start-progress', phase: 'scanning', primaryConnected: false },
+    ]);
+    onDiagnostic({ phase: 'peer:connect', message: primary });
+    onDiagnostic({ phase: 'engine-perf', message: 'initial-sync 751ms' });
+    expect(progress).toHaveBeenCalledTimes(2);
+    vi.advanceTimersByTime(300);
+    expect(progress.mock.lastCall).toEqual([
+      { id, event: 'start-progress', phase: 'finishing', primaryConnected: true },
+    ]);
+    onDiagnostic({ phase: 'peer:disconnect', message: primary + ' private disconnect reason' });
+    vi.advanceTimersByTime(300);
+    expect(progress.mock.lastCall).toEqual([
+      { id, event: 'start-progress', phase: 'finishing', primaryConnected: false },
+    ]);
+    deferred.resolve();
+    expect((await pending).error).toBeUndefined();
+    onDiagnostic({ phase: 'peer:connect', message: primary });
+    vi.advanceTimersByTime(1500);
+    expect(progress).toHaveBeenCalledTimes(4);
+    expect(fixture.engine.request.mock.calls).toEqual([[start], [start]]);
+  } finally {
+    deferred.resolve();
+    vi.useRealTimers();
+  }
+  primaryChanged.mockClear();
+  onUsable();
+  expect(primaryChanged.mock.calls).toEqual([[{ event: 'primary-change', account: owner }]]);
+  await request('close');
+  onUsable();
+  expect(primaryChanged).toHaveBeenCalledOnce();
 });
 
 it('opens the fixed peer transport before the foreground engine start, after access checks', async () => {

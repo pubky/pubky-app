@@ -12,7 +12,7 @@ import { Spinner } from '@/atoms/Spinner/Spinner';
 import { Textarea } from '@/atoms/Textarea/Textarea';
 import { walletMessage } from '@/libs/wallet/amount';
 import { acquireRingDevice } from '@/services/wallet/ring-enrollment';
-import { type LastWalletBalance, WalletSession } from '@/services/wallet/session';
+import { type LastWalletBalance, WalletSession, type WalletStartProgress } from '@/services/wallet/session';
 import { WalletDashboard } from './WalletDashboard';
 import { WalletOpening } from './WalletOpening';
 import { RecoveryWords, useWalletTask, WalletPanel, type WalletTask } from './WalletPanel';
@@ -27,9 +27,22 @@ type Stage =
   | { kind: 'ring'; defaults: CreateWalletInput; network: Network; session: WalletSession; reserved: boolean }
   | { kind: 'backup'; id: string; network: Network; phrase: string }
   | { kind: 'start'; id: string; network: Network }
-  | ({ kind: 'wallet' } & ActiveWallet & ({ status: 'syncing' | 'ready' } | { status: 'failed'; message: string }));
+  | ({ kind: 'wallet' } & ActiveWallet &
+      (
+        | { status: 'syncing'; progress?: WalletStartProgress }
+        | { status: 'ready' }
+        | { status: 'failed'; message: string }
+      ));
 
 export type UnlockedWallet = { session: WalletSession; network: Network; task: WalletTask };
+
+function startMessage(progress?: WalletStartProgress) {
+  if (!progress) return 'Connecting to Bitcoin and Lightning…';
+  if (progress.phase === 'opening') return 'Opening your Bitcoin wallet…';
+  if (progress.phase === 'scanning')
+    return progress.primaryConnected ? 'Lightning connected. Syncing Bitcoin…' : 'Syncing Bitcoin…';
+  return progress.primaryConnected ? 'Finishing wallet startup…' : 'Connecting to Lightning…';
+}
 
 export function WalletAccount({
   account,
@@ -59,11 +72,22 @@ export function WalletAccount({
     }
     let session: WalletSession;
     try {
-      session = new WalletSession(account, (balance) => {
-        if (live.current !== session) return;
-        setLastBalance(balance);
-        setStage({ kind: 'opening' });
-      });
+      session = new WalletSession(
+        account,
+        (balance) => {
+          if (live.current !== session) return;
+          setLastBalance(balance);
+          setStage({ kind: 'opening' });
+        },
+        (progress) => {
+          if (live.current !== session) return;
+          setStage((current) =>
+            current.kind === 'wallet' && current.status === 'syncing' && current.session === session
+              ? { ...current, progress }
+              : current,
+          );
+        },
+      );
     } catch {
       setNotice('This browser could not start the wallet worker.');
       setStage({ kind: 'unavailable' });
@@ -243,9 +267,9 @@ export function WalletAccount({
         </Button>
       </div>
     ) : (
-      <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Spinner size="sm" aria-hidden className="motion-reduce:animate-none" /> Connecting to Bitcoin and Lightning…
-      </p>
+      <div role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Spinner size="sm" aria-hidden className="motion-reduce:animate-none" /> {startMessage(stage.progress)}
+      </div>
     ));
   return (
     <>
