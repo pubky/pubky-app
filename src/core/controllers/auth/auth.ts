@@ -3,11 +3,17 @@ import { validateCapabilities } from '@synonymdev/pubky';
 import type { PersistStorage } from 'zustand/middleware';
 import { AuthApplication } from '@/application/auth/auth';
 import { BootstrapApplication, type BootstrapProgressCallback } from '@/application/bootstrap/bootstrap';
+import { LocksApplication } from '@/application/locks/locks';
 import { NotificationApplication } from '@/application/notification/notification';
 import { SettingsApplication } from '@/application/settings/settings';
 import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
 import { UserApplication } from '@/application/user/user';
-import { APP_CAPABILITIES, LOCKS_CAPABILITIES, SOCIAL_V1_APP_CAPABILITIES } from '@/config/auth';
+import {
+  APP_CAPABILITIES,
+  LOCKS_CAPABILITIES,
+  LOCKS_READER_COPY_CAPABILITIES,
+  SOCIAL_V1_APP_CAPABILITIES,
+} from '@/config/auth';
 import { getModerationId } from '@/config/moderation';
 import { getHomeserverCapabilities } from '@/config/network';
 import type { SessionReadiness } from '@/controllers/auth/auth.types';
@@ -668,6 +674,23 @@ export class AuthController {
     if (settingsSyncSucceeded) {
       this.startModerationFollow(pubky);
     }
+    this.startLocksReaderFileCopy(pubky, isCurrent);
+  }
+
+  /**
+   * Copies the reader's Locks files of builds before #3206 into the app's namespace, never awaited: it
+   * can download large attachments. Only when the grant reads the old root and writes the new one: a
+   * listing the grant refuses would fail and be reported on every sign-in. A failed run is reported once
+   * and the next bootstrap copies what is still missing.
+   */
+  private static startLocksReaderFileCopy(pubky: Pubky, isCurrent: () => boolean): void {
+    // The session's own grant: `hasCapabilities` answers false until a restore is `ready`, which comes after this.
+    const { session } = useAuthStore.getState();
+    if (!session || !hasCapabilities(session.info.capabilities, LOCKS_READER_COPY_CAPABILITIES)) return;
+    void LocksApplication.copySocialReaderFiles({ readerPubky: pubky, isCurrent }).catch((error: unknown) => {
+      // AppError factories already report at their origin. Only unexpected raw failures need a warning.
+      if (!isAppError(error)) Logger.warn('Failed to copy the Locks reader files from /priv/social/', { pubky, error });
+    });
   }
 
   /**

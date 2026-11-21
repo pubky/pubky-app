@@ -66,7 +66,7 @@ describe('usePayToUnlock, Check again on a download that never settles', () => {
     vi.clearAllMocks();
     vi.useFakeTimers();
     mocks.saved.length = 0;
-    mocks.saved.push(`pubky://reader1/priv/social/purchases/LOCK1/${BUNDLE}.json`);
+    mocks.saved.push(`pubky://reader1/priv/app.pubky/v1/locks/purchases/LOCK1/${BUNDLE}.json`);
     mocks.lookupVerificationTask.mockResolvedValue(mockVerificationTask('completed'));
     mocks.proxyReadGuardedResource.mockResolvedValue(
       new TextEncoder().encode('{"content":"paid","kind":"short","attachments":null}'),

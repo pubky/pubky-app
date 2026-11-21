@@ -118,18 +118,53 @@ everything ever unlocked. The replica also survives the creator revoking the loc
 
 ## Where the data lives
 
-| Where                                                         | What                                                                                                                   | Who can read it                                              |
-| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| creator's HS `/priv/app.locks/content/`                       | the locked post + attachments (originals)                                                                              | the creator; readers only via Lock Server proxy + credential |
-| creator's HS `/pub/app.locks/<lockId>.json`                   | the public lock contract (`LockFile`)                                                                                  | anyone                                                       |
-| reader's HS `/priv/social/unlocked/<lockId>/`                 | the reader's replica, written on unlock                                                                                | that reader only                                             |
-| reader's HS `/priv/social/purchases/<lockId>/<bundleId>.json` | one file per bundle id, written BEFORE the proof is submitted (#2297, #2827); the legacy `<lockId>.json` is still read | that reader only                                             |
+| Where                                                                     | What                                                                                            | Who can read it                                              |
+| ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| creator's HS `/priv/app.locks/content/`                                   | the locked post + attachments (originals)                                                       | the creator; readers only via Lock Server proxy + credential |
+| creator's HS `/pub/app.locks/<lockId>.json`                               | the public lock contract (`LockFile`)                                                           | anyone                                                       |
+| reader's HS `/priv/app.pubky/v1/locks/unlocked/<lockId>/`                 | the reader's replica, written on unlock                                                         | that reader only                                             |
+| reader's HS `/priv/app.pubky/v1/locks/purchases/<lockId>/<bundleId>.json` | one file per bundle id, written BEFORE the proof is submitted (#2297, #2827)                    | that reader only                                             |
+| reader's HS `/priv/social/unlocked/`, `/priv/social/purchases/`           | the same files from builds before #3206, read until copied ([below](#reader-files-before-3206)) | that reader only                                             |
 
 Account deletion and export (`ProfileApplication.commitDelete` / `downloadData`, `docs/data-patterns.md`) sweep the
-whole `/priv/social/` of the signed-in account, so a reader's `unlocked/` replicas and `purchases/` files go with
-the account. The creator's `/pub/app.locks/<lockId>.json` and `/priv/app.locks/content/` are Lock Server contracts
+whole `/priv/social/` and `/priv/app.pubky/v1/` of the signed-in account, so a reader's replicas and purchase files
+go with the account, at either location. The creator's `/pub/app.locks/<lockId>.json` and `/priv/app.locks/content/` are Lock Server contracts
 under a read-only grant (`/priv/app.locks/content/:r`) and are left alone: deleting a lock is the Lock Server's job
 ([Deleting an announcement](#deleting-an-announcement)).
+
+### Reader files before #3206
+
+Builds before #3206 kept the replicas and purchase files under `/priv/social/unlocked/` and
+`/priv/social/purchases/` (with the one-file-per-lock `<lockId>.json` of builds before #2827). `/priv/social/` is
+for objects the social spec defines, and only pubky.app reads these files, so they moved to the app's own namespace.
+
+1. **Copy.** After bootstrap, `AuthController` starts `LocksApplication.copySocialReaderFiles` and never waits for
+   it, only when the session's grant reads `/priv/social/` and writes the app's namespace (a refused listing would be
+   reported on every sign-in). It lists both roots and copies only what the new root lacks: purchase files (a legacy
+   `<lockId>.json` becomes `<lockId>/<bundleId>.json`), then each completed replica, attachments first and the marker
+   last, its attachment URLs pointing at the copies, and the cached row replaced with it. The copied marker carries
+   `unlocked_at`, the source marker's write time (0 when it has none), so the Unlocked screen keeps its order. A run
+   that stops midway, or whose account signs out, is finished by the next bootstrap; a file that fails (a full quota,
+   say) is left for the next run while the rest are copied. A legacy purchase file that cannot be parsed, or a name in
+   neither layout, stays where it is.
+2. **Flag.** `/priv/app.pubky/v1/locks/_social_copied.json` (named apart from the migration gate's `_migrated.json`)
+   is written last, after a run with no failure. An account whose social roots are empty (it never used Locks before
+   #3206) gets no flag file, so its export shows nothing new; the page remembers the answer instead.
+3. **Reads.** The flag is read once per reader and page load, before the new root: read after it, the flag can
+   report a copy another tab finished after that read, and the file is then in neither answer. Until the flag
+   exists, one replica is read from the new root, then from the social root only when the new one has no marker,
+   and the Unlocked screen reads both roots, the new one winning. After the flag they read only the new root.
+   Purchase files are read from both roots until #3207, flag or not: one lock's on every payment
+   (`fetchResolvedPurchase`) and all of them for `usePurchasedLocks`. A build before #3206 still open in another
+   tab or device writes its ids under the social root, and a lock with an unreadable file there is still refused
+   instead of paid twice.
+4. **Writes.** A fresh bundle id is saved under the social root first, then under the new root, both before the
+   proof is submitted, until #3207. A build before #3206 on another device reads only the social root: without that
+   copy it would mint a second id for a lock already paid here. If the second PUT fails, the retry finds the id under
+   the social root, which every purchase read covers, and reuses it.
+5. **Left for #3207.** The social files are not deleted; removing them, the fallback reads, the copy, the social-root
+   write and `/priv/social/:rw` from the Locks scopes is #3207. Account deletion also sweeps `/priv/social/` with that scope, so
+   #3207 decides how a reader's leftover social files go.
 
 ---
 
@@ -195,7 +230,7 @@ the announcement undeletable. A URL that does carry an id the server rejects sti
 On the Lock Server the deletion is graceful and asynchronous (`DELETE /creator/content-locks/{lock_id}`,
 `202`): `lock.json` is replaced by a tombstone at once, new unlocks are refused, readers who already
 paid can still finish, then the guarded resources are removed. The app does not poll the job.
-Readers' replicas in their own `/priv/social/unlocked/` are never touched; only the creator's cached
+Readers' replicas in their own `/priv/app.pubky/v1/locks/unlocked/` are never touched; only the creator's cached
 original is dropped from IndexedDB. A reader who still has the announcement cached sees the usual
 deleted-post fallback once Nexus drops it.
 
@@ -236,7 +271,7 @@ deleted-post fallback once Nexus drops it.
   `isLockTeaserWithinLimit`. The composer's teaser max (`getLockTeaserMaxLength`) is
   `LOCK_TEASER_MAX_CHARACTER_LENGTH` minus the length of the `content_kind` entry actually written, so a lock
   without one keeps the old limit.
-- The reader's replica marker (`/priv/social/unlocked/<lockId>/post.json`, `replicatedPostSchema`) is
+- The reader's replica marker (`/priv/app.pubky/v1/locks/unlocked/<lockId>/post.json`, `replicatedPostSchema`) is
   not a v1 post object: each attachment carries its `content_type` inline so the copy renders without
   the creator's lock file, and `announcement` holds the `pubky://…/posts/<id>` URI of the post the
   content was unlocked from. Nexus cannot look a post up by its lock URL, so without that URI the
@@ -347,7 +382,7 @@ own-content reads rely on it.
 **Payment unlock** (#2368) is split into steps the modal drives because a real payment takes
 minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the state machine:
 
-1. On open: `fetchResolvedPurchase` — the reader's `/priv/social/purchases/<lockId>/` holds one file
+1. On open: `fetchResolvedPurchase` — the reader's `/priv/app.pubky/v1/locks/purchases/<lockId>/` holds one file
    per bundle id the reader ever started this lock's payment with (#2297, #2827). A bundle id is the
    ONLY handle to reach a purchase again (the reader is anonymous to the Lock Server), so it is
    written **before** the proof is submitted, kept after replication, and a failed read or a file
@@ -374,7 +409,8 @@ minutes and happens in Bitkit, not the browser. `usePayToUnlock` owns the state 
    and goes to the install screen when there is none. `pending`/`in_progress` → the task is already
    running, so nothing is submitted and the wait resumes. Only a saved id with **no task** is
    submitted again: that submission never reached the server.
-4. `startPayment` reuses the saved id or mints and saves a fresh one, then submits the proof (empty
+4. `startPayment` reuses the saved id or mints and saves a fresh one (under both roots until #3207, see
+   [Reader files before #3206](#reader-files-before-3206)), then submits the proof (empty
    payload, reader pubky at the bundle's top level). Only **Try again** (or **I completed the
    steps**, or **Check again** on the not-payable screen) may replace an ended id: an automatic
    start that waited behind another submission and finds every saved id ended returns that status
@@ -476,7 +512,8 @@ covered by the per-id files above (#2827).
 watching, so a reader who closes the tab mid-wait would come back to a post still offering Unlock
 over content they own. `usePurchaseResume` closes that gap: it finishes the purchase in the
 background, with no interaction. What tells it a lock is already paid for is
-`usePurchasedLocks` — **one listing** of `/priv/social/purchases/` per reader per page load,
+`usePurchasedLocks` — **one listing** of `/priv/app.pubky/v1/locks/purchases/` per reader per page load (plus the
+social root until the [copy](#reader-files-before-3206) is done),
 shared by every lock post on screen, so the feed never asks per post.
 
 Replication is what makes path 1 work on later views: no Lock Server call, and the content
@@ -485,11 +522,11 @@ survives the creator revoking access.
 **Three readers, three sources.** The names differ only by a word, so read them by where the
 bytes come from:
 
-| Method                   | Reads from                                                 | Needs                    |
-| ------------------------ | ---------------------------------------------------------- | ------------------------ |
-| `fetchUnlockedContent`   | creator's guarded storage, via the Lock Server proxy       | access credential        |
-| `fetchReplicatedContent` | the reader's own copy at `/priv/social/unlocked/<lockId>/` | pubky.app session        |
-| `fetchOwnContent`        | the creator's own `/priv/app.locks/content/`               | pubky.app session (a==b) |
+| Method                   | Reads from                                                             | Needs                    |
+| ------------------------ | ---------------------------------------------------------------------- | ------------------------ |
+| `fetchUnlockedContent`   | creator's guarded storage, via the Lock Server proxy                   | access credential        |
+| `fetchReplicatedContent` | the reader's own copy at `/priv/app.pubky/v1/locks/unlocked/<lockId>/` | pubky.app session        |
+| `fetchOwnContent`        | the creator's own `/priv/app.locks/content/`                           | pubky.app session (a==b) |
 
 Only the first one costs an unlock. `fetchReplicatedAttachments` loads the media for a
 replica whose marker the caller already has — the unlocked list uses it so listing the
@@ -546,7 +583,7 @@ profile only — the data lives in the reader's `/priv`, so another user's profi
 profile/(own)/layout.tsx → ProfilePageContainer
   ├─ useUnlockedList({ enabled: isOwnProfile })   → local list immediately, HS fetch once
   │    └─ LocksController.getUnlockedList / fetchUnlockedList
-  │         └─ listAll(/priv/social/unlocked/) → completedLockIds → read each post.json
+  │         └─ listAll(/priv/app.pubky/v1/locks/unlocked/) → completedLockIds → read each post.json
   ├─ unlockedCount → ProfilePageFilterBar (sidebar badge)
   └─ UnlockedListProvider → ProfileUnlocked (the page)
        └─ ProfileUnlockedItem

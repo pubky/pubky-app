@@ -38,6 +38,11 @@ const mocks = vi.hoisted(() => ({
   getBytes: vi.fn(),
   getBytesIfExists: vi.fn(),
   listAll: vi.fn(),
+  // The flag and the social roots of builds before #3206 get their own mocks, so the queued answers
+  // of a test about the new root are not taken by those reads.
+  copyFlag: vi.fn(),
+  socialGetBytesIfExists: vi.fn(),
+  socialListAll: vi.fn(),
   cacheGet: vi.fn().mockResolvedValue(null),
   cacheDescriptor: vi.fn().mockResolvedValue(undefined),
   cachePost: vi.fn().mockResolvedValue(undefined),
@@ -66,8 +71,14 @@ vi.mock('@/services/homeserver/homeserver', () => ({
     createWriteFence: () => ({ enter: () => {}, assertCurrent: () => {} }),
     putBlob: mocks.putBlob,
     getBytes: mocks.getBytes,
-    getBytesIfExists: mocks.getBytesIfExists,
-    listAll: mocks.listAll,
+    getBytesIfExists: (url: string) =>
+      (url.endsWith('/locks/_social_copied.json')
+        ? mocks.copyFlag
+        : url.includes('/priv/social/')
+          ? mocks.socialGetBytesIfExists
+          : mocks.getBytesIfExists)(url),
+    listAll: (params: { baseDirectory: string }) =>
+      (params.baseDirectory.includes('/priv/social/') ? mocks.socialListAll : mocks.listAll)(params),
   },
 }));
 
@@ -102,6 +113,10 @@ vi.mock('@/services/locks/locks.utils', async (importOriginal) => {
 });
 
 beforeEach(() => {
+  LocksApplication.resetSocialCopyStateForTests();
+  mocks.copyFlag.mockReset().mockResolvedValue(null);
+  mocks.socialGetBytesIfExists.mockReset().mockResolvedValue(null);
+  mocks.socialListAll.mockReset().mockResolvedValue([]);
   mocks.cacheGet.mockReset().mockResolvedValue(null);
   mocks.cacheDescriptor.mockReset().mockResolvedValue(undefined);
   mocks.cachePost.mockReset().mockResolvedValue(undefined);
@@ -764,13 +779,14 @@ describe('LocksApplication (payment unlock)', () => {
     ],
   });
   const lockUrl = 'pubky://pubkybob/pub/app.locks/LOCK1.json';
-  const purchaseRoot = 'pubky://reader1/priv/social/purchases/LOCK1/';
+  const purchaseRoot = 'pubky://reader1/priv/app.pubky/v1/locks/purchases/LOCK1/';
   const legacyPurchaseUrl = 'pubky://reader1/priv/social/purchases/LOCK1.json';
   const purchaseBytes = (raw: string) => ({ bytes: new TextEncoder().encode(raw), contentType: 'application/json' });
   // Listing-based ids must look like `BundleId.generate()` output or the parser skips them.
   const BUNDLE_A = 'A'.repeat(26);
   const BUNDLE_B = 'B'.repeat(26);
   const purchaseFile = (bundleId: string) => `${purchaseRoot}${bundleId}.json`;
+  const socialPurchaseFile = (bundleId: string) => `pubky://reader1/priv/social/purchases/LOCK1/${bundleId}.json`;
   const task = mockVerificationTask;
   /** Answers each id's lookup from the map; an id outside it reads as "never received". */
   const lookups = (byId: Record<string, ReturnType<typeof task> | null>) =>
@@ -801,13 +817,13 @@ describe('LocksApplication (payment unlock)', () => {
     it('returns null, without a lookup, when nothing is saved for the lock', async () => {
       await expect(LocksApplication.fetchResolvedPurchase(params)).resolves.toBeNull();
       expect(mocks.listAll).toHaveBeenCalledWith({ baseDirectory: purchaseRoot });
-      expect(mocks.getBytesIfExists).toHaveBeenCalledWith(legacyPurchaseUrl);
+      expect(mocks.socialGetBytesIfExists).toHaveBeenCalledWith(legacyPurchaseUrl);
       expect(mocks.lookupVerificationTask).not.toHaveBeenCalled();
     });
 
     // Builds before #2827 saved one file per lock; those purchases must stay reachable.
     it('reads the legacy single-file layout', async () => {
-      mocks.getBytesIfExists.mockResolvedValue(purchaseBytes('{"bundle_id":"saved-1"}'));
+      mocks.socialGetBytesIfExists.mockResolvedValue(purchaseBytes('{"bundle_id":"saved-1"}'));
       lookups({ 'saved-1': task('pending') });
 
       await expect(LocksApplication.fetchResolvedPurchase(params)).resolves.toEqual({
@@ -819,11 +835,39 @@ describe('LocksApplication (payment unlock)', () => {
 
     it('counts a legacy id that is also saved per bundle once', async () => {
       mocks.listAll.mockResolvedValue([purchaseFile(BUNDLE_A)]);
-      mocks.getBytesIfExists.mockResolvedValue(purchaseBytes(`{"bundle_id":"${BUNDLE_A}"}`));
+      mocks.socialGetBytesIfExists.mockResolvedValue(purchaseBytes(`{"bundle_id":"${BUNDLE_A}"}`));
       lookups({ [BUNDLE_A]: task('pending') });
 
       await expect(LocksApplication.fetchResolvedPurchase(params)).resolves.toMatchObject({ bundleId: BUNDLE_A });
       expect(lookedUp()).toEqual([BUNDLE_A]);
+    });
+
+    // Not "the social root only when the new one is empty": the paid id may be the one only it has.
+    it('ranks the ids under both roots together until the copy is done', async () => {
+      mocks.listAll.mockResolvedValue([purchaseFile(BUNDLE_B)]);
+      mocks.socialListAll.mockResolvedValue([`pubky://reader1/priv/social/purchases/LOCK1/${BUNDLE_A}.json`]);
+      lookups({ [BUNDLE_A]: task('completed'), [BUNDLE_B]: task('pending') });
+
+      await expect(LocksApplication.fetchResolvedPurchase(params)).resolves.toMatchObject({ bundleId: BUNDLE_A });
+      expect(mocks.socialListAll).toHaveBeenCalledWith({
+        baseDirectory: 'pubky://reader1/priv/social/purchases/LOCK1/',
+      });
+    });
+
+    it('still reads the social root after the copy, where a build before #3206 open elsewhere writes', async () => {
+      mocks.copyFlag.mockResolvedValue({ bytes: new Uint8Array(), modifiedAt: 1 });
+      mocks.listAll.mockResolvedValue([
+        `pubky://copied-payer/priv/app.pubky/v1/locks/purchases/LOCK1/${BUNDLE_B}.json`,
+      ]);
+      mocks.socialListAll.mockResolvedValue([`pubky://copied-payer/priv/social/purchases/LOCK1/${BUNDLE_A}.json`]);
+      lookups({ [BUNDLE_A]: task('completed'), [BUNDLE_B]: task('pending') });
+
+      await expect(
+        LocksApplication.fetchResolvedPurchase({ ...params, readerPubky: 'copied-payer' }),
+      ).resolves.toMatchObject({ bundleId: BUNDLE_A });
+      expect(mocks.socialGetBytesIfExists).toHaveBeenCalledWith(
+        'pubky://copied-payer/priv/social/purchases/LOCK1.json',
+      );
     });
 
     // Two devices each minted an id (#2827): the one that was paid wins, whatever its order.
@@ -925,7 +969,7 @@ describe('LocksApplication (payment unlock)', () => {
 
     // Fail closed: something was purchased and its handle is gone — minting a fresh id could pay twice.
     it.each([
-      ['an unreadable legacy file', () => mocks.getBytesIfExists.mockResolvedValue(purchaseBytes('garbage'))],
+      ['an unreadable legacy file', () => mocks.socialGetBytesIfExists.mockResolvedValue(purchaseBytes('garbage'))],
       [
         'a file under the lock root whose name is not a bundle id',
         () => mocks.listAll.mockResolvedValue([`${purchaseRoot}notes.json`, purchaseFile(BUNDLE_A)]),
@@ -1018,7 +1062,7 @@ describe('LocksApplication (payment unlock)', () => {
 
     it('never writes or deletes', async () => {
       mocks.listAll.mockResolvedValue([purchaseFile(BUNDLE_A)]);
-      mocks.getBytesIfExists.mockResolvedValue(purchaseBytes('{"bundle_id":"saved-1"}'));
+      mocks.socialGetBytesIfExists.mockResolvedValue(purchaseBytes('{"bundle_id":"saved-1"}'));
       lookups({ [BUNDLE_A]: task('failed'), 'saved-1': task('expired') });
 
       await LocksApplication.fetchResolvedPurchase(params);
@@ -1037,15 +1081,15 @@ describe('LocksApplication (payment unlock)', () => {
       mocks.submitProof.mockResolvedValue({ status: 'pending' });
     });
 
-    it('mints a bundle id, saves it BEFORE submitting, and returns it with the status', async () => {
+    it('mints a bundle id, saves it under both roots BEFORE submitting, and returns it with the status', async () => {
       await expect(LocksApplication.startPayment(params)).resolves.toEqual({ bundleId: 'fresh-1', status: 'pending' });
 
       // The bytes matter, not just the URL: a file written with the wrong id is money nobody can
-      // reach again.
-      const [{ url, blob }] = mocks.putBlob.mock.calls[0] as [{ url: string; blob: Uint8Array }];
-      expect(url).toBe(purchaseFile('fresh-1'));
-      expect(GuardedContentParser.parsePurchaseFile(blob)).toBe('fresh-1');
-      expect(mocks.putBlob.mock.invocationCallOrder[0]).toBeLessThan(mocks.submitProof.mock.invocationCallOrder[0]);
+      // reach again. The social root goes first: a build before #3206 reads only that one.
+      const writes = mocks.putBlob.mock.calls.map(([call]) => call as { url: string; blob: Uint8Array });
+      expect(writes.map(({ url }) => url)).toEqual([socialPurchaseFile('fresh-1'), purchaseFile('fresh-1')]);
+      for (const { blob } of writes) expect(GuardedContentParser.parsePurchaseFile(blob)).toBe('fresh-1');
+      expect(mocks.putBlob.mock.invocationCallOrder[1]).toBeLessThan(mocks.submitProof.mock.invocationCallOrder[0]);
       expect(mocks.submitProof).toHaveBeenCalledWith({
         version: 1,
         bundle_id: 'fresh-1',
@@ -1064,7 +1108,7 @@ describe('LocksApplication (payment unlock)', () => {
         regionBlocked: true,
       });
       // The id stays saved: from a supported region the same unlock replays it and creates one payment.
-      expect(mocks.putBlob).toHaveBeenCalledTimes(1);
+      expect(mocks.putBlob).toHaveBeenCalledTimes(2);
     });
 
     // Second attempt after a 451: the id saved by the first attempt is now looked up, and the Lock Server
@@ -1169,7 +1213,7 @@ describe('LocksApplication (payment unlock)', () => {
     // only handle to its invoice.
     it('mints a fresh id beside the ended ones instead of overwriting them on Try again', async () => {
       mocks.listAll.mockResolvedValue([purchaseFile(BUNDLE_A)]);
-      mocks.getBytesIfExists.mockResolvedValue(purchaseBytes('{"bundle_id":"dead-1"}'));
+      mocks.socialGetBytesIfExists.mockResolvedValue(purchaseBytes('{"bundle_id":"dead-1"}'));
       lookups({ [BUNDLE_A]: task('expired'), 'dead-1': task('failed') });
 
       await expect(LocksApplication.startPayment({ ...params, isRetry: true })).resolves.toEqual({
@@ -1177,11 +1221,11 @@ describe('LocksApplication (payment unlock)', () => {
         status: 'pending',
       });
       expect(mocks.generateBundleId).toHaveBeenCalledTimes(1);
-      expect(mocks.putBlob).toHaveBeenCalledTimes(1);
-      const [{ url, blob }] = mocks.putBlob.mock.calls[0] as [{ url: string; blob: Uint8Array }];
-      expect(url).toBe(purchaseFile('fresh-1'));
-      expect(GuardedContentParser.parsePurchaseFile(blob)).toBe('fresh-1');
-      expect(mocks.putBlob.mock.invocationCallOrder[0]).toBeLessThan(mocks.submitProof.mock.invocationCallOrder[0]);
+      expect(mocks.putBlob.mock.calls.map(([{ url }]) => url)).toEqual([
+        socialPurchaseFile('fresh-1'),
+        purchaseFile('fresh-1'),
+      ]);
+      expect(mocks.putBlob.mock.invocationCallOrder[1]).toBeLessThan(mocks.submitProof.mock.invocationCallOrder[0]);
       expect(mocks.submitProof).toHaveBeenCalledWith(expect.objectContaining({ bundle_id: 'fresh-1' }));
     });
 
@@ -1198,7 +1242,8 @@ describe('LocksApplication (payment unlock)', () => {
     it('serializes the read-mint-write-submit section for the same reader and lock', async () => {
       const saved: string[] = [];
       mocks.generateBundleId.mockResolvedValue(BUNDLE_A);
-      mocks.listAll.mockImplementation(async () => [...saved]);
+      mocks.listAll.mockImplementation(async () => saved.filter((url) => !url.includes('/priv/social/')));
+      mocks.socialListAll.mockImplementation(async () => saved.filter((url) => url.includes('/priv/social/')));
       mocks.putBlob.mockImplementation(async ({ url }: { url: string }) => {
         saved.push(url);
       });
@@ -1223,7 +1268,7 @@ describe('LocksApplication (payment unlock)', () => {
         expect(request).toHaveBeenCalledTimes(2);
         expect(request).toHaveBeenNthCalledWith(1, 'locks-pay:reader1:LOCK1', expect.any(Function));
         expect(mocks.generateBundleId).toHaveBeenCalledTimes(1);
-        expect(mocks.putBlob).toHaveBeenCalledTimes(1);
+        expect(mocks.putBlob).toHaveBeenCalledTimes(2);
         expect(mocks.submitProof.mock.calls.map(([bundle]) => bundle.bundle_id)).toEqual([BUNDLE_A, BUNDLE_A]);
         expect(first.bundleId).toBe(second.bundleId);
       } finally {
@@ -1277,10 +1322,10 @@ describe('LocksApplication (payment unlock)', () => {
     });
 
     describe('when the homeserver refuses the purchase-file PUT', () => {
-      const homeserverError = (body: string) =>
+      const homeserverError = (body: string, status = 409) =>
         httpStatusCodeToError(
-          409,
-          `Request failed: Server responded with an error: 409 Conflict - ${body}`,
+          status,
+          `Request failed: Server responded with an error: ${status} - ${body}`,
           ErrorService.Homeserver,
           'putBlob',
           purchaseFile(BUNDLE_A),
@@ -1298,7 +1343,7 @@ describe('LocksApplication (payment unlock)', () => {
       // The conflict says the purchases changed after they were read; here the late write landed.
       it('re-reads the purchases after the publish conflict and reuses the id that landed', async () => {
         const saved: string[] = [];
-        mocks.listAll.mockImplementation(async () => [...saved]);
+        mocks.socialListAll.mockImplementation(async () => [...saved]);
         mocks.putBlob.mockImplementationOnce(async ({ url }: { url: string }) => {
           saved.push(url);
           throw homeserverError(HOMESERVER_PUBLISH_CONFLICT_MESSAGE);
@@ -1308,6 +1353,23 @@ describe('LocksApplication (payment unlock)', () => {
         expect(mocks.listAll).toHaveBeenCalledTimes(2);
         expect(mocks.generateBundleId).toHaveBeenCalledOnce();
         expect(mocks.putBlob).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ fence: expect.anything() }));
+        expect(mocks.submitProof).toHaveBeenCalledWith(expect.objectContaining({ bundle_id: BUNDLE_A }));
+      });
+
+      // A failed second PUT leaves the id under the social root, which every build reads until #3207.
+      it('reuses the id from the social root when the PUT under the new root fails', async () => {
+        const socialSaved: string[] = [];
+        mocks.socialListAll.mockImplementation(async () => [...socialSaved]);
+        mocks.putBlob
+          .mockImplementationOnce(async ({ url }: { url: string }) => {
+            socialSaved.push(url);
+          })
+          .mockRejectedValueOnce(homeserverError('Service Unavailable', 503));
+
+        await expect(LocksApplication.startPayment(params)).resolves.toEqual({ bundleId: BUNDLE_A, status: 'pending' });
+        expect(socialSaved).toEqual([socialPurchaseFile(BUNDLE_A)]);
+        expect(mocks.generateBundleId).toHaveBeenCalledOnce();
+        expect(mocks.putBlob).toHaveBeenCalledTimes(2);
         expect(mocks.submitProof).toHaveBeenCalledWith(expect.objectContaining({ bundle_id: BUNDLE_A }));
       });
 
@@ -1322,7 +1384,7 @@ describe('LocksApplication (payment unlock)', () => {
 
     // Fail closed: a saved file that cannot be read means a purchase exists and its id is lost.
     it('does not mint a replacement for an unreadable saved id', async () => {
-      mocks.getBytesIfExists.mockResolvedValue(purchaseBytes('garbage'));
+      mocks.socialGetBytesIfExists.mockResolvedValue(purchaseBytes('garbage'));
 
       await expect(LocksApplication.startPayment(params)).rejects.toMatchObject({
         code: ValidationErrorCode.INVALID_INPUT,
@@ -1364,17 +1426,37 @@ describe('LocksApplication (payment unlock)', () => {
   });
 
   describe('fetchPurchasedLockIds', () => {
-    it('lists the reader purchases with one listing, in both layouts', async () => {
-      mocks.listAll.mockResolvedValue([
+    it('lists the reader purchases with one listing per root, in both layouts, until the copy is done', async () => {
+      mocks.listAll.mockResolvedValue([`pubky://reader1/priv/app.pubky/v1/locks/purchases/lock3/${BUNDLE_B}.json`]);
+      mocks.socialListAll.mockResolvedValue([
         'pubky://reader1/priv/social/purchases/lock1.json',
         `pubky://reader1/priv/social/purchases/lock2/${BUNDLE_A}.json`,
       ]);
 
       await expect(LocksApplication.fetchPurchasedLockIds({ readerPubky: 'reader1' })).resolves.toEqual([
+        'lock3',
         'lock1',
         'lock2',
       ]);
-      expect(mocks.listAll).toHaveBeenCalledWith({ baseDirectory: 'pubky://reader1/priv/social/purchases/' });
+      expect(mocks.listAll).toHaveBeenCalledWith({
+        baseDirectory: 'pubky://reader1/priv/app.pubky/v1/locks/purchases/',
+      });
+      expect(mocks.socialListAll).toHaveBeenCalledWith({ baseDirectory: 'pubky://reader1/priv/social/purchases/' });
+    });
+
+    // A build before #3206 can still save an id there after the copy, and so can a failed second PUT in
+    // `startPayment`: without it, a paid lock loses the recovery of content it never received.
+    it('still lists the social root after the copy, until #3207', async () => {
+      mocks.copyFlag.mockResolvedValue({ bytes: new Uint8Array(), modifiedAt: 1 });
+      mocks.listAll.mockResolvedValue([
+        `pubky://copied-buyer/priv/app.pubky/v1/locks/purchases/lock3/${BUNDLE_B}.json`,
+      ]);
+      mocks.socialListAll.mockResolvedValue([`pubky://copied-buyer/priv/social/purchases/lock4/${BUNDLE_A}.json`]);
+
+      await expect(LocksApplication.fetchPurchasedLockIds({ readerPubky: 'copied-buyer' })).resolves.toEqual([
+        'lock3',
+        'lock4',
+      ]);
     });
   });
 
@@ -1709,9 +1791,9 @@ describe('LocksApplication.replicateUnlockedContent', () => {
 
     const urls = mocks.putBlob.mock.calls.map(([params]) => params.url);
     expect(urls).toEqual([
-      `pubky://${READER}/priv/social/unlocked/LOCK1/img1`,
-      `pubky://${READER}/priv/social/unlocked/LOCK1/img2`,
-      `pubky://${READER}/priv/social/unlocked/LOCK1/post.json`,
+      `pubky://${READER}/priv/app.pubky/v1/locks/unlocked/LOCK1/img1`,
+      `pubky://${READER}/priv/app.pubky/v1/locks/unlocked/LOCK1/img2`,
+      `pubky://${READER}/priv/app.pubky/v1/locks/unlocked/LOCK1/post.json`,
     ]);
     expect(mocks.cachePost).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -1749,8 +1831,8 @@ describe('LocksApplication.replicateUnlockedContent', () => {
       content: 'secret body',
       kind: 'image',
       attachments: [
-        { url: `pubky://${READER}/priv/social/unlocked/LOCK1/img1`, content_type: 'image/png', slot: 0 },
-        { url: `pubky://${READER}/priv/social/unlocked/LOCK1/img2`, content_type: 'image/png', slot: 1 },
+        { url: `pubky://${READER}/priv/app.pubky/v1/locks/unlocked/LOCK1/img1`, content_type: 'image/png', slot: 0 },
+        { url: `pubky://${READER}/priv/app.pubky/v1/locks/unlocked/LOCK1/img2`, content_type: 'image/png', slot: 1 },
       ],
       announcement: ANNOUNCEMENT_URI,
     });
@@ -1776,7 +1858,7 @@ describe('LocksApplication.fetchReplicatedAttachments', () => {
       content: 'body',
       kind: 'image',
       attachments: contentTypes.map((content_type, index) => ({
-        url: `pubky://reader/priv/social/unlocked/LOCK1/file${index}`,
+        url: `pubky://reader/priv/app.pubky/v1/locks/unlocked/LOCK1/file${index}`,
         content_type,
       })),
     });
@@ -1834,7 +1916,7 @@ describe('LocksApplication.fetchReplicatedAttachments', () => {
       });
 
       expect(mocks.getBytes).toHaveBeenCalledOnce();
-      expect(mocks.getBytes).toHaveBeenCalledWith('pubky://reader/priv/social/unlocked/LOCK1/file0');
+      expect(mocks.getBytes).toHaveBeenCalledWith('pubky://reader/priv/app.pubky/v1/locks/unlocked/LOCK1/file0');
       expect(result.map((attachment) => attachment.slot)).toEqual([0]);
     });
 
@@ -1882,7 +1964,7 @@ describe('LocksApplication.fetchReplicatedContent', () => {
   });
 
   it('reads only the cover of an article for a preview', async () => {
-    const file = (name: string) => `pubky://${READER}/priv/social/unlocked/LOCK1/${name}`;
+    const file = (name: string) => `pubky://${READER}/priv/app.pubky/v1/locks/unlocked/LOCK1/${name}`;
     mocks.getBytesIfExists.mockResolvedValueOnce(
       marker({
         content: JSON.stringify({ title: 'Title', body: '![b](attachment:1)' }),
@@ -1912,12 +1994,56 @@ describe('LocksApplication.fetchReplicatedContent', () => {
     const result = await LocksApplication.fetchReplicatedContent({ lockUrl: LOCK_URL, readerPubky: READER });
 
     expect(result).toBeNull();
-    expect(mocks.getBytesIfExists).toHaveBeenCalledWith(`pubky://${READER}/priv/social/unlocked/LOCK1/post.json`);
+    expect(mocks.getBytesIfExists).toHaveBeenCalledWith(
+      `pubky://${READER}/priv/app.pubky/v1/locks/unlocked/LOCK1/post.json`,
+    );
+    // Not copied yet: a replica of a build before #3206 may exist only under the social root.
+    expect(mocks.socialGetBytesIfExists).toHaveBeenCalledWith(`pubky://${READER}/priv/social/unlocked/LOCK1/post.json`);
     expect(mocks.cachePost).not.toHaveBeenCalled();
   });
 
+  it('reads a replica that exists only under the social root while the copy is not done', async () => {
+    mocks.getBytesIfExists.mockResolvedValueOnce(null);
+    mocks.socialGetBytesIfExists.mockResolvedValueOnce(
+      marker({ content: 'old copy', kind: 'short', attachments: null }),
+    );
+
+    const result = await LocksApplication.fetchReplicatedContent({ lockUrl: LOCK_URL, readerPubky: READER });
+
+    expect(result?.post.content).toBe('old copy');
+  });
+
+  it('does not read the social root when the new root has the marker', async () => {
+    mocks.getBytesIfExists.mockResolvedValueOnce(marker({ content: 'new copy', kind: 'short', attachments: null }));
+
+    const result = await LocksApplication.fetchReplicatedContent({ lockUrl: LOCK_URL, readerPubky: READER });
+
+    expect(result?.post.content).toBe('new copy');
+    expect(mocks.socialGetBytesIfExists).not.toHaveBeenCalled();
+  });
+
+  it('does not read the social root once the copy is done', async () => {
+    mocks.copyFlag.mockResolvedValue({ bytes: new Uint8Array(), modifiedAt: 1 });
+    mocks.getBytesIfExists.mockResolvedValueOnce(null);
+
+    const result = await LocksApplication.fetchReplicatedContent({ lockUrl: LOCK_URL, readerPubky: 'copied-reader' });
+
+    expect(result).toBeNull();
+    expect(mocks.socialGetBytesIfExists).not.toHaveBeenCalled();
+  });
+
+  // Read after the new marker, the flag can report a copy that finished after that read: the replica
+  // is then in neither root's answer.
+  it('reads the copy flag before the new marker', async () => {
+    mocks.getBytesIfExists.mockResolvedValueOnce(marker({ content: 'new copy', kind: 'short', attachments: null }));
+
+    await LocksApplication.fetchReplicatedContent({ lockUrl: LOCK_URL, readerPubky: 'flag-first-reader' });
+
+    expect(mocks.copyFlag.mock.invocationCallOrder[0]).toBeLessThan(mocks.getBytesIfExists.mock.invocationCallOrder[0]);
+  });
+
   it('loads the replicated post and its attachments from the reader priv (no lock file needed)', async () => {
-    const attachmentUrl = `pubky://${READER}/priv/social/unlocked/LOCK1/img1`;
+    const attachmentUrl = `pubky://${READER}/priv/app.pubky/v1/locks/unlocked/LOCK1/img1`;
     mocks.getBytesIfExists.mockResolvedValueOnce(
       marker({ content: 'secret', kind: 'image', attachments: [{ url: attachmentUrl, content_type: 'image/png' }] }),
     );
@@ -1935,7 +2061,7 @@ describe('LocksApplication.fetchReplicatedContent', () => {
   });
 
   it('reads each attachment back at the slot the marker recorded for it', async () => {
-    const url = (id: string) => `pubky://${READER}/priv/social/unlocked/LOCK1/${id}`;
+    const url = (id: string) => `pubky://${READER}/priv/app.pubky/v1/locks/unlocked/LOCK1/${id}`;
     mocks.getBytesIfExists.mockResolvedValueOnce(
       marker({
         content: 'secret',
@@ -1964,7 +2090,7 @@ describe('LocksApplication.fetchReplicatedContent', () => {
   });
 
   it('leaves the cache unchanged when a replicated attachment read fails', async () => {
-    const attachmentUrl = `pubky://${READER}/priv/social/unlocked/LOCK1/img1`;
+    const attachmentUrl = `pubky://${READER}/priv/app.pubky/v1/locks/unlocked/LOCK1/img1`;
     mocks.getBytesIfExists.mockResolvedValueOnce(
       marker({ content: 'secret', kind: 'image', attachments: [{ url: attachmentUrl, content_type: 'image/png' }] }),
     );
@@ -1977,7 +2103,8 @@ describe('LocksApplication.fetchReplicatedContent', () => {
 
 describe('LocksApplication.fetchUnlockedList', () => {
   const READER = 'pubkyreader123';
-  const markerUrl = (lockId: string) => `pubky://${READER}/priv/social/unlocked/${lockId}/post.json`;
+  const markerUrl = (lockId: string) => `pubky://${READER}/priv/app.pubky/v1/locks/unlocked/${lockId}/post.json`;
+  const socialMarkerUrl = (lockId: string) => `pubky://${READER}/priv/social/unlocked/${lockId}/post.json`;
   const marker = (content: string, modifiedAt: number | null, announcement?: string) => ({
     bytes: new TextEncoder().encode(JSON.stringify({ content, kind: 'short', attachments: null, announcement })),
     modifiedAt,
@@ -2047,6 +2174,345 @@ describe('LocksApplication.fetchUnlockedList', () => {
 
     expect(result.map((item) => item.lockId)).toEqual(['DATED', 'NOHEADER']);
   });
+
+  it('adds the replicas only the social root has until the copy is done, the new root winning', async () => {
+    mocks.listAll.mockResolvedValueOnce([markerUrl('BOTH'), markerUrl('NEW')]);
+    mocks.socialListAll.mockResolvedValueOnce([socialMarkerUrl('BOTH'), socialMarkerUrl('OLD')]);
+    mocks.getBytesIfExists.mockImplementation(async (url: string) =>
+      url === markerUrl('BOTH') ? marker('both, new copy', 3) : marker('new', 2),
+    );
+    mocks.socialGetBytesIfExists.mockResolvedValue(marker('old', 1));
+
+    const result = await LocksApplication.fetchUnlockedList({ readerPubky: READER });
+
+    expect(result.map((item) => [item.lockId, item.post.content])).toEqual([
+      ['BOTH', 'both, new copy'],
+      ['NEW', 'new'],
+      ['OLD', 'old'],
+    ]);
+    expect(mocks.socialGetBytesIfExists).toHaveBeenCalledOnce();
+    expect(mocks.socialGetBytesIfExists).toHaveBeenCalledWith(socialMarkerUrl('OLD'));
+  });
+
+  it('sorts a copied marker by the unlock time it carries, not its write time', async () => {
+    mocks.listAll.mockResolvedValueOnce([markerUrl('COPIED'), markerUrl('FRESH')]);
+    mocks.getBytesIfExists.mockImplementation(async (url: string) =>
+      url === markerUrl('COPIED')
+        ? {
+            bytes: new TextEncoder().encode(JSON.stringify({ content: 'c', kind: 'short', unlocked_at: 100 })),
+            modifiedAt: 9000,
+          }
+        : marker('f', 500),
+    );
+
+    const result = await LocksApplication.fetchUnlockedList({ readerPubky: READER });
+
+    expect(result.map((item) => [item.lockId, item.unlockedAt])).toEqual([
+      ['FRESH', 500],
+      ['COPIED', 100],
+    ]);
+  });
+
+  it('lists only the new root once the copy is done', async () => {
+    mocks.copyFlag.mockResolvedValue({ bytes: new Uint8Array(), modifiedAt: 1 });
+    mocks.listAll.mockResolvedValueOnce([]);
+
+    await expect(LocksApplication.fetchUnlockedList({ readerPubky: 'copied-library' })).resolves.toEqual([]);
+    expect(mocks.socialListAll).not.toHaveBeenCalled();
+  });
+
+  // Read beside the new root's listing, the flag can report a copy that another tab finished after
+  // that listing: the replica is then in neither listing.
+  it("reads the copy flag before the new root's listing", async () => {
+    mocks.listAll.mockResolvedValueOnce([]);
+
+    await LocksApplication.fetchUnlockedList({ readerPubky: 'flag-first-library' });
+
+    expect(mocks.copyFlag.mock.invocationCallOrder[0]).toBeLessThan(mocks.listAll.mock.invocationCallOrder[0]);
+  });
+});
+
+describe('LocksApplication.copySocialReaderFiles', () => {
+  const BUNDLE_A = 'A'.repeat(26);
+  const BUNDLE_B = 'B'.repeat(26);
+  const NEW = '/priv/app.pubky/v1/locks/';
+  const SOCIAL = '/priv/social/';
+  const bytes = (value: unknown, modifiedAt: number | null = 1) => ({
+    bytes: new TextEncoder().encode(typeof value === 'string' ? value : JSON.stringify(value)),
+    modifiedAt,
+  });
+  /** One reader per test: the copy state is kept per reader for the page's life. */
+  let readerCount = 0;
+  let reader = '';
+  const url = (root: string, tail: string) => `pubky://${reader}${root}${tail}`;
+  const written = () => mocks.putBlob.mock.calls.map(([params]) => params.url);
+  /** What each social root lists; the new roots list `newRoots`. */
+  const roots = (
+    social: { unlocked?: string[]; purchases?: string[] },
+    newRoots: { unlocked?: string[]; purchases?: string[] } = {},
+  ) => {
+    const pick =
+      (lists: typeof social) =>
+      async ({ baseDirectory }: { baseDirectory: string }) =>
+        (baseDirectory.endsWith('/purchases/') ? lists.purchases : lists.unlocked) ?? [];
+    mocks.socialListAll.mockImplementation(pick(social));
+    mocks.listAll.mockImplementation(pick(newRoots));
+  };
+  const writtenJson = (target: string) =>
+    JSON.parse(new TextDecoder().decode(mocks.putBlob.mock.calls.find(([params]) => params.url === target)?.[0].blob));
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    reader = `copy-reader-${(readerCount += 1)}`;
+    mocks.listAll.mockResolvedValue([]);
+    mocks.getBytesIfExists.mockResolvedValue(null);
+    mocks.putBlob.mockResolvedValue(undefined);
+  });
+
+  it('does nothing once the flag is there', async () => {
+    mocks.copyFlag.mockResolvedValue(bytes({ copied_at: 1 }));
+
+    await LocksApplication.copySocialReaderFiles({ readerPubky: reader });
+
+    expect(mocks.listAll).not.toHaveBeenCalled();
+    expect(mocks.socialListAll).not.toHaveBeenCalled();
+    expect(mocks.putBlob).not.toHaveBeenCalled();
+  });
+
+  it('copies each missing purchase file, the legacy one in the per-bundle layout, then writes the flag', async () => {
+    roots(
+      {
+        purchases: [
+          url(SOCIAL, `purchases/LOCK1/${BUNDLE_A}.json`),
+          url(SOCIAL, `purchases/LOCK2/${BUNDLE_A}.json`),
+          url(SOCIAL, 'purchases/LOCK3.json'),
+        ],
+      },
+      { purchases: [url(NEW, `purchases/LOCK2/${BUNDLE_A}.json`)] },
+    );
+    mocks.socialGetBytesIfExists.mockResolvedValue(bytes({ bundle_id: BUNDLE_B }));
+
+    await LocksApplication.copySocialReaderFiles({ readerPubky: reader });
+
+    expect(written()).toEqual([
+      url(NEW, `purchases/LOCK1/${BUNDLE_A}.json`),
+      url(NEW, `purchases/LOCK3/${BUNDLE_B}.json`),
+      url(NEW, '_social_copied.json'),
+    ]);
+    expect(writtenJson(url(NEW, `purchases/LOCK3/${BUNDLE_B}.json`))).toEqual({ bundle_id: BUNDLE_B });
+    expect(mocks.socialGetBytesIfExists).toHaveBeenCalledWith(url(SOCIAL, 'purchases/LOCK3.json'));
+  });
+
+  it.each([
+    ['a legacy file it cannot read', 'purchases/LOCK1.json', bytes('garbage')],
+    ['a legacy id that is not a bundle id', 'purchases/LOCK1.json', bytes({ bundle_id: 'saved-1' })],
+    ['a name in neither layout', 'purchases/LOCK1/extra.json', null],
+  ])('leaves %s where it is, for the payment read that keeps reading the social root', async (_label, tail, legacy) => {
+    roots({ purchases: [url(SOCIAL, tail)] });
+    mocks.socialGetBytesIfExists.mockResolvedValue(legacy);
+
+    await LocksApplication.copySocialReaderFiles({ readerPubky: reader });
+
+    expect(written()).toEqual([url(NEW, '_social_copied.json')]);
+  });
+
+  it('copies a replica: attachments first, then the marker pointing at them with the original unlock time', async () => {
+    roots({ unlocked: [url(SOCIAL, 'unlocked/LOCK1/img1'), url(SOCIAL, 'unlocked/LOCK1/post.json')] });
+    const image = new Uint8Array([1, 2, 3]);
+    mocks.socialGetBytesIfExists.mockImplementation(async (target: string) =>
+      target.endsWith('post.json')
+        ? bytes(
+            {
+              content: 'secret',
+              kind: 'image',
+              attachments: [{ url: url(SOCIAL, 'unlocked/LOCK1/img1'), content_type: 'image/png', slot: 0 }],
+              announcement: 'pubky://author/pub/social/v1/posts/P1',
+            },
+            1700,
+          )
+        : { bytes: image, modifiedAt: 1 },
+    );
+
+    await LocksApplication.copySocialReaderFiles({ readerPubky: reader });
+
+    expect(written()).toEqual([
+      url(NEW, 'unlocked/LOCK1/img1'),
+      url(NEW, 'unlocked/LOCK1/post.json'),
+      url(NEW, '_social_copied.json'),
+    ]);
+    expect(mocks.putBlob.mock.calls[0][0].blob).toEqual(image);
+    expect(writtenJson(url(NEW, 'unlocked/LOCK1/post.json'))).toEqual({
+      content: 'secret',
+      kind: 'image',
+      attachments: [{ url: url(NEW, 'unlocked/LOCK1/img1'), content_type: 'image/png', slot: 0 }],
+      announcement: 'pubky://author/pub/social/v1/posts/P1',
+      unlocked_at: 1700,
+    });
+    // The cached row pointed at the social copies, which #3207 deletes.
+    expect(mocks.cachePost).toHaveBeenCalledExactlyOnceWith({
+      lockId: 'LOCK1',
+      post: writtenJson(url(NEW, 'unlocked/LOCK1/post.json')),
+      unlockedAt: 1700,
+    });
+  });
+
+  const oneReplica = (modifiedAt: number | null) => {
+    roots({ unlocked: [url(SOCIAL, 'unlocked/LOCK1/post.json')] });
+    mocks.socialGetBytesIfExists.mockResolvedValue(
+      bytes({ content: 'old', kind: 'short', attachments: null }, modifiedAt),
+    );
+  };
+
+  it('copies a marker with no write time as the oldest, as the source sorted', async () => {
+    oneReplica(null);
+
+    await LocksApplication.copySocialReaderFiles({ readerPubky: reader });
+
+    expect(writtenJson(url(NEW, 'unlocked/LOCK1/post.json')).unlocked_at).toBe(0);
+  });
+
+  it('writes nothing once the account it started for is gone', async () => {
+    oneReplica(1700);
+
+    await LocksApplication.copySocialReaderFiles({ readerPubky: reader, isCurrent: () => false });
+
+    expect(mocks.putBlob).not.toHaveBeenCalled();
+    expect(mocks.cachePost).not.toHaveBeenCalled();
+  });
+
+  it('stops between files when the account changes midway, without the cache row or the flag', async () => {
+    roots({ unlocked: [url(SOCIAL, 'unlocked/LOCK1/post.json'), url(SOCIAL, 'unlocked/LOCK2/post.json')] });
+    mocks.socialGetBytesIfExists.mockResolvedValue(bytes({ content: 'old', kind: 'short', attachments: null }));
+    let checks = 0;
+    const isCurrent = () => (checks += 1) === 1;
+
+    await LocksApplication.copySocialReaderFiles({ readerPubky: reader, isCurrent });
+
+    expect(written()).toEqual([url(NEW, 'unlocked/LOCK1/post.json')]);
+    expect(mocks.cachePost).not.toHaveBeenCalled();
+  });
+
+  it('copies again a replica the new root holds only part of, after a run that stopped midway', async () => {
+    roots(
+      { unlocked: [url(SOCIAL, 'unlocked/LOCK1/img1'), url(SOCIAL, 'unlocked/LOCK1/post.json')] },
+      { unlocked: [url(NEW, 'unlocked/LOCK1/img1')] },
+    );
+    mocks.socialGetBytesIfExists.mockImplementation(async (target: string) =>
+      target.endsWith('post.json')
+        ? bytes({
+            content: 'secret',
+            kind: 'image',
+            attachments: [{ url: url(SOCIAL, 'unlocked/LOCK1/img1'), content_type: 'image/png' }],
+          })
+        : { bytes: new Uint8Array([1]), modifiedAt: 1 },
+    );
+
+    await LocksApplication.copySocialReaderFiles({ readerPubky: reader });
+
+    expect(written()).toEqual([
+      url(NEW, 'unlocked/LOCK1/img1'),
+      url(NEW, 'unlocked/LOCK1/post.json'),
+      url(NEW, '_social_copied.json'),
+    ]);
+  });
+
+  it('reads both roots for the page when the flag cannot be read', async () => {
+    mocks.copyFlag.mockRejectedValue(new Error('offline'));
+    roots({ unlocked: [url(SOCIAL, 'unlocked/OLD/post.json')] });
+    mocks.socialGetBytesIfExists.mockResolvedValue(bytes({ content: 'old', kind: 'short', attachments: null }));
+
+    const list = await LocksApplication.fetchUnlockedList({ readerPubky: reader });
+
+    expect(list.map((item) => item.lockId)).toEqual(['OLD']);
+  });
+
+  it('skips a replica the new root already has, a corrupt one, and a partial one', async () => {
+    roots(
+      {
+        unlocked: [
+          url(SOCIAL, 'unlocked/DONE/post.json'),
+          url(SOCIAL, 'unlocked/CORRUPT/post.json'),
+          url(SOCIAL, 'unlocked/PARTIAL/img1'),
+        ],
+      },
+      { unlocked: [url(NEW, 'unlocked/DONE/post.json')] },
+    );
+    mocks.socialGetBytesIfExists.mockResolvedValue(bytes('not json'));
+
+    await LocksApplication.copySocialReaderFiles({ readerPubky: reader });
+
+    expect(written()).toEqual([url(NEW, '_social_copied.json')]);
+    expect(mocks.socialGetBytesIfExists).toHaveBeenCalledOnce();
+    expect(mocks.socialGetBytesIfExists).toHaveBeenCalledWith(url(SOCIAL, 'unlocked/CORRUPT/post.json'));
+  });
+
+  it('does not write the marker over one a fresh unlock wrote during the copy', async () => {
+    roots({ unlocked: [url(SOCIAL, 'unlocked/LOCK1/post.json')] });
+    mocks.socialGetBytesIfExists.mockResolvedValue(bytes({ content: 'old', kind: 'short', attachments: null }));
+    mocks.getBytesIfExists.mockResolvedValue(bytes({ content: 'fresh', kind: 'short', attachments: null }));
+
+    await LocksApplication.copySocialReaderFiles({ readerPubky: reader });
+
+    expect(written()).toEqual([url(NEW, '_social_copied.json')]);
+  });
+
+  it('stops reading the social unlocked root once the copy finished, and keeps the purchases root', async () => {
+    await LocksApplication.copySocialReaderFiles({ readerPubky: reader });
+    vi.clearAllMocks();
+    mocks.listAll.mockResolvedValue([]);
+    mocks.socialListAll.mockResolvedValue([]);
+
+    await LocksApplication.fetchUnlockedList({ readerPubky: reader });
+    await LocksApplication.fetchPurchasedLockIds({ readerPubky: reader });
+
+    expect(mocks.socialListAll.mock.calls).toEqual([[{ baseDirectory: url(SOCIAL, 'purchases/') }]]);
+    expect(mocks.copyFlag).not.toHaveBeenCalled();
+  });
+
+  it('copies the rest when one file fails, and the next run copies that one and writes the flag', async () => {
+    const replica = (lockId: string) => ({
+      content: lockId,
+      kind: 'image',
+      attachments: [{ url: url(SOCIAL, `unlocked/${lockId}/img1`), content_type: 'image/png' }],
+    });
+    roots({ unlocked: [url(SOCIAL, 'unlocked/FULL/post.json'), url(SOCIAL, 'unlocked/OK/post.json')] });
+    mocks.socialGetBytesIfExists.mockImplementation(async (target: string) =>
+      target.endsWith('post.json') ? bytes(replica(target.includes('/FULL/') ? 'FULL' : 'OK')) : bytes('image'),
+    );
+    // A full quota (507) is not retried: the first attachment fails for good on this run.
+    mocks.putBlob.mockRejectedValueOnce(new Error('507 Insufficient Storage'));
+
+    await expect(LocksApplication.copySocialReaderFiles({ readerPubky: reader })).resolves.toBeUndefined();
+
+    expect(written()).toEqual([
+      url(NEW, 'unlocked/FULL/img1'),
+      url(NEW, 'unlocked/OK/img1'),
+      url(NEW, 'unlocked/OK/post.json'),
+    ]);
+
+    // The next run finds OK complete at the new root and FULL still to do.
+    mocks.putBlob.mockClear();
+    roots(
+      { unlocked: [url(SOCIAL, 'unlocked/FULL/post.json'), url(SOCIAL, 'unlocked/OK/post.json')] },
+      { unlocked: [url(NEW, 'unlocked/OK/img1'), url(NEW, 'unlocked/OK/post.json')] },
+    );
+    await LocksApplication.copySocialReaderFiles({ readerPubky: reader });
+
+    expect(written()).toEqual([
+      url(NEW, 'unlocked/FULL/img1'),
+      url(NEW, 'unlocked/FULL/post.json'),
+      url(NEW, '_social_copied.json'),
+    ]);
+  });
+
+  it('writes no flag file for an account whose social roots are empty, and lists no new root', async () => {
+    await LocksApplication.copySocialReaderFiles({ readerPubky: reader });
+    await LocksApplication.fetchUnlockedList({ readerPubky: reader });
+
+    expect(mocks.putBlob).not.toHaveBeenCalled();
+    expect(mocks.socialListAll).toHaveBeenCalledTimes(2);
+    expect(mocks.listAll).toHaveBeenCalledOnce();
+  });
 });
 
 describe('LocksApplication cache writes after logout (#2797)', () => {
@@ -2087,7 +2553,7 @@ describe('LocksApplication cache writes after logout (#2797)', () => {
 
   it('fetchUnlockedList returns the list but does not cache it', async () => {
     const scope = logoutDuring();
-    mocks.listAll.mockResolvedValueOnce([`pubky://${READER}/priv/social/unlocked/LOCK1/post.json`]);
+    mocks.listAll.mockResolvedValueOnce([`pubky://${READER}/priv/app.pubky/v1/locks/unlocked/LOCK1/post.json`]);
     mocks.getBytesIfExists.mockImplementationOnce(async () => {
       scope.logout();
       return markerOf('secret');

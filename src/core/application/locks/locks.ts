@@ -107,6 +107,14 @@ export class LocksApplication {
    */
   private static readonly inFlightPaidContent = new Map<string, Promise<TUnlockedContent>>();
 
+  /** `hasCopiedSocialFiles` answers per reader, kept for the page's life. */
+  private static readonly socialFilesCopied = new Map<string, Promise<boolean>>();
+
+  /** Forgets `socialFilesCopied`: a test that signs one account in again needs a fresh flag read. */
+  static resetSocialCopyStateForTests(): void {
+    this.socialFilesCopied.clear();
+  }
+
   static generateConnectUrl(params: TGenerateConnectUrlParams): Promise<string> {
     return LocksService.generateConnectUrl(params);
   }
@@ -145,11 +153,16 @@ export class LocksApplication {
     readerPubky,
   }: TPaymentLockParams): Promise<TResolvedPurchase | null> {
     const lockId = this.requireLockId(lockUrl, 'fetchResolvedPurchase');
-    const [files, legacy] = await Promise.all([
+    // Both roots, even after the copy, until #3207: a build before #3206 still open elsewhere writes its
+    // ids under the social root, and minting beside the one that was paid could charge twice.
+    const [files, socialFiles, legacy] = await Promise.all([
       HomeserverService.listAll({ baseDirectory: GuardedContentParser.purchaseLockRootUrl(readerPubky, lockId) }),
+      HomeserverService.listAll({
+        baseDirectory: GuardedContentParser.socialPurchaseLockRootUrl(readerPubky, lockId),
+      }),
       HomeserverService.getBytesIfExists(GuardedContentParser.legacyPurchaseUrl(readerPubky, lockId)),
     ]);
-    const bundleIds = GuardedContentParser.purchaseBundleIds(files);
+    const bundleIds = GuardedContentParser.purchaseBundleIds([...files, ...socialFiles]);
     const legacyId = legacy ? GuardedContentParser.parsePurchaseFile(legacy.bytes) : null;
     if (!bundleIds || (legacy && !legacyId)) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'purchase bundle id file is unreadable', {
@@ -233,13 +246,17 @@ export class LocksApplication {
       }
       if (resolved?.kind === 'reusable') return resolved.bundleId;
       const bundleId = await LocksService.generateBundleId();
+      const blob = new TextEncoder().encode(GuardedContentParser.buildPurchaseFile(bundleId));
       // Saved BEFORE the proof is submitted: a submission that succeeds while the file is missing
-      // leaves a purchase nobody can reach.
-      await HomeserverService.putBlob({
-        url: GuardedContentParser.purchaseUrl(readerPubky, lockId, bundleId),
-        blob: new TextEncoder().encode(GuardedContentParser.buildPurchaseFile(bundleId)),
-        fence,
-      });
+      // leaves a purchase nobody can reach. TODO:[Locks] #3207 — drop the social-root PUT. Until then
+      // it goes first: a build before #3206 reads only that root and would mint a second id, and if
+      // the second PUT fails the id still sits where every build reads it.
+      for (const url of [
+        GuardedContentParser.socialPurchaseUrl(readerPubky, lockId, bundleId),
+        GuardedContentParser.purchaseUrl(readerPubky, lockId, bundleId),
+      ]) {
+        await HomeserverService.putBlob({ url, blob, fence });
+      }
       return bundleId;
     };
     const run = async (): Promise<TStartPaymentResult> => {
@@ -296,15 +313,18 @@ export class LocksApplication {
   }
 
   /**
-   * Lock ids the reader has started a payment for, from `/priv/social/purchases/`. The bundle id
-   * file is written before the proof is submitted, so pending and failed purchases are included.
-   * One listing answers it for every lock post on screen, so the feed never asks per post.
+   * Lock ids the reader has started a payment for, from both purchases roots. The bundle id file is
+   * written before the proof is submitted, so pending and failed purchases are included. One listing
+   * per root answers it for every lock post on screen, so the feed never asks per post.
    */
   static async fetchPurchasedLockIds({ readerPubky }: TFetchUnlockedListParams): Promise<string[]> {
-    const files = await HomeserverService.listAll({
-      baseDirectory: GuardedContentParser.purchasesRootUrl(readerPubky),
-    });
-    return GuardedContentParser.purchasedLockIds(files);
+    // The social root even after the copy, until #3207, as in `fetchResolvedPurchase`: a build before
+    // #3206 and a failed second PUT in `startPayment` can leave an id only there.
+    const [files, socialFiles] = await Promise.all([
+      HomeserverService.listAll({ baseDirectory: GuardedContentParser.purchasesRootUrl(readerPubky) }),
+      HomeserverService.listAll({ baseDirectory: GuardedContentParser.socialPurchasesRootUrl(readerPubky) }),
+    ]);
+    return GuardedContentParser.purchasedLockIds([...files, ...socialFiles]);
   }
 
   /**
@@ -445,8 +465,8 @@ export class LocksApplication {
   }
 
   /**
-   * Copies unlocked content into the reader's own `/priv/social/unlocked/<lockId>/`, so re-reading it
-   * later needs no credential and survives the creator revoking access.
+   * Copies unlocked content into the reader's own `/priv/app.pubky/v1/locks/unlocked/<lockId>/`, so
+   * re-reading it later needs no credential and survives the creator revoking access.
    *
    * Attachments upload first: `post.json` is the completion marker (§7 reads it to decide whether a
    * lock is already unlocked), so it must land only once everything it references is stored. A partial
@@ -491,7 +511,8 @@ export class LocksApplication {
   }
 
   /**
-   * Lists the reader's unlocked content from `/priv/social/unlocked/`, newest unlock first.
+   * Lists the reader's unlocked content, newest unlock first: the unlocked root, and the social one
+   * until the copy is done, because until then some replicas exist only there (the new root wins).
    * Only locks whose `post.json` marker exists count — a partial replica has none. A corrupt or
    * concurrently-deleted marker drops that one item so the rest still renders; any other failure
    * rejects the whole list so the caller can retry.
@@ -500,14 +521,25 @@ export class LocksApplication {
     readerPubky,
     isCurrent,
   }: TFetchUnlockedListParams & TViewerScope): Promise<TUnlockedListItem[]> {
-    const files = await HomeserverService.listAll({
-      baseDirectory: GuardedContentParser.unlockedRootUrl(readerPubky),
-    });
+    const copied = await this.hasCopiedSocialFiles(readerPubky);
+    const [files, socialFiles] = await Promise.all([
+      HomeserverService.listAll({ baseDirectory: GuardedContentParser.unlockedRootUrl(readerPubky) }),
+      copied
+        ? []
+        : HomeserverService.listAll({ baseDirectory: GuardedContentParser.socialUnlockedRootUrl(readerPubky) }),
+    ]);
+    const markerUrls = new Map<string, string>();
+    for (const lockId of GuardedContentParser.completedLockIds(socialFiles)) {
+      markerUrls.set(lockId, GuardedContentParser.socialUnlockedPostUrl(readerPubky, lockId));
+    }
+    for (const lockId of GuardedContentParser.completedLockIds(files)) {
+      markerUrls.set(lockId, GuardedContentParser.unlockedPostUrl(readerPubky, lockId));
+    }
 
     const items = await Promise.all(
-      GuardedContentParser.completedLockIds(files).map(async (lockId) => {
+      [...markerUrls].map(async ([lockId, markerUrl]) => {
         try {
-          const replicatedPost = await this.readReplicatedMarker(readerPubky, lockId, 'fetchUnlockedList');
+          const replicatedPost = await this.readReplicatedMarker(markerUrl, lockId, 'fetchUnlockedList');
           if (!replicatedPost) return null;
           return this.toUnlockedListItem(lockId, replicatedPost.post, replicatedPost.unlockedAt);
         } catch (error) {
@@ -554,11 +586,11 @@ export class LocksApplication {
    * reported via throw instead of a silent null.
    */
   private static async readReplicatedMarker(
-    readerPubky: string,
+    markerUrl: string,
     lockId: string,
     operation: string,
   ): Promise<{ post: ReplicatedPost; unlockedAt: number } | null> {
-    const marker = await HomeserverService.getBytesIfExists(GuardedContentParser.unlockedPostUrl(readerPubky, lockId));
+    const marker = await HomeserverService.getBytesIfExists(markerUrl);
     if (!marker) return null;
 
     const post = GuardedContentParser.parseReplicatedPost(marker.bytes);
@@ -570,11 +602,15 @@ export class LocksApplication {
       });
     }
     // The marker is written once, when the unlock completes, so its server-side write time IS the
-    // unlock time. 0 when the header is missing, which sorts the item oldest.
-    return { post, unlockedAt: marker.modifiedAt ?? 0 };
+    // unlock time, except on a copied marker, which carries its own. 0 when both are missing, which
+    // sorts the item oldest.
+    return { post, unlockedAt: post.unlocked_at ?? marker.modifiedAt ?? 0 };
   }
 
-  /** Already unlocked → load from reader's HS `/priv`. Null if no `post.json` (never unlocked or partial). */
+  /**
+   * Already unlocked → load from reader's HS `/priv`. Null if no `post.json` (never unlocked or partial).
+   * The social root is read only when the new one has no marker and the copy is not done yet.
+   */
   static async fetchReplicatedContent({
     lockUrl,
     readerPubky,
@@ -584,7 +620,17 @@ export class LocksApplication {
     const lockId = LockContentParser.lockIdFromUrl(lockUrl);
     if (!lockId) return null;
 
-    const replicatedPost = await this.readReplicatedMarker(readerPubky, lockId, 'fetchReplicatedContent');
+    const operation = 'fetchReplicatedContent';
+    const copied = await this.hasCopiedSocialFiles(readerPubky);
+    let replicatedPost = await this.readReplicatedMarker(
+      GuardedContentParser.unlockedPostUrl(readerPubky, lockId),
+      lockId,
+      operation,
+    );
+    if (!replicatedPost && !copied) {
+      const socialMarkerUrl = GuardedContentParser.socialUnlockedPostUrl(readerPubky, lockId);
+      replicatedPost = await this.readReplicatedMarker(socialMarkerUrl, lockId, operation);
+    }
     if (!replicatedPost) return null;
 
     // Read without the creator's lock.json on purpose: once replicated, the reader's copy must stay
@@ -637,6 +683,179 @@ export class LocksApplication {
       }),
     );
     return reads.filter((attachment): attachment is TUnlockedAttachment => attachment !== null);
+  }
+
+  /**
+   * Whether the reader's files under `/priv/social/` are all copied to the app's namespace (#3206);
+   * until then the unlocked list and the replica read also look there. One flag read per reader and
+   * page load. A failed read counts as not copied: reading both roots is only slower. Await it before
+   * reading the new root: read after, it can report a copy that finished after that read, and the
+   * file is then in neither answer.
+   */
+  private static hasCopiedSocialFiles(readerPubky: string): Promise<boolean> {
+    let copied = this.socialFilesCopied.get(readerPubky);
+    if (!copied) {
+      copied = HomeserverService.getBytesIfExists(GuardedContentParser.socialCopyFlagUrl(readerPubky)).then(
+        (flag) => flag !== null,
+        () => false,
+      );
+      this.socialFilesCopied.set(readerPubky, copied);
+    }
+    return copied;
+  }
+
+  /**
+   * Copies the reader's replicas and purchase files from `/priv/social/` to the app's namespace
+   * (#3206), in the background after bootstrap. Only what is missing at the new root is written, so
+   * a run that stops midway is finished by the next one. A file that fails is left for the next run and
+   * the rest still copied; the flag goes last, only after a run with no failure. It stops the list reads
+   * only: `fetchResolvedPurchase` keeps reading the social root. An account whose social roots are empty
+   * gets no flag file, only this page's answer. The social files stay (#3207).
+   */
+  static async copySocialReaderFiles({
+    readerPubky,
+    isCurrent,
+  }: TFetchUnlockedListParams & TViewerScope): Promise<void> {
+    // Every write follows a read, so the session is checked before each one, the first included.
+    const fence = HomeserverService.createWriteFence({ guardFirstPass: true });
+    if (await this.hasCopiedSocialFiles(readerPubky)) return;
+    const [socialUnlocked, socialPurchases] = await Promise.all([
+      HomeserverService.listAll({ baseDirectory: GuardedContentParser.socialUnlockedRootUrl(readerPubky) }),
+      HomeserverService.listAll({ baseDirectory: GuardedContentParser.socialPurchasesRootUrl(readerPubky) }),
+    ]);
+    // Most accounts never used Locks before #3206: nothing to copy, and no flag file in their export.
+    if (socialUnlocked.length === 0 && socialPurchases.length === 0) {
+      this.socialFilesCopied.set(readerPubky, Promise.resolve(true));
+      return;
+    }
+    const [unlocked, purchases] = await Promise.all([
+      HomeserverService.listAll({ baseDirectory: GuardedContentParser.unlockedRootUrl(readerPubky) }),
+      HomeserverService.listAll({ baseDirectory: GuardedContentParser.purchasesRootUrl(readerPubky) }),
+    ]);
+    const purchasesCopied = await this.copySocialPurchases(readerPubky, socialPurchases, purchases, fence, isCurrent);
+    const replicasCopied = await this.copySocialReplicas(readerPubky, socialUnlocked, unlocked, fence, isCurrent);
+    // Signed out or switched account midway: the next bootstrap of this account finishes the copy.
+    if (!purchasesCopied || !replicasCopied || isCurrent?.() === false) return;
+
+    const flag = new TextEncoder().encode(JSON.stringify({ copied_at: Date.now() }));
+    await retryHomeserverWriteAfterReread(fence, () =>
+      HomeserverService.putBlob({ url: GuardedContentParser.socialCopyFlagUrl(readerPubky), blob: flag, fence }),
+    );
+    this.socialFilesCopied.set(readerPubky, Promise.resolve(true));
+  }
+
+  /**
+   * False when a file failed to copy, for the next run. A legacy file that cannot be parsed, or a name
+   * in neither layout, is not a failure: it stays where it is, and `fetchResolvedPurchase` reads the
+   * social root on every payment and refuses that lock rather than mint beside an id it cannot read.
+   */
+  private static async copySocialPurchases(
+    readerPubky: string,
+    socialFiles: string[],
+    files: string[],
+    fence: THomeserverWriteFence,
+    isCurrent: TViewerScope['isCurrent'],
+  ): Promise<boolean> {
+    let copied = true;
+    const { bundles, legacyLockIds } = GuardedContentParser.purchaseFiles(socialFiles);
+    for (const lockId of legacyLockIds) {
+      if (isCurrent?.() === false) return false;
+      try {
+        const legacy = await HomeserverService.getBytesIfExists(
+          GuardedContentParser.legacyPurchaseUrl(readerPubky, lockId),
+        );
+        const bundleId = legacy ? GuardedContentParser.parsePurchaseFile(legacy.bytes) : null;
+        if (bundleId && GuardedContentParser.isBundleId(bundleId)) bundles.push({ lockId, bundleId });
+      } catch {
+        // Reported where it was made; the next run reads it again.
+        copied = false;
+      }
+    }
+
+    const existing = new Set(
+      GuardedContentParser.purchaseFiles(files).bundles.map(({ lockId, bundleId }) => `${lockId}/${bundleId}`),
+    );
+    for (const { lockId, bundleId } of bundles) {
+      if (isCurrent?.() === false) return false;
+      if (existing.has(`${lockId}/${bundleId}`)) continue;
+      const blob = new TextEncoder().encode(GuardedContentParser.buildPurchaseFile(bundleId));
+      try {
+        await retryHomeserverWriteAfterReread(fence, () =>
+          HomeserverService.putBlob({
+            url: GuardedContentParser.purchaseUrl(readerPubky, lockId, bundleId),
+            blob,
+            fence,
+          }),
+        );
+        existing.add(`${lockId}/${bundleId}`);
+      } catch {
+        // Reported where it was made; the next run writes it again.
+        copied = false;
+      }
+    }
+    return copied;
+  }
+
+  /**
+   * Copies each completed social replica that has no marker at the new root: attachments first, the
+   * marker last, as on unlock. A corrupt social marker is skipped (the list already hides it), and so
+   * is an attachment the replica lost. The marker is not written over one a fresh unlock wrote meanwhile.
+   * The cached row is replaced too: it still points at the social copies, which #3207 deletes. False
+   * when a replica failed to copy (a full quota, say): the next run copies it, the rest go on.
+   */
+  private static async copySocialReplicas(
+    readerPubky: string,
+    socialFiles: string[],
+    files: string[],
+    fence: THomeserverWriteFence,
+    isCurrent: TViewerScope['isCurrent'],
+  ): Promise<boolean> {
+    let copied = true;
+    const done = new Set(GuardedContentParser.completedLockIds(files));
+    for (const lockId of GuardedContentParser.completedLockIds(socialFiles)) {
+      if (isCurrent?.() === false) return false;
+      if (done.has(lockId)) continue;
+      try {
+        await this.copySocialReplica(readerPubky, lockId, fence, isCurrent);
+      } catch {
+        // Reported where it was made; the next run copies this replica again.
+        copied = false;
+      }
+    }
+    return copied;
+  }
+
+  /** One replica: attachments first, the marker last, as on unlock; then the cached row. */
+  private static async copySocialReplica(
+    readerPubky: string,
+    lockId: string,
+    fence: THomeserverWriteFence,
+    isCurrent: TViewerScope['isCurrent'],
+  ): Promise<void> {
+    const source = await HomeserverService.getBytesIfExists(
+      GuardedContentParser.socialUnlockedPostUrl(readerPubky, lockId),
+    );
+    const post = source ? GuardedContentParser.parseReplicatedPost(source.bytes) : null;
+    if (!source || !post) return;
+
+    // 0 when the source has no write time either, which sorts it oldest, as the source sorted.
+    const unlockedAt = post.unlocked_at ?? source.modifiedAt ?? 0;
+    const copy = GuardedContentParser.toCopiedReplica(post, readerPubky, lockId, unlockedAt);
+    for (const { from, to } of copy.files) {
+      await retryHomeserverWriteAfterReread(fence, async () => {
+        const file = await HomeserverService.getBytesIfExists(from);
+        if (file) await HomeserverService.putBlob({ url: to, blob: file.bytes, fence });
+      });
+    }
+    const markerUrl = GuardedContentParser.unlockedPostUrl(readerPubky, lockId);
+    const marker = new TextEncoder().encode(JSON.stringify(copy.post));
+    const wrote = await retryHomeserverWriteAfterReread(fence, async () => {
+      if (await HomeserverService.getBytesIfExists(markerUrl)) return false;
+      await HomeserverService.putBlob({ url: markerUrl, blob: marker, fence });
+      return true;
+    });
+    if (!wrote || isCurrent?.() === false) return;
+    await LocalLocksService.upsertPost({ lockId, post: copy.post, unlockedAt }).catch(() => undefined);
   }
 
   /**
