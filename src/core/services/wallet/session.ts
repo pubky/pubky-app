@@ -162,32 +162,53 @@ export class WalletSession {
     await this.call('remember-balance', { walletId, network, totalSats });
   }
 
-  private offlineWallet(expected?: string): string {
+  private selectedWallet(expected?: string): string {
     const id = this.client.connection.walletId;
-    if (!id || (expected && expected !== id) || this.closing || !this.ownsAccount()) throw locked();
+    if (!id || (expected !== undefined && expected !== id) || this.closing || !this.ownsAccount()) throw locked();
     this.assertRingDevice?.();
     return id;
   }
 
+  /** Read completed receipts from the unlocked vault before the first live snapshot. */
+  async savedActivity(walletId: string): Promise<Activity[]> {
+    this.selectedWallet(walletId);
+    // The pinned client uses this local-only loader to validate stored receipts
+    // before merging them with live activity. An older client can omit it.
+    const client = this.client as EmbeddedWalletClient & {
+      _ledgerFor?: (id: string) => Promise<Map<string, Activity>>;
+    };
+    if (!client._ledgerFor) return [];
+    if (!this.assertRingDevice && (await this.ringBinding())) throw locked();
+    this.selectedWallet(walletId);
+    const ledger = await client._ledgerFor(walletId);
+    this.selectedWallet(walletId);
+    return structuredClone(
+      [...ledger.values()]
+        .filter((row) => row.status === 'completed')
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .slice(0, 20),
+    );
+  }
+
   async loadOfflineReceiveDraft(): Promise<OfflineReceiveDraft | null> {
-    const walletId = this.offlineWallet();
+    const walletId = this.selectedWallet();
     const draft = await this.call<OfflineReceiveDraft | null>('offline-draft', { walletId });
-    this.offlineWallet(walletId);
+    this.selectedWallet(walletId);
     return draft;
   }
 
   async receive(quote: ReceiveQuote): Promise<ReceiveRequest> {
-    const walletId = this.offlineWallet();
+    const walletId = this.selectedWallet();
     if (quote.mode !== 'offline') return this.client.receive(quote);
     if (this.offlineOperation) throw new WalletError('An offline request is being prepared.', 'RECEIVE_BUSY');
     this.offlineOperation = true;
     try {
       await this.call('begin-offline-receive', { walletId, draft: quote });
-      this.offlineWallet(walletId);
+      this.selectedWallet(walletId);
       const request = await this.client.receive(quote);
-      this.offlineWallet(walletId);
+      this.selectedWallet(walletId);
       await this.call('finish-offline-receive', { walletId, request });
-      this.offlineWallet(walletId);
+      this.selectedWallet(walletId);
       return request;
     } finally {
       this.offlineOperation = false;
@@ -195,7 +216,7 @@ export class WalletSession {
   }
 
   async discardOfflineReceiveDraft(id: string): Promise<void> {
-    const walletId = this.offlineWallet();
+    const walletId = this.selectedWallet();
     if (this.offlineOperation) throw new WalletError('An offline request is being prepared.', 'RECEIVE_BUSY');
     this.offlineOperation = true;
     try {
@@ -209,7 +230,7 @@ export class WalletSession {
           path: `/wallets/${walletId}/api/receive/offline`,
         }),
       ]);
-      this.offlineWallet(walletId);
+      this.selectedWallet(walletId);
       if (!Array.isArray(registry?.requests) || !Array.isArray(reservations?.requests))
         throw new WalletError('Reconnect to check the saved offline request.', 'RECEIVE_UNAVAILABLE');
       const saved = registry.requests.find((request) => request.id === id);

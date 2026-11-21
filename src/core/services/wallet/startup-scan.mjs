@@ -3,6 +3,13 @@
 const batchSize = 20;
 const batchDelay = 15;
 const defaultDelay = 50;
+const refreshWaitMs = 30_000;
+
+function incomplete() {
+  return Object.assign(new Error('Bitcoin sync is incomplete. Retry the connection before sending.'), {
+    code: 'WALLET_SYNC_INCOMPLETE',
+  });
+}
 
 function smallScan(wallet) {
   const windows = wallet.gapLimitOptions;
@@ -23,38 +30,44 @@ function smallScan(wallet) {
 
 /** Beignet extension API 1 supplies the on-chain wallet before its first refresh. */
 export function createStartupScan() {
-  let wallet;
+  let attachment;
   let timer;
   let attempted = false;
+  let accelerated = false;
 
   function restoreCadence() {
     clearTimeout(timer);
-    if (wallet?.electrum.batchDelay === batchDelay) wallet.electrum.batchDelay = defaultDelay;
+    const electrum = attachment?.wallet.electrum;
+    if (accelerated && electrum?.batchDelay === batchDelay) electrum.batchDelay = defaultDelay;
+    accelerated = false;
   }
 
   const extension = {
     id: 'pubky-startup-scan',
     version: '1',
     api: 1,
-    attach({ wallet: attached, generation }) {
+    attach({ wallet, generation }) {
+      restoreCadence();
+      const current = { wallet, verified: false };
+      attachment = current;
       if (
-        attempted ||
-        generation !== 1 ||
-        attached.electrum?.batchLimit !== batchSize ||
-        attached.electrum.batchDelay !== defaultDelay ||
-        !smallScan(attached)
-      )
-        return {};
+        !attempted &&
+        generation === 1 &&
+        wallet.electrum?.batchLimit === batchSize &&
+        wallet.electrum.batchDelay === defaultDelay &&
+        smallScan(wallet)
+      ) {
+        accelerated = true;
+        wallet.electrum.batchDelay = batchDelay;
+        // Limit the faster cadence even when new history makes the scan grow.
+        timer = setTimeout(restoreCadence, 1500);
+      }
       attempted = true;
-      wallet = attached;
-      wallet.electrum.batchDelay = batchDelay;
-      // Limit the faster cadence even when new history makes the scan grow,
-      // the peer is slow, or startup fails before reporting its sync mark.
-      timer = setTimeout(restoreCadence, 1500);
       return {
         stop() {
+          if (attachment !== current) return;
           restoreCadence();
-          wallet = undefined;
+          attachment = undefined;
         },
       };
     },
@@ -64,20 +77,23 @@ export function createStartupScan() {
     nodeOptions: { extensions: [extension] },
     restoreCadence,
     async confirm(refresh) {
-      const checked = wallet;
-      if (!checked) return;
+      const current = attachment;
+      if (!current) throw incomplete();
+      if (current.verified) return;
+      const { wallet } = current;
       restoreCadence();
-      // The engine's startup wait is bounded. Retry an unfinished or failed
-      // refresh with the original cadence before returning payment readiness.
-      if (checked.isRefreshing || checked.refreshFailed) {
-        await refresh();
-        if (wallet !== checked || checked.isRefreshing || checked.refreshFailed) {
-          throw Object.assign(new Error('Bitcoin sync is incomplete. Retry the connection before sending.'), {
-            code: 'WALLET_SYNC_INCOMPLETE',
-          });
-        }
+      // The engine can return while its scan is still running. Requesting a
+      // refresh then queues a second full scan. Observe the original result.
+      const deadline = performance.now() + refreshWaitMs;
+      while (wallet.isRefreshing && attachment === current && performance.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
       }
-      wallet = undefined;
+      if (attachment !== current || wallet.isRefreshing) throw incomplete();
+      if (wallet.refreshFailed) {
+        await refresh();
+        if (attachment !== current || wallet.isRefreshing || wallet.refreshFailed) throw incomplete();
+      }
+      current.verified = true;
     },
   };
 }

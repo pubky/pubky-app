@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import type { Activity, Network, ReceiveRequest } from '@beignet/wallet-core';
 import { QueryClient, useQuery } from '@tanstack/react-query';
 import {
@@ -71,6 +71,8 @@ type View = 'overview' | 'send' | 'receive' | 'backup';
 
 export function WalletDashboard({
   session,
+  connection,
+  connectionNotice,
   walletId,
   ringBacked,
   interrupted,
@@ -82,6 +84,8 @@ export function WalletDashboard({
   task,
 }: {
   session: WalletSession;
+  connection: 'syncing' | 'ready' | 'failed';
+  connectionNotice: ReactNode;
   walletId: string;
   ringBacked: boolean;
   interrupted: 'legacy' | 'payment' | null;
@@ -92,6 +96,7 @@ export function WalletDashboard({
   lock: () => void;
   task: WalletTask;
 }) {
+  const ready = connection === 'ready';
   const [view, setView] = useState<View>(recipient ? 'send' : 'overview');
   const lastAction = useRef<'send' | 'receive' | null>(null);
   const sendButton = useRef<HTMLButtonElement>(null);
@@ -108,28 +113,38 @@ export function WalletDashboard({
   const [queries] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } }));
   const [request, setRequest] = useState<ReceiveRequest | null>(null);
   const tracking = useReceiveTracker(session.client, queries, walletId, request);
+  const savedActivity = useQuery(
+    {
+      queryKey: ['saved-activity', walletId],
+      queryFn: () => session.savedActivity(walletId),
+      enabled: !ready,
+      staleTime: Infinity,
+    },
+    queries,
+  );
   const draftKey = ['offline-receive-draft', walletId];
   const draft = useQuery(
     {
       queryKey: draftKey,
       queryFn: () => session.loadOfflineReceiveDraft(),
-      enabled: view === 'receive',
+      enabled: ready && view === 'receive',
       staleTime: Infinity,
     },
     queries,
   );
-  const [openedAt] = useState(Date.now);
-  const lastReturn = useRef(openedAt);
+  const lastReturn = useRef(0);
   useEffect(() => {
     const onReturn = () => {
       if (!document.hidden) lastReturn.current = Date.now();
     };
+    if (ready) onReturn();
     document.addEventListener('visibilitychange', onReturn);
     return () => document.removeEventListener('visibilitychange', onReturn);
-  }, []);
+  }, [ready]);
   const snapshot = useQuery(
     {
       queryKey: ['wallet', walletId],
+      enabled: ready,
       queryFn: async ({ queryKey }) => {
         const live = await session.client.snapshot();
         const previous = queries.getQueryData<{ entries: ActivityEntry[]; away: string[]; settledAt: number }>(
@@ -168,6 +183,7 @@ export function WalletDashboard({
     queries,
   );
   const data = snapshot.data;
+  const entries = data?.entries ?? savedActivity.data?.map((row) => ({ key: row.id, row }));
   const receivePrimary = data?.primaries?.find((primary) => primary.isReceiveTarget) ?? data?.primary;
   const away = new Set(data?.away);
   const verifiedTotal =
@@ -205,7 +221,7 @@ export function WalletDashboard({
   const needsRecovery = data?.balance.pending?.erroredSats ?? 0;
   if (needsRecovery > 0) notes.add(`${bitcoinAmount(needsRecovery)} need recovery attention before they can be spent.`);
   const refresh = () => {
-    void snapshot.refetch();
+    if (ready) void snapshot.refetch();
   };
   const switchTo = (next: View) => {
     if (next === 'overview' && (view === 'send' || view === 'receive')) lastAction.current = view;
@@ -215,6 +231,7 @@ export function WalletDashboard({
   };
   const notices = (
     <>
+      {connectionNotice}
       {notes.size > 0 && (
         <ul className="grid gap-1 rounded-xl bg-background p-3 text-sm text-muted-foreground">
           {Array.from(notes, (note) => (
@@ -294,6 +311,7 @@ export function WalletDashboard({
   if (view === 'send')
     return (
       <WalletSend
+        ready={ready}
         client={session.client}
         navigation={navigation}
         activity={data?.activity}
@@ -307,6 +325,7 @@ export function WalletDashboard({
   if (view === 'receive')
     return (
       <WalletReceive
+        ready={ready}
         client={session.client}
         navigation={navigation}
         task={task}
@@ -365,6 +384,8 @@ export function WalletDashboard({
             </p>
           ) : lastBalance ? (
             <SavedBalance balance={lastBalance} />
+          ) : !ready ? (
+            <div aria-label="Balance pending" className="mt-2 h-9 w-36 rounded bg-secondary" />
           ) : snapshot.isPending ? (
             <Spinner size="sm" aria-label="Loading balance" />
           ) : (
@@ -401,7 +422,7 @@ export function WalletDashboard({
           <Button
             size="icon"
             variant="outline"
-            disabled={task.busy || snapshot.isFetching}
+            disabled={!ready || task.busy || snapshot.isFetching}
             aria-label="Refresh wallet"
             onClick={refresh}
           >
@@ -411,7 +432,7 @@ export function WalletDashboard({
             size="icon"
             variant="outline"
             aria-label="Back up wallet"
-            disabled={task.busy}
+            disabled={task.busy || (connection === 'syncing' && !ringBacked)}
             onClick={() => switchTo('backup')}
           >
             <KeyRound />
@@ -440,7 +461,7 @@ export function WalletDashboard({
           <Button
             variant="outline"
             className="self-start"
-            disabled={task.busy}
+            disabled={task.busy || connection === 'syncing'}
             onClick={() =>
               phrase ? switchTo('overview') : task.run(async () => setPhrase(await session.client.getRecoveryPhrase()))
             }
@@ -449,7 +470,7 @@ export function WalletDashboard({
           </Button>
         </WalletPanel>
       )}
-      <WalletPanel title="Activity" icon={ActivityIcon}>
+      <WalletPanel title={!data && entries?.length ? 'Saved activity' : 'Activity'} icon={ActivityIcon}>
         {needsPaymentReview && (
           <div role="status" className="grid gap-2 rounded-xl border border-border p-3 text-sm">
             <p>
@@ -477,15 +498,19 @@ export function WalletDashboard({
             )}
           </div>
         )}
-        {!data ? (
+        {!entries || (!data && entries.length === 0) ? (
           <p className="text-sm text-muted-foreground">
-            {snapshot.isPending ? 'Loading activity…' : 'Activity unavailable.'}
+            {ready
+              ? snapshot.isPending
+                ? 'Loading activity…'
+                : 'Activity unavailable.'
+              : 'Activity will update after sync.'}
           </p>
-        ) : data.activity.length === 0 ? (
+        ) : entries.length === 0 ? (
           <p className="text-sm text-muted-foreground">Your payments and requests will appear here.</p>
         ) : (
           <ul className="divide-y divide-border">
-            {data.entries.map(({ key, row }) => (
+            {entries.map(({ key, row }) => (
               <ActivityRow
                 key={key}
                 row={row}

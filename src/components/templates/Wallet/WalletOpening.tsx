@@ -1,4 +1,5 @@
-import { Bitcoin } from 'lucide-react';
+import { Bitcoin, LockKeyhole } from 'lucide-react';
+import { Button } from '@/atoms/Button/Button';
 import { Card } from '@/atoms/Card/Card';
 import { Spinner } from '@/atoms/Spinner/Spinner';
 import { bitcoinAmount } from '@/libs/wallet/amount';
@@ -18,12 +19,23 @@ export function SavedBalance({ balance }: { balance: LastWalletBalance }) {
   );
 }
 
-export function WalletOpening({ balance, message }: { balance: LastWalletBalance | null; message: string }) {
+export function WalletOpening({
+  balance,
+  message,
+  lock,
+}: {
+  balance: LastWalletBalance | null;
+  message: string;
+  lock: () => void;
+}) {
   return (
     <Card className="gap-6 rounded-2xl border border-border p-5 sm:p-7">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <Bitcoin aria-hidden className="size-5 text-brand" /> Bitcoin
         {balance && <span className="rounded-full border border-border px-2 py-0.5 text-xs">{balance.network}</span>}
+        <Button size="sm" aria-label="Lock while opening" variant="outline" className="ml-auto" onClick={lock}>
+          <LockKeyhole /> Lock
+        </Button>
       </div>
       {balance ? (
         <SavedBalance balance={balance} />

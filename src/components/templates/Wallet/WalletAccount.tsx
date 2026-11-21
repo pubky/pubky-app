@@ -10,6 +10,7 @@ import { Input } from '@/atoms/Input/Input';
 import { Label } from '@/atoms/Label/Label';
 import { Spinner } from '@/atoms/Spinner/Spinner';
 import { Textarea } from '@/atoms/Textarea/Textarea';
+import { walletMessage } from '@/libs/wallet/amount';
 import { acquireRingDevice } from '@/services/wallet/ring-enrollment';
 import { type LastWalletBalance, WalletSession } from '@/services/wallet/session';
 import { WalletDashboard } from './WalletDashboard';
@@ -17,6 +18,7 @@ import { WalletOpening } from './WalletOpening';
 import { RecoveryWords, useWalletTask, WalletPanel, type WalletTask } from './WalletPanel';
 import { type RingSetupMode, WalletRingSetup } from './WalletRingSetup';
 
+type ActiveWallet = { id: string; network: Network; session: WalletSession };
 type Stage =
   | { kind: 'checking' | 'unavailable' | 'framed' }
   | { kind: 'opening' }
@@ -25,7 +27,7 @@ type Stage =
   | { kind: 'ring'; defaults: CreateWalletInput; network: Network; session: WalletSession; reserved: boolean }
   | { kind: 'backup'; id: string; network: Network; phrase: string }
   | { kind: 'start'; id: string; network: Network }
-  | { kind: 'ready'; id: string; network: Network; session: WalletSession };
+  | ({ kind: 'wallet' } & ActiveWallet & ({ status: 'syncing' | 'ready' } | { status: 'failed'; message: string }));
 
 export type UnlockedWallet = { session: WalletSession; network: Network; task: WalletTask };
 
@@ -41,8 +43,9 @@ export function WalletAccount({
   renderReady?: (wallet: UnlockedWallet) => ReactNode;
 }) {
   const live = useRef<WalletSession | null>(null);
+  const connecting = useRef(false);
   const lease = useRef<Awaited<ReturnType<typeof acquireRingDevice>> | null>(null);
-  const [ringBacked, setRingBacked] = useState(false);
+  const [ringBacked, setRingBacked] = useState<boolean | null>(null);
   const [stage, setStage] = useState<Stage>({ kind: 'checking' });
   const [lastBalance, setLastBalance] = useState<LastWalletBalance | null>(null);
   const [checkingDevice, setCheckingDevice] = useState(false);
@@ -119,6 +122,31 @@ export function WalletAccount({
     lease.current = held;
     return held;
   }
+  async function connect(wallet: ActiveWallet) {
+    if (live.current !== wallet.session || connecting.current) return;
+    connecting.current = true;
+    setStage({ ...wallet, kind: 'wallet', status: 'syncing' });
+    try {
+      await wallet.session.client.startWallet();
+      if (live.current === wallet.session) setStage({ ...wallet, kind: 'wallet', status: 'ready' });
+    } catch (err) {
+      if (live.current === wallet.session)
+        setStage({
+          ...wallet,
+          kind: 'wallet',
+          status: 'failed',
+          message: err instanceof Error ? walletMessage(err.message) : 'Could not connect to the wallet network.',
+        });
+    } finally {
+      connecting.current = false;
+    }
+  }
+
+  function lock() {
+    live.current = null;
+    reset();
+  }
+
   async function start(session: WalletSession, id: string, network: Network) {
     if (live.current !== session) return;
     session.client.selectWallet(id);
@@ -136,8 +164,9 @@ export function WalletAccount({
       }
       if (live.current !== session) return;
     }
-    await session.client.startWallet();
-    if (live.current === session) setStage({ kind: 'ready', id, network, session });
+    // Once device ownership is verified, release the unlock action so forms can
+    // accept input while the engine connects. Only a successful start enables quotes.
+    void connect({ session, id, network });
   }
   async function openExisting(session: WalletSession, records: WalletRecord[]) {
     if (records.length !== 1) {
@@ -190,12 +219,34 @@ export function WalletAccount({
     });
     if (live.current !== session) return;
     session.client.selectWallet(created.id);
+    setRingBacked(false);
     setStage({ kind: 'start', id: created.id, network: created.network });
     setNotice(created.warnings?.join(' ') || '');
     if (mnemonic) return start(session, created.id, created.network);
     const phrase = created.mnemonic || (await session.client.getRecoveryPhrase());
     if (live.current === session) setStage({ kind: 'backup', id: created.id, network: created.network, phrase });
   }
+  const connectionNotice =
+    stage.kind === 'wallet' &&
+    stage.status !== 'ready' &&
+    (stage.status === 'failed' ? (
+      <div role="alert" className="flex flex-wrap items-center gap-2 text-sm">
+        <span>{stage.message}</span>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={task.busy}
+          onClick={() => void connect({ session: stage.session, id: stage.id, network: stage.network })}
+        >
+          Retry connection
+        </Button>
+      </div>
+    ) : (
+      <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Spinner size="sm" aria-hidden className="motion-reduce:animate-none" /> Connecting to Bitcoin and Lightning…
+      </p>
+    ));
   return (
     <>
       {task.error && (
@@ -304,19 +355,14 @@ export function WalletAccount({
       )}
       {(stage.kind === 'opening' || (stage.kind === 'start' && task.busy)) && (
         <WalletOpening
+          lock={lock}
           balance={
             lastBalance &&
             (stage.kind === 'opening' || (lastBalance.walletId === stage.id && lastBalance.network === stage.network))
               ? lastBalance
               : null
           }
-          message={
-            stage.kind === 'opening'
-              ? 'Preparing your wallet…'
-              : checkingDevice
-                ? 'Checking device access…'
-                : 'Syncing Bitcoin and connecting to Lightning…'
-          }
+          message={checkingDevice ? 'Checking device access…' : 'Preparing your wallet…'}
         />
       )}
       {stage.kind === 'start' && !task.busy && (
@@ -331,7 +377,7 @@ export function WalletAccount({
             >
               Retry connection
             </Button>
-            {!ringBacked && (
+            {ringBacked === false && (
               <Button
                 variant="outline"
                 onClick={() =>
@@ -350,26 +396,32 @@ export function WalletAccount({
           </div>
         </WalletPanel>
       )}
-      {stage.kind === 'ready' &&
+      {stage.kind === 'wallet' &&
         (renderReady ? (
-          <>
-            {interrupted === 'payment' && (
-              <p role="status" className="rounded-xl border border-border p-4 text-sm">
-                A previous payment still needs review. Check{' '}
-                <a className="underline" href={APP_ROUTES.WALLET}>
-                  Activity in Pubky Wallet
-                </a>{' '}
-                before sending it again.
-              </p>
-            )}
-            {renderReady({ session: stage.session, network: stage.network, task })}
-          </>
+          stage.status === 'ready' ? (
+            <>
+              {interrupted === 'payment' && (
+                <p role="status" className="rounded-xl border border-border p-4 text-sm">
+                  A previous payment still needs review. Check{' '}
+                  <a className="underline" href={APP_ROUTES.WALLET}>
+                    Activity in Pubky Wallet
+                  </a>{' '}
+                  before sending it again.
+                </p>
+              )}
+              {renderReady({ session: stage.session, network: stage.network, task })}
+            </>
+          ) : (
+            connectionNotice
+          )
         ) : (
           <WalletDashboard
             key={JSON.stringify([stage.id, recipient])}
             session={stage.session}
+            connection={stage.status}
+            connectionNotice={connectionNotice}
             walletId={stage.id}
-            ringBacked={ringBacked}
+            ringBacked={ringBacked === true}
             interrupted={interrupted}
             onPaymentReviewed={() => setInterrupted(null)}
             lastBalance={
@@ -378,12 +430,7 @@ export function WalletAccount({
             network={stage.network}
             recipient={recipient}
             task={task}
-            lock={() =>
-              task.run(async () => {
-                await live.current?.close();
-                reset();
-              })
-            }
+            lock={lock}
           />
         ))}
       {notice && (

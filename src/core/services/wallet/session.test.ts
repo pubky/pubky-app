@@ -236,6 +236,89 @@ function offlineSession(handler: (request: WorkerCall) => unknown) {
   return session;
 }
 
+it('opens only validated, completed local receipts in reverse date order', async () => {
+  const walletId = 'a'.repeat(32);
+  const completed = {
+    id: 'payment',
+    reference: 'payment',
+    kind: 'sent',
+    amountSats: 126,
+    timestamp: 4,
+    status: 'completed',
+  };
+  const reads: string[] = [];
+  const session = offlineSession(({ operation, payload }) => {
+    reads.push(operation);
+    if (operation === 'load-activity') {
+      expect(payload).toEqual({ walletId });
+      return [
+        { ...completed, secret: 'discard' },
+        { ...completed, id: 'invalid', amountSats: -2 },
+        { ...completed, id: 'pending', status: 'pending' },
+        { ...completed, id: 'newer', timestamp: 12 },
+        { ...completed, amountSats: 100 },
+        ...Array.from({ length: 25 }, (_, i) => ({ ...completed, id: 'old-' + i, timestamp: 0 })),
+      ];
+    }
+    return null;
+  });
+  await expect(session.savedActivity('f'.repeat(32))).rejects.toThrow('locked');
+  expect(reads).toEqual([]);
+  const rows = await session.savedActivity(walletId);
+  expect(rows).toHaveLength(20);
+  expect(rows.slice(0, 2).map((row) => [row.id, row.amountSats])).toEqual([
+    ['newer', 126],
+    ['payment', 126],
+  ]);
+  expect(rows.some((row) => ['invalid', 'pending'].includes(row.id))).toBe(false);
+  expect(rows[1]).not.toHaveProperty('secret');
+  rows[1].amountSats = 0;
+  expect((await session.savedActivity(walletId))[1].amountSats).toBe(126);
+  expect(reads).toEqual(['ring-binding', 'load-activity', 'ring-binding']);
+  await session.close();
+});
+
+it('skips the preview when the local ledger reader is unavailable', async () => {
+  const operations: string[] = [];
+  const session = offlineSession(({ operation }) => operations.push(operation));
+  Object.defineProperty(session.client, '_ledgerFor', { value: undefined });
+  await expect(session.savedActivity('a'.repeat(32))).resolves.toEqual([]);
+  expect(operations).toEqual([]);
+  await session.close();
+});
+
+it.each(['switch', 'device', 'account', 'close'])('discards a local receipt read after a %s change', async (change) => {
+  const read = Promise.withResolvers<unknown[]>();
+  const operations: string[] = [];
+  const session = offlineSession(({ operation }) => {
+    operations.push(operation);
+    if (operation === 'load-activity') return read.promise;
+    if (operation === 'ring-binding') return { deviceId: 'device', network: 'mainnet' };
+    return null;
+  });
+  const walletId = 'a'.repeat(32);
+  let revoked = false;
+  const generation = auth.generation;
+  try {
+    await expect(session.savedActivity(walletId)).rejects.toThrow('locked');
+    expect(operations).toEqual(['ring-binding']);
+    session.guardRingDevice(() => {
+      if (revoked) throw new Error('Device inactive');
+    });
+    const result = session.savedActivity(walletId);
+    await vi.waitFor(() => expect(operations).toEqual(['ring-binding', 'load-activity']));
+    if (change === 'switch') session.client.selectWallet('e'.repeat(32));
+    if (change === 'device') revoked = true;
+    if (change === 'account') auth.generation += '-next';
+    if (change === 'close') void session.close();
+    read.resolve([]);
+    await expect(result).rejects.toThrow();
+  } finally {
+    auth.generation = generation;
+    await session.close();
+  }
+});
+
 it('records the draft before contacting the primary and releases the QR only after durable tracking', async () => {
   const operations: string[] = [];
   let release!: () => void;

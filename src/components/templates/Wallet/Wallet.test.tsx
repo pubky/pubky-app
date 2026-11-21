@@ -6,12 +6,14 @@ import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { LastWalletBalance } from '@/services/wallet/session';
 import { Wallet } from './Wallet';
+import { WalletAccount } from './WalletAccount';
 
 const wallet = vi.hoisted(() => ({
   account: 'account-one',
   exists: true,
   inspect: vi.fn(),
   rememberBalance: vi.fn(),
+  savedActivity: vi.fn(),
   awayReceipts: vi.fn(),
   unlocked: undefined as ((preview: LastWalletBalance | null) => void) | undefined,
   ringBinding: vi.fn(),
@@ -70,6 +72,7 @@ vi.mock('@/services/wallet/session', () => ({
       wallet.unlocked = onUnlocked;
     }
     rememberBalance = wallet.rememberBalance;
+    savedActivity = wallet.savedActivity;
     awayReceipts = wallet.awayReceipts;
     loadOfflineReceiveDraft = wallet.loadOfflineReceiveDraft;
     discardOfflineReceiveDraft = wallet.discardOfflineReceiveDraft;
@@ -121,6 +124,7 @@ beforeEach(() => {
   wallet.acknowledgePayment.mockResolvedValue(undefined);
   wallet.startWallet.mockResolvedValue(undefined);
   wallet.rememberBalance.mockResolvedValue(undefined);
+  wallet.savedActivity.mockResolvedValue([]);
   wallet.awayReceipts.mockResolvedValue([]);
   wallet.getConfig.mockResolvedValue({ offlineReceiveAvailable: true });
   wallet.loadOfflineReceiveDraft.mockResolvedValue(null);
@@ -175,15 +179,129 @@ describe('Pubky wallet', () => {
     expect(screen.queryByText('₿4,200')).toBeNull();
     fireEvent.change(password, { target: { value: 'example password' } });
     fireEvent.click(screen.getByRole('button', { name: 'Unlock wallet' }));
-    expect(await screen.findByText('Last verified balance')).toBeVisible();
+    await screen.findByText('Connecting to Bitcoin and Lightning…');
+    expect(screen.getByText('Last verified balance')).toBeVisible();
     expect(screen.getByText('₿4,200')).toBeVisible();
-    await screen.findByText('Syncing Bitcoin and connecting to Lightning…');
-    expect(screen.queryByRole('button', { name: 'Send' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Send' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Receive' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Refresh wallet' })).toBeDisabled();
     expect(wallet.snapshot).not.toHaveBeenCalled();
     await act(async () => finishStart());
     expect(await screen.findByRole('group', { name: '₿4,700' })).toBeVisible();
     expect(wallet.rememberBalance).toHaveBeenCalledWith(record.id, 'regtest', 4700);
     expect(screen.queryByText('Last verified balance')).toBeNull();
+  });
+
+  it('opens saved receipts and preserves a send draft while the engine connects', async () => {
+    const start = Promise.withResolvers<void>();
+    wallet.startWallet.mockReturnValue(start.promise);
+    wallet.savedActivity.mockResolvedValue([
+      {
+        id: 'saved',
+        kind: 'received',
+        status: 'completed',
+        title: 'Payment received',
+        description: 'Coffee',
+        reference: 'saved',
+        timestamp: Date.now() - 60_000,
+        amountSats: 1250,
+        feeSats: 0,
+      },
+    ]);
+    render(<Wallet />);
+    await unlock();
+    expect(await screen.findByRole('heading', { name: 'Saved activity' })).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: /Payment received/ }));
+    const receipt = await screen.findByRole('dialog');
+    expect(within(receipt).getByText('Coffee')).toBeVisible();
+    fireEvent.click(within(receipt).getByRole('button', { name: 'Close' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+    const destination = screen.getByLabelText('Pay to');
+    fireEvent.change(destination, { target: { value: 'lnbcrt1draft' } });
+    const review = screen.getByRole<HTMLButtonElement>('button', { name: 'Review payment' });
+    expect(review).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Max' })).toBeDisabled();
+    fireEvent.submit(review.form!);
+    expect(wallet.prepareSend).not.toHaveBeenCalled();
+    expect(wallet.snapshot).not.toHaveBeenCalled();
+    await act(async () => start.resolve());
+    await waitFor(() => expect(review).toBeEnabled());
+    expect(destination).toHaveValue('lnbcrt1draft');
+    expect(wallet.prepareSend).not.toHaveBeenCalled();
+    expect(wallet.send).not.toHaveBeenCalled();
+  });
+
+  it('keeps a receive draft through a connection failure and explicit retry', async () => {
+    const first = Promise.withResolvers<void>();
+    const retry = Promise.withResolvers<void>();
+    wallet.startWallet.mockReturnValueOnce(first.promise).mockReturnValueOnce(retry.promise);
+    render(<Wallet />);
+    await unlock();
+    fireEvent.click(screen.getByRole('button', { name: 'Receive' }));
+    const description = screen.getByLabelText('Description (optional)');
+    fireEvent.change(description, { target: { value: 'Return trip' } });
+    const review = screen.getByRole<HTMLButtonElement>('button', { name: 'Review request' });
+    expect(review).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Receive on-chain' })).toBeDisabled();
+    fireEvent.submit(review.form!);
+    expect(wallet.quoteReceive).not.toHaveBeenCalled();
+    expect(wallet.loadOfflineReceiveDraft).not.toHaveBeenCalled();
+    expect(wallet.getConfig).not.toHaveBeenCalled();
+    await act(async () => first.reject(new Error('Connection timed out.')));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Connection timed out.');
+    fireEvent.click(screen.getByRole('button', { name: 'Retry connection' }));
+    expect(wallet.startWallet).toHaveBeenCalledTimes(2);
+    expect(review).toBeDisabled();
+    await act(async () => retry.resolve());
+    await waitFor(() => expect(review).toBeEnabled());
+    expect(description).toHaveValue('Return trip');
+    expect(wallet.quoteReceive).not.toHaveBeenCalled();
+    expect(wallet.receive).not.toHaveBeenCalled();
+  });
+
+  it('waits for the Ring device lease before opening the dashboard or its saved history', async () => {
+    const lease = Promise.withResolvers<{ assertActive: () => void; release: () => Promise<void> }>();
+    wallet.ringBinding.mockResolvedValue({ network: 'regtest', deviceId: 'own-device' });
+    wallet.acquireRingDevice.mockReturnValue(lease.promise);
+    render(<Wallet />);
+    fireEvent.change(await screen.findByLabelText('Password', { exact: true }), {
+      target: { value: 'example password' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock wallet' }));
+    expect(await screen.findByText('Checking device access…')).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Send' })).toBeNull();
+    expect(wallet.savedActivity).not.toHaveBeenCalled();
+    expect(wallet.startWallet).not.toHaveBeenCalled();
+    await act(async () => lease.resolve({ assertActive: vi.fn(), release: vi.fn().mockResolvedValue(undefined) }));
+    expect(await screen.findByRole('button', { name: 'Send' })).toBeEnabled();
+    expect(wallet.guardRingDevice).toHaveBeenCalledOnce();
+  });
+
+  it('locks immediately and ignores a late start result', async () => {
+    const start = Promise.withResolvers<void>();
+    wallet.startWallet.mockReturnValue(start.promise);
+    render(<Wallet />);
+    await unlock();
+    fireEvent.click(screen.getByRole('button', { name: 'Lock' }));
+    expect(await screen.findByLabelText('Password', { exact: true })).toBeVisible();
+    await act(async () => start.resolve());
+    expect(screen.queryByRole('button', { name: 'Send' })).toBeNull();
+    expect(wallet.snapshot).not.toHaveBeenCalled();
+  });
+
+  it('mounts checkout funding only after the live wallet is ready', async () => {
+    const start = Promise.withResolvers<void>();
+    wallet.startWallet.mockReturnValue(start.promise);
+    const checkout = vi.fn(() => <button>Review funding</button>);
+    render(<WalletAccount account={wallet.account} reset={vi.fn()} renderReady={checkout} />);
+    fireEvent.change(await screen.findByLabelText('Password', { exact: true }), {
+      target: { value: 'example password' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Unlock wallet' }));
+    expect(await screen.findByText('Connecting to Bitcoin and Lightning…')).toBeVisible();
+    expect(checkout).not.toHaveBeenCalled();
+    await act(async () => start.resolve());
+    expect(await screen.findByRole('button', { name: 'Review funding' })).toBeVisible();
   });
 
   it('shows a single spendable balance without the unconfirmed channel funding notice', async () => {

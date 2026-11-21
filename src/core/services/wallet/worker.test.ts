@@ -406,7 +406,7 @@ it('opens a valid wallet when the optional preview is corrupt, out of date range
   }
 });
 
-it('only completes an accelerated startup after an incomplete scan recovers at the original cadence', async () => {
+it('only completes an accelerated startup after a failed scan recovers at the original cadence', async () => {
   const mainnet = { ...grant, network: 'mainnet', fastElectrumStart: true };
   fixture.files.set(
     '/wallet/registry.json',
@@ -422,8 +422,8 @@ it('only completes an accelerated startup after an incomplete scan recovers at t
     gapLimitOptions: { lookAhead: 20, lookBehind: 20, lookAheadChange: 20, lookBehindChange: 20 },
     transactions: {},
     utxos: [],
-    isRefreshing: true,
-    refreshFailed: false,
+    isRefreshing: false,
+    refreshFailed: true,
   };
   nodeOptions!.extensions[0].attach({ wallet, generation: 1 });
   expect(wallet.electrum.batchDelay).toBe(15);
@@ -434,7 +434,7 @@ it('only completes an accelerated startup after an incomplete scan recovers at t
   expect((await request('request', start)).error?.code).toBe('WALLET_SYNC_INCOMPLETE');
   expect(fixture.engine.request.mock.lastCall).toEqual([refresh]);
   fixture.engine.request.mockResolvedValueOnce({ status: 'running' }).mockImplementationOnce(async () => {
-    wallet.isRefreshing = false;
+    wallet.refreshFailed = false;
   });
   expect((await request('request', start)).result).toEqual({ status: 'running' });
   expect(fixture.engine.request.mock.lastCall).toEqual([refresh]);

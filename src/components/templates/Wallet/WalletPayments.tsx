@@ -37,6 +37,7 @@ import { WalletScanner } from './WalletScanner';
 
 type PaymentProps = {
   client: WalletClientInterface;
+  ready?: boolean;
   task: WalletTask;
   refresh: () => void;
   navigation?: WalletNavigation;
@@ -114,6 +115,7 @@ function PaymentCode({ label, value, preview = false }: { label: string; value: 
 
 export function WalletSend({
   client,
+  ready = true,
   navigation,
   sendPayment,
   activity,
@@ -127,6 +129,7 @@ export function WalletSend({
   recipient?: string;
   activity?: Activity[];
 }) {
+  const engineTask = ready && !task.busy ? task : null;
   const [request, setRequest] = useState(recipient || '');
   const [maximum, setMaximum] = useState<WalletMaximum | null>(null);
   const [drainOffer, setDrainOffer] = useState<WalletDrainAvailable | null>(null);
@@ -196,7 +199,7 @@ export function WalletSend({
   }
   function leaveReview(next: () => void) {
     if (review?.payment.method === 'drain') {
-      void task.run(async () => {
+      void engineTask?.run(async () => {
         await client.cancelDrain(review.payment.id);
         next();
       });
@@ -282,7 +285,7 @@ export function WalletSend({
           )}
           <Warnings items={review.payment.warnings} />
           <div className="flex flex-wrap gap-2">
-            <Button variant="brand" disabled={task.busy} onClick={() => task.run(send)}>
+            <Button variant="brand" disabled={!engineTask} onClick={() => engineTask?.run(send)}>
               {task.busy ? 'Sending…' : review.payment.method === 'drain' ? 'Confirm wallet drain' : 'Confirm payment'}
             </Button>
             <Button variant="outline" disabled={task.busy} onClick={() => leaveReview(() => setReview(null))}>
@@ -304,8 +307,9 @@ export function WalletSend({
           className="grid gap-3"
           onSubmit={(e) => {
             e.preventDefault();
+            if (!engineTask || !request.trim() || drainOffer) return;
             setExpired(false);
-            void task.run(prepare);
+            void engineTask.run(prepare);
           }}
         >
           {expired && <p role="status">The quote expired. Review the payment again.</p>}
@@ -346,8 +350,8 @@ export function WalletSend({
               type="button"
               variant={maximum ? 'default' : 'outline'}
               aria-pressed={!!maximum}
-              disabled={task.busy || !request.trim()}
-              onClick={() => task.run(chooseMaximum)}
+              disabled={!engineTask || !request.trim()}
+              onClick={() => engineTask?.run(chooseMaximum)}
             >
               Max
             </Button>
@@ -362,9 +366,9 @@ export function WalletSend({
                 type="button"
                 variant="outline"
                 className="justify-self-start"
-                disabled={task.busy}
+                disabled={!engineTask}
                 onClick={() =>
-                  task.run(async () => {
+                  engineTask?.run(async () => {
                     setReview(await reviewWalletDrain(client, request, network, drainOffer));
                   })
                 }
@@ -386,7 +390,7 @@ export function WalletSend({
             type="submit"
             variant="brand"
             className="justify-self-start"
-            disabled={task.busy || !request.trim() || !!drainOffer}
+            disabled={!engineTask || !request.trim() || !!drainOffer}
           >
             {task.busy ? 'Working…' : 'Review payment'}
           </Button>
@@ -418,6 +422,7 @@ const MIN_OFFLINE_SATS = 354;
 
 export function WalletReceive({
   client,
+  ready = true,
   navigation,
   task,
   refresh,
@@ -451,6 +456,7 @@ export function WalletReceive({
   discardOfflineDraft: (id: string) => Promise<void>;
   issueOffline: (quote: ReceiveQuote) => Promise<ReceiveRequest>;
 }) {
+  const engineTask = ready && !task.busy ? task : null;
   const [deposit, setDeposit] = useState<{ address: string; uri: string; amountSats?: number } | null>(null);
   const [copied, setCopied] = useState(false);
   const [amount, setAmount] = useState('');
@@ -472,6 +478,7 @@ export function WalletReceive({
   const [hostSupport, setHostSupport] = useState<'checking' | 'available' | 'unavailable' | 'error'>('checking');
   const [check, setCheck] = useState(0);
   useEffect(() => {
+    if (!ready) return;
     let active = true;
     Promise.resolve()
       .then(() => client.getConfig())
@@ -484,16 +491,18 @@ export function WalletReceive({
     return () => {
       active = false;
     };
-  }, [client, check]);
+  }, [client, check, ready]);
   const pending = offlineDraft ?? attemptedDraft;
   const canReceiveOffline =
+    ready &&
     offlineDraftReady &&
     hostSupport === 'available' &&
     primaryConnected !== false &&
     primaryOfflineAvailable !== false &&
     (offlineCapacity === undefined || offlineCapacity >= MIN_OFFLINE_SATS);
   let switchHint = 'Accept a Lightning payment while your wallet is closed.';
-  if (!offlineDraftReady)
+  if (!ready) switchHint = 'Offline capacity will be checked when connected.';
+  else if (!offlineDraftReady)
     switchHint = reloadOfflineDraft
       ? 'Could not check for a saved offline request.'
       : 'Checking for a saved offline request…';
@@ -672,7 +681,7 @@ export function WalletReceive({
           </dl>
           <Warnings items={quote.warnings} />
           <div className="flex flex-wrap gap-2">
-            <Button variant="brand" disabled={task.busy} onClick={() => task.run(issue)}>
+            <Button variant="brand" disabled={!engineTask} onClick={() => engineTask?.run(issue)}>
               {quote === expiredQuote
                 ? task.busy
                   ? 'Refreshing quote…'
@@ -706,8 +715,8 @@ export function WalletReceive({
           <div className="flex flex-wrap gap-2">
             <Button
               variant="brand"
-              disabled={task.busy}
-              onClick={() => task.run(() => reviewOffline(pending.amountSats, pending.description, pending))}
+              disabled={!engineTask}
+              onClick={() => engineTask?.run(() => reviewOffline(pending.amountSats, pending.description, pending))}
             >
               {task.busy ? 'Checking request…' : 'Resume offline request'}
             </Button>
@@ -724,9 +733,9 @@ export function WalletReceive({
             </Button>
             <Button
               variant="ghost"
-              disabled={task.busy}
+              disabled={!engineTask}
               onClick={() =>
-                task.run(async () => {
+                engineTask?.run(async () => {
                   await discardOfflineDraft(pending.id);
                   setAttemptedDraft(null);
                   setOffline(false);
@@ -740,10 +749,14 @@ export function WalletReceive({
       ) : (
         <form
           className="grid gap-3"
+          onChange={() => {
+            // A saved offline request can arrive after the user starts typing.
+            if (!ready || !offlineDraftReady) setUseOnline(true);
+          }}
           onSubmit={(e) => {
             e.preventDefault();
-            if (!canReviewAmount || task.busy) return;
-            void task.run(async () => {
+            if (!canReviewAmount || !engineTask) return;
+            void engineTask.run(async () => {
               if (offline) await reviewOffline(amountSats, description);
               else await reviewOnline(amountSats);
             });
@@ -783,13 +796,13 @@ export function WalletReceive({
                 <p id="receive-offline-hint" className="text-xs text-muted-foreground">
                   {switchHint}
                 </p>
-                {(reloadOfflineDraft || hostSupport === 'error') && (
+                {ready && (reloadOfflineDraft || hostSupport === 'error') && (
                   <button
                     type="button"
                     disabled={task.busy}
                     className="rounded-sm text-xs underline focus-visible:outline-2 focus-visible:outline-ring"
                     onClick={() => {
-                      if (reloadOfflineDraft) void task.run(reloadOfflineDraft);
+                      if (reloadOfflineDraft) void engineTask?.run(reloadOfflineDraft);
                       else {
                         setHostSupport('checking');
                         setCheck((n) => n + 1);
@@ -805,7 +818,7 @@ export function WalletReceive({
                 type="button"
                 aria-describedby="receive-offline-hint"
                 checked={offline}
-                disabled={task.busy || (!offline && !canReceiveOffline)}
+                disabled={!engineTask || (!offline && !canReceiveOffline)}
                 onCheckedChange={(enabled) => {
                   setOffline(enabled);
                   setUseOnline(!enabled);
@@ -819,7 +832,7 @@ export function WalletReceive({
               type="submit"
               className="justify-self-start disabled:border-border disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100"
               variant="brand"
-              disabled={task.busy || !canReviewAmount}
+              disabled={!engineTask || !canReviewAmount}
             >
               {task.busy ? 'Preparing request…' : 'Review request'}
             </Button>
@@ -828,9 +841,9 @@ export function WalletReceive({
                 type="button"
                 className="justify-self-start"
                 variant="outline"
-                disabled={task.busy || amountSats === undefined}
+                disabled={!engineTask || amountSats === undefined}
                 onClick={() =>
-                  task.run(async () => {
+                  engineTask?.run(async () => {
                     if (amountSats === undefined) return;
                     const address = await newBitcoinAddress();
                     const requestedAmount = amountSats || undefined;
