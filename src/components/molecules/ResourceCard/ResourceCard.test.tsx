@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getResourceRoute } from '@/app/routes';
 import { PostPreviewNavigableProvider } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
@@ -391,26 +391,144 @@ describe('ResourceCard', () => {
       expect(screen.getByTestId('resource-card-type-tile').querySelector('svg')).toHaveClass('lucide-music');
     });
 
-    it('shows the image under the text as a post shows its one image, the type tile only without one', () => {
-      render(<ResourceCard card={musicRecordingFixture} href={musicRecordingFixture.uri} />);
+    it.each([
+      ['an article', ARTICLE],
+      ['an artist', mbGroupEnrichedFixture],
+    ])(
+      'shows the image of %s under the text as a post shows its one image, the type tile only without one',
+      (_, fixture) => {
+        render(<ResourceCard card={fixture} href={fixture.uri} />);
 
-      const slot = screen.getByTestId('resource-card-image');
-      expect(title().compareDocumentPosition(slot)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
-      expect(slot).toContainElement(screen.getByRole('button', { name: musicRecordingFixture.name! }));
-      expect(cardImage()).toHaveAttribute('data-cy', 'post-attachment-image');
-      expect(cardImage()).toHaveAccessibleName(musicRecordingFixture.name!);
-      expect(screen.queryByTestId('resource-card-type-tile')).not.toBeInTheDocument();
-    });
+        const slot = screen.getByTestId('resource-card-image');
+        expect(title().compareDocumentPosition(slot)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+        expect(slot).toContainElement(screen.getByRole('button', { name: fixture.name! }));
+        expect(cardImage()).toHaveAttribute('data-cy', 'post-attachment-image');
+        expect(cardImage()).toHaveAccessibleName(fixture.name!);
+        expect(screen.queryByTestId('resource-card-type-tile')).not.toBeInTheDocument();
+      },
+    );
 
     it.each([
       ['video', videoFixture],
       ['movie', movieFixture],
-      ['song', musicRecordingFixture],
+      ['band', mbGroupEnrichedFixture],
     ])('shows a %s’s image whole, in its own shape', (_, fixture) => {
       render(<ResourceCard card={fixture} href={fixture.uri} />);
 
       expect(cardImage()).toHaveClass('object-contain', 'max-h-96');
       expect(cardImage()).not.toHaveClass('object-cover');
+    });
+
+    describe('cover art', () => {
+      const ALBUM: TPinakesResourceDetail = { ...mbReleaseGroupFixture, image: 'https://coverartarchive.org/a.jpg' };
+      const PLAYLIST: TPinakesResourceDetail = {
+        ...musicRecordingFixture,
+        type: 'MusicPlaylist',
+        type_path: ['Thing', 'CreativeWork', 'MusicPlaylist'],
+      };
+
+      it.each([
+        ['song', musicRecordingFixture],
+        ['album', ALBUM],
+        ['playlist', PLAYLIST],
+      ])('shows a %s’s cover small, left of the title', (_, fixture) => {
+        render(<ResourceCard card={fixture} href={fixture.uri} />);
+
+        const slot = screen.getByTestId('resource-card-image');
+        expect(slot.compareDocumentPosition(title())).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+        expect(slot).toHaveClass('shrink-0', 'self-start');
+        expect(slot).toHaveAttribute('data-resource-controls');
+        expect(slot).toHaveAttribute('data-shape', 'square');
+        expect(cardImage()).toHaveAttribute('src', fixture.image);
+        expect(cardImage()).toHaveClass('size-20', 'sm:size-24', 'object-cover');
+        expect(cardImage()).not.toHaveClass('max-h-96');
+        const trigger = screen.getByRole('button', { name: fixture.name! });
+        expect(slot).toContainElement(trigger);
+        // The lightbox's own trigger, as on a post's image: a screen reader hears that it opens a dialog.
+        expect(trigger).toHaveAttribute('aria-haspopup', 'dialog');
+        expect(trigger).toHaveAttribute('aria-expanded', 'false');
+        expect(screen.queryByTestId('resource-card-image-fit')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('resource-card-type-tile')).not.toBeInTheDocument();
+      });
+
+      it('shows a larger cover on the resource page’s card', () => {
+        render(<ResourceCard card={ALBUM} size="large" />);
+
+        expect(cardImage()).toHaveClass('size-24', 'sm:size-40');
+      });
+
+      it('opens the cover in the post’s lightbox on a tap, while the rest of the card opens the page', async () => {
+        const onPostClick = vi.fn();
+        render(
+          <div onClick={onPostClick}>
+            <ResourceCard card={ALBUM} href={ALBUM.uri} />
+          </div>,
+        );
+        const open = vi.spyOn(window, 'open').mockReturnValue(null);
+        fireEvent.click(screen.getByTestId('resource-card-type'));
+        expect(mockPush).toHaveBeenCalledWith(getResourceRoute(ALBUM.uri));
+        mockPush.mockClear();
+        onPostClick.mockClear();
+        const slot = screen.getByTestId('resource-card-image');
+        const trigger = screen.getByRole('button', { name: ALBUM.name! });
+        const focus = vi.spyOn(trigger, 'focus');
+
+        // A middle click on the cover opens nothing.
+        fireEvent(cardImage(), new MouseEvent('auxclick', { bubbles: true, cancelable: true, button: 1 }));
+        expect(open).not.toHaveBeenCalled();
+        expect(mockPush).not.toHaveBeenCalled();
+
+        fireEvent.click(cardImage());
+
+        const lightbox = await screen.findByRole('dialog');
+        expect(trigger).toHaveAttribute('aria-expanded', 'true');
+        expect(within(lightbox).getByTestId('carousel-image-zoom-frame')).toHaveAttribute('data-zoomed', 'false');
+        const lightboxImage = within(lightbox)
+          .getAllByRole('img')
+          .find((img) => img.getAttribute('src') === ALBUM.image);
+        expect(lightboxImage).toBeDefined();
+        expect(mockPush).not.toHaveBeenCalled();
+        expect(onPostClick).not.toHaveBeenCalled();
+
+        // The lightbox's image is the cover's in React only: its load or failure leaves the cover as it is.
+        Object.defineProperty(lightboxImage!, 'naturalWidth', { value: 1200 });
+        Object.defineProperty(lightboxImage!, 'naturalHeight', { value: 630 });
+        fireEvent.load(lightboxImage!);
+        fireEvent.error(lightboxImage!);
+        expect(screen.getByTestId('resource-card-image')).toBe(slot);
+        expect(slot).toHaveAttribute('data-shape', 'square');
+        expect(screen.queryByTestId('resource-card-type-tile')).not.toBeInTheDocument();
+
+        // Closing gives the focus back to the cover, without scrolling the feed.
+        fireEvent.keyDown(lightbox, { key: 'Escape' });
+        await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+        expect(focus).toHaveBeenLastCalledWith({ preventScroll: true });
+        expect(mockPush).not.toHaveBeenCalled();
+        expect(open).not.toHaveBeenCalled();
+      });
+
+      it('shows a wide cover as a 16:9 thumbnail once it has loaded', async () => {
+        render(<ResourceCard card={musicRecordingFixture} href={musicRecordingFixture.uri} />);
+        Object.defineProperty(cardImage(), 'naturalWidth', { value: 1200 });
+        Object.defineProperty(cardImage(), 'naturalHeight', { value: 630 });
+
+        fireEvent.load(cardImage());
+
+        expect(screen.getByTestId('resource-card-image')).toHaveAttribute('data-shape', 'wide');
+        expect(cardImage()).toHaveClass('aspect-video', 'w-28');
+        expect(cardImage()).not.toHaveClass('size-20');
+      });
+
+      it('falls back to the type tile when the cover fails, and dims a gone one', () => {
+        const { unmount } = render(<ResourceCard card={{ ...ALBUM, status: PinakesStatus.MISSING }} />);
+        expect(screen.getByTestId('resource-card-image')).toHaveClass('opacity-60');
+        unmount();
+
+        render(<ResourceCard card={ALBUM} href={ALBUM.uri} />);
+        fireEvent.error(cardImage());
+        expect(screen.queryByTestId('resource-card-image')).not.toBeInTheDocument();
+        expect(screen.getByTestId('resource-card-type-tile')).toBeInTheDocument();
+      });
     });
 
     it('opens the image in the post’s lightbox on a tap, never the resource page', async () => {

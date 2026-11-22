@@ -44,10 +44,11 @@ import {
   getResourceLinks,
   getResourceStatus,
   getResourceTypeLabel,
+  hasCoverArt,
   OTHER_DATES_ANCHOR,
 } from './ResourceCard.utils';
 import { CARD_MUTED_TEXT, ResourceCardFrame, ResourceCardHeader } from './ResourceCardFrame';
-import { ResourceCardMedia, ResourceCardTypeTile } from './ResourceCardMedia';
+import { ResourceCardCover, ResourceCardMedia, ResourceCardTypeTile } from './ResourceCardMedia';
 import { ResourceChainBody, ResourceChainCopy, ResourceChainLines } from './ResourceChain';
 import { getChainView } from './ResourceChain.utils';
 import { ResourceCredits } from './ResourceCredits';
@@ -84,15 +85,16 @@ const DETAIL_ICON_SIZE = 14;
  * One card for every external resource Pinakes knows, in the frame of an embedded post: the type
  * and source on top, then the title (the type's icon left of it when there is no image), a summary
  * line of the type's facts (`getResourceSummary`) and the description, and under them the image, as
- * a post shows one (`ResourceCardMedia`). An event leads with its dates, venue,
+ * a post shows one (`ResourceCardMedia`). A song's, album's or playlist's cover is a small thumbnail
+ * left of the title (`ResourceCardCover`). An event leads with its dates, venue,
  * organizer and attendance; a card with an audio `stream` (an episode, or a recording's preview)
  * plays it, and a show its latest episodes (`ResourceEpisodes`). A sparse card fills a missing
  * description or image from a general database in its
  * group (`useResourceFallback`), then a missing title or image from the link's OpenGraph data.
  *
  * The title opens the resource's page (in a new tab where links may not navigate), and so does a
- * click on the card outside its controls (`ResourceCardFrame`); a tap on the image opens it in the
- * post's lightbox. The header's source is the one link out (none on a `missing` card). A player or
+ * click on the card outside its controls (`ResourceCardFrame`); a tap on the image or cover opens it
+ * in the post's lightbox. The header's source is the one link out (none on a `missing` card). A player or
  * embed in the body (`isBodyReplaced`) is its own set of controls, as the episode's audio is, and
  * takes the image's place too. The `large` card heads the resource page, lists every fact under
  * "Details" (not while an X post's embed is its body, `isBodyReplaced`) and is no click-through.
@@ -155,6 +157,9 @@ export function ResourceCard({
   const { metadata: og } = useOgMetadata(needsOg ? titleUrl : null);
   const ogImage = getHttpUrl(og?.image);
   const shownImage = usableCardImage ?? (ogImage && !failedImages.includes(ogImage) ? ogImage : null);
+  const onImageError = (url: string) => setFailedImages((urls) => [...urls, url]);
+  // A cover is a small thumbnail beside the text; every other image shows under it.
+  const isCover = hasCoverArt(card);
   const title = card.name?.trim() || og?.title?.trim() || getDisplayLink(href || card.uri);
   const shownDescription = description ?? fallback.description?.value ?? null;
 
@@ -304,8 +309,17 @@ export function ResourceCard({
         {showBody(
           <Container overrideDefaults className="flex min-w-0 flex-col gap-3">
             <Container overrideDefaults className="flex min-w-0 gap-4">
-              {/* Without an image, the type's icon stands left of the text. */}
+              {/* Without an image, the type's icon stands left of the text; a cover stands there too. */}
               {!shownImage && <ResourceCardTypeTile typeIcon={getResourceTypeIcon(card)} isLarge={isLarge} />}
+              {shownImage && isCover && (
+                <ResourceCardCover
+                  imageUrl={shownImage}
+                  name={title}
+                  isLarge={isLarge}
+                  dimmed={isMissing}
+                  onImageError={onImageError}
+                />
+              )}
 
               <Container className="min-w-0 flex-1 gap-1.5">
                 {statusNote && (
@@ -430,13 +444,8 @@ export function ResourceCard({
                 )}
               </Container>
             </Container>
-            {shownImage && (
-              <ResourceCardMedia
-                imageUrl={shownImage}
-                name={title}
-                dimmed={isMissing}
-                onImageError={(url) => setFailedImages((urls) => [...urls, url])}
-              />
+            {shownImage && !isCover && (
+              <ResourceCardMedia imageUrl={shownImage} name={title} dimmed={isMissing} onImageError={onImageError} />
             )}
           </Container>,
         )}

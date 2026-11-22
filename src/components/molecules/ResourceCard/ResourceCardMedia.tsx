@@ -2,7 +2,10 @@
 
 import { type SyntheticEvent, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
+import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
+import { DialogTrigger } from '@/atoms/Dialog/Dialog';
+import { Image } from '@/atoms/Image/Image';
 import { cn } from '@/libs/utils/utils';
 import { PostAttachmentsImagesAndVideos } from '@/molecules/PostAttachmentsImagesAndVideos/PostAttachmentsImagesAndVideos';
 
@@ -51,6 +54,70 @@ export function ResourceCardMedia({ imageUrl, name, dimmed, onImageError }: Reso
       >
         <PostAttachmentsImagesAndVideos imagesAndVideos={[{ type: 'image/*', name, urls: { main: imageUrl } }]} />
       </Container>
+    </Container>
+  );
+}
+
+/** From this width-to-height ratio on, a loaded cover shows as a 16:9 thumbnail instead of a square. */
+const WIDE_RATIO = 1.4;
+
+interface ResourceCardCoverProps extends ResourceCardMediaProps {
+  /** The resource page's card: a larger thumbnail. */
+  isLarge: boolean;
+}
+
+/**
+ * A song's, album's or playlist's cover (`hasCoverArt`): small, left of the card's text, a square (a 16:9 thumbnail
+ * when the loaded image is wide), aligned to the top so a tall text column never stretches it. A tap opens it in
+ * the post's lightbox (`PostAttachmentsImagesAndVideos`, its own trigger), with pinch and double-tap zoom; a press
+ * on it never opens the resource page (`data-resource-controls`).
+ */
+export function ResourceCardCover({ imageUrl, name, isLarge, dimmed, onImageError }: ResourceCardCoverProps) {
+  const [loadedShape, setLoadedShape] = useState<{ url: string; wide: boolean } | null>(null);
+  const isWide = loadedShape?.url === imageUrl && loadedShape.wide;
+  const squareSize = isLarge ? 'size-24 sm:size-40' : 'size-20 sm:size-24';
+  const wideSize = isLarge ? 'aspect-video w-40 sm:w-64' : 'aspect-video w-28 sm:w-40';
+  return (
+    <Container
+      overrideDefaults
+      data-resource-controls
+      data-testid="resource-card-image"
+      data-shape={isWide ? 'wide' : 'square'}
+      onLoad={(event) => {
+        const image = getOwnImage(event);
+        if (!image || image.naturalWidth <= 0 || image.naturalHeight <= 0) return;
+        const ratio = image.naturalWidth / image.naturalHeight;
+        // Wide when the image is; square when it is upright, as a cover is.
+        if (ratio >= WIDE_RATIO) setLoadedShape({ url: imageUrl, wide: true });
+        else if (ratio < 1) setLoadedShape({ url: imageUrl, wide: false });
+      }}
+      onError={(event) => {
+        if (getOwnImage(event)) onImageError(imageUrl);
+      }}
+      className={cn('shrink-0 self-start', dimmed && 'opacity-60')}
+    >
+      <PostAttachmentsImagesAndVideos
+        imagesAndVideos={[{ type: 'image/*', name, urls: { main: imageUrl } }]}
+        renderTrigger={({ openPreview }) => (
+          // The lightbox's own trigger, as a post's image tile is: it says it opens a dialog.
+          <DialogTrigger asChild>
+            <Button
+              overrideDefaults
+              type="button"
+              onClick={(event) => openPreview(0, event)}
+              className="block cursor-pointer rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Image
+                src={imageUrl}
+                alt={name}
+                width={isWide ? (isLarge ? 256 : 160) : isLarge ? 160 : 96}
+                height={isWide ? (isLarge ? 144 : 90) : isLarge ? 160 : 96}
+                className={cn('rounded-md object-cover object-center', isWide ? wideSize : squareSize)}
+              />
+            </Button>
+          </DialogTrigger>
+        )}
+      />
     </Container>
   );
 }

@@ -28,6 +28,7 @@ import {
   getResourceTagsLabel,
   getResourceTarget,
   getResourceTypeLabel,
+  hasCoverArt,
   isCardSurfaceClick,
   isWritableResourceUri,
   MAX_LINK_SPELLINGS,
@@ -398,6 +399,32 @@ describe('getResourceTagsLabel', () => {
   it('falls back to the external resource without a typed card', () => {
     expect(getResourceTagsLabel(null)).toBe('Tags on the external resource');
     expect(getResourceTagsLabel({ type: '', type_path: [] })).toBe('Tags on the external resource');
+  });
+});
+
+describe('hasCoverArt', () => {
+  it.each([
+    ['MusicRecording', ['Thing', 'CreativeWork', 'MusicRecording']],
+    ['MusicAlbum', ['Thing', 'CreativeWork', 'MusicPlaylist', 'MusicAlbum']],
+    ['MusicRelease', ['Thing', 'CreativeWork', 'MusicPlaylist', 'MusicRelease']],
+    ['MusicPlaylist', ['Thing', 'CreativeWork', 'MusicPlaylist']],
+  ])('reads a %s image as cover art', (type, type_path) => {
+    expect(hasCoverArt({ type, type_path })).toBe(true);
+  });
+
+  it('reads cover art from the type_path of a narrower type it has never seen', () => {
+    expect(hasCoverArt({ type: 'MusicMixtape', type_path: ['Thing', 'CreativeWork', 'MusicPlaylist'] })).toBe(true);
+  });
+
+  it.each([
+    ['MusicGroup', ['Thing', 'Organization', 'PerformingGroup', 'MusicGroup']],
+    ['Person', ['Thing', 'Person']],
+    ['VideoObject', ['Thing', 'CreativeWork', 'MediaObject', 'VideoObject']],
+    ['PodcastSeries', ['Thing', 'CreativeWork', 'Intangible', 'Series', 'CreativeWorkSeries', 'PodcastSeries']],
+    ['Book', ['Thing', 'CreativeWork', 'Book']],
+    ['Article', ['Thing', 'CreativeWork', 'Article']],
+  ])('reads a %s image as no cover', (type, type_path) => {
+    expect(hasCoverArt({ type, type_path })).toBe(false);
   });
 });
 

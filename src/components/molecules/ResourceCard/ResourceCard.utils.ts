@@ -72,6 +72,20 @@ export function getNearestTypes(card: Pick<TPinakesCard, 'type' | 'type_path'>):
 }
 
 /**
+ * schema.org types whose `image` is cover art: a song's, an album's or release's, a playlist's (`MusicAlbum` and
+ * `MusicRelease` are playlists in schema.org). An artist (`MusicGroup`, `Person`) has a photo, not a cover.
+ */
+const COVER_ART_TYPES: ReadonlySet<string> = new Set(['MusicRecording', 'MusicPlaylist', 'MusicAlbum', 'MusicRelease']);
+
+/**
+ * Whether the card's image is cover art (`COVER_ART_TYPES`), from its `type` or any `type_path` entry: the card
+ * shows it small, left of its text. Every other image shows under the text, as a post shows one.
+ */
+export function hasCoverArt(card: Pick<TPinakesCard, 'type' | 'type_path'>): boolean {
+  return getNearestTypes(card).some((type) => COVER_ART_TYPES.has(type));
+}
+
+/**
  * Which details a card shows, from the nearest ancestor in its `type_path` that has a family
  * (`Restaurant` → `LocalBusiness` → `Place`). Types with no such ancestor are plain web cards.
  */
