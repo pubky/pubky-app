@@ -85,7 +85,7 @@ describe('getChainView', () => {
     expect(view.copy).toEqual({ label: 'Copy transaction ID', value: TXID });
     expect(view.lines.map(text)).toEqual([
       'In block 975,251 · Nov 10, 2026 · 400 inputs → 1 output',
-      'Fee 118,488 sats · 2.01 sat/vB · 1.29 BTC out',
+      'Fee ₿118,488 · 2.01 ₿/vB · ₿129,015,985 out',
     ]);
     expect(links(view.lines)).toEqual([
       { label: 'block 975,251', href: route(`btc:block/${BLOCK_HASH}`), full: BLOCK_HASH },
@@ -99,7 +99,7 @@ describe('getChainView', () => {
     const coinbase = getChainView({ ...TX, facts: { ...TX.facts, coinbase: 'true', fee: '0' } }, LOCALE)!;
     expect(coinbase.lines.map(text)).toEqual([
       'Coinbase · In block 975,251 · Nov 10, 2026 · 400 inputs → 1 output',
-      '1.29 BTC out',
+      '₿129,015,985 out',
     ]);
     const named = getChainView(
       {
@@ -126,10 +126,10 @@ describe('getChainView', () => {
     const view = getChainView({ ...TX, related, related_total: { input: 400 } }, LOCALE)!;
     const [inputs, outputs] = view.lists;
     expect(inputs).toMatchObject({ key: 'input', title: 'Inputs', more: 398 });
-    // One scale for inputs and outputs: the largest is the 1.29 BTC output.
+    // One scale for inputs and outputs: the largest is the ₿129,015,985 output.
     expect(inputs.rows.map((row) => [row.link?.label, row.amount, row.share?.toFixed(2)])).toEqual([
-      ['1A1zP1…DivfNa', '0.02 BTC', '1.55'],
-      ['bc1qar…wf5mdq', '500,000 sats', '0.39'],
+      ['1A1zP1…DivfNa', '₿2,000,000', '1.55'],
+      ['bc1qar…wf5mdq', '₿500,000', '0.39'],
     ]);
     expect(outputs.rows[1].share).toBe(100);
     expect(inputs.rows[0].link).toMatchObject({
@@ -139,7 +139,7 @@ describe('getChainView', () => {
     });
     // `outputs` is the fact (1), not the list's length; an output with no root is text.
     expect(outputs.more).toBe(0);
-    expect(outputs.rows[0]).toMatchObject({ link: null, text: 'OP_RETURN', amount: '0 sats' });
+    expect(outputs.rows[0]).toMatchObject({ link: null, text: 'OP_RETURN', amount: '₿0' });
   });
 
   it('a block: when, how many, previous and next linked, its fill of the weight limit, the hash in full', () => {
@@ -204,20 +204,30 @@ describe('getChainView', () => {
     );
     const view = getChainView(address, LOCALE)!;
     expect(view.title).toBeNull();
-    expect(view.figure).toBe('57.71 BTC');
-    expect(view.lines.map(text)).toEqual(['Received 57.71 BTC · Sent 100,000 sats · 67,479 transactions']);
-    expect(text(view.compact)).toBe('57.71 BTC · 67,479 transactions');
+    expect(view.figure).toBe('₿5,771,052,471');
+    expect(view.lines.map(text)).toEqual(['Received ₿5,771,152,471 · Sent ₿100,000 · 67,479 transactions']);
+    expect(text(view.compact)).toBe('₿5,771,052,471 · 67,479 transactions');
     expect(view.lists[0].title).toBe('Latest transactions');
     expect(view.lists[0].more).toBe(67_476);
     expect(view.lists[0].rows.map((row) => [row.lead, row.link?.label, row.amount, row.sign])).toEqual([
-      ['Nov 10, 2026', '3d365b…e46fd5', '+5,000 sats', 'in'],
-      ['Nov 9, 2026', 'a7f10c…50d4f5', '−100,000 sats', 'out'],
-      ['Unconfirmed', '000000…7f9893', '0 sats', null],
+      ['Nov 10, 2026', '3d365b…e46fd5', '+₿5,000', 'in'],
+      ['Nov 9, 2026', 'a7f10c…50d4f5', '−₿100,000', 'out'],
+      ['Unconfirmed', '000000…7f9893', '₿0', null],
     ]);
     // Pinakes' own total (with unconfirmed transactions) wins over the fact.
     const withPending = getChainView({ ...address, related_total: { tx: 67_482 } }, LOCALE)!;
     expect(withPending.lists[0].more).toBe(67_479);
     expect(view.shownFacts).not.toContain('unconfirmed_tx_count');
+  });
+
+  it('an address amount that is not whole base units stays out, never as null', () => {
+    const view = getChainView(
+      chainCard('BitcoinAddress', `btc:address/${TXID}`, { balance: '1.5', received: '2.75', tx_count: '3' }),
+      LOCALE,
+    )!;
+    expect(view.figure).toBeNull();
+    expect(view.lines.map(text)).toEqual(['3 transactions']);
+    expect(view.compact).toEqual(['3 transactions']);
   });
 
   it('a long address in the title is shortened', () => {
@@ -242,13 +252,13 @@ describe('getChainView', () => {
       },
     );
     const view = getChainView(node, LOCALE)!;
-    expect(view.lines.map(text)).toEqual(['1,833 channels · 360.95 BTC capacity']);
+    expect(view.lines.map(text)).toEqual(['1,833 channels · ₿36,094,691,466 capacity']);
     expect(view.copy).toEqual({ label: 'Copy node public key', value: ACINQ });
     expect(view.lists).toHaveLength(1);
     expect(view.lists[0].rows.map((row) => [row.link?.label, row.link?.href, row.amount, row.share])).toEqual([
-      ['bfx-lnd0', route(`ln:node/${BFX}`), '5 BTC', 100],
+      ['bfx-lnd0', route(`ln:node/${BFX}`), '₿500,000,000', 100],
       // No peer known by name: the channel itself.
-      ['1', route('ln:channel/1'), '1 BTC', 20],
+      ['1', route('ln:channel/1'), '₿100,000,000', 20],
     ]);
     expect(view.lists[0].more).toBe(1831);
   });
@@ -264,13 +274,13 @@ describe('getChainView', () => {
       status: 'active',
     };
     const view = getChainView(chainCard('LightningChannel', 'ln:channel/892785849701564416', facts), LOCALE)!;
-    expect(view.lines.map(text)).toEqual(['ACINQ ↔ bfx-lnd0', '5 BTC · Active · Funding a7f10c…50d4f5']);
+    expect(view.lines.map(text)).toEqual(['ACINQ ↔ bfx-lnd0', '₿500,000,000 · Active · Funding a7f10c…50d4f5']);
     expect(links(view.lines).map((item) => item.href)).toEqual([
       route(`ln:node/${ACINQ}`),
       route(`ln:node/${BFX}`),
       route(`btc:tx/${FUNDING}`),
     ]);
-    expect(text(view.compact)).toBe('ACINQ ↔ bfx-lnd0 · 5 BTC');
+    expect(text(view.compact)).toBe('ACINQ ↔ bfx-lnd0 · ₿500,000,000');
 
     const closed = getChainView(
       chainCard('LightningChannel', 'ln:channel/892785849701564416', facts, {
@@ -278,7 +288,7 @@ describe('getChainView', () => {
       }),
       LOCALE,
     )!;
-    expect(text(closed.lines[1])).toBe('5 BTC · Active · Funding a7f10c…50d4f5 · Closed by 3d365b…e46fd5');
+    expect(text(closed.lines[1])).toBe('₿500,000,000 · Active · Funding a7f10c…50d4f5 · Closed by 3d365b…e46fd5');
 
     const testnet = getChainView(chainCard('LightningChannel', 'ln-testnet:channel/1', facts), LOCALE)!;
     expect(links(testnet.lines).map((item) => item.href)).toEqual([
@@ -290,8 +300,9 @@ describe('getChainView', () => {
 });
 
 describe('formatters', () => {
-  it('a fee rate in sat/vB', () => {
-    expect(formatFeeRate('118488', '59057', LOCALE)).toBe('2.01 sat/vB');
+  it('a fee rate in ₿/vB', () => {
+    expect(formatFeeRate('118488', '59057', LOCALE)).toBe('2.01 ₿/vB');
+    expect(formatFeeRate('1000', '400', 'de-DE')).toBe('2,5 ₿/vB');
     expect(formatFeeRate('118488', '0', LOCALE)).toBeNull();
   });
 

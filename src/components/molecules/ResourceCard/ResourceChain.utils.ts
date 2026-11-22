@@ -1,7 +1,7 @@
 import { getResourceRoute } from '@/app/routes';
 import type { TPinakesRelated, TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { getNearestTypes } from './ResourceCard.utils';
-import { formatCount, formatFactDate, formatSats, getFact, humanizeValue } from './ResourceFacts.utils';
+import { formatBitcoin, formatCount, formatFactDate, getFact, humanizeValue } from './ResourceFacts.utils';
 
 /**
  * What a Bitcoin or Lightning card shows in its body instead of the summary line: lines that link
@@ -191,7 +191,7 @@ function relatedList(
   const rows = shown.map((item, index): TChainRow => {
     const amount = amounts[index];
     const sign = options.signed && amount ? (amount > 0 ? 'in' : 'out') : null;
-    const formatted = amount === null ? null : formatSats(String(Math.abs(amount)), options.locale);
+    const formatted = amount === null ? null : formatBitcoin(String(Math.abs(amount)), options.locale);
     return {
       key: `${rel}-${index}`,
       link: relatedLink(item),
@@ -211,12 +211,12 @@ function largestAmount(items: TPinakesRelated[]): number {
   return Math.max(0, ...items.slice(0, CHAIN_LIST_MAX).map((item) => Math.abs(toNumber(item.amount_sat) ?? 0)));
 }
 
-/** `2.01 sat/vB` from a fee in sats and a size in vB. */
+/** `2.01 ₿/vB` from a fee in bitcoin base units (BIP 177) and a size in vB. */
 export function formatFeeRate(fee: string | null, vsize: string | null, locale?: string): string | null {
-  const sats = toNumber(fee);
+  const amount = toNumber(fee);
   const size = toNumber(vsize);
-  if (sats === null || size === null || size <= 0) return null;
-  return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(sats / size)} sat/vB`;
+  if (amount === null || size === null || size <= 0) return null;
+  return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(amount / size)} ₿/vB`;
 }
 
 function txView(card: TChainCard, root: TChainRoot, locale?: string): TChainView {
@@ -239,7 +239,7 @@ function txView(card: TChainCard, root: TChainRoot, locale?: string): TChainView
   }
   // A coinbase transaction pays no fee.
   const isCoinbase = fact('coinbase') === 'true';
-  const fee = isCoinbase ? null : formatSats(fact('fee'), locale);
+  const fee = isCoinbase ? null : formatBitcoin(fact('fee'), locale);
   const rate = isCoinbase ? null : formatFeeRate(fact('fee'), fact('vsize'), locale);
   const inputs = toNumber(fact('inputs'));
   const outputs = toNumber(fact('outputs'));
@@ -247,7 +247,7 @@ function txView(card: TChainCard, root: TChainRoot, locale?: string): TChainView
     inputs !== null && outputs !== null
       ? `${plural(inputs, 'input', undefined, locale)} → ${plural(outputs, 'output', undefined, locale)}`
       : null;
-  const value = formatSats(fact('output_value'), locale);
+  const value = formatBitcoin(fact('output_value'), locale);
   const lines: TChainLine[] = [
     [...placed, ...(flow ? [flow] : [])],
     [...(fee ? [`Fee ${fee}`] : []), ...(rate ? [rate] : []), ...(value ? [`${value} out`] : [])],
@@ -331,9 +331,12 @@ function addressView(card: TChainCard, root: TChainRoot, locale?: string): TChai
   const received = toNumber(fact('received'));
   const sent = balance !== null && received !== null && received >= balance ? received - balance : null;
   const txCount = toNumber(fact('tx_count'));
+  // Each amount as it reads: `null` for one the formatter refuses (a fraction), which then stays out.
+  const amount = (value: number | null) => (value === null ? null : formatBitcoin(String(value), locale));
+  const [balanceText, receivedText, sentText] = [amount(balance), amount(received), amount(sent)];
   const line: TChainLine = [
-    ...(received !== null ? [`Received ${formatSats(String(received), locale)}`] : []),
-    ...(sent !== null ? [`Sent ${formatSats(String(sent), locale)}`] : []),
+    ...(receivedText ? [`Received ${receivedText}`] : []),
+    ...(sentText ? [`Sent ${sentText}`] : []),
     ...(txCount !== null ? [plural(txCount, 'transaction', undefined, locale)] : []),
   ];
   const latest = relatedList(card, 'tx', 'Latest transactions', {
@@ -346,10 +349,10 @@ function addressView(card: TChainCard, root: TChainRoot, locale?: string): TChai
     kind: ChainKind.ADDRESS,
     title: shortenTitle(card.name),
     copy: { label: 'Copy address', value: root.id },
-    figure: balance !== null ? formatSats(String(balance), locale) : null,
+    figure: balanceText,
     lines: line.length > 0 ? [line] : [],
     compact: [
-      ...(balance !== null ? [formatSats(String(balance), locale)!] : []),
+      ...(balanceText ? [balanceText] : []),
       ...(txCount !== null ? [plural(txCount, 'transaction', undefined, locale)] : []),
     ],
     fill: null,
@@ -361,7 +364,7 @@ function addressView(card: TChainCard, root: TChainRoot, locale?: string): TChai
 function nodeView(card: TChainCard, root: TChainRoot, locale?: string): TChainView {
   const fact = (key: string) => getFact(card, key);
   const channels = toNumber(fact('channels'));
-  const capacity = formatSats(fact('capacity'), locale);
+  const capacity = formatBitcoin(fact('capacity'), locale);
   const line: TChainLine = [
     ...(channels !== null ? [plural(channels, 'channel', undefined, locale)] : []),
     ...(capacity ? [`${capacity} capacity`] : []),
@@ -408,7 +411,7 @@ function channelView(card: TChainCard, root: TChainRoot, locale?: string): TChai
   };
   const funding = txOf('funding_tx');
   const closing = txOf('closing_tx');
-  const capacity = formatSats(fact('capacity'), locale);
+  const capacity = formatBitcoin(fact('capacity'), locale);
   const status = fact('status');
   const ends: TChainLine = one && two ? [[one, '↔', two]] : [];
   const about: TChainLine = [

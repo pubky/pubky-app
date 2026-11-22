@@ -75,7 +75,7 @@ describe('ResourceCard, a Bitcoin or Lightning card', () => {
     expect(screen.getAllByTestId('resource-chain-line')[0].querySelector('svg.lucide-arrow-right')).not.toBeNull();
     expect(lines).toEqual([
       'In block 975,251 · Nov 10, 2026 · 400 inputs to 1 output',
-      'Fee 118,488 sats · 2.01 sat/vB · 1.29 BTC out',
+      'Fee ₿118,488 · 2.01 ₿/vB · ₿129,015,985 out',
     ]);
     // The heading's name is the title alone; the copy button sits next to it.
     expect(screen.getByRole('heading', { level: 2 })).toHaveAccessibleName('Transaction 3d365b…e46fd5');
@@ -132,7 +132,7 @@ describe('ResourceCard, a Bitcoin or Lightning card', () => {
     expect(within(inputs).getByRole('progressbar', { hidden: true })).toBeInTheDocument();
     expect(inputs).toHaveTextContent('+399 more');
     expect(within(outputs).queryByRole('link')).not.toBeInTheDocument();
-    expect(outputs).toHaveTextContent('OP_RETURN0 sats');
+    expect(outputs).toHaveTextContent('OP_RETURN₿0');
   });
 
   it('leaves every other card as it was', () => {

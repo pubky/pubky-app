@@ -243,7 +243,7 @@ export interface TPinakesRelated {
   /** Its card root (`btc:address/…`, `btc:tx/…`, `ln:node/…`), `null` for one with none (`OP_RETURN`). */
   uri?: string | null;
   name?: string | null;
-  /** An amount in sats; signed for an address's transactions (+ received, − sent). */
+  /** An amount in bitcoin base units (BIP 177); signed for an address's transactions (+ received, − sent). */
   amount_sat?: number | null;
   /** RFC 3339. */
   at?: string | null;

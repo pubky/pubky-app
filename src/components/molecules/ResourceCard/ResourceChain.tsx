@@ -69,7 +69,7 @@ function ChainLineText({ line, target }: ChainTargetProps & { line: TChainLine }
       data-testid="resource-chain-line"
       className="font-medium wrap-anywhere text-foreground/90"
     >
-      {/* A line wraps between its parts, not inside a figure ("1.29 BTC"); a group (two nodes) may wrap. */}
+      {/* A line wraps between its parts, not inside a figure ("₿129,015,985"); a group (two nodes) may wrap. */}
       {line.map((part, index) => (
         <Fragment key={index}>
           {/* The dot stays at the end of a line, never starts the next. */}
