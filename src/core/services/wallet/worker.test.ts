@@ -3,6 +3,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { primaryChannelReadiness } from './channel-readiness.mjs';
 import { assertHandoffReady, sealHandoff } from './handoff.mjs';
 import { createHandoffClose } from './handoff-close.mjs';
+import { recoverPrimary } from './recover-primary.mjs';
 import type { WalletStartProgress } from './session';
 import type { createStartupScan } from './startup-scan.mjs';
 
@@ -12,6 +13,7 @@ const fixture = vi.hoisted(() => {
     read: (path: string) => files.get(path)?.slice() ?? null,
     write: vi.fn((path: string, bytes: Uint8Array) => files.set(path, bytes.slice())),
     list: (prefix: string) => [...files.keys()].filter((path) => path.startsWith(prefix)),
+    remove: (path: string) => files.delete(path),
     compact: vi.fn(),
     enrollLocalUnlock: vi.fn(),
     close: vi.fn(),
@@ -50,6 +52,7 @@ vi.mock('./startup-sockets.mjs', () => ({ createStartupSockets: () => fixture.so
 vi.mock('./channel-readiness.mjs', { spy: true });
 vi.mock('./handoff.mjs', { spy: true });
 vi.mock('./handoff-close.mjs', { spy: true });
+vi.mock('./recover-primary.mjs', { spy: true });
 vi.mock('@beignet/portable-engine/sqljs', () => ({ createSqlJsDatabaseFactory: fixture.compile }));
 vi.mock('./storage.mjs', () => ({
   inspectFiles: fixture.inspect,
@@ -623,6 +626,57 @@ it('replaces a nearly expired prefetch and cancels an outstanding ticket on lock
 });
 
 const reconnect = { method: 'POST', path: '/api/wallets/' + walletId + '/lfbw/setup', body: {} };
+
+function transferredEmptyPolicy() {
+  const deviceId = crypto.randomUUID();
+  const encode = (value: unknown) => new TextEncoder().encode(JSON.stringify(value));
+  fixture.files.set('/pubky/ring-device-v1.json', encode(deviceId));
+  fixture.files.set('/pubky/ring-binding-v1.json', encode({
+    version: 1, deviceId, network: grant.network, mode: 'create',
+    commitment: 'a'.repeat(64), transferId: crypto.randomUUID(),
+  }));
+  return { id: walletId, status: 'running', network: grant.network, lfbw: {
+    enabled: true, primaries: [], primaryPubkey: null, primaryUri: null,
+    setup: 'failed', setupError: 'No primary node is configured',
+  } };
+}
+
+it('checks the saved policy before startup and joins simultaneous repairs for a transferred Ring wallet', async () => {
+  const missing = transferredEmptyPolicy();
+  const patching = Promise.withResolvers<typeof missing>();
+  vi.mocked(recoverPrimary).mockReturnValueOnce(patching.promise);
+  fixture.engine.request.mockResolvedValue(missing);
+  try {
+    const start = request('request', { method: 'POST', path: '/api/wallets/' + walletId + '/start' });
+    await vi.waitFor(() => expect(recoverPrimary).toHaveBeenCalledOnce());
+    const retry = request('request', reconnect);
+    await vi.waitFor(() => expect(fixture.engine.request).toHaveBeenCalledWith(reconnect));
+    patching.resolve(missing);
+    await expect(Promise.all([start, retry])).resolves.toEqual([
+      expect.objectContaining({ result: missing }), expect.objectContaining({ result: missing }),
+    ]);
+    expect(fixture.engine.request.mock.calls[0][0]).toEqual({ method: 'GET', path: '/api/wallets/' + walletId });
+    expect(recoverPrimary).toHaveBeenCalledOnce();
+  } finally {
+    fixture.engine.request.mockReset();
+  }
+});
+
+it('remembers a conflicting original primary even if engine startup erases it before the next unlock', async () => {
+  const empty = transferredEmptyPolicy();
+  const previous = { ...empty, lfbw: { ...empty.lfbw, primaryUri: grant.primaryUri.replace('@test:1', '@other:1') } };
+  fixture.engine.request.mockResolvedValueOnce(previous).mockResolvedValue(empty);
+  try {
+    await request('request', { method: 'POST', path: '/api/wallets/' + walletId + '/start' });
+    await freshWorker();
+    await request('open', 'a local vault password');
+    await request('request', reconnect);
+    expect(recoverPrimary).not.toHaveBeenCalled();
+    expect(fixture.engine.request).toHaveBeenCalledWith(reconnect);
+  } finally {
+    fixture.engine.request.mockReset();
+  }
+});
 
 it('reports only local dial categories and authoritative ownership evidence for the unlocked wallet', async () => {
   const [{ onDiagnostic }] = fixture.createRuntime.mock.lastCall!;

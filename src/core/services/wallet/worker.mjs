@@ -12,6 +12,7 @@ import {
   verifyHandoffSource,
 } from './handoff.mjs';
 import { createHandoffClose } from './handoff-close.mjs';
+import { isMissingPrimary, matchesPrimaryPolicy, recoverPrimary } from './recover-primary.mjs';
 import { provisionRingWallet, ringBinding, ringDeviceId } from './ring.mjs';
 import { createStartupScan } from './startup-scan.mjs';
 import { createStartupSockets } from './startup-sockets.mjs';
@@ -42,6 +43,8 @@ let channelReadiness;
 let activeProgress;
 let primaryConnected = false;
 let primaryDialIssue = null;
+let originalPrimaryPolicy;
+let primaryRepair;
 let transport;
 let compiledDatabase;
 let connectionIssue;
@@ -241,6 +244,48 @@ function rejectIfClosing() {
   if (closing) throw Object.assign(new Error('The wallet is locked.'), { code: 'WALLET_CLOSED' });
 }
 
+async function checkOriginalPrimary(runtime, walletId, grant, assertCurrent) {
+  let record;
+  try {
+    record = await runtime.request({ method: 'GET', path: '/api/wallets/' + walletId });
+  } catch {
+    return false;
+  }
+  assertCurrent();
+  if (!record || record.id !== walletId || record.network !== grant.network) return false;
+  const conflictPath = '/pubky/primary-policy-conflict/' + walletId;
+  if (!matchesPrimaryPolicy(record, grant.network, grant.primaryUri)) {
+    if (!volume.read(conflictPath)) volume.write(conflictPath, Uint8Array.of(1));
+    return false;
+  }
+  if (!volume.read(conflictPath)) return true;
+  // A later explicit selection of the deployment primary supersedes an old conflict.
+  if (record.lfbw.primaryUri !== grant.primaryUri) return false;
+  volume.remove(conflictPath);
+  return true;
+}
+
+async function startOrReconnectRestoredWallet(request, walletId, binding) {
+  const runtime = engine;
+  const grant = activeGrant;
+  const assertCurrent = () => {
+    rejectIfClosing();
+    if (runtime !== engine || grant !== activeGrant || handoffStopped || connectionIssue) throw busy();
+  };
+  // Startup can erase evidence of a previously configured alternative.
+  originalPrimaryPolicy ??= checkOriginalPrimary(runtime, walletId, grant, assertCurrent);
+  const allowed = await originalPrimaryPolicy;
+  assertCurrent();
+  const record = await runtime.request(request);
+  if (!allowed || record?.id !== walletId || !isMissingPrimary(record)) return record;
+  assertCurrent();
+  if (!primaryRepair) {
+    primaryRepair = recoverPrimary(runtime, record, grant.network, grant.primaryUri, assertCurrent, binding)
+      .finally(() => { primaryRepair = undefined; });
+  }
+  return primaryRepair;
+}
+
 function verifyLocalUnlockIntent(account, scope, mode) {
   const plan = pendingLocalUnlock;
   if (!plan || plan.account !== account || plan.mode !== mode ||
@@ -437,6 +482,8 @@ async function close() {
   channelReadiness = undefined;
   primaryConnected = false;
   primaryDialIssue = null;
+  originalPrimaryPolicy = undefined;
+  primaryRepair = undefined;
   volume?.close();
   volume = undefined;
   awayReceipts = undefined;
@@ -687,7 +734,7 @@ async function handle({ id, operation, account, payload, notifyUnlocked, notifyS
     ) {
       throw Object.assign(new Error(connectionIssue), { code: 'WALLET_CONFIGURATION' });
     }
-    const bound = !!ringBinding(volume);
+    const bound = ringBinding(volume);
     if (
       bound &&
       payload.method?.toUpperCase() === 'POST' &&
@@ -701,9 +748,10 @@ async function handle({ id, operation, account, payload, notifyUnlocked, notifyS
     let progress;
     try {
       const start = payload.method === 'POST' && /^\/api\/wallets\/([0-9a-f]{32})\/start$/.exec(payload.path);
+      const retry = payload.method === 'POST' && /^\/api\/wallets\/([0-9a-f]{32})\/lfbw\/(?:setup|retry)$/.exec(payload.path);
       // A transport ticket may have been evicted even before expiry. Explicit
       // reconnects always get a fresh ticket before opening another socket.
-      if (payload.method === 'POST' && /^\/api\/wallets\/[0-9a-f]{32}\/lfbw\/(?:setup|retry)$/.test(payload.path)) {
+      if (retry) {
         await refreshGrant(activeGrant);
         rejectIfClosing();
       }
@@ -714,7 +762,10 @@ async function handle({ id, operation, account, payload, notifyUnlocked, notifyS
       // The caller has verified the device lease. Overlap the fixed relay dial
       // with node restoration and leave the authenticated Lightning handshake to Beignet.
       if (start && !background) transport?.preparePeer();
-      const result = await engine.request(payload);
+      const setup = start || retry;
+      const result = setup && activeGrant && bound?.network === activeGrant.network && (bound.transferId || bound.mode === 'restore')
+        ? await startOrReconnectRestoredWallet(payload, setup[1], bound)
+        : await engine.request(payload);
       if (payload.method === 'GET' && /^\/wallets\/[0-9a-f]{32}\/api\/channels$/.test(payload.path) &&
           !closing && !handoffStopped && !background && activeGrant) {
         channelReadiness?.observeFunding(result);
