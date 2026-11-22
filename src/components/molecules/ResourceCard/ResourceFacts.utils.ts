@@ -22,11 +22,8 @@ const SUMMARY_SEPARATOR = ' · ';
 const MAX_SUMMARY_PARTS = 3;
 /** List facts show this many values on the summary line, then `+N`. */
 const MAX_SUMMARY_LIST_ITEMS = 2;
-const SATS_PER_BTC = 100_000_000;
 /** A summary value this long or longer is left out when the title contains it. */
 const MIN_SAID_LENGTH = 3;
-/** From this many sats on, an amount reads in BTC (0.01 BTC). */
-const BTC_THRESHOLD_SATS = 1_000_000;
 /** A time at midnight UTC, the way sources write a bare day as a timestamp. */
 const MIDNIGHT_UTC = /T00:00(?::00(?:\.0+)?)?(?:Z|[+-]00:?00)$/i;
 /** A partial date as MusicBrainz and other sources give it: `YYYY`, `YYYY-MM`, `YYYY-MM-DD`. */
@@ -94,15 +91,17 @@ export function formatCompactCount(value: string | null, locale?: string): strin
   return new Intl.NumberFormat(locale, { notation: 'compact', maximumFractionDigits: 1 }).format(number);
 }
 
-/** An amount in sats: `5770586745` → `57.71 BTC`, `500000` → `500,000 sats`. */
-export function formatSats(value: string | null, locale?: string): string | null {
-  const sats = toNumber(value);
-  if (sats === null || sats < 0) return null;
-  if (sats >= BTC_THRESHOLD_SATS) {
-    const btc = new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(sats / SATS_PER_BTC);
-    return `${btc} BTC`;
-  }
-  return `${new Intl.NumberFormat(locale).format(sats)} sats`;
+/**
+ * A bitcoin amount as BIP 177 writes it: whole base units ("bitcoin") after the ₿ sign, with the
+ * locale's grouping: `994797` → `₿994,797`, `129000000` → `₿129,000,000`. Never in BTC or with
+ * decimals. `null` for a negative amount, a fraction of a base unit or no number. Exact up to
+ * `Number.MAX_SAFE_INTEGER`, far above the 2.1 quadrillion supply.
+ */
+export function formatBitcoin(value: string | null, locale?: string): string | null {
+  const amount = toNumber(value);
+  if (amount === null || amount < 0 || !Number.isInteger(amount)) return null;
+  // `+ 0` reads -0 as 0.
+  return `₿${new Intl.NumberFormat(locale).format(amount + 0)}`;
 }
 
 /** `149` `USD` → `$149.00`; `0` → `Free`. Without a valid currency the number alone. */
@@ -294,7 +293,7 @@ const ARTICLE_SUMMARY: SummaryPart[] = [fact('author'), dateFact('published')];
 const POSTING_SUMMARY: SummaryPart[] = [
   firstOf(fact('author', (value) => (value ? `@${value.replace(/^@/, '')}` : null))),
   prefixed('~', fact('territory')),
-  firstOf(suffixed(fact('sats', formatCount), ' sats'), suffixed(fact('score', formatCount), ' points')),
+  firstOf(fact('sats', formatBitcoin), suffixed(fact('score', formatCount), ' points')),
   suffixed(fact('comment_count', formatCount), ' comments'),
 ];
 
@@ -435,10 +434,10 @@ const SUMMARIES: Readonly<Record<string, SummaryPart[]>> = {
       return inputs && outputs ? `${inputs} in → ${outputs} out` : null;
     },
   ],
-  BitcoinAddress: [fact('balance', formatSats), suffixed(fact('tx_count', formatCount), ' transactions')],
+  BitcoinAddress: [fact('balance', formatBitcoin), suffixed(fact('tx_count', formatCount), ' transactions')],
   LightningNode: [
     suffixed(fact('channels', formatCount), ' channels'),
-    suffixed(fact('capacity', formatSats), ' capacity'),
+    suffixed(fact('capacity', formatBitcoin), ' capacity'),
   ],
   LightningChannel: [
     (card) => {
@@ -446,7 +445,7 @@ const SUMMARIES: Readonly<Record<string, SummaryPart[]>> = {
       const two = getFact(card, 'node2_alias');
       return one && two ? `${one} ↔ ${two}` : null;
     },
-    fact('capacity', formatSats),
+    fact('capacity', formatBitcoin),
     humanFact('status'),
   ],
   // Cities and regions: the address is the country (and the city repeats the name).
@@ -494,7 +493,8 @@ export function getResourceSummary(
 }
 
 /** How a fact's value reads on the page. */
-type FactFormat = 'text' | 'date' | 'seconds' | 'minutes' | 'count' | 'sats' | 'bool' | 'country' | 'language' | 'list';
+type FactFormat =
+  'text' | 'date' | 'seconds' | 'minutes' | 'count' | 'bitcoin' | 'bool' | 'country' | 'language' | 'list';
 
 /** Facts whose label is not their key in words, and how each known fact's value reads. */
 const FACT_FORMATS: Readonly<Record<string, { label?: string; format?: FactFormat; unit?: string }>> = {
@@ -537,20 +537,21 @@ const FACT_FORMATS: Readonly<Record<string, { label?: string; format?: FactForma
   size: { format: 'count', unit: 'bytes' },
   vsize: { label: 'Virtual size', format: 'count', unit: 'vB' },
   weight: { format: 'count', unit: 'WU' },
-  median_fee_rate: { unit: 'sat/vB' },
+  median_fee_rate: { unit: '₿/vB' },
   length: { format: 'count', unit: 'aa' },
   molecular_weight: { unit: 'g/mol' },
   molecular_weight_kda: { label: 'Molecular weight', unit: 'kDa' },
   exact_mass: { unit: 'Da' },
   positional_accuracy_m: { label: 'Positional accuracy', unit: 'm' },
-  balance: { format: 'sats' },
-  received: { format: 'sats' },
-  capacity: { format: 'sats' },
-  reward: { format: 'sats' },
-  total_fees: { format: 'sats' },
-  fee: { format: 'sats' },
-  output_value: { format: 'sats' },
-  sats: { format: 'count' },
+  balance: { format: 'bitcoin' },
+  received: { format: 'bitcoin' },
+  capacity: { format: 'bitcoin' },
+  reward: { format: 'bitcoin' },
+  total_fees: { format: 'bitcoin' },
+  fee: { format: 'bitcoin' },
+  output_value: { format: 'bitcoin' },
+  // What a Stacker News post was zapped, in bitcoin base units.
+  sats: { label: 'Zapped', format: 'bitcoin' },
   in_force: { format: 'bool' },
   has_results: { format: 'bool' },
   reviewed: { format: 'bool' },
@@ -646,8 +647,8 @@ function formatFactValueOnly(key: string, value: string, locale?: string): strin
       return formatMinutes(value) ?? value;
     case 'count':
       return formatCount(value, locale) ?? value;
-    case 'sats':
-      return formatSats(value, locale) ?? value;
+    case 'bitcoin':
+      return formatBitcoin(value, locale) ?? value;
     case 'bool':
       return value === 'true' ? 'Yes' : value === 'false' ? 'No' : value;
     case 'country':
@@ -671,7 +672,7 @@ export interface TResourceFactRow {
 
 /**
  * Every fact of the card as a labelled row for the resource page's Details: known facts with their
- * label and format (`duration` 369 → `6:09`, `balance` → `57.71 BTC`), any other key in words with
+ * label and format (`duration` 369 → `6:09`, `balance` 5770586745 → `₿5,770,586,745`), any other key in words with
  * its value as written (a list split, an `http(s)` value a link). Identifiers the card already
  * uses (`HIDDEN_FACTS`) and values that repeat the title are left out. Rows keep the order Pinakes
  * sends.

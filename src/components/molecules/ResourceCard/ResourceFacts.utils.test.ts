@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   formatAddress,
+  formatBitcoin,
   formatCategory,
   formatCountry,
   formatDuration,
@@ -8,7 +9,6 @@ import {
   formatList,
   formatMinutes,
   formatMoney,
-  formatSats,
   getFactLabel,
   getResourceDetailRows,
   getResourceFactRows,
@@ -44,11 +44,22 @@ describe('formatters', () => {
   });
 
   it.each([
-    ['5770586745', '57.71 BTC'],
-    ['500000000', '5 BTC'],
-    ['500000', '500,000 sats'],
-  ])('formats %s sats as %s', (value, expected) => {
-    expect(formatSats(value, LOCALE)).toBe(expected);
+    ['0', '₿0'],
+    ['1', '₿1'],
+    ['994797', '₿994,797'],
+    ['129000000', '₿129,000,000'],
+    ['2100000000000000', '₿2,100,000,000,000,000'],
+    ['-0', '₿0'],
+    ['-1', null],
+    ['1.29', null],
+    ['x', null],
+    [null, null],
+  ])('formats %s bitcoin as %s, in whole base units (BIP 177)', (value, expected) => {
+    expect(formatBitcoin(value, LOCALE)).toBe(expected);
+  });
+
+  it('groups a bitcoin amount the locale’s way', () => {
+    expect(formatBitcoin('994797', 'de-DE')).toBe('₿994.797');
   });
 
   it('formats a price, a free one as Free', () => {
@@ -164,6 +175,16 @@ describe('getResourceSummary', () => {
       card('LearningResource', { card_count: '4374', front_lang: 'pt-BR', back_lang: 'en-US' }),
       '4,374 cards · Brazilian Portuguese → American English',
     ],
+    [
+      'a Stacker News post: author, territory, what it was zapped',
+      card('DiscussionForumPosting', { author: 'k00b', territory: 'bitcoin', sats: '1234', comment_count: '5' }),
+      '@k00b · ~bitcoin · ₿1,234',
+    ],
+    [
+      'a Lightning node: channels and capacity',
+      card('LightningNode', { channels: '1833', capacity: '36094691466' }),
+      '1,833 channels · ₿36,094,691,466 capacity',
+    ],
   ])('says %s', (_, input, expected) => {
     expect(getResourceSummary(input, LOCALE)).toBe(expected);
   });
@@ -271,7 +292,7 @@ describe('fact rows', () => {
     );
     expect(rows.map(({ label, value }) => `${label}: ${value}`)).toEqual([
       'Size: 989,323 bytes',
-      'Median fee rate: 62.0 sat/vB',
+      'Median fee rate: 62.0 ₿/vB',
       'Molecular weight: 438.26 kDa',
     ]);
   });
@@ -290,12 +311,17 @@ describe('fact rows', () => {
       LOCALE,
     );
     expect(rows.map(({ label, value, href }) => [label, value, href])).toEqual([
-      ['Balance', '57.71 BTC', null],
+      ['Balance', '₿5,770,586,745', null],
       ['Transactions', '67,323', null],
       ['Brand new fact', 'a, b', null],
       ['Website', 'https://example.org', 'https://example.org'],
       ['ISRC', 'USQX91300108', null],
     ]);
+  });
+
+  it('reads a Stacker News post’s zaps in bitcoin, labelled Zapped', () => {
+    const rows = getResourceFactRows(card('DiscussionForumPosting', { sats: '1234' }), LOCALE);
+    expect(rows.map(({ label, value }) => [label, value])).toEqual([['Zapped', '₿1,234']]);
   });
 
   it('never links a value that is not http(s)', () => {
