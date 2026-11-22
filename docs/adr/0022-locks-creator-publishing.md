@@ -58,11 +58,11 @@ Each object has an owner. **A and B are usually the same account** — they diff
 creator authorizes the Lock Server with a different Pubky Ring identity, which is allowed. The
 frontend must handle both cases.
 
-| Object              | Where                                                              | Owner                                                  | Visibility                                          |
-| ------------------- | ------------------------------------------------------------------ | ------------------------------------------------------ | --------------------------------------------------- |
-| **Announcement**    | `/pub/pubky.app/posts/<id>` (normal `PubkyAppPost`)                | pubky.app account (**A**)                              | Public, indexed by Nexus                            |
-| **Lock file**       | `/pub/app.locks/<lock_id>.json`                                    | Lock-Server-authenticated account (**B**, may equal A) | Public (criteria, resource hashes — nothing secret) |
-| **Guarded content** | `/priv/app.locks/content/<uuid>`, written/read via the Lock Server | **B**                                                  | Locked (HTTP 401 without unlock)                    |
+| Object              | Where                                                                                        | Owner                                                  | Visibility                                          |
+| ------------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------ | --------------------------------------------------- |
+| **Announcement**    | `/pub/pubky.app/posts/<id>` (normal `PubkyAppPost`)                                          | pubky.app account (**A**)                              | Public, indexed by Nexus                            |
+| **Lock file**       | `/pub/app.locks/<lock_id>.json`                                                              | Lock-Server-authenticated account (**B**, may equal A) | Public (criteria, resource hashes — nothing secret) |
+| **Guarded content** | `/priv/app.locks/content/<uuid>` (`<uuid>.svg` for an SVG), written/read via the Lock Server | **B**                                                  | Locked (HTTP 401 without unlock)                    |
 
 - The announcement's `lock` field (pubky-app-specs ≥ 0.6.0, flat `pubky://` URL) points at the
   public lock file. `lock` — not `kind` — is what marks a post as locked.

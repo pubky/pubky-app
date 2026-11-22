@@ -8,6 +8,7 @@ import {
   getImageUploadSizeLimitKind,
   IMAGE_UPLOAD_SIZE_LIMIT_KIND_CONTEXT_KEY,
 } from '@/libs/image/imageUploadSizeLimit';
+import { isSvgType } from '@/libs/image/rasterizeSvg';
 import { stripImageMetadata } from '@/libs/image/stripImageMetadata';
 import { getArticlePreviewSlots } from '@/libs/post/articleInlineMedia';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
@@ -1123,7 +1124,7 @@ export class LocksApplication {
   /**
    * Uploads one file under a freshly minted path and returns its descriptor.
    *
-   * The path is a random id, never the original filename: two attachments named `cover.png` would
+   * The path is a random id (plus `.svg` for an SVG), never the original filename: two attachments named `cover.png` would
    * resolve to the same path and the second upload would silently overwrite the first. This mirrors
    * normal posts, where the file path is the content hash (`files/{hash}.{ext}`) and the filename
    * survives only as display metadata, the attachment's `name`.
@@ -1135,7 +1136,9 @@ export class LocksApplication {
     { contentType, bytes }: TLockContentFile,
     uploadedPaths: string[],
   ): Promise<TRegisterGuardedResourceResult> {
-    const path = crypto.randomUUID();
+    // The homeserver ignores the declared type and checks the first bytes before the path. The SVG clean-up
+    // leaves `<svg` first, which no check matches, so the extension makes the stored type `image/svg+xml` (#2683).
+    const path = isSvgType(contentType) ? `${crypto.randomUUID()}.svg` : crypto.randomUUID();
     const result = await LocksService.registerGuardedResource({ path, contentType, bytes });
     uploadedPaths.push(path);
     return result;

@@ -328,7 +328,10 @@ export interface TUnlockedListItem {
 
 /** One guarded attachment read back after unlock — raw bytes + its content type (for a Blob). */
 export interface TUnlockedAttachment {
-  /** Guarded path tail (`/priv/app.locks/content/<uuid>` → `<uuid>`); reused as the filename when replicated. */
+  /**
+   * Guarded path tail (`/priv/app.locks/content/<uuid>` → `<uuid>`, or `<uuid>.svg` for an SVG); reused as
+   * the filename when replicated, so the reader's copy of an SVG is stored as `image/svg+xml` too.
+   */
   id: string;
   contentType: string;
   bytes: Uint8Array;
