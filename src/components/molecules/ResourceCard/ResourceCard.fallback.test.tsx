@@ -2,7 +2,12 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useOgMetadata } from '@/hooks/useOgMetadata/useOgMetadata';
 import { usePinakesGroup } from '@/hooks/usePinakesGroup/usePinakesGroup';
-import { getCardPreviewImageUrl, getImageRetryUrl, getResourceImageUrl } from '@/libs/image/resourceImage';
+import {
+  getCardPreviewImageUrl,
+  getImageRetryUrl,
+  getResourceImageUrl,
+  getYouTubeThumbnailUrl,
+} from '@/libs/image/resourceImage';
 import instagramBlockedFixture from '@/services/pinakes/fixtures/by-uri.instagram-blocked.json';
 import mbArtistSparseFixture from '@/services/pinakes/fixtures/by-uri.mb-artist-sparse.json';
 import mbGroupEnrichedFixture from '@/services/pinakes/fixtures/by-uri.mb-group.enriched.json';
@@ -126,6 +131,24 @@ describe('ResourceCard: a sparse card borrows from its group', () => {
     expect(screen.queryByTestId('resource-card-image')).not.toBeInTheDocument();
     expect(screen.getByTestId('resource-card-type-tile')).toBeInTheDocument();
     expect(screen.getByTestId('resource-card-title')).toHaveTextContent('Post on instagram.com');
+  });
+
+  it('borrows a group member’s image once a YouTube thumbnail fails in every size and as the card names it', () => {
+    const THUMBNAIL = 'https://i.ytimg.com/vi/bEV_7OjtFVk/hqdefault.jpg';
+    mockGroup.mockReturnValue({
+      data: group([member({ ...WIKIDATA, id: 'b', image: COMMONS_IMAGE })]),
+      isLoading: false,
+      isError: false,
+    });
+    render(<ResourceCard card={{ ...SPARSE, image: THUMBNAIL }} />);
+
+    expect(cardImage()).toHaveAttribute('src', getYouTubeThumbnailUrl('bEV_7OjtFVk', 'hq720'));
+    failTwice();
+    expect(cardImage()).toHaveAttribute('src', getYouTubeThumbnailUrl('bEV_7OjtFVk', 'mqdefault'));
+    failTwice();
+    expect(cardImage()).toHaveAttribute('src', routed(THUMBNAIL));
+    failTwice();
+    expect(cardImage()).toHaveAttribute('src', routed(COMMONS_IMAGE));
   });
 
   it('shows the type icon when the OG image fails to load', () => {

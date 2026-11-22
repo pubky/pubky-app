@@ -83,7 +83,8 @@ export const IMAGE_PAGE_PER_SECOND = 0.5;
 export const IMAGE_PAGE_RESERVE = 5;
 /**
  * This server instance's budget of YouTube thumbnail reads, and their own cache, apart from card
- * images': any video ID can be asked for. A visual timeline asks two sizes per video at most.
+ * images': any video ID can be asked for. A visual timeline asks two sizes per video at most, a card two sizes
+ * twice each (`ResourceCard`, for a card image that is a YouTube thumbnail).
  */
 export const IMAGE_THUMBNAIL_BURST = 60;
 export const IMAGE_THUMBNAIL_PER_SECOND = 2;

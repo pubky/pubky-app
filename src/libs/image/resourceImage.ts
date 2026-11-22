@@ -43,6 +43,37 @@ export function getLinkImageUrl(link: string, src: string | null | undefined): s
   return `${RESOURCE_IMAGE_ROUTE}?${new URLSearchParams({ link, src })}`;
 }
 
+/** Where YouTube serves a video's thumbnails (`https://i.ytimg.com/vi/<id>/<size>.jpg`). */
+const YOUTUBE_THUMBNAIL_HOSTS = new Set(['i.ytimg.com', 'img.youtube.com']);
+
+/** A YouTube video ID: eleven letters, digits, `-` or `_`. */
+const YOUTUBE_VIDEO_ID = /^[A-Za-z0-9_-]{11}$/;
+
+/** The file names of a video's default thumbnail in its sizes (not its other frames or a Short's upright one). */
+const YOUTUBE_THUMBNAIL_FILE = /^(?:(?:hq|mq|sd|maxres)?default\.(?:jpg|webp)|hq720\.(?:jpg|webp)|0\.jpg)$/;
+
+/**
+ * The video ID of a YouTube thumbnail's address (`https://i.ytimg.com/vi/<id>/hqdefault.jpg`, also `vi_webp/` and
+ * `img.youtube.com`, a default thumbnail in any size), else `null`. A card names `hqdefault`, which adds bars above
+ * and below the video's 16:9 frame; with the ID it shows a 16:9 size from the route instead (`getYouTubeThumbnailUrl`).
+ */
+export function getYouTubeThumbnailVideoId(src: string | null | undefined): string | null {
+  if (!src) return null;
+  let url: URL;
+  try {
+    url = new URL(src);
+  } catch {
+    return null;
+  }
+  if ((url.protocol !== 'https:' && url.protocol !== 'http:') || !YOUTUBE_THUMBNAIL_HOSTS.has(url.hostname)) {
+    return null;
+  }
+  const [, folder, id, file, ...rest] = url.pathname.split('/');
+  const isThumbnail =
+    (folder === 'vi' || folder === 'vi_webp') && rest.length === 0 && YOUTUBE_THUMBNAIL_FILE.test(file ?? '');
+  return isThumbnail && YOUTUBE_VIDEO_ID.test(id) ? id : null;
+}
+
 /** The app's own address for a YouTube video's thumbnail (`/api/image?youtube=<id>&variant=<size>`). */
 export function getYouTubeThumbnailUrl(videoId: string, variant: 'hq720' | 'mqdefault'): string {
   return `${RESOURCE_IMAGE_ROUTE}?${new URLSearchParams({ youtube: videoId, variant })}`;

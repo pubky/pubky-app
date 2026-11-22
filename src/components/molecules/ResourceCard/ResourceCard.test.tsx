@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getResourceRoute } from '@/app/routes';
-import { getResourceImageUrl } from '@/libs/image/resourceImage';
+import { getImageRetryUrl, getResourceImageUrl, getYouTubeThumbnailUrl } from '@/libs/image/resourceImage';
 import { PostPreviewNavigableProvider } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import articleFixture from '@/services/pinakes/fixtures/by-uri.article.json';
 import bookFixture from '@/services/pinakes/fixtures/by-uri.book.json';
@@ -439,6 +439,33 @@ describe('ResourceCard', () => {
       expect(cardImage()).not.toHaveClass('object-cover');
     });
 
+    it('shows a YouTube video’s 16:9 thumbnail from the route, without the bars its card’s hqdefault has', () => {
+      expect(videoFixture.image).toBe('https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg');
+      render(<ResourceCard card={videoFixture} href={videoFixture.uri} />);
+
+      const hq720 = getYouTubeThumbnailUrl('dQw4w9WgXcQ', 'hq720');
+      const mqdefault = getYouTubeThumbnailUrl('dQw4w9WgXcQ', 'mqdefault');
+      expect(cardImage()).toHaveAttribute('src', hq720);
+      expect(screen.getByTestId('resource-card-image-fit')).toBeInTheDocument();
+      // A failed size is asked once more (the route may have been busy).
+      fireEvent.error(cardImage());
+      expect(cardImage()).toHaveAttribute('src', getImageRetryUrl(hq720));
+      // `hq720` is missing for some older uploads: `mqdefault`, which every video has, comes next.
+      fireEvent.error(cardImage());
+      expect(cardImage()).toHaveAttribute('src', mqdefault);
+      fireEvent.error(cardImage());
+      expect(cardImage()).toHaveAttribute('src', getImageRetryUrl(mqdefault));
+      // Neither loads: the image as the card names it, through the route (then its usual retry and fallbacks).
+      fireEvent.error(cardImage());
+      expect(cardImage()).toHaveAttribute('src', imageOf(videoFixture));
+    });
+
+    it('keeps a card image that is not a YouTube thumbnail as the card names it', () => {
+      render(<ResourceCard card={movieFixture} href={movieFixture.uri} />);
+
+      expect(cardImage()).toHaveAttribute('src', imageOf(movieFixture));
+    });
+
     it('shows a video post’s still under the text, where its post stands', () => {
       const post: TPinakesResourceDetail = {
         ...VIDEO_PAGE,
@@ -506,6 +533,18 @@ describe('ResourceCard', () => {
       render(<ResourceCard card={post} href={post.uri} />);
       expect(screen.getByTestId('resource-card-image')).toHaveAttribute('data-shape', 'square');
       expect(screen.queryByTestId('resource-card-image-fit')).not.toBeInTheDocument();
+    });
+
+    it('keeps a YouTube thumbnail 16:9 on a card that is no song, album or playlist', () => {
+      const page: TPinakesResourceDetail = { ...ARTICLE, image: 'https://i.ytimg.com/vi/bEV_7OjtFVk/hqdefault.jpg' };
+      render(<ResourceCard card={page} href={page.uri} />);
+      expect(cardImage()).toHaveAttribute('src', getYouTubeThumbnailUrl('bEV_7OjtFVk', 'hq720'));
+      Object.defineProperty(cardImage(), 'naturalWidth', { value: 1280 });
+      Object.defineProperty(cardImage(), 'naturalHeight', { value: 720 });
+
+      fireEvent.load(cardImage());
+
+      expect(screen.getByTestId('resource-card-image')).toHaveAttribute('data-shape', 'wide');
     });
 
     describe('the small image beside the text', () => {
@@ -664,6 +703,33 @@ describe('ResourceCard', () => {
         expect(screen.getByTestId('resource-card-image')).toHaveAttribute('data-shape', 'wide');
         expect(cardImage()).toHaveClass('aspect-video', 'w-28');
         expect(cardImage()).not.toHaveClass('size-20');
+      });
+
+      it('shows a YouTube upload’s cover as the middle square of its 16:9 thumbnail, never as a wide one', () => {
+        const UPLOAD: TPinakesResourceDetail = {
+          ...musicRecordingFixture,
+          uri: 'https://www.youtube.com/watch?v=bEV_7OjtFVk',
+          image: 'https://i.ytimg.com/vi/bEV_7OjtFVk/hqdefault.jpg',
+        };
+        render(<ResourceCard card={UPLOAD} href="https://music.youtube.com/watch?v=bEV_7OjtFVk" />);
+        expect(cardImage()).toHaveAttribute('src', getYouTubeThumbnailUrl('bEV_7OjtFVk', 'hq720'));
+        Object.defineProperty(cardImage(), 'naturalWidth', { value: 1280 });
+        Object.defineProperty(cardImage(), 'naturalHeight', { value: 720 });
+
+        fireEvent.load(cardImage());
+
+        expect(screen.getByTestId('resource-card-image')).toHaveAttribute('data-shape', 'square');
+        expect(cardImage()).toHaveClass('size-20', 'sm:size-24', 'object-cover', 'object-center');
+        expect(cardImage()).not.toHaveClass('aspect-video');
+
+        // The cover's own failures move it along the same sizes; the image as the card names it stays square too.
+        fireEvent.error(cardImage());
+        fireEvent.error(cardImage());
+        expect(cardImage()).toHaveAttribute('src', getYouTubeThumbnailUrl('bEV_7OjtFVk', 'mqdefault'));
+        fireEvent.error(cardImage());
+        fireEvent.error(cardImage());
+        expect(cardImage()).toHaveAttribute('src', imageOf(UPLOAD));
+        expect(screen.getByTestId('resource-card-image')).toHaveAttribute('data-shape', 'square');
       });
 
       it('falls back to the type tile when the cover fails, and dims a gone one', () => {

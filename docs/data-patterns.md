@@ -513,7 +513,10 @@ page budget to cards' own links, a page not read now answers with its preview kn
 have a budget and a cache of their own. The budgets are per server instance and there is no limit per client here (a
 forwarded address can be spoofed): a deployment limits `/api/image` per client at its edge, keyed by the address its
 own proxy trusts. A card asks a failed route image once more, then shows its next image or its type tile, never the
-image's own address.
+image's own address. A card image that is a YouTube thumbnail (`getYouTubeThumbnailVideoId`; Pinakes names
+`hqdefault`, which has bars above and below the video) shows the video's 16:9 `hq720`, else `mqdefault`, from
+`?youtube=`, and the image as the card names it only when neither loads; a song's, album's or playlist's cover then
+shows the thumbnail's middle square, where a label upload's cover sits.
 What remains: any public raster image that a real, settled card or a real page's preview names can be read through
 the app, within those caps. A calendar occurrence's image other than its calendar's is not one the route serves, and
 a post's text link straight to an image file still shows that file from its host.
