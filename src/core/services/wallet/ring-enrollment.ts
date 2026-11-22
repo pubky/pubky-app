@@ -18,6 +18,7 @@ import {
 import { WalletHandoffImportError } from './session';
 
 export { RingEnrollmentError };
+export class RingDeviceBusyError extends RingEnrollmentError {}
 
 type Mode = 'create' | 'restore';
 type Intent = Mode | 'open';
@@ -29,7 +30,9 @@ function safeError(error: unknown) {
   const failure = httpFailure.safeParse(error);
   const status = failure.success && failure.data.data.statusCode;
   if (status === 423)
-    return new RingEnrollmentError('Another device is using this Ring wallet. Close it there and try again.');
+    return new RingDeviceBusyError(
+      'The wallet is still locked by another session. Close any other open copy, then try again.',
+    );
   if (status === 507) return new RingEnrollmentError('Your homeserver needs more storage to save this wallet move.');
   if (status === 413)
     return new RingEnrollmentError('The homeserver could not accept a wallet transfer file of this size.');
@@ -338,18 +341,46 @@ function maintainLease(
   return { release, abandon, run, assertActive, track };
 }
 
-async function lockedDevice(account: string, network: Network, id: string, onLost: () => void | Promise<void>) {
+function checkDeviceAccess(
+  record: Marker | null,
+  deviceId: string,
+  intent: Intent,
+  installedTransferId: string | null,
+): asserts record is Owner | null {
+  if (record?.version === 2 && record.state === 'ready') throw movePending();
+  if (record?.deviceId === deviceId) {
+    if (receipt(record) !== installedTransferId) throw changed();
+  } else if (intent === 'open' || (record && intent !== 'restore')) {
+    throw new RingEnrollmentError('This wallet device must be explicitly restored before it can open.');
+  }
+}
+
+async function lockedDevice(
+  account: string,
+  network: Network,
+  id: string,
+  onLost: () => void | Promise<void>,
+  openingReceipt?: string | null,
+) {
   const ctx = context(account, network, id);
-  const requestedAt = requestTime();
+  const read = () => readMarker(ctx.storage, ctx.path, network);
+  let requestedAt: ReturnType<typeof requestTime>;
   let lock: StorageLock;
   try {
+    // A former owner opening its wallet should never take the active owner's lease.
+    // The read under the lock remains authoritative if ownership changes during acquisition.
+    if (openingReceipt !== undefined) {
+      const record = await read();
+      if (!ctx.current()) throw new RingEnrollmentError('The signed-in Pubky account changed.');
+      checkDeviceAccess(record, id, 'open', openingReceipt);
+    }
+    requestedAt = requestTime();
     lock = await ctx.storage.lock(ctx.path, leaseSeconds);
   } catch (error) {
     ctx.storage.free();
     throw safeError(error);
   }
   const lease = maintainLease(ctx.storage, lock, requestedAt, ctx.current, onLost);
-  const read = () => readMarker(ctx.storage, ctx.path, network);
   // All record transitions use the exclusive server token and do one write attempt.
   // Decode and compare the entire marker, including the immutable chunk manifest, under that token.
   async function replace(expected: Marker | null, next: Marker) {
@@ -445,16 +476,17 @@ export async function acquireRingDevice(
   onLost: () => void | Promise<void>,
   installedTransferId: string | null = null,
 ): Promise<RingDeviceLease> {
-  const held = await lockedDevice(account, network, deviceId, onLost);
+  const held = await lockedDevice(
+    account,
+    network,
+    deviceId,
+    onLost,
+    intent === 'open' ? installedTransferId : undefined,
+  );
   try {
     const record = await held.run(held.read);
-    if (record?.version === 2 && record.state === 'ready') throw movePending();
-    if (record?.deviceId === deviceId) {
-      if (receipt(record) !== installedTransferId) throw changed();
-      return ownerLease(held, await cleanOwner(held, record));
-    }
-    if (intent === 'open' || (record && intent !== 'restore'))
-      throw new RingEnrollmentError('This wallet device must be explicitly restored before it can open.');
+    checkDeviceAccess(record, deviceId, intent, installedTransferId);
+    if (record?.deviceId === deviceId) return ownerLease(held, await cleanOwner(held, record));
     if (intent !== 'create' && intent !== 'restore') throw new RingEnrollmentError('Invalid wallet device action.');
     // Only a fresh local provision can use cold recovery. Never promote a staged handoff using this path.
     if (installedTransferId !== null) throw changed();

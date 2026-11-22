@@ -4,6 +4,7 @@ import {
   cancelRingHandoff,
   claimRingHandoff,
   inspectRingDevice,
+  RingDeviceBusyError,
   ringEnrollment,
   RingEnrollmentError,
 } from './ring-enrollment';
@@ -127,7 +128,7 @@ describe('Ring private wallet device', () => {
     expect(f.storage.lock).toHaveBeenCalledWith(path, 90);
     expect(f.storage.lock.mock.invocationCallOrder[0]).toBeLessThan(f.storage.get.mock.invocationCallOrder[0]);
     expect(f.get()).toEqual(record());
-    await expect(acquireRingDevice(account, 'mainnet', b, 'restore', vi.fn())).rejects.toThrow(/Another device/);
+    await expect(acquireRingDevice(account, 'mainnet', b, 'restore', vi.fn())).rejects.toThrow(RingDeviceBusyError);
     await lease.release();
     await expect(acquireRingDevice(account, 'mainnet', b, 'create', vi.fn())).rejects.toThrow(/restored/);
     await expect(acquireRingDevice(account, 'mainnet', b, 'open', vi.fn())).rejects.toThrow(/restored/);
@@ -161,6 +162,46 @@ describe('Ring private wallet device', () => {
     await held.release();
     return f;
   }
+
+  it('refuses an ordinary open for a different owner, a stale receipt or a ready move without taking the lease', async () => {
+    const f = fixture();
+    const owner = await acquireRingDevice(account, 'mainnet', a, 'create', vi.fn());
+    f.storage.lock.mockClear();
+    await expect(acquireRingDevice(account, 'mainnet', b, 'open', vi.fn())).rejects.toThrow(/restored/);
+    await expect(acquireRingDevice(account, 'mainnet', a, 'open', vi.fn(), transfer)).rejects.toThrow(/changed/);
+    await owner.publishHandoff(transfer, body);
+    await expect(acquireRingDevice(account, 'mainnet', b, 'open', vi.fn())).rejects.toThrow(/move/);
+    expect(f.storage.lock).not.toHaveBeenCalled();
+    await owner.release();
+  });
+
+  it('rechecks the owner and receipt under the acquired lease before starting a wallet', async () => {
+    const f = fixture();
+    for (const [next, reason] of [
+      [record(b), /restored/],
+      [{ ...record(a), version: 2, state: 'owned', transferId: transfer }, /changed/],
+    ] as const) {
+      f.set(next);
+      // The device still owned the marker when it read before asking for the lock.
+      f.storage.get.mockResolvedValueOnce(new Response(JSON.stringify(record(a))));
+      await expect(acquireRingDevice(account, 'mainnet', a, 'open', vi.fn())).rejects.toThrow(reason);
+      expect(f.get()).toEqual(next);
+    }
+    expect(f.storage.lock).toHaveBeenCalledTimes(2);
+    expect(f.storage.unlock).toHaveBeenCalledTimes(2);
+    expect(f.storage.putTextLocked).not.toHaveBeenCalled();
+  });
+
+  it('discards an ownership read from a replaced session before requesting a lock', async () => {
+    const f = fixture();
+    f.storage.get.mockImplementationOnce(async () => {
+      f.state.generation++;
+      return new Response(JSON.stringify(record(a)));
+    });
+    await expect(acquireRingDevice(account, 'mainnet', a, 'open', vi.fn())).rejects.toThrow(/account changed/);
+    expect(f.storage.lock).not.toHaveBeenCalled();
+    expect(f.storage.free).toHaveBeenCalledOnce();
+  });
 
   it('publishes only verified immutable chunks and fences the source until explicit cancellation', async () => {
     const f = fixture();
@@ -228,9 +269,9 @@ describe('Ring private wallet device', () => {
     expect(f.get()).toMatchObject({ state: 'ready' });
     await vi.advanceTimersByTimeAsync(15_000);
     expect(f.storage.refreshLock).toHaveBeenCalledTimes(5);
-    await expect(cancelRingHandoff(account, 'mainnet', a, transfer)).rejects.toThrow(/Another device/);
+    await expect(cancelRingHandoff(account, 'mainnet', a, transfer)).rejects.toThrow(RingDeviceBusyError);
     await expect(claimRingHandoff(account, 'mainnet', secondTransfer, transfer, vi.fn(), vi.fn())).rejects.toThrow(
-      /Another device/,
+      RingDeviceBusyError,
     );
     installed();
     const claimed = await claim;
@@ -570,9 +611,10 @@ describe('Ring private wallet device', () => {
 
   it('reports actionable lock errors without exposing server messages', async () => {
     const f = fixture();
+    f.set(record(a));
     for (const [status, expected] of [
       [405, /version/],
-      [423, /Another device/],
+      [423, RingDeviceBusyError],
       [503, /Could not reach/],
       [507, /storage/],
     ] as const) {

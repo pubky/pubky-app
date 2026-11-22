@@ -3,8 +3,8 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import userEvent from '@testing-library/user-event';
 import { bech32 } from 'bech32';
 import type { ReactNode } from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { RingEnrollmentError } from '@/services/wallet/ring-enrollment';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { RingDeviceBusyError, RingEnrollmentError } from '@/services/wallet/ring-enrollment';
 import type { LastWalletBalance, WalletStartProgress } from '@/services/wallet/session';
 import { Wallet } from './Wallet';
 import { WalletAccount } from './WalletAccount';
@@ -64,14 +64,18 @@ const wallet = vi.hoisted(() => ({
   resolveRecipient: vi.fn(),
 }));
 
-vi.mock('@/services/wallet/ring-enrollment', () => ({
-  RingEnrollmentError: class extends Error {},
-  ringEnrollment: wallet.ringEnrollment,
-  inspectRingDevice: wallet.inspectRingDevice,
-  acquireRingDevice: wallet.acquireRingDevice,
-  cancelRingHandoff: wallet.cancelRingHandoff,
-  claimRingHandoff: wallet.claimRingHandoff,
-}));
+vi.mock('@/services/wallet/ring-enrollment', () => {
+  class RingEnrollmentError extends Error {}
+  return {
+    RingEnrollmentError,
+    RingDeviceBusyError: class extends RingEnrollmentError {},
+    ringEnrollment: wallet.ringEnrollment,
+    inspectRingDevice: wallet.inspectRingDevice,
+    acquireRingDevice: wallet.acquireRingDevice,
+    cancelRingHandoff: wallet.cancelRingHandoff,
+    claimRingHandoff: wallet.claimRingHandoff,
+  };
+});
 vi.mock('./WalletKeyApproval', () => ({
   WalletKeyApproval: ({
     onKey,
@@ -734,6 +738,149 @@ describe('Pubky wallet', () => {
     await act(async () => lease.resolve({ assertActive: vi.fn(), release: vi.fn().mockResolvedValue(undefined) }));
     expect(await screen.findByRole('button', { name: 'Send' })).toBeEnabled();
     expect(wallet.guardRingDevice).toHaveBeenCalledOnce();
+  });
+
+  describe('reopening a Ring wallet while its previous lease is busy', () => {
+    const binding = { network: 'regtest', deviceId: 'this-phone', transferId: 'installed-receipt' };
+    const advance = (ms: number) => act(() => vi.advanceTimersByTimeAsync(ms));
+    const makeLease = () => ({ assertActive: vi.fn(), release: vi.fn().mockResolvedValue(undefined) });
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      wallet.ringBinding.mockResolvedValue(binding);
+      wallet.inspectRingDevice.mockResolvedValue({ state: 'this-device', transferId: binding.transferId });
+      wallet.acquireRingDevice.mockRejectedValue(new RingDeviceBusyError('Lock busy.'));
+    });
+    afterEach(() => {
+      vi.restoreAllMocks();
+      vi.useRealTimers();
+    });
+
+    async function openWithPassword() {
+      const view = render(<Wallet />);
+      await act(async () => {});
+      fireEvent.change(screen.getByLabelText('Password', { exact: true }), { target: { value: 'example password' } });
+      await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Unlock wallet' })));
+      return view;
+    }
+
+    it('waits through a full lease and opens only after acquiring the installed receipt', async () => {
+      const held = makeLease();
+      const acquired = Promise.withResolvers<typeof held>();
+      wallet.inspect.mockResolvedValue({ exists: true, ringUnlock: { ...binding, passwordAvailable: false } });
+      wallet.openWithRing.mockResolvedValue({ network: 'regtest' });
+      render(<Wallet />);
+      await act(async () => {});
+      await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Unlock with Ring' })));
+      await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Approve in test Ring' })));
+      expect(screen.getByText('Waiting for wallet access')).toBeVisible();
+      for (let i = 0; i < 9; i++) await advance(10_000);
+      expect(wallet.acquireRingDevice).toHaveBeenCalledTimes(10);
+      wallet.acquireRingDevice.mockReturnValueOnce(acquired.promise);
+      await advance(10_000);
+      await advance(30_000);
+      expect(wallet.acquireRingDevice).toHaveBeenCalledTimes(11);
+      expect(wallet.acquireRingDevice).toHaveBeenLastCalledWith(
+        wallet.account,
+        binding.network,
+        binding.deviceId,
+        'open',
+        expect.any(Function),
+        binding.transferId,
+      );
+      expect(wallet.guardRingDevice).not.toHaveBeenCalled();
+      expect(wallet.startWallet).not.toHaveBeenCalled();
+      expect(wallet.savedActivity).not.toHaveBeenCalled();
+      expect(screen.queryByRole('button', { name: 'Retry connection' })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Send' })).toBeNull();
+      await act(async () => acquired.resolve(held));
+      expect(wallet.guardRingDevice).toHaveBeenCalledWith(held.assertActive);
+      expect(wallet.guardRingDevice).toHaveBeenCalledBefore(wallet.startWallet);
+      expect(screen.getByRole('button', { name: 'Send' })).toBeEnabled();
+      expect(wallet.openWithRing).toHaveBeenCalledOnce();
+    });
+
+    it.each([
+      [{ state: 'other-device', transferId: 'moved' }, 'Your wallet is on another device'],
+      [{ state: 'handoff-ready', sourceDeviceId: binding.deviceId, transferId: 'moving' }, 'Keep wallet here'],
+      [{ state: 'handoff-ready', sourceDeviceId: 'other', transferId: 'returning' }, 'Use wallet on this device'],
+    ] as const)('shows the transfer controls automatically for %s', async (status, label) => {
+      await openWithPassword();
+      expect(screen.getByText('Waiting for wallet access')).toBeVisible();
+      wallet.inspectRingDevice.mockResolvedValue(status);
+      await advance(10_000);
+      expect(screen.getByText(label)).toBeVisible();
+      expect(screen.queryByText('Waiting for wallet access')).toBeNull();
+      expect(wallet.startWallet).not.toHaveBeenCalled();
+    });
+
+    it('pauses while hidden, releases a late background acquisition, and resumes on return', async () => {
+      const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(false);
+      const held = makeLease();
+      const acquired = Promise.withResolvers<typeof held>();
+      await openWithPassword();
+      hidden.mockReturnValue(true);
+      fireEvent(document, new Event('visibilitychange'));
+      await advance(120_000);
+      expect(wallet.acquireRingDevice).toHaveBeenCalledOnce();
+      wallet.acquireRingDevice.mockReturnValueOnce(acquired.promise);
+      hidden.mockReturnValue(false);
+      fireEvent(document, new Event('visibilitychange'));
+      await advance(0);
+      expect(wallet.acquireRingDevice).toHaveBeenCalledTimes(2);
+      hidden.mockReturnValue(true);
+      fireEvent(document, new Event('visibilitychange'));
+      await act(async () => acquired.resolve(held));
+      expect(held.release).toHaveBeenCalledOnce();
+      expect(wallet.startWallet).not.toHaveBeenCalled();
+      await advance(15_000);
+      wallet.acquireRingDevice.mockResolvedValueOnce(makeLease());
+      hidden.mockReturnValue(false);
+      fireEvent(document, new Event('visibilitychange'));
+      await advance(0);
+      expect(wallet.startWallet).toHaveBeenCalledOnce();
+    });
+
+    it.each(['lock', 'change account', 'unmount'])('releases an in-flight acquisition after %s', async (action) => {
+      const held = makeLease();
+      const acquired = Promise.withResolvers<typeof held>();
+      const view = await openWithPassword();
+      wallet.acquireRingDevice.mockReturnValueOnce(acquired.promise);
+      await advance(10_000);
+      expect(wallet.acquireRingDevice).toHaveBeenCalledTimes(2);
+      if (action === 'lock') fireEvent.click(screen.getByRole('button', { name: 'Lock wallet' }));
+      else if (action === 'change account') {
+        wallet.account = 'account-two';
+        view.rerender(<Wallet />);
+      } else view.unmount();
+      await act(async () => acquired.resolve(held));
+      await advance(100_000);
+      expect(held.release).toHaveBeenCalledOnce();
+      expect(wallet.acquireRingDevice).toHaveBeenCalledTimes(2);
+      expect(wallet.guardRingDevice).not.toHaveBeenCalled();
+      expect(wallet.startWallet).not.toHaveBeenCalled();
+    });
+
+    it('keeps other homeserver errors actionable without starting a retry loop', async () => {
+      wallet.acquireRingDevice.mockRejectedValue(new RingEnrollmentError('Authorize this wallet again.'));
+      await openWithPassword();
+      expect(screen.getByRole('alert')).toHaveTextContent('Authorize this wallet again.');
+      expect(screen.getByRole('button', { name: 'Retry connection' })).toBeEnabled();
+      expect(screen.queryByText('Waiting for wallet access')).toBeNull();
+      await advance(100_000);
+      expect(wallet.acquireRingDevice).toHaveBeenCalledOnce();
+      expect(wallet.startWallet).not.toHaveBeenCalled();
+    });
+
+    it('stops retrying when the registered owner has a different installed receipt', async () => {
+      await openWithPassword();
+      wallet.inspectRingDevice.mockResolvedValue({ state: 'this-device', transferId: 'different' });
+      await advance(10_000);
+      expect(screen.getByRole('alert')).toHaveTextContent('The wallet device record changed.');
+      await advance(100_000);
+      expect(wallet.acquireRingDevice).toHaveBeenCalledTimes(2);
+      expect(wallet.startWallet).not.toHaveBeenCalled();
+    });
   });
 
   it('locks immediately and ignores a late start result', async () => {

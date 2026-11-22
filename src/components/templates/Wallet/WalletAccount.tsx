@@ -1,6 +1,6 @@
 'use client';
 
-import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useEffectEvent, useRef, useState } from 'react';
 import type { CreateWalletInput, Network, WalletRecord } from '@beignet/wallet-core';
 import { ArrowRight, KeyRound, LockKeyhole, Wallet as WalletIcon } from 'lucide-react';
 import { APP_ROUTES } from '@/app/routes';
@@ -16,6 +16,7 @@ import {
   cancelRingHandoff,
   claimRingHandoff,
   inspectRingDevice,
+  RingDeviceBusyError,
   type RingDeviceLease,
   type RingDeviceStatus,
   RingEnrollmentError,
@@ -37,6 +38,8 @@ import { WalletCheckoutRecovery } from './WalletRecoveryStatus';
 import { type RingSetupMode, WalletRingSetup } from './WalletRingSetup';
 
 type ActiveWallet = { id: string; network: Network; session: WalletSession };
+type RingBinding = NonNullable<Awaited<ReturnType<WalletSession['ringBinding']>>>;
+type WaitingForDevice = { kind: 'waiting-for-device'; wallet: ActiveWallet; binding: RingBinding };
 type TransferResult = 'offered' | 'moved-away' | 'received' | 'still-ready' | 'kept' | 'unpublished' | 'incomplete';
 type Stage =
   | { kind: 'checking' | 'unavailable' | 'framed' }
@@ -53,7 +56,8 @@ type Stage =
   | { kind: 'empty'; defaults: CreateWalletInput; network: Network }
   | { kind: 'ring'; defaults: CreateWalletInput; network: Network; session: WalletSession; reserved: boolean }
   | { kind: 'backup'; id: string; network: Network; phrase: string }
-  | { kind: 'start'; id: string; network: Network }
+  | { kind: 'start'; id: string; network: Network; checking?: 'vault' | 'device' }
+  | WaitingForDevice
   | {
       kind: 'switch';
       session: WalletSession;
@@ -110,7 +114,6 @@ export function WalletAccount({
   const [ringBacked, setRingBacked] = useState<boolean | null>(null);
   const [stage, setStage] = useState<Stage>({ kind: 'checking' });
   const [lastBalance, setLastBalance] = useState<LastWalletBalance | null>(null);
-  const [checkingDevice, setCheckingDevice] = useState(false);
   const [recovering, setRecovering] = useState(false);
   const [progress, setProgress] = useState<number>();
   const [notice, setNotice] = useState('');
@@ -390,34 +393,99 @@ export function WalletAccount({
     }
   }
 
+  async function openRingWallet(wallet: ActiveWallet, binding: RingBinding, retrying = false) {
+    const { session, network } = wallet;
+    let held: RingDeviceLease;
+    try {
+      held = await holdDevice(session, network, binding.deviceId, 'open', binding.transferId);
+    } catch (error) {
+      if (live.current !== session) return;
+      if (!(error instanceof RingEnrollmentError)) throw error;
+      const status = await inspectRingDevice(account, network, binding.deviceId);
+      if (live.current !== session) return;
+      if (status.state === 'handoff-ready' || status.state === 'other-device') {
+        setStage({ kind: 'switch', session, network, deviceId: binding.deviceId, status });
+        return;
+      }
+      if (error instanceof RingDeviceBusyError && status.state === 'this-device') {
+        if (status.transferId !== (binding.transferId ?? null))
+          throw new RingEnrollmentError('The wallet device record changed. Reopen the wallet to check its owner.');
+        setStage({ kind: 'waiting-for-device', wallet, binding });
+        return;
+      }
+      throw error;
+    }
+    if (live.current !== session) return;
+    if (retrying && document.hidden) {
+      // The browser went into the background during the request. No engine has started.
+      lease.current = null;
+      await held.release();
+      if (live.current === session) setStage({ kind: 'waiting-for-device', wallet, binding });
+      return;
+    }
+    setRecovering(binding.mode === 'restore' && !binding.transferId);
+    void connect(wallet);
+  }
+
+  const retryDevice = useEffectEvent(({ wallet, binding }: WaitingForDevice) => {
+    void task.run(async () => {
+      try {
+        await openRingWallet(wallet, binding, true);
+      } catch (error) {
+        if (live.current !== wallet.session) return;
+        setStage({ kind: 'start', id: wallet.id, network: wallet.network });
+        throw error;
+      }
+    });
+  });
+  useEffect(() => {
+    if (stage.kind !== 'waiting-for-device') return;
+    const waiting = stage;
+    const retryAt = Date.now() + 10_000;
+    let timer: number | undefined;
+    let sent = false;
+    function schedule() {
+      window.clearTimeout(timer);
+      if (sent || document.hidden) return;
+      timer = window.setTimeout(
+        () => {
+          if (document.hidden || live.current !== waiting.wallet.session) return;
+          sent = true;
+          retryDevice(waiting);
+        },
+        Math.max(0, retryAt - Date.now()),
+      );
+    }
+    schedule();
+    document.addEventListener('visibilitychange', schedule);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener('visibilitychange', schedule);
+    };
+  }, [stage]);
+
   async function start(session: WalletSession, id: string, network: Network) {
     if (live.current !== session) return;
     session.client.selectWallet(id);
-    setStage({ kind: 'start', id, network });
-    const binding = await session.ringBinding();
-    if (live.current !== session) return;
-    setRingBacked(Boolean(binding));
-    if (binding) {
-      if (binding.network !== network) throw new Error('The Ring wallet and this Bitcoin network do not match.');
-      setCheckingDevice(true);
-      try {
-        await holdDevice(session, network, binding.deviceId, 'open', binding.transferId);
-        setRecovering(binding.mode === 'restore' && !binding.transferId);
-      } catch (error) {
-        if (!(error instanceof RingEnrollmentError) || live.current !== session) throw error;
-        const status = await inspectRingDevice(account, network, binding.deviceId);
-        if (status.state !== 'handoff-ready' && status.state !== 'other-device') throw error;
-        if (live.current === session)
-          setStage({ kind: 'switch', session, network, deviceId: binding.deviceId, status });
-        return;
-      } finally {
-        if (live.current === session) setCheckingDevice(false);
-      }
+    setStage({ kind: 'start', id, network, checking: 'vault' });
+    try {
+      const binding = await session.ringBinding();
       if (live.current !== session) return;
+      setRingBacked(Boolean(binding));
+      const wallet = { session, id, network };
+      if (binding) {
+        if (binding.network !== network)
+          throw new RingEnrollmentError('The Ring wallet and this Bitcoin network do not match.');
+        setStage({ kind: 'start', id, network, checking: 'device' });
+        await openRingWallet(wallet, binding);
+      } else {
+        void connect(wallet);
+      }
+    } catch (error) {
+      if (live.current !== session) return;
+      setStage({ kind: 'start', id, network });
+      throw error;
     }
-    // Once device ownership is verified, release the unlock action so forms can
-    // accept input while the engine connects. Only a successful start enables quotes.
-    void connect({ session, id, network });
   }
   async function openExisting(session: WalletSession, records: WalletRecord[]) {
     if (records.length !== 1) {
@@ -793,7 +861,7 @@ export function WalletAccount({
           </Button>
         </WalletPanel>
       )}
-      {(stage.kind === 'opening' || (stage.kind === 'start' && task.busy)) && (
+      {(stage.kind === 'opening' || (stage.kind === 'start' && (stage.checking || task.busy))) && (
         <WalletOpening
           lock={lock}
           balance={
@@ -802,10 +870,23 @@ export function WalletAccount({
               ? lastBalance
               : null
           }
-          message={checkingDevice ? 'Checking device access…' : 'Preparing your wallet…'}
+          message={
+            stage.kind === 'start' && stage.checking === 'device' ? 'Checking device access…' : 'Preparing your wallet…'
+          }
         />
       )}
-      {stage.kind === 'start' && !task.busy && (
+      {stage.kind === 'waiting-for-device' && (
+        <WalletPanel title="Waiting for wallet access" icon={LockKeyhole}>
+          <p role="status" className="text-sm text-muted-foreground">
+            This wallet is registered to this device. It will open automatically when the previous session releases
+            it. If you still have another copy open, lock it there.
+          </p>
+          <Button type="button" variant="outline" className="self-start" onClick={lock}>
+            Lock wallet
+          </Button>
+        </WalletPanel>
+      )}
+      {stage.kind === 'start' && !stage.checking && !task.busy && (
         <WalletPanel title="Open wallet" icon={WalletIcon}>
           <div className="flex flex-wrap gap-2">
             <Button
