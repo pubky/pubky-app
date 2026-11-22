@@ -154,25 +154,21 @@ export function DialogLockContent({
                         ? satsFormatter.format(BigInt(field.value))
                         : field.value
                     }
-                    onFocus={(event) => {
-                      // Only the sats value is grouped; a USD value is shown as typed, so its selection stays.
-                      if (asset !== 'BTC') {
+                    onFocus={({ currentTarget: input }) => {
+                      if (asset !== 'BTC' || !input.value.includes(',')) {
                         setIsAmountFocused(true);
                         return;
                       }
-                      const input = event.currentTarget;
-                      // Ungroup only after the browser has placed the caret (a click) or selected the value (Tab)
-                      // in the grouped text, then carry that selection over to the same digits. Ungrouping in the
-                      // focus task itself drops the select-all and shifts a click by the separators before it.
+                      // Let a click place the caret or Tab select the grouped amount before mapping its digits.
                       requestAnimationFrame(() => {
-                        if (document.activeElement !== input) return;
-                        const { value, selectionStart, selectionEnd } = input;
+                        if (document.activeElement !== input || !input.value.includes(',')) return;
+                        const { value, selectionStart, selectionEnd, selectionDirection } = input;
                         const digitsBefore = (index: number | null) =>
-                          value.slice(0, index ?? value.length).replace(/\D/g, '').length;
+                          toSats(value.slice(0, index ?? value.length)).length;
                         const start = digitsBefore(selectionStart);
                         const end = digitsBefore(selectionEnd);
                         flushSync(() => setIsAmountFocused(true));
-                        input.setSelectionRange(start, end);
+                        input.setSelectionRange(start, end, selectionDirection ?? 'none');
                       });
                     }}
                     onBlur={() => {
@@ -186,11 +182,32 @@ export function DialogLockContent({
                       }
                       // Stays up after the next keystroke: typing "2.4" leaves "24", and the note must still
                       // be there when the creator looks. Emptying the field clears it.
-                      const raw = event.target.value;
-                      const next = toSats(raw);
+                      const input = event.currentTarget;
+                      const raw = input.value;
+                      let next = toSats(raw);
                       const dropped = dropsInput(raw);
                       setDroppedInput((shown) => dropped || (shown && next !== ''));
-                      field.onChange(next);
+                      if (isAmountFocused || document.activeElement !== input) {
+                        field.onChange(next);
+                        return;
+                      }
+                      // A keyboard or paste can edit the grouped text before the focus frame. Let the native
+                      // edit finish, then carry its caret into the ungrouped result.
+                      let caret = toSats(raw.slice(0, input.selectionStart ?? raw.length)).length;
+                      const { inputType } = event.nativeEvent as InputEvent;
+                      if (
+                        next === field.value &&
+                        (inputType === 'deleteContentBackward' || inputType === 'deleteContentForward')
+                      ) {
+                        // Deleting just a separator in the displayed price should delete the adjacent digit.
+                        if (inputType === 'deleteContentBackward') caret = Math.max(0, caret - 1);
+                        next = toSats(next.slice(0, caret) + next.slice(caret + 1));
+                      }
+                      flushSync(() => {
+                        setIsAmountFocused(true);
+                        field.onChange(next);
+                      });
+                      input.setSelectionRange(caret, caret);
                     }}
                     aria-describedby={asset === 'BTC' && droppedInput ? 'lock-amount-whole-sats' : undefined}
                     maxLength={27}

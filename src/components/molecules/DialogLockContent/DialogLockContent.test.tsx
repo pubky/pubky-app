@@ -159,9 +159,12 @@ describe('DialogLockContent', () => {
 describe('price field editing (#2458)', () => {
   const field = () => screen.getByLabelText<HTMLInputElement>('Bitcoin Amount', { selector: 'input' });
 
+  afterEach(() => vi.restoreAllMocks());
+
   it('keeps the caret where the creator typed when the edit crosses a thousands boundary', async () => {
     const user = userEvent.setup();
     await setup();
+    vi.spyOn(window, 'requestAnimationFrame').mockReturnValue(1);
     await user.type(field(), '100');
     field().setSelectionRange(1, 1);
     await user.keyboard('2');
@@ -180,6 +183,35 @@ describe('price field editing (#2458)', () => {
     await user.keyboard('{Backspace}');
 
     expect(field()).toHaveValue('100');
+  });
+
+  it('maps edits in an existing grouped price to the selected digits before the next frame', async () => {
+    const user = userEvent.setup();
+    await setup({ appliedPrice: { asset: 'BTC', amount: '1234567' } });
+    vi.spyOn(window, 'requestAnimationFrame').mockReturnValue(1);
+    await user.pointer({ keys: '[MouseLeft]', target: field(), offset: 6 }); // 1,234,|567
+    await user.keyboard('{Backspace}');
+    expect(field()).toHaveValue('123567');
+    expect(field().selectionStart).toBe(3);
+
+    await user.tab();
+    await user.pointer({ keys: '[MouseLeft]', target: field(), offset: 4 }); // 123,|567
+    await user.paste('8');
+    expect(field()).toHaveValue('1238567');
+    expect(field().selectionStart).toBe(4);
+  });
+
+  it('preserves the caret for text inserted without a keydown before the focus frame', async () => {
+    await setup({ appliedPrice: { asset: 'BTC', amount: '18967' } });
+    vi.spyOn(window, 'requestAnimationFrame').mockReturnValue(1);
+    act(() => field().focus());
+    fireEvent.input(field(), {
+      inputType: 'insertText',
+      data: '4',
+      target: { value: '18,4967', selectionStart: 4, selectionEnd: 4 },
+    });
+    expect(field()).toHaveValue('184967');
+    expect(field().selectionStart).toBe(3);
   });
 
   it('groups the amount once the field loses focus, and ungroups it on focus', async () => {
