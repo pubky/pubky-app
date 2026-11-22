@@ -126,7 +126,9 @@ export class WalletSession {
         return;
       }
       this.pending.delete(data.id);
-      if (data.error) {
+      if (waiter.operation !== 'close' && (this.closing || !this.ownsAccount())) {
+        waiter.reject(locked());
+      } else if (data.error) {
         const { code, status, message } = data.error;
         const failure =
           waiter.operation === 'handoff-import' && code && handoffImportCodes.has(code)
@@ -166,7 +168,7 @@ export class WalletSession {
 
   private call<T>(operation: string, payload?: unknown, transfer: Transferable[] = []): Promise<T> {
     const worker = this.worker;
-    if (!worker || (this.closing && operation !== 'close')) return Promise.reject(locked());
+    if (!worker || (operation !== 'close' && (this.closing || !this.ownsAccount()))) return Promise.reject(locked());
     const id = ++this.counter;
     return new Promise((resolve, reject) => {
       const notifyUnlocked = (operation === 'open' || operation === 'open-with-ring') && !!this.onUnlocked;
@@ -522,20 +524,18 @@ export class WalletSession {
   }
 
   private closeWorker(): Promise<void> {
+    if (this.closeAttempt) return this.closeAttempt;
     if (!this.worker) return Promise.resolve();
-    if (!this.closeAttempt) {
-      const previous = pendingClosures.get(this.account);
-      const closing = Promise.all([previous?.catch(() => {}), this.call('close')])
-        .then(() => undefined)
-        .finally(() => {
-          this.dispose(locked());
-          if (pendingClosures.get(this.account) === closing) pendingClosures.delete(this.account);
-          this.closeAttempt = undefined;
-        });
-      pendingClosures.set(this.account, closing);
-      this.closeAttempt = closing;
-    }
-    return this.closeAttempt;
+    const previous = pendingClosures.get(this.account);
+    const closing = Promise.all([previous?.catch(() => {}), this.call('close')])
+      .then(() => undefined)
+      .finally(() => {
+        this.dispose(locked());
+        if (pendingClosures.get(this.account) === closing) pendingClosures.delete(this.account);
+      });
+    pendingClosures.set(this.account, closing);
+    this.closeAttempt = closing;
+    return closing;
   }
 
   private dispose(error: Error) {

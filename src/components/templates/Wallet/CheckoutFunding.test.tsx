@@ -12,20 +12,20 @@ const mocks = vi.hoisted(() => ({
   prepareSend: vi.fn(),
   send: vi.fn(),
   snapshot: vi.fn(),
-  locked: vi.fn(),
-  opened: vi.fn(),
+  viewClosed: vi.fn(),
+  viewOpened: vi.fn(),
   auth: { currentUserPubky: 'reader', session: {} },
   unlockNetwork: 'regtest',
 }));
 vi.mock('@/libs/wallet/networks', () => ({ checkoutNetworks: mocks.networks }));
 vi.mock('@/libs/wallet/bitkitFunding', () => ({ getBitkitFundingAddress: mocks.address }));
 vi.mock('@/stores/auth/auth.store', () => ({ useAuthStore: { getState: () => mocks.auth } }));
-vi.mock('./WalletAccount', () => ({
-  WalletAccount: ({ renderReady, account }: { renderReady: (args: unknown) => React.ReactNode; account: string }) => {
+vi.mock('./WalletTab', () => ({
+  WalletSurface: ({ renderReady, account }: { renderReady: (args: unknown) => React.ReactNode; account: string }) => {
     useEffect(() => {
-      mocks.opened(account);
+      mocks.viewOpened(account);
       return () => {
-        mocks.locked(account);
+        mocks.viewClosed(account);
       };
     }, [account]);
     const task = useWalletTask();
@@ -86,7 +86,7 @@ describe('Bitkit checkout funding', () => {
       expect(await screen.findByText(message as RegExp)).toBeVisible();
       expect(screen.queryByRole('button')).toBeNull();
       expect(mocks.address).not.toHaveBeenCalled();
-      expect(mocks.opened).not.toHaveBeenCalled();
+      expect(mocks.viewOpened).not.toHaveBeenCalled();
     },
   );
   it('shows a distinct, editable transfer to the reader and sends once only after confirmation', async () => {
@@ -94,7 +94,7 @@ describe('Bitkit checkout funding', () => {
     const amount = await expand();
     expect(amount).toHaveValue('5000');
     expect(mocks.address).toHaveBeenCalledWith('reader', 'regtest');
-    expect(mocks.opened).toHaveBeenCalledWith('reader');
+    expect(mocks.viewOpened).toHaveBeenCalledWith('reader');
     expect(mocks.send).not.toHaveBeenCalled();
     fireEvent.change(amount, { target: { value: '8000' } });
     fireEvent.click(screen.getByRole('button', { name: 'Review transfer' }));
@@ -109,8 +109,8 @@ describe('Bitkit checkout funding', () => {
     expect(await screen.findByText('Your transfer to Bitkit is pending confirmation.')).toBeVisible();
     expect(screen.getByText(/separate purchase request in Bitkit/)).toBeVisible();
     expect(mocks.send).toHaveBeenCalledTimes(1);
-    expect(mocks.opened).toHaveBeenCalledTimes(1);
-    expect(mocks.locked).not.toHaveBeenCalled();
+    expect(mocks.viewOpened).toHaveBeenCalledTimes(1);
+    expect(mocks.viewClosed).not.toHaveBeenCalled();
     expect(screen.queryByRole('button')).toBeNull();
   });
   it('leaves the funding amount blank for a USD price', async () => {
@@ -160,7 +160,7 @@ describe('Bitkit checkout funding', () => {
     await pending.promise;
     expect(mocks.send).not.toHaveBeenCalled();
   });
-  it('keeps the signer alive before broadcast and tracks only the approved transfer', async () => {
+  it('keeps the funding view open before broadcast and tracks only the approved transfer', async () => {
     mocks.send.mockResolvedValue({ id: 'quote', status: 'pending' });
     const queued = Promise.withResolvers<{ activity: unknown[] }>();
     mocks.snapshot.mockReturnValue(queued.promise);
@@ -169,7 +169,7 @@ describe('Bitkit checkout funding', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Review transfer' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Confirm transfer to my Bitkit' }));
     expect(await screen.findByText('Your transfer to Bitkit is pending.')).toBeVisible();
-    expect(mocks.locked).not.toHaveBeenCalled();
+    expect(mocks.viewClosed).not.toHaveBeenCalled();
     queued.resolve({
       activity: [
         { id: 'submission:other', kind: 'sent', status: 'completed', txid: 'other' },
@@ -179,26 +179,26 @@ describe('Bitkit checkout funding', () => {
     expect(await screen.findByText('Your transfer to Bitkit completed.')).toBeVisible();
     expect(screen.getByText(/transaction ID approved/)).toBeVisible();
     expect(screen.queryByText(/transaction ID other/)).toBeNull();
-    await waitFor(() => expect(mocks.locked).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(mocks.viewClosed).toHaveBeenCalledTimes(1));
   });
   it('reopens an existing transfer without a fresh recipient, quote or send', async () => {
     mocks.snapshot.mockResolvedValue({
       activity: [{ id: 'submission:old', kind: 'sent', status: 'completed', txid: 'mined' }],
     });
     const view = render(<Checkout initial={{ status: 'pending', id: 'old', network: 'regtest' }} />);
-    expect(mocks.opened).not.toHaveBeenCalled();
+    expect(mocks.viewOpened).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Reopen wallet to track transfer' }));
     expect(await screen.findByText('Your transfer to Bitkit completed.')).toBeVisible();
     expect(mocks.address).not.toHaveBeenCalled();
     expect(mocks.prepareSend).not.toHaveBeenCalled();
     expect(mocks.send).not.toHaveBeenCalled();
     view.unmount();
-    expect(mocks.locked).toHaveBeenCalled();
+    expect(mocks.viewClosed).toHaveBeenCalled();
   });
   it('keeps an uncertain transfer visible after returning to checkout', () => {
     render(<Checkout initial={{ status: 'uncertain' }} />);
     expect(screen.getByText(/status of your transfer to Bitkit is unknown/)).toBeVisible();
     expect(screen.queryByRole('button')).toBeNull();
-    expect(mocks.opened).not.toHaveBeenCalled();
+    expect(mocks.viewOpened).not.toHaveBeenCalled();
   });
 });

@@ -13,8 +13,9 @@ import { fundingInProgress, type FundingState } from '@/libs/wallet/fundingState
 import { checkoutNetworks } from '@/libs/wallet/networks';
 import type { TLockPrice } from '@/services/locks/locks.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
-import { type UnlockedWallet, WalletAccount } from './WalletAccount';
+import type { UnlockedWallet } from './WalletAccount';
 import { Detail, WalletPanel, Warnings } from './WalletPanel';
+import { WalletSurface } from './WalletTab';
 
 interface FundingProps {
   account: string;
@@ -109,7 +110,6 @@ function TrackTransfer({
 
 export function CheckoutFunding({ account, price, state, onState, purchaseWaiting = true }: FundingProps) {
   const [expanded, setExpanded] = useState(false);
-  const [revision, setRevision] = useState(0);
   const [queries] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } }));
   const networks = useQuery(
     {
@@ -174,10 +174,9 @@ export function CheckoutFunding({ account, price, state, onState, purchaseWaitin
       {!tracking && address.isFetching && <p role="status">Looking up your Bitkit address…</p>}
       {!tracking && address.isError && <p role="alert">{address.error.message}</p>}
       {(tracking || (address.isSuccess && !address.isFetching)) && (
-        <WalletAccount
-          key={JSON.stringify([account, network, revision])}
+        <WalletSurface
+          key={JSON.stringify([account, network])}
           account={account}
-          reset={() => setRevision((n) => n + 1)}
           renderReady={(wallet) =>
             wallet.network === network ? (
               tracking && state ? (

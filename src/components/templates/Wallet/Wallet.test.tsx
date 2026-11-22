@@ -1,16 +1,21 @@
 import { WalletError } from '@beignet/wallet-core';
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render as renderUi, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { bech32 } from 'bech32';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { RingDeviceBusyError, RingEnrollmentError } from '@/services/wallet/ring-enrollment';
 import type { LastWalletBalance, WalletStartProgress } from '@/services/wallet/session';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { mockRingSession } from '@/test-utils/pubky';
+import { CheckoutFunding } from './CheckoutFunding';
 import { Wallet } from './Wallet';
-import { WalletAccount } from './WalletAccount';
+import { WalletSurface, WalletTabProvider } from './WalletTab';
+
+const account = 'account-one';
+const render = (ui: ReactNode) => renderUi(ui, { wrapper: WalletTabProvider });
 
 const wallet = vi.hoisted(() => ({
-  account: 'account-one',
   exists: true,
   inspect: vi.fn(),
   rememberBalance: vi.fn(),
@@ -94,10 +99,10 @@ vi.mock('@/libs/wallet/resolveRecipient', () => ({ resolveRecipient: wallet.reso
 vi.mock('@/organisms/ContentLayout/ContentLayout', () => ({
   ContentLayout: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
-vi.mock('@/stores/auth/auth.store', () => ({
-  useAuthStore: (select: (state: { session: object; currentUserPubky: string }) => string) =>
-    select({ session: {}, currentUserPubky: wallet.account }),
+vi.mock('@/libs/wallet/networks', () => ({
+  checkoutNetworks: async () => ({ walletNetwork: 'regtest', locksNetwork: 'regtest' }),
 }));
+vi.mock('@/libs/wallet/bitkitFunding', () => ({ getBitkitFundingAddress: async () => 'bcrt1ownbitkit' }));
 vi.mock('@/services/wallet/session', () => ({
   WalletSession: class {
     constructor(
@@ -155,7 +160,11 @@ const sendQuote = {
 
 beforeEach(() => {
   vi.resetAllMocks();
-  wallet.account = 'account-one';
+  useAuthStore.setState({
+    currentUserPubky: account,
+    session: mockRingSession(['/:rw'], account),
+    generation: 'first',
+  });
   wallet.exists = true;
   wallet.ringBinding.mockResolvedValue(null);
   wallet.ringEnrollment.mockResolvedValue('new');
@@ -212,6 +221,254 @@ async function unlock() {
 }
 
 describe('Pubky wallet', () => {
+  describe('unlocked wallet in this tab', () => {
+    const binding = { network: 'regtest', deviceId: 'this-phone', transferId: 'installed-receipt' };
+    const checkout = <CheckoutFunding account={account} price={{ asset: 'BTC', amount: '1000' }} onState={vi.fn()} />;
+    const feed = <main>Feed</main>;
+
+    const makeLease = () => ({
+      assertActive: vi.fn(),
+      release: vi.fn().mockResolvedValue(undefined),
+      abandon: vi.fn().mockResolvedValue(undefined),
+    });
+
+    function openDevice() {
+      const lease = makeLease();
+      wallet.ringBinding.mockResolvedValue(binding);
+      wallet.acquireRingDevice.mockResolvedValueOnce(lease);
+      return lease;
+    }
+
+    it('reuses the same signer and Ring lease across the feed, checkout and a new wallet route', async () => {
+      const lease = openDevice();
+      const view = render(feed);
+      expect(wallet.inspect).not.toHaveBeenCalled();
+      view.rerender(<Wallet recipient="first-recipient" />);
+      await unlock();
+      fireEvent.click(screen.getByRole('button', { name: 'Review payment' }));
+      expect(await screen.findByRole('button', { name: 'Confirm payment' })).toBeVisible();
+
+      view.rerender(feed);
+      expect(screen.queryByText('Coffee')).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Confirm payment', hidden: true })).toBeNull();
+      view.rerender(checkout);
+      fireEvent.click(await screen.findByRole('button', { name: 'Fund my Bitkit from Pubky Wallet' }));
+      expect(await screen.findByLabelText(/Funding amount/)).toHaveValue('1000');
+      fireEvent.click(screen.getByRole('button', { name: 'Back to checkout' }));
+      view.rerender(<Wallet recipient="second-recipient" />);
+      expect(await screen.findByLabelText('Pay to')).toHaveValue('second-recipient');
+      expect(screen.queryByRole('button', { name: 'Confirm payment' })).toBeNull();
+      expect(wallet.open).toHaveBeenCalledOnce();
+      expect(wallet.startWallet).toHaveBeenCalledOnce();
+      expect(wallet.acquireRingDevice).toHaveBeenCalledOnce();
+      expect(wallet.send).not.toHaveBeenCalled();
+      expect(lease.release).not.toHaveBeenCalled();
+      expect(wallet.close).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Lock wallet' }));
+      expect(await screen.findByLabelText('Password', { exact: true })).toHaveValue('');
+      expect(wallet.close).toHaveBeenCalledOnce();
+      expect(lease.release).toHaveBeenCalledOnce();
+      view.rerender(checkout);
+      fireEvent.click(await screen.findByRole('button', { name: 'Fund my Bitkit from Pubky Wallet' }));
+      expect(await screen.findByLabelText('Password', { exact: true })).toHaveValue('');
+      expect(screen.queryByLabelText(/Funding amount/)).toBeNull();
+    });
+
+    it('keeps a checkout unlock available to Wallet in this tab alone', async () => {
+      const view = render(checkout);
+      fireEvent.click(await screen.findByRole('button', { name: 'Fund my Bitkit from Pubky Wallet' }));
+      fireEvent.change(await screen.findByLabelText('Password', { exact: true }), {
+        target: { value: 'example password' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Unlock wallet' }));
+      expect(await screen.findByLabelText(/Funding amount/)).toBeVisible();
+      view.rerender(<Wallet />);
+      expect(await screen.findByText('Total balance')).toBeVisible();
+
+      const anotherTab = render(<Wallet />);
+      expect(await within(anotherTab.container).findByLabelText('Password', { exact: true })).toHaveValue('');
+      expect(within(view.container).getByRole('button', { name: 'Send' })).toBeEnabled();
+      expect(wallet.open).toHaveBeenCalledOnce();
+      expect(wallet.startWallet).toHaveBeenCalledOnce();
+      expect(wallet.close).not.toHaveBeenCalled();
+    });
+
+    it.each(['ready', 'syncing'])(
+      'locks a %s wallet from checkout and returns to a locked wallet route',
+      async (status) => {
+        const lease = openDevice();
+        const started = Promise.withResolvers<void>();
+        if (status === 'syncing') wallet.startWallet.mockReturnValueOnce(started.promise);
+        const view = render(<Wallet />);
+        await unlock();
+        view.rerender(checkout);
+        fireEvent.click(await screen.findByRole('button', { name: 'Fund my Bitkit from Pubky Wallet' }));
+        if (status === 'ready') expect(await screen.findByLabelText(/Funding amount/)).toBeVisible();
+        else expect(await screen.findByText('Connecting to Bitcoin and Lightning…')).toBeVisible();
+        fireEvent.click(screen.getByRole('button', { name: /^Lock( wallet)?$/ }));
+
+        expect(await screen.findByLabelText('Password', { exact: true })).toHaveValue('');
+        expect(screen.queryByLabelText(/Funding amount/)).toBeNull();
+        expect(wallet.close).toHaveBeenCalledOnce();
+        expect(lease.release).toHaveBeenCalledOnce();
+        await act(async () => started.resolve());
+        view.rerender(<Wallet />);
+        expect(await screen.findByLabelText('Password', { exact: true })).toHaveValue('');
+        expect(screen.queryByRole('button', { name: 'Send' })).toBeNull();
+        expect(wallet.startWallet).toHaveBeenCalledOnce();
+      },
+    );
+
+    it.each([true, false])(
+      'closes the parked worker on pagehide (persisted=%s) and restores locked',
+      async (persisted) => {
+        const lease = openDevice();
+        const stopped = Promise.withResolvers<void>();
+        const view = render(<Wallet />);
+        await unlock();
+        view.rerender(feed);
+        wallet.close.mockReturnValueOnce(stopped.promise);
+
+        fireEvent(window, new PageTransitionEvent('pagehide', { persisted }));
+        expect(wallet.close).toHaveBeenCalledOnce();
+        expect(lease.release).not.toHaveBeenCalled();
+        await act(async () => stopped.resolve());
+        expect(lease.release).toHaveBeenCalledOnce();
+        fireEvent(window, new PageTransitionEvent('pageshow', { persisted }));
+        view.rerender(<Wallet />);
+        expect(await screen.findByLabelText('Password', { exact: true })).toHaveValue('');
+        expect(wallet.open).toHaveBeenCalledOnce();
+        expect(wallet.startWallet).toHaveBeenCalledOnce();
+      },
+    );
+
+    it.each(['sign out', 'account', 'session', 'generation'])(
+      'invalidates the parked wallet on %s change',
+      async (change) => {
+        const lease = openDevice();
+        const view = render(<Wallet />);
+        await unlock();
+        view.rerender(feed);
+        act(() => {
+          switch (change) {
+            case 'sign out':
+              useAuthStore.setState({ session: null });
+              break;
+            case 'account':
+              useAuthStore.setState({ currentUserPubky: 'account-two' });
+              break;
+            case 'session':
+              useAuthStore.setState({ session: mockRingSession(['/:rw'], account) });
+              break;
+            case 'generation':
+              useAuthStore.setState({ generation: 'second' });
+              break;
+          }
+        });
+        await waitFor(() => expect(lease.release).toHaveBeenCalledOnce());
+        expect(wallet.close).toHaveBeenCalledOnce();
+        if (change === 'sign out') {
+          view.rerender(<Wallet />);
+          expect(screen.queryByLabelText('Password')).toBeNull();
+          act(() => useAuthStore.setState({ session: mockRingSession(['/:rw'], account) }));
+        } else view.rerender(<Wallet />);
+        expect(await screen.findByLabelText('Password', { exact: true })).toHaveValue('');
+        expect(wallet.startWallet).toHaveBeenCalledOnce();
+      },
+    );
+
+    it('requires a new unlock and checks ownership after a parked wallet loses its Ring lease', async () => {
+      openDevice();
+      const view = render(<Wallet />);
+      await unlock();
+      view.rerender(feed);
+      const lost = wallet.acquireRingDevice.mock.calls[0][4];
+      await act(async () => lost());
+      expect(wallet.close).toHaveBeenCalled();
+
+      wallet.acquireRingDevice.mockRejectedValueOnce(new RingEnrollmentError('Another device owns this wallet.'));
+      wallet.inspectRingDevice.mockResolvedValue({ state: 'other-device', transferId: 'new-receipt' });
+      view.rerender(<Wallet />);
+      await unlock();
+      expect(await screen.findByText('Your wallet is on another device')).toBeVisible();
+      expect(wallet.startWallet).toHaveBeenCalledOnce();
+      expect(wallet.guardRingDevice).toHaveBeenCalledOnce();
+      expect(screen.queryByRole('button', { name: 'Send' })).toBeNull();
+    });
+
+    it('releases a late acquisition without touching the replacement signer or its lease', async () => {
+      const pending = Promise.withResolvers<ReturnType<typeof makeLease>>();
+      const stale = makeLease();
+      const current = makeLease();
+      wallet.ringBinding.mockResolvedValue(binding);
+      wallet.acquireRingDevice.mockReturnValueOnce(pending.promise).mockResolvedValueOnce(current);
+      const view = render(<Wallet />);
+      fireEvent.change(await screen.findByLabelText('Password', { exact: true }), {
+        target: { value: 'example password' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Unlock wallet' }));
+      expect(await screen.findByText('Checking device access…')).toBeVisible();
+      const oldWorker = wallet.open.mock.contexts[0];
+      view.rerender(feed);
+      view.rerender(<Wallet />);
+      await unlock();
+      expect(await screen.findByRole('button', { name: 'Send' })).toBeEnabled();
+
+      await act(async () => pending.resolve(stale));
+      expect(stale.release).toHaveBeenCalledOnce();
+      expect(current.release).not.toHaveBeenCalled();
+      expect(wallet.close.mock.contexts).toEqual([oldWorker]);
+      expect(wallet.guardRingDevice).toHaveBeenCalledOnce();
+      expect(wallet.guardRingDevice).toHaveBeenCalledWith(current.assertActive);
+      expect(wallet.startWallet).toHaveBeenCalledOnce();
+      expect(screen.getByRole('button', { name: 'Send' })).toBeEnabled();
+    });
+
+    it('cancels a source move when the wallet route closes during preparation', async () => {
+      const lease = openDevice();
+      const prepared = Promise.withResolvers<typeof binding>();
+      const stopped = Promise.withResolvers<void>();
+      wallet.prepareHandoff.mockReturnValueOnce(prepared.promise);
+      const view = render(<Wallet />);
+      await unlock();
+      fireEvent.click(await screen.findByRole('button', { name: 'Back up wallet' }));
+      const move = await screen.findByRole('button', { name: 'Move to another device' });
+      await waitFor(() => expect(move).toBeEnabled());
+      fireEvent.click(move);
+      expect(await screen.findByText('Preparing your transfer')).toBeVisible();
+
+      wallet.close.mockReturnValueOnce(stopped.promise);
+      view.rerender(feed);
+      await act(async () => prepared.resolve(binding));
+      expect(lease.release).not.toHaveBeenCalled();
+      await act(async () => stopped.resolve());
+      expect(lease.release).toHaveBeenCalledOnce();
+      view.rerender(<Wallet />);
+      expect(await screen.findByLabelText('Password', { exact: true })).toHaveValue('');
+      expect(screen.queryByRole('button', { name: 'Approve in test Ring' })).toBeNull();
+      expect(wallet.acquireRingDevice).toHaveBeenCalledOnce();
+      expect(wallet.exportHandoff).not.toHaveBeenCalled();
+    });
+
+    it('discards a local Ring unlock that completes after leaving its wallet route', async () => {
+      const approval = Promise.withResolvers<{ network: string }>();
+      wallet.inspect.mockResolvedValue({ exists: true, ringUnlock: { ...binding, passwordAvailable: false } });
+      wallet.openWithRing.mockReturnValueOnce(approval.promise);
+      const view = render(<Wallet />);
+      fireEvent.click(await screen.findByRole('button', { name: 'Unlock with Ring' }));
+      fireEvent.click(await screen.findByRole('button', { name: 'Approve in test Ring' }));
+      expect(wallet.openWithRing).toHaveBeenCalledOnce();
+      view.rerender(feed);
+      await act(async () => approval.resolve({ network: 'regtest' }));
+      view.rerender(<Wallet />);
+      expect(await screen.findByRole('button', { name: 'Unlock with Ring' })).toBeVisible();
+      expect(screen.queryByRole('button', { name: 'Approve in test Ring' })).toBeNull();
+      expect(wallet.listWallets).not.toHaveBeenCalled();
+      expect(wallet.startWallet).not.toHaveBeenCalled();
+    });
+  });
+
   it('requires fresh Ring approval before opening a Ring-only local vault', async () => {
     const scope = { network: 'regtest', deviceId: '2fc6e567-18a1-4861-8939-e31fa35ae477', passwordAvailable: false };
     wallet.inspect.mockResolvedValue({ exists: true, ringUnlock: scope });
@@ -324,7 +581,7 @@ describe('Pubky wallet', () => {
       fireEvent.click(await screen.findByRole('button', { name: 'Approve in test Ring' }));
       expect(wallet.acquireRingDevice).toHaveBeenNthCalledWith(
         2,
-        wallet.account,
+        account,
         binding.network,
         binding.deviceId,
         'open',
@@ -428,7 +685,7 @@ describe('Pubky wallet', () => {
       fireEvent.click(await screen.findByRole('button', { name: 'Approve in test Ring' }));
       expect(await screen.findByText(result)).toBeVisible();
       if (scenario === 'claimed') expect(screen.getByRole('button', { name: 'Done' })).toBeVisible();
-      expect(wallet.inspectRingDevice).toHaveBeenCalledWith(wallet.account, binding.network, binding.deviceId);
+      expect(wallet.inspectRingDevice).toHaveBeenCalledWith(account, binding.network, binding.deviceId);
       expect(publishing.release).toHaveBeenCalledBefore(wallet.inspectRingDevice);
       expect(publishing.publishHandoff).toHaveBeenCalledOnce();
       expect(running.publishHandoff).not.toHaveBeenCalled();
@@ -781,7 +1038,7 @@ describe('Pubky wallet', () => {
       await advance(30_000);
       expect(wallet.acquireRingDevice).toHaveBeenCalledTimes(11);
       expect(wallet.acquireRingDevice).toHaveBeenLastCalledWith(
-        wallet.account,
+        account,
         binding.network,
         binding.deviceId,
         'open',
@@ -849,10 +1106,8 @@ describe('Pubky wallet', () => {
       await advance(10_000);
       expect(wallet.acquireRingDevice).toHaveBeenCalledTimes(2);
       if (action === 'lock') fireEvent.click(screen.getByRole('button', { name: 'Lock wallet' }));
-      else if (action === 'change account') {
-        wallet.account = 'account-two';
-        view.rerender(<Wallet />);
-      } else view.unmount();
+      else if (action === 'change account') act(() => useAuthStore.setState({ currentUserPubky: 'account-two' }));
+      else view.unmount();
       await act(async () => acquired.resolve(held));
       await advance(100_000);
       expect(held.release).toHaveBeenCalledOnce();
@@ -899,7 +1154,7 @@ describe('Pubky wallet', () => {
     const start = Promise.withResolvers<void>();
     wallet.startWallet.mockReturnValue(start.promise);
     const checkout = vi.fn(() => <button>Review funding</button>);
-    render(<WalletAccount account={wallet.account} reset={vi.fn()} renderReady={checkout} />);
+    render(<WalletSurface account={account} renderReady={checkout} />);
     fireEvent.change(await screen.findByLabelText('Password', { exact: true }), {
       target: { value: 'example password' },
     });
@@ -2111,13 +2366,12 @@ describe('Pubky wallet', () => {
         finish = () => resolve({ network: 'regtest', primaryUri: 'peer' });
       }),
     );
-    const view = render(<Wallet />);
+    render(<Wallet />);
     fireEvent.change(await screen.findByLabelText('Password', { exact: true }), {
       target: { value: 'example password' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Unlock wallet' }));
-    wallet.account = 'account-two';
-    view.rerender(<Wallet />);
+    act(() => useAuthStore.setState({ currentUserPubky: 'account-two' }));
     await act(async () => finish());
     expect(wallet.close).toHaveBeenCalled();
     expect(wallet.listWallets).not.toHaveBeenCalled();

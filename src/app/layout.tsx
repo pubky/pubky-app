@@ -13,6 +13,7 @@ import { PwaManager } from '@/organisms/PwaManager/PwaManager';
 import { ErrorBoundaryProvider } from '@/providers/ErrorBoundaryProvider/ErrorBoundaryProvider';
 import { GlobalErrorHandlerProvider } from '@/providers/GlobalErrorHandlerProvider/GlobalErrorHandlerProvider';
 import { ServiceWorkerRegistrationProvider } from '@/providers/ServiceWorkerRegistrationProvider/ServiceWorkerRegistrationProvider';
+import { WalletTabProvider } from '@/templates/Wallet/WalletTab';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -60,7 +61,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <PwaManager />
             <Toaster />
             <ErrorBoundaryProvider>
-              <AppShell>{children}</AppShell>
+              <WalletTabProvider>
+                <AppShell>{children}</AppShell>
+              </WalletTabProvider>
             </ErrorBoundaryProvider>
           </GlobalErrorHandlerProvider>
         </ServiceWorkerRegistrationProvider>

@@ -136,6 +136,8 @@ it('fences a failed worker and verifies the stored state before reopening the sa
     error: { code: 'WALLET_CLOSE_UNCERTAIN', message: 'The last write could not be confirmed.' },
   });
   await expect(closing).rejects.toMatchObject({ code: 'WALLET_CLOSE_UNCERTAIN' });
+  await expect(old.close()).rejects.toMatchObject({ code: 'WALLET_CLOSE_UNCERTAIN' });
+  expect(workers[0].postMessage).toHaveBeenCalledTimes(1);
   await vi.waitFor(() => expect(workers[1].postMessage).toHaveBeenCalled());
   expect(workers[0].terminate).toHaveBeenCalledTimes(1);
   expect(lastRequest(workers[1]).operation).toBe('inspect');
@@ -261,7 +263,7 @@ it('accepts progress only for its pending start, selected wallet and current dev
   await session.close();
 });
 
-it.each(['current', 'other account', 'signout', 'sync', 'new generation', 'lock'])(
+it.each(['current', 'other account', 'signout', 'sync', 'new generation', 'new session', 'lock'])(
   'delivers local unlock only to the pending open for its current signed-in owner (%s)',
   async (condition) => {
     const account = 'y'.repeat(52);
@@ -308,14 +310,15 @@ it.each(['current', 'other account', 'signout', 'sync', 'new generation', 'lock'
     if (condition === 'signout') auth.isLoggingOut = true;
     if (condition === 'sync') auth.needsAccountSync = true;
     if (condition === 'new generation') auth.generation = 'replacement';
+    if (condition === 'new session') auth.session = {};
     const close = condition === 'lock' ? session.close() : undefined;
     worker.onmessage?.({ data: payload });
     worker.onmessage?.({ data: payload });
     worker.onmessage?.({ data: { id: open.id, result: {} } });
-    await opening;
     expect(notify).toHaveBeenCalledTimes(condition === 'current' ? 1 : 0);
     session.client.selectWallet(walletId);
     if (condition === 'current') {
+      await expect(opening).resolves.toEqual({});
       expect(notify).toHaveBeenCalledWith(payload.balance);
       await expect(session.rememberBalance('f'.repeat(32), 'regtest', 5)).rejects.toThrow();
       await session.rememberBalance(walletId, 'regtest', 5);
@@ -324,6 +327,10 @@ it.each(['current', 'other account', 'signout', 'sync', 'new generation', 'lock'
         payload: { walletId, network: 'regtest', totalSats: 5 },
       });
     } else {
+      await expect(opening).rejects.toMatchObject({ code: 'WALLET_CLOSED' });
+      const dispatched = worker.requests.length;
+      await expect(session.ringBinding()).rejects.toMatchObject({ code: 'WALLET_CLOSED' });
+      expect(worker.requests).toHaveLength(dispatched);
       await expect(session.rememberBalance(walletId, 'regtest', 5)).rejects.toThrow();
     }
     await (close ?? session.close());

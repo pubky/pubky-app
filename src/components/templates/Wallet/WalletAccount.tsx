@@ -1,6 +1,8 @@
 'use client';
 
-import { type ReactNode, useEffect, useEffectEvent, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import Link from 'next/link';
 import type { CreateWalletInput, Network, WalletRecord } from '@beignet/wallet-core';
 import { ArrowRight, KeyRound, LockKeyhole, Wallet as WalletIcon } from 'lucide-react';
 import { APP_ROUTES } from '@/app/routes';
@@ -100,11 +102,15 @@ export function WalletAccount({
   recipient,
   reset,
   renderReady,
+  outlet,
+  onInvalidate,
 }: {
   account: string;
   recipient?: string;
   reset: () => void;
   renderReady?: (wallet: UnlockedWallet) => ReactNode;
+  outlet: HTMLElement | null;
+  onInvalidate: (close: () => void) => () => void;
 }) {
   const live = useRef<WalletSession | null>(null);
   const connecting = useRef(false);
@@ -119,7 +125,16 @@ export function WalletAccount({
   const [notice, setNotice] = useState('');
   const [interrupted, setInterrupted] = useState<'legacy' | 'payment' | null>(null);
   const task = useWalletTask();
+  const previousOutlet = useRef(outlet);
+  useLayoutEffect(() => {
+    const changed = previousOutlet.current !== outlet;
+    previousOutlet.current = outlet;
+    // An unlocked wallet can keep running without a view. Credentials, Ring
+    // approvals and partially completed moves belong to the view that opened them.
+    if ((!outlet || changed) && stage.kind !== 'wallet') reset();
+  }, [outlet, reset, stage.kind]);
   useEffect(() => {
+    if (!previousOutlet.current) return;
     if (window.top !== window.self) {
       setStage({ kind: 'framed' });
       return;
@@ -161,21 +176,30 @@ export function WalletAccount({
         setStage({ kind: 'unavailable' });
       },
     );
-    return () => {
-      live.current = null;
+    let revoked = false;
+    function invalidate() {
+      if (revoked) return;
+      revoked = true;
+      if (live.current === session) live.current = null;
       const held = lease.current;
       lease.current = null;
       void closeDevice(session, held).catch(() => undefined);
+    }
+    const unregister = onInvalidate(invalidate);
+    return () => {
+      unregister();
+      invalidate();
     };
-  }, [account]);
+  }, [account, onInvalidate]);
 
   function lostDevice(session: WalletSession) {
-    if (live.current !== session) return;
-    live.current = null;
-    setNotice(
-      'The wallet locked because it could not keep exclusive access to this Ring wallet. Reopen it to reconnect.',
-    );
-    setStage({ kind: 'unavailable' });
+    if (live.current === session) {
+      live.current = null;
+      setNotice(
+        'The wallet locked because it could not keep exclusive access to this Ring wallet. Reopen it to reconnect.',
+      );
+      setStage({ kind: 'unavailable' });
+    }
     return session.close();
   }
   async function holdDevice(
@@ -616,7 +640,8 @@ export function WalletAccount({
         <Spinner size="sm" aria-hidden className="motion-reduce:animate-none" /> {startMessage(stage.progress)}
       </div>
     ));
-  return (
+  if (!outlet) return null;
+  return createPortal(
     <>
       {task.error && (
         <p role="alert" className="rounded-xl border border-destructive/50 p-4 text-sm text-foreground">
@@ -917,6 +942,18 @@ export function WalletAccount({
           </div>
         </WalletPanel>
       )}
+      {stage.kind === 'wallet' && renderReady && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="justify-self-end"
+          disabled={task.busy}
+          onClick={lock}
+        >
+          <LockKeyhole /> Lock
+        </Button>
+      )}
       {stage.kind === 'wallet' &&
         (renderReady ? (
           stage.status === 'ready' ? (
@@ -924,9 +961,9 @@ export function WalletAccount({
               {interrupted === 'payment' && (
                 <p role="status" className="rounded-xl border border-border p-4 text-sm">
                   A previous payment still needs review. Check{' '}
-                  <a className="underline" href={APP_ROUTES.WALLET}>
+                  <Link className="underline" href={APP_ROUTES.WALLET}>
                     Activity in Pubky Wallet
-                  </a>{' '}
+                  </Link>{' '}
                   before sending it again.
                 </p>
               )}
@@ -973,7 +1010,8 @@ export function WalletAccount({
           {notice}
         </p>
       )}
-    </>
+    </>,
+    outlet,
   );
 }
 
