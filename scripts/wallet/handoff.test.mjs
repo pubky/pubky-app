@@ -190,8 +190,9 @@ test('a clean close requires graceful node and wallet stops and the exact flushe
     'archived htlc awaiting confirmation',
     'archived htlc awaiting resolution',
     'archived htlc reorg',
-    'archived htlc with recency hold',
+    'resolved channel with only a restore recency hold',
     'archived htlc missing from database',
+    'archived htlc dropped after preflight',
     'unresolved force close',
     'no database close',
   ]) {
@@ -206,17 +207,18 @@ test('a clean close requires graceful node and wallet stops and the exact flushe
     const db = observer.opened(dbPath, factory(dbPath));
     db.exec('CREATE TABLE channels (channel_id TEXT PRIMARY KEY)');
     const archived = outcome.startsWith('archived htlc');
+    const handsetChannel = outcome === 'resolved channel with only a restore recency hold';
     const channelId = Buffer.alloc(32, 42);
     const state = {
-      state: archived ? 'CLOSED' : outcome === 'unresolved force close' ? 'FORCE_CLOSED' : 'NORMAL',
+      state: handsetChannel || archived ? 'CLOSED' : outcome === 'unresolved force close' ? 'FORCE_CLOSED' : 'NORMAL',
       htlcs: new Map(),
       pendingLocalUpdates: [],
-      restoreRecencyUnproven: outcome === 'archived htlc with recency hold',
+      restoreRecencyUnproven: handsetChannel || (archived && outcome !== 'archived htlc'),
     };
     if (archived) state.htlcs.set('received-1', { state: 'COMMITTED' });
     const channels = [];
     if (!['idle empty', 'live database changed'].includes(outcome)) {
-      if (outcome !== 'archived htlc missing from database')
+      if (!['archived htlc missing from database', 'archived htlc dropped after preflight'].includes(outcome))
         db.prepare('INSERT INTO channels VALUES (?)').run(channelId.toString('hex'));
       channels.push({ getFullState: () => state, getChannelId: () => channelId });
     }
@@ -254,6 +256,8 @@ test('a clean close requires graceful node and wallet stops and the exact flushe
     const instance = observer.extension.attach({ wallet, generation: 1, network });
     instance.bind(node);
     instance.start();
+    if (handsetChannel || outcome === 'archived htlc dropped after preflight') observer.assertChannelsReady(network);
+    if (outcome === 'archived htlc dropped after preflight') channels.length = 0;
     const graceful = node.gracefulShutdown;
     const stop = wallet.stop;
     const close = observer.close(
@@ -271,7 +275,7 @@ test('a clean close requires graceful node and wallet stops and the exact flushe
         volume.set(path, bytes.slice());
       },
     );
-    if (['clean', 'idle empty', 'live database changed', 'archived htlc'].includes(outcome)) {
+    if (handsetChannel || ['clean', 'idle empty', 'live database changed', 'archived htlc'].includes(outcome)) {
       assert.deepEqual(await close, sha256(volume.get(dbPath)));
       if (outcome === 'idle empty') assert.deepEqual(volume.get(dbPath), before);
       if (outcome === 'live database changed') {
@@ -288,6 +292,59 @@ test('a clean close requires graceful node and wallet stops and the exact flushe
     assert.equal(wallet.stop, stop);
     db.close();
   }
+});
+
+test('reports only the blocking channel condition during live inspection', () => {
+  const observer = createHandoffClose();
+  const check = () => observer.assertChannelsReady(network);
+  const pending = (reason) => assert.throws(check, { code: 'WALLET_HANDOFF_PENDING', reason });
+  pending('CHANNEL_STATE_UNREADABLE');
+  const state = { state: 'NORMAL', htlcs: new Map(), pendingLocalUpdates: [] };
+  const id = Buffer.alloc(32);
+  let channelId = null;
+  let monitor;
+  const instance = observer.extension.attach({ wallet: {}, network });
+  instance.bind({
+    getChannelManager: () => ({
+      listChannels: () => [{ getChannelId: () => channelId, getFullState: () => state }],
+      getMonitor: () => monitor,
+    }),
+  });
+  instance.start();
+  observer.opened(dbPath, {});
+  pending('CHANNEL_PROVISIONAL');
+  channelId = Uint8Array.of(42);
+  pending('CHANNEL_STATE_UNREADABLE');
+  channelId = id;
+  check();
+  for (const [flag, reason] of [
+    ['needsCommitment', 'CHANNEL_NEEDS_COMMITMENT'],
+    ['awaitingLocalFeeCommitment', 'CHANNEL_FEE_COMMITMENT'],
+    ['awaitingClosingSig', 'CHANNEL_CLOSE_SIGNATURE'],
+    ['dataLossDetected', 'CHANNEL_DATA_LOSS'],
+    ['stateUncertain', 'CHANNEL_STATE_UNCERTAIN'],
+    ['restoreRevokedRisk', 'CHANNEL_COMMITMENT_REVOKED'],
+    ['restoreRecencyUnproven', 'CHANNEL_RESTORE_RECENCY'],
+    ['reestablishRecencyUnproven', 'CHANNEL_REESTABLISH_RECENCY'],
+    ['reestablishSecretMissing', 'CHANNEL_REESTABLISH_SECRET'],
+  ]) {
+    state[flag] = true;
+    pending(reason);
+    delete state[flag];
+  }
+  state.htlcs.set(1, { state: 'COMMITTED' });
+  pending('CHANNEL_ACTIVE_HTLCS');
+  state.state = 'CLOSED';
+  state.restoreRecencyUnproven = true;
+  pending('CHANNEL_MONITOR_UNAVAILABLE');
+  monitor = { isCommitmentConfirmed: () => false, isFullyResolved: () => false };
+  pending('CHANNEL_CLOSE_UNCONFIRMED');
+  monitor.isCommitmentConfirmed = () => true;
+  pending('CHANNEL_CLOSE_UNRESOLVED');
+  monitor.isFullyResolved = () => true;
+  state.pendingLocalUpdates.push({ type: 1 });
+  state.needsCommitment = true;
+  check();
 });
 
 test('requires a running, idle recovery and payment surface', async () => {

@@ -246,7 +246,7 @@ it('fences new business while draining an admitted request, and cancels a move w
 
 // The close observer and envelope have their own SQL/crypto tests. Keep the real
 // Ring provisioning, authorization and source binding checks at the worker boundary.
-async function pauseForHandoff() {
+async function provisionHandoffSource() {
   fixture.engine.request.mockImplementationOnce(async ({ body }) => {
     const record = { id: walletId, network: grant.network };
     fixture.volume.write(
@@ -256,8 +256,13 @@ async function pauseForHandoff() {
     return { record };
   });
   expect((await request('ring-wallet', payload())).error).toBeUndefined();
-  const deviceId = (await request('ring-device')).result;
+  return (await request('ring-device')).result;
+}
+
+async function pauseForHandoff() {
+  const deviceId = await provisionHandoffSource();
   const observer = vi.mocked(createHandoffClose).mock.results.at(-1)!.value;
+  vi.spyOn(observer, 'assertChannelsReady').mockImplementationOnce(() => {});
   const digest = new Uint8Array(32).fill(29);
   vi.mocked(assertHandoffReady).mockResolvedValueOnce(undefined);
   vi.spyOn(observer, 'close').mockImplementationOnce(async () => {
@@ -273,6 +278,46 @@ async function pauseForHandoff() {
     approved: () => ({ key: key(), network: grant.network, sourceDeviceId: deviceId, transferId: crypto.randomUUID() }),
   };
 }
+
+it.each(['prepare-handoff', 'handoff-export'])(
+  'keeps the source open and allows a retry when %s finds pending updates',
+  async (operation) => {
+    const deviceId = await provisionHandoffSource();
+    const observer = vi.mocked(createHandoffClose).mock.results.at(-1)!.value;
+    const state = { state: 'NORMAL', htlcs: new Map(), pendingLocalUpdates: [{ type: 1 }] };
+    const instance = observer.extension.attach({ wallet: {}, network: grant.network });
+    instance.bind({
+      getChannelManager: () => ({
+        listChannels: () => [{ getChannelId: () => Buffer.alloc(32), getFullState: () => state }],
+      }),
+    });
+    instance.start();
+    observer.opened('/wallet/regtest.db', {});
+    const transferId = crypto.randomUUID();
+    const move = () =>
+      request(operation, { network: grant.network, walletId, sourceDeviceId: deviceId, transferId, key: key() });
+    vi.mocked(assertHandoffReady).mockResolvedValueOnce(undefined);
+    expect((await move()).error).toMatchObject({
+      code: 'WALLET_HANDOFF_PENDING',
+      message: expect.stringMatching(/local updates awaiting acknowledgment/i),
+    });
+    expect(fixture.engine.close).not.toHaveBeenCalled();
+    expect(fixture.volume.close).not.toHaveBeenCalled();
+    expect(fixture.sockets.close).not.toHaveBeenCalled();
+    expect((await request('begin-send')).error).toBeUndefined();
+    await request('finish-send', 'completed');
+
+    state.pendingLocalUpdates.length = 0;
+    vi.mocked(assertHandoffReady).mockResolvedValueOnce(undefined);
+    vi.spyOn(observer, 'close').mockImplementationOnce(async () => {
+      await fixture.engine.close();
+      return new Uint8Array(32);
+    });
+    if (operation === 'handoff-export') vi.mocked(sealHandoff).mockResolvedValueOnce(Uint8Array.of(42));
+    expect((await move()).error).toBeUndefined();
+    expect(fixture.engine.close).toHaveBeenCalledOnce();
+  },
+);
 
 it('fences a paused source and exports exactly once for its matching Ring key, account and device', async () => {
   const { approved, digest } = await pauseForHandoff();

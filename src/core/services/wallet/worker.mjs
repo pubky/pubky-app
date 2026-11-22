@@ -464,6 +464,7 @@ async function prepareSource(account, { network, walletId }) {
   rejectIfClosing();
   await assertHandoffReady(engine, walletId);
   rejectIfClosing();
+  handoffClose.assertChannelsReady(network);
   handoffStopped = true;
   const digest = await stopEngine(network);
   rejectIfClosing();
@@ -505,6 +506,8 @@ async function handoff(operation, account, payload) {
   if (operation === 'handoff-export') {
     const id = verifyHandoffSource(volume, auth);
     await assertHandoffReady(engine, id);
+    rejectIfClosing();
+    handoffClose.assertChannelsReady(auth.network);
   } else {
     // Import can replace only an idle runtime. Merely inspecting a stale
     // vault does not start its Lightning node or give it writer authority.

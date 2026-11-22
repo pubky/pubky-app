@@ -25,6 +25,27 @@ const transferMessages = {
     'This wallet is waiting for its channel backup from the recovery peer. Check Recovery before moving it.',
   CHANNELS_UNSETTLED:
     'Lightning channel state is still being verified. Check Recovery and wait for the channels to settle before moving the wallet.',
+  CHANNEL_STATE_UNREADABLE: 'The wallet could not read the live Lightning channel state to verify this move.',
+  CHANNEL_PROVISIONAL: 'A Lightning channel has a temporary identifier. Keep the wallet open while the channel opens.',
+  CHANNEL_MONITOR_UNAVAILABLE: 'The wallet could not find the on-chain monitor for a closed Lightning channel.',
+  CHANNEL_CLOSE_UNCONFIRMED: 'The closing transaction for a Lightning channel is awaiting confirmation.',
+  CHANNEL_CLOSE_UNRESOLVED: 'A Lightning channel still has an on-chain output to resolve.',
+  CHANNEL_ACTIVE_HTLCS: 'A Lightning channel still has payment contracts to settle. Check Activity before moving.',
+  CHANNEL_PENDING_UPDATES: 'A Lightning channel has local updates awaiting acknowledgment from its peer.',
+  CHANNEL_NEEDS_COMMITMENT: 'A Lightning channel has updates waiting for a new commitment signature.',
+  CHANNEL_FEE_COMMITMENT: 'A Lightning channel is waiting for its peer to sign a fee update.',
+  CHANNEL_CLOSE_SIGNATURE: 'A Lightning channel is waiting for its peer to sign the closing transaction.',
+  CHANNEL_DATA_LOSS: 'The wallet detected missing Lightning channel history. Check Recovery before moving.',
+  CHANNEL_STATE_UNCERTAIN: 'The wallet could not verify its recovered Lightning channel state. Check Recovery.',
+  CHANNEL_COMMITMENT_REVOKED:
+    'The Lightning peer has proof that this wallet’s channel commitment was revoked. Check Recovery.',
+  CHANNEL_RESTORE_RECENCY:
+    'The wallet could not verify that its restored Lightning channel is up to date. Check Recovery.',
+  CHANNEL_REESTABLISH_RECENCY:
+    'The Lightning peer reported newer channel state that the wallet could not verify. Check Recovery.',
+  CHANNEL_REESTABLISH_SECRET: 'The wallet is missing a secret needed to reconnect a Lightning channel. Check Recovery.',
+  CHANNEL_RECONNECTING: 'A Lightning channel is waiting to reconnect to its peer.',
+  CHANNEL_SPLICING: 'A Lightning channel is changing its funding transaction.',
   OPERATIONS_UNSETTLED: 'Review pending wallet activity before moving this wallet.',
   SNAPSHOT: 'The saved wallet transfer could not be verified. Lock and reopen the wallet to check its status.',
 };
@@ -51,7 +72,7 @@ export function handoffErrorMessage(error) {
 
 const invalid = (reason = 'SNAPSHOT') =>
   Object.assign(new Error(transferMessages[reason]), { code: 'WALLET_HANDOFF_INVALID', reason });
-const unsettled = (reason) =>
+export const pendingHandoff = (reason) =>
   Object.assign(new Error(transferMessages[reason]), { code: 'WALLET_HANDOFF_PENDING', reason });
 
 function json(bytes, reason) {
@@ -82,7 +103,7 @@ export async function assertHandoffReady(engine, id) {
   // A node held for seed recovery can reject its other daemon routes.
   // Read recovery first so the refusal retains its actual cause.
   const recovery = await get(api + '/recovery/status');
-  if (recovery?.importPending === true || recovery?.restore?.inProgress) throw unsettled('RECOVERY_PENDING');
+  if (recovery?.importPending === true || recovery?.restore?.inProgress) throw pendingHandoff('RECOVERY_PENDING');
   const node = recovery?.node;
   if (
     recovery?.mode !== 'peer-storage' ||
@@ -99,7 +120,7 @@ export async function assertHandoffReady(engine, id) {
     !Array.isArray(node.channels) ||
     node.channels.some((ch) => ch.status !== 'active' || held(ch))
   )
-    throw unsettled('CHANNELS_UNSETTLED');
+    throw pendingHandoff('CHANNELS_UNSETTLED');
   const [channels, payments, submissions, sends, offline] = await Promise.all([
     get(api + '/channels'),
     get(api + '/payments'),
@@ -122,7 +143,7 @@ export async function assertHandoffReady(engine, id) {
       );
     })
   )
-    throw unsettled('CHANNELS_UNSETTLED');
+    throw pendingHandoff('CHANNELS_UNSETTLED');
   if (
     !Array.isArray(payments) ||
     payments.some(
@@ -136,7 +157,7 @@ export async function assertHandoffReady(engine, id) {
     !Array.isArray(offline.requests) ||
     offline.requests.some((job) => !job.done || job.unresolvedSlots > 0)
   )
-    throw unsettled('OPERATIONS_UNSETTLED');
+    throw pendingHandoff('OPERATIONS_UNSETTLED');
 }
 
 export async function authorizeHandoff(account, { key, network, transferId, sourceDeviceId }, deployment) {
