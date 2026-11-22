@@ -64,6 +64,7 @@ import {
   getResourceSummary,
   isBlockedCard,
 } from './ResourceFacts.utils';
+import { getResourcePost, RESOURCE_POST_FACTS, ResourcePost } from './ResourcePost';
 import { useResourceSurface } from './ResourceSurfaceContext';
 import { getResourceTypeIcon } from './ResourceTypeIcon';
 import { useResourceFallback } from './useResourceFallback';
@@ -94,7 +95,7 @@ const DETAIL_ICON_SIZE = 14;
  * and source on top, then the title with the card's image as a small thumbnail left of it
  * (`ResourceCardCover`; the type's icon when there is no image), a summary line of the type's facts
  * (`getResourceSummary`) and the description. An image that stands in for an embed
- * (`showsEmbedImage`: a video's) shows under them instead, as a post shows one
+ * (`showsEmbedImage`: a video's, a post's) shows under them instead, as a post shows one
  * (`ResourceCardMedia`). An event leads with its dates, venue,
  * organizer and attendance; a card with an audio `stream` (an episode, or a recording's preview)
  * plays it, and a show its latest episodes (`ResourceEpisodes`). A sparse card fills a missing
@@ -106,9 +107,11 @@ const DETAIL_ICON_SIZE = 14;
  * click on the card outside its controls (`ResourceCardFrame`); a tap on the image opens it in the
  * post's lightbox. The header's source is the one link out (none on a `missing` card). A player or
  * embed in the body (`isBodyReplaced`) is its own set of controls, as the episode's audio is, and
- * takes the image's place too. The `large` card heads the resource page, lists every fact under
- * "Details" (not while an X post's embed is its body, `isBodyReplaced`), with one plain line in place
- * of a refused read's `blocked` fact (`getBlockedNote`), and is no click-through.
+ * takes the image's place too. A player loaded inside the card (`player`, platform embeds up front
+ * off) sits under the text instead of a video's or a post's image under it, and the card stays. The `large` card heads
+ * the resource page, lists every fact under "Details" (not while an X post's embed is its body,
+ * `isBodyReplaced`), with one plain line in place of a refused read's `blocked` fact (`getBlockedNote`),
+ * and is no click-through.
  * Only `http(s)` values become links, images or audio.
  */
 export function ResourceCard({
@@ -120,6 +123,8 @@ export function ResourceCard({
   renderBody,
   isBodyReplaced = false,
   headerControl,
+  player,
+  asPost = false,
 }: ResourceCardProps) {
   const navigable = useIsPostPreviewNavigable();
   const [expanded, setExpanded] = useState(false);
@@ -195,11 +200,14 @@ export function ResourceCard({
     if (!retriedImages.includes(shownImage)) setRetriedImages((urls) => [...urls, shownImage]);
     else onImageError(shownImage);
   };
-  // An image that stands in for an embed shows large under the text; every other one is a small
-  // thumbnail beside it.
-  const isEmbedImage = showsEmbedImage(card, { href });
   const title = card.name?.trim() || og?.title?.trim() || getDisplayLink(href || card.uri);
   const shownDescription = description ?? fallback.description?.value ?? null;
+
+  // A social post shows as a post, from its card's data alone.
+  const post = asPost ? getResourcePost(card) : null;
+  // An image that stands in for an embed (a post's photo too) shows large under the text; every other
+  // one is a small thumbnail beside it.
+  const isEmbedImage = showsEmbedImage(card, { href, isPost: post !== null });
 
   // A Bitcoin or Lightning card shows its lines, with links to what it names, instead of a summary.
   const chain = getChainView(card);
@@ -251,7 +259,10 @@ export function ResourceCard({
   // An X post's embed in the large card's body (`isBodyReplaced`) shows who wrote it and when.
   const detailRows =
     isLarge && !isBodyReplaced
-      ? getResourceDetailRows(card, { withDates: !isEvent }).filter((row) => !chain?.shownFacts.includes(row.key))
+      ? getResourceDetailRows(card, { withDates: !isEvent }).filter(
+          // A post's own lines already say who wrote it and when.
+          (row) => !chain?.shownFacts.includes(row.key) && !(post && RESOURCE_POST_FACTS.includes(row.key)),
+        )
       : [];
   const isLongDescription = isLarge && (shownDescription?.length ?? 0) > LONG_DESCRIPTION_CHARS;
   const clampOnPhone = isLongDescription && !expanded;
@@ -348,7 +359,9 @@ export function ResourceCard({
           <Container overrideDefaults className="flex min-w-0 flex-col gap-3">
             <Container overrideDefaults className="flex min-w-0 gap-4">
               {/* Left of the text: the card's image, small, or without one the type's icon. */}
-              {!shownImageSrc && <ResourceCardTypeTile typeIcon={getResourceTypeIcon(card)} isLarge={isLarge} />}
+              {!shownImageSrc && !post && (
+                <ResourceCardTypeTile typeIcon={getResourceTypeIcon(card)} isLarge={isLarge} />
+              )}
               {shownImageSrc && !isEmbedImage && (
                 <ResourceCardCover
                   imageUrl={shownImageSrc}
@@ -360,136 +373,153 @@ export function ResourceCard({
                 />
               )}
 
-              <Container className="min-w-0 flex-1 gap-1.5">
-                {statusNote && (
-                  <Badge
-                    variant="secondary"
-                    data-testid="resource-card-status"
-                    className="max-w-full whitespace-normal"
-                  >
-                    <statusNote.icon aria-hidden="true" />
-                    {statusNote.text}
-                  </Badge>
-                )}
-                {isLarge ? (
-                  withCopy(
-                    <Typography
-                      as="h2"
-                      overrideDefaults
-                      dir="auto"
-                      className={cn(
-                        'text-xl font-bold wrap-anywhere text-foreground sm:text-2xl',
-                        isMissing && 'text-foreground/70',
-                      )}
+              {post ? (
+                <ResourcePost post={post} href={smallTitleUrl} linkTarget={titleTarget} isLarge={isLarge} />
+              ) : (
+                <Container className="min-w-0 flex-1 gap-1.5">
+                  {statusNote && (
+                    <Badge
+                      variant="secondary"
+                      data-testid="resource-card-status"
+                      className="max-w-full whitespace-normal"
                     >
-                      {/* Not a link: the header's "Open in <site>" is the one way to the same place. */}
-                      <span data-testid="resource-card-title" title={shownTitle === title ? undefined : title}>
-                        {shownTitle}
-                      </span>
-                    </Typography>,
-                  )
-                ) : (
-                  <Link
-                    href={smallTitleUrl}
-                    target={titleTarget}
-                    rel={titleTarget ? 'noopener noreferrer' : undefined}
-                    overrideDefaults
-                    dir="auto"
-                    data-testid="resource-card-title"
-                    className="line-clamp-3 text-base font-bold wrap-anywhere text-foreground hover:text-brand"
-                  >
-                    {shownTitle}
-                  </Link>
-                )}
-
-                {show && (
-                  <Typography
-                    size="sm"
-                    dir="auto"
-                    data-testid="resource-card-show"
-                    className="font-medium text-foreground/90"
-                  >
-                    From{' '}
+                      <statusNote.icon aria-hidden="true" />
+                      {statusNote.text}
+                    </Badge>
+                  )}
+                  {isLarge ? (
+                    withCopy(
+                      <Typography
+                        as="h2"
+                        overrideDefaults
+                        dir="auto"
+                        className={cn(
+                          'text-xl font-bold wrap-anywhere text-foreground sm:text-2xl',
+                          isMissing && 'text-foreground/70',
+                        )}
+                      >
+                        {/* Not a link: the header's "Open in <site>" is the one way to the same place. */}
+                        <span data-testid="resource-card-title" title={shownTitle === title ? undefined : title}>
+                          {shownTitle}
+                        </span>
+                      </Typography>,
+                    )
+                  ) : (
                     <Link
-                      href={getResourceRoute(show.uri)}
+                      href={smallTitleUrl}
                       target={titleTarget}
                       rel={titleTarget ? 'noopener noreferrer' : undefined}
                       overrideDefaults
-                      className="font-bold wrap-anywhere hover:text-brand"
+                      dir="auto"
+                      data-testid="resource-card-title"
+                      className="line-clamp-3 text-base font-bold wrap-anywhere text-foreground hover:text-brand"
                     >
-                      {show.name || getDisplayLink(show.uri)}
+                      {shownTitle}
                     </Link>
-                  </Typography>
-                )}
+                  )}
 
-                {summary && (
-                  <Typography
-                    size="sm"
-                    dir="auto"
-                    data-testid="resource-card-summary"
-                    className="line-clamp-2 font-medium wrap-anywhere text-foreground/90"
-                  >
-                    <ResourceArrowText text={summary} />
-                  </Typography>
-                )}
+                  {show && (
+                    <Typography
+                      size="sm"
+                      dir="auto"
+                      data-testid="resource-card-show"
+                      className="font-medium text-foreground/90"
+                    >
+                      From{' '}
+                      <Link
+                        href={getResourceRoute(show.uri)}
+                        target={titleTarget}
+                        rel={titleTarget ? 'noopener noreferrer' : undefined}
+                        overrideDefaults
+                        className="font-bold wrap-anywhere hover:text-brand"
+                      >
+                        {show.name || getDisplayLink(show.uri)}
+                      </Link>
+                    </Typography>
+                  )}
 
-                {chain && <ResourceChainLines view={chain} isLarge={isLarge} target={titleTarget} />}
+                  {summary && (
+                    <Typography
+                      size="sm"
+                      dir="auto"
+                      data-testid="resource-card-summary"
+                      className="line-clamp-2 font-medium wrap-anywhere text-foreground/90"
+                    >
+                      <ResourceArrowText text={summary} />
+                    </Typography>
+                  )}
 
-                {/* An event leads with when and where. */}
-                {eventDetails}
+                  {chain && <ResourceChainLines view={chain} isLarge={isLarge} target={titleTarget} />}
 
-                {shownDescription && (
-                  <Typography
-                    size="sm"
-                    dir="auto"
-                    id={descriptionId}
-                    data-testid="resource-card-description"
-                    data-borrowed={description ? undefined : 'true'}
-                    className={cn(
-                      'font-normal wrap-anywhere text-muted-foreground',
-                      !isLarge && 'line-clamp-2',
-                      clampOnPhone && 'max-sm:line-clamp-6',
-                    )}
-                  >
-                    {shownDescription}
-                  </Typography>
-                )}
-                {isLongDescription && (
-                  <Button
-                    type="button"
-                    variant={ButtonVariant.GHOST}
-                    data-testid="resource-card-more"
-                    aria-expanded={expanded}
-                    aria-controls={descriptionId}
-                    onClick={() => setExpanded((value) => !value)}
-                    className="h-auto w-fit p-0 text-sm font-medium text-foreground hover:bg-transparent hover:text-brand sm:hidden"
-                  >
-                    {expanded ? 'Less' : 'More'}
-                  </Button>
-                )}
+                  {/* An event leads with when and where. */}
+                  {eventDetails}
 
-                {point && <ResourceDetail icon={MapPin} text={point} testId="resource-card-point" />}
-                {eventStatusNote && (
-                  <ResourceDetail icon={CircleAlert} text={eventStatusNote} testId="resource-card-event-status" />
-                )}
-                {cardAttribution && (
-                  <Typography
-                    size="xs"
-                    data-testid="resource-card-attribution"
-                    className="font-normal wrap-anywhere text-muted-foreground"
-                  >
-                    {cardAttribution}
-                  </Typography>
-                )}
-              </Container>
+                  {shownDescription && (
+                    <Typography
+                      size="sm"
+                      dir="auto"
+                      id={descriptionId}
+                      data-testid="resource-card-description"
+                      data-borrowed={description ? undefined : 'true'}
+                      className={cn(
+                        'font-normal wrap-anywhere text-muted-foreground',
+                        !isLarge && 'line-clamp-2',
+                        clampOnPhone && 'max-sm:line-clamp-6',
+                      )}
+                    >
+                      {shownDescription}
+                    </Typography>
+                  )}
+                  {isLongDescription && (
+                    <Button
+                      type="button"
+                      variant={ButtonVariant.GHOST}
+                      data-testid="resource-card-more"
+                      aria-expanded={expanded}
+                      aria-controls={descriptionId}
+                      onClick={() => setExpanded((value) => !value)}
+                      className="h-auto w-fit p-0 text-sm font-medium text-foreground hover:bg-transparent hover:text-brand sm:hidden"
+                    >
+                      {expanded ? 'Less' : 'More'}
+                    </Button>
+                  )}
+
+                  {point && <ResourceDetail icon={MapPin} text={point} testId="resource-card-point" />}
+                  {eventStatusNote && (
+                    <ResourceDetail icon={CircleAlert} text={eventStatusNote} testId="resource-card-event-status" />
+                  )}
+                  {cardAttribution && (
+                    <Typography
+                      size="xs"
+                      data-testid="resource-card-attribution"
+                      className="font-normal wrap-anywhere text-muted-foreground"
+                    >
+                      {cardAttribution}
+                    </Typography>
+                  )}
+                </Container>
+              )}
             </Container>
-            {shownImageSrc && isEmbedImage && (
-              <ResourceCardMedia
-                imageUrl={shownImageSrc}
-                name={title}
-                dimmed={isMissing}
-                onImageError={onShownImageError}
-              />
+            {player ? (
+              // A player loaded in the card: its own controls, never a click-through.
+              <Container
+                overrideDefaults
+                data-resource-controls
+                data-testid="resource-card-player"
+                className="min-w-0 cursor-auto"
+              >
+                {player}
+              </Container>
+            ) : (
+              shownImageSrc &&
+              isEmbedImage && (
+                <ResourceCardMedia
+                  imageUrl={shownImageSrc}
+                  name={title}
+                  dimmed={isMissing}
+                  onImageError={onShownImageError}
+                />
+              )
             )}
           </Container>,
         )}

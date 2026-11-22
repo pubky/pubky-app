@@ -24,6 +24,7 @@ import { AnimatedHeight } from '@/molecules/ResourcePlayer/ResourcePlayerFrame';
 import { useCardPlayer } from '@/molecules/ResourcePlayer/useCardPlayer';
 import { ResourceActions } from '@/organisms/ResourceActions/ResourceActions';
 import { PinakesStatus, type TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
+import { useSettingsStore } from '@/stores/settings/settings.store';
 import { GenericPreview } from './GenericPreview';
 import { useSlowRead } from './useSlowRead';
 
@@ -89,8 +90,8 @@ interface GenericResourcePreviewProps {
  * front. Either has the embed/card switch in its header when there is a choice (Card, then the
  * services), and no Play on in its action row; in a post, the composer and a collection alike. A
  * player plays only on a press inside it, and never docks in a post being written. A viewer who
- * turned platform embeds up front off (Settings, Links & Media) gets a stand-in that loads nothing
- * until its Play.
+ * turned platform embeds up front off (Settings, Links & Media) gets the card, with the switch and
+ * Play in its header: nothing loads until Play, which loads the player inside the card.
  *
  * A link Pinakes does not know yet (a post published seconds ago) is read again while the preview
  * is on screen (`usePinakesCard`'s `recheck`), and its card replaces the link's own preview in the
@@ -126,6 +127,7 @@ function ResourcePreview({
   // card's surface: its player's pills are the post's own, as its footer's (`ResourceActions`).
   const actionSurface = useResourceSurface() === 'card' ? 'default' : undefined;
   const navigable = useIsPostPreviewNavigable();
+  const embedsUpFront = useSettingsStore((state) => state.media.embedsUpFront);
   // A post being written (the composer, the Reply and Repost dialogs) previews the resource.
   const isPreview = isComposing || !navigable;
   const lookupUrl = isPinakesConfigured() && !isDirectMediaFile(url) ? url : null;
@@ -144,7 +146,7 @@ function ResourcePreview({
   const isReading = isLoading || Boolean(isResolving);
   const isSlow = useSlowRead(lookupUrl, isReading, PINAKES_SLOW_READ_MS);
   // Embed or card, with the switch; in a post being written a player previews (`preview`).
-  const { embed, switcher } = useCardPlayer(card && !hasNothingToShow(card) ? card : null, url, actionSurface, {
+  const { embed, switcher, player } = useCardPlayer(card && !hasNothingToShow(card) ? card : null, url, actionSurface, {
     preview: isPreview,
   });
 
@@ -189,7 +191,17 @@ function ResourcePreview({
       </ResourceEmbedFrame>
     );
   }
+  // With platform embeds up front off: the card, its switch and Play in the header, the player in it.
   return (
-    <ResourceCard card={shownCard} href={url} actions={actions} isOnScreen={isOnScreen} headerControl={switcher} />
+    <ResourceCard
+      card={shownCard}
+      href={url}
+      actions={actions}
+      isOnScreen={isOnScreen}
+      headerControl={switcher}
+      player={player}
+      // With platform embeds up front off a social post shows as a post, from its card's data.
+      asPost={!embedsUpFront}
+    />
   );
 }

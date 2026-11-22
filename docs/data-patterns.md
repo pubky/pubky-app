@@ -518,6 +518,22 @@ What remains: any public raster image that a real, settled card or a real page's
 the app, within those caps. A calendar occurrence's image other than its calendar's is not one the route serves, and
 a post's text link straight to an image file still shows that file from its host.
 
+**Players and posts in a card.** With "Show platform embeds up front" off (Settings, Links & Media; the default),
+a link with a Pinakes card shows that card on every surface (a post's embed, the composer, Edit and Repost, feeds and
+collections, the resource page, and a YouTube, Vimeo or X link that is only in a post's text) and nothing is asked
+from the service before a press. The card's header holds the service switch (when there are several services) and
+Play on the chosen one (`useCardPlayer` → `CardPlayControl`); Play loads that service's player with autoplay inside
+the card, under its text (`ResourceCard`'s `player`), and the same pill closes it again. Picking another service stops
+what plays and offers that service's Play. The card stays whole with a player open, a podcast's own episodes
+included. A settled social post shows as a post from the card's own data at once (`getResourcePost`,
+`ResourcePost`: author, handle, text, date, its image through `/api/image`), with nothing loaded from its site; when
+it carries no video (`showsPostFromCard`) there is nothing to press. One with a video (a video frame or stream, a
+`VideoObject` type, or an X video thumbnail as its card or link preview image: `hasPostVideo`) keeps "Play on
+<site>": the press opens the site's post inside the card and its video plays there, inside the post (a post's frame
+takes no autoplay parameter). A post Pinakes could not read keeps "Show on <site>". A link with no card keeps its
+pill.
+With platform embeds up front on, the service's player or embed shows up front in place of the card's body.
+
 **Places and events (maps, agenda, dates).** A place's or an event's card shows where it is with `ResourceLocation`
 (`src/components/molecules/ResourceMap/`): a map of its `point` when that is on the map (`getMapPoint`), else, with
 only an address, one line; an event that names neither (an online one, a venue known by name alone) gets no map and

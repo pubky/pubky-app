@@ -66,4 +66,17 @@ export interface ResourceCardProps {
   isBodyReplaced?: boolean;
   /** A control in the header, next to the type: a card's embed/card switch (`useCardPlayer`'s `switcher`). */
   headerControl?: ReactNode;
+  /**
+   * A service's player or a platform's embed loaded inside the card (platform embeds up front off:
+   * `useCardPlayer`'s `player`, an X post's embed): under the card's text, in the place of an image that
+   * stands in for an embed (`showsEmbedImage`; the small image beside the text stays), its own set of controls. The
+   * card stays as it is.
+   */
+  player?: ReactNode;
+  /**
+   * A social post's card shows the post from its own data (`getResourcePost`: author, handle, text,
+   * date) instead of a title and summary: platform embeds up front off, where nothing is asked from
+   * the post's site. Any other card is unchanged.
+   */
+  asPost?: boolean;
 }

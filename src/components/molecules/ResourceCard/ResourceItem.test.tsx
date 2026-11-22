@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { getResourceRoute } from '@/app/routes';
 import { isPinakesConfigured, PINAKES_SLOW_READ_MS } from '@/config/pinakes';
@@ -224,18 +224,16 @@ describe('ResourceItem', () => {
       expect(screen.getByTestId('item')).not.toHaveClass('bg-card');
     });
 
-    it('keeps our card with Show on, loading nothing from X, when platform embeds up front are off', () => {
+    it('shows the post from our card’s data, loading nothing from X and needing no press, when platform embeds up front are off', () => {
       setMedia({ embedsUpFront: false });
       read(POST_CARD);
       render(<ResourceItem uri={POST_URL} />);
 
-      expect(screen.getByTestId('resource-card')).toHaveTextContent('LNbits: a post');
+      expect(screen.getByTestId('resource-card-post')).toHaveTextContent('LNbits: a post');
+      expect(screen.queryByRole('button', { name: /^Show on / })).not.toBeInTheDocument();
       expect(screen.queryByTestId('native-embed-body')).not.toBeInTheDocument();
       expect(mocks.tweet).not.toHaveBeenCalled();
       expect(document.querySelectorAll('iframe')).toHaveLength(0);
-
-      fireEvent.click(screen.getByRole('button', { name: /^Show on / }));
-      expect(within(screen.getByTestId('native-embed-body')).getByTestId('twitter-tweet')).toBeInTheDocument();
     });
 
     it('pauses the platform’s embed off screen as a post does, and leaves any other link’s card as it was', () => {

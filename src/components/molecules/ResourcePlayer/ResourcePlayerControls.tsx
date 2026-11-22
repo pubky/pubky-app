@@ -124,8 +124,9 @@ function ProviderMenu({ targets, current, onSelect, trigger, icons = true, label
  * below a separator, the services to show instead (`ProviderMenu`). Picking one only switches
  * the player shown; it never starts it. While the card shows (`current` is `null`), the switch reads Card;
  * a service whose link is a match by metadata shows no label here either, its note in the hover text and name.
- * On a phone it shows the favicon (or the card's link icon) and the chevron only; the name stays in
- * its accessible name.
+ * Without `onShowCard` (a card that always shows, platform embeds up front off) the menu lists the
+ * services only. On a phone it shows the favicon (or the card's link icon) and the chevron only; the
+ * name stays in its accessible name.
  */
 export function PlayerSwitch({
   targets,
@@ -139,7 +140,8 @@ export function PlayerSwitch({
   /** The service shown, or `null` while the card shows instead. */
   current: PlayerTarget | null;
   onSelect: (target: PlayerTarget) => void;
-  onShowCard: () => void;
+  /** Card's row; none where the card always shows. */
+  onShowCard?: () => void;
   /** The services' favicons (served by the app, `ResourceSourceIcon`). */
   icons?: boolean;
   surface?: PostActionSurface;
@@ -178,12 +180,14 @@ export function PlayerSwitch({
 /**
  * The player pill in the action row's own buttons: ▶ and the service's logo, while open the logo and
  * ✕; the label (the service's name) is its accessible name and tooltip: an X post's "Show on" on
- * its card (`NativeEmbedResource`).
+ * its card (`NativeEmbedResource`), a card's Play (`CardPlayControl`). `text` is a short word after
+ * the logo while closed, from `sm` on (a phone shows the icons only).
  */
 export function PlayOnPill({
   uri,
   isOpen,
   label,
+  text,
   surface = 'muted',
   className,
   ...props
@@ -192,6 +196,7 @@ export function PlayOnPill({
   uri: string;
   isOpen: boolean;
   label: string;
+  text?: string;
   surface?: PostActionSurface;
 } & Omit<ComponentProps<typeof Button>, 'variant' | 'size' | 'children' | 'aria-label' | 'title'>) {
   return (
@@ -205,8 +210,96 @@ export function PlayOnPill({
     >
       {!isOpen && <Play aria-hidden="true" className="fill-current" />}
       <ResourceSourceIcon uri={uri} />
+      {!isOpen && text && (
+        <Typography as="span" overrideDefaults aria-hidden="true" className="max-sm:hidden">
+          {text}
+        </Typography>
+      )}
       {isOpen && <X aria-hidden="true" />}
     </Button>
+  );
+}
+
+/**
+ * The place of a `PlayOnPill` held while it is not known yet whether one shows (a post's link preview,
+ * which may name a video, is read): the same size, invisible, out of the tab order and hidden from
+ * screen readers, so the row does not move when the pill comes.
+ */
+export function PlayOnPillPlaceholder({ uri, surface }: { uri: string; surface?: PostActionSurface }) {
+  return (
+    <PlayOnPill
+      uri={uri}
+      isOpen={false}
+      label=""
+      surface={surface}
+      aria-hidden="true"
+      tabIndex={-1}
+      className="invisible"
+      data-testid="show-embed-placeholder"
+    />
+  );
+}
+
+/**
+ * A card's player controls with platform embeds up front off (`useCardPlayer`), in its header: the
+ * service switch when there is a choice (`switcher`), then Play on the chosen service (`PlayOnPill`:
+ * ▶, its logo, and "Play" from `sm` on), which loads that service's player inside the card; while
+ * it is open the same pill closes it (the logo and ✕), back to the card alone. Its accessible name
+ * says what it plays where ("Play <title> on <service>"); a post, map or document frame is shown
+ * ("Show on <service>"). A post's frame with a video in it reads "Play on <service>": the press opens the
+ * post inside the card and its video is played there, inside the post (such a frame takes no autoplay
+ * parameter). A preview (the composer) shows its player paused.
+ */
+export function CardPlayControl({
+  switcher,
+  target,
+  title,
+  isOpen,
+  preview = false,
+  hasVideo = false,
+  onPlay,
+  onClose,
+  surface,
+}: {
+  switcher?: ReactNode;
+  /** The chosen service. */
+  target: PlayerTarget;
+  /** What it plays: the card's title. */
+  title: string;
+  /** Its player shows in the card. */
+  isOpen: boolean;
+  preview?: boolean;
+  /** A post's frame that carries a video (`hasPostVideo`): Play, not Show. */
+  hasVideo?: boolean;
+  onPlay: () => void;
+  onClose: () => void;
+  surface?: PostActionSurface;
+}) {
+  // A frame is shown, not played: but a post's frame with a video in it is a Play too.
+  const shows = Boolean(target.frame) && !hasVideo;
+  const label = isOpen
+    ? `Close ${target.name}`
+    : shows
+      ? `Show on ${target.name}`
+      : target.frame
+        ? `Play on ${target.name}`
+        : preview
+          ? `Show the ${target.name} player`
+          : `Play ${title} on ${target.name}`;
+  return (
+    <Container overrideDefaults className="flex min-w-0 items-center gap-2" data-testid="card-player-controls">
+      {switcher}
+      <PlayOnPill
+        uri={target.link}
+        isOpen={isOpen}
+        label={label}
+        text={shows ? 'Show' : 'Play'}
+        surface={surface}
+        aria-expanded={isOpen}
+        onClick={isOpen ? onClose : onPlay}
+        data-testid="card-play"
+      />
+    </Container>
   );
 }
 

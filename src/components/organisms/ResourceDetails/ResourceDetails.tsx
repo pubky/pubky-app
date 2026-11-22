@@ -36,8 +36,10 @@ import {
 import { ResourceFileCard } from '@/molecules/ResourceCard/ResourceFileCard';
 import { FILE_TAGS_LABEL, FILE_TYPE_LABEL } from '@/molecules/ResourceCard/ResourceFileCard.utils';
 import { ResourceLinkCard } from '@/molecules/ResourceCard/ResourceLinkCard';
+import { hasPostVideo, showsPostFromCard } from '@/molecules/ResourceCard/ResourcePost';
+import { usePostPreviewImage } from '@/molecules/ResourceCard/usePostPreviewImage';
 import { ResourceCardSkeleton } from '@/molecules/ResourceCardSkeleton/ResourceCardSkeleton';
-import { PlayOnPill } from '@/molecules/ResourcePlayer/ResourcePlayerControls';
+import { PlayOnPill, PlayOnPillPlaceholder } from '@/molecules/ResourcePlayer/ResourcePlayerControls';
 import { useCardPlayer } from '@/molecules/ResourcePlayer/useCardPlayer';
 import { DialogNewPost } from '@/organisms/DialogNewPost/DialogNewPost';
 import { DialogReply } from '@/organisms/DialogReply/DialogReply';
@@ -232,16 +234,20 @@ function ResourceKnown({
   const { feed } = useEventFeed(getResourceFamily(card) === ResourceFamily.EVENT ? card : null);
   // An X post shows X's own embed as the card's body, as in a post (`usePostEmbed`).
   const postEmbed = usePostEmbed(card, uri);
+  const embedsUpFront = useSettingsStore((state) => state.media.embedsUpFront);
   // Embed or card, as in a post (`useCardPlayer`): the page's own link's player up front in place of
   // the card's image and text, a generic link's card; the switch in the large card's header. An X
   // post's embed, or its Show on, is its only source; once X cannot show it, its card is generic.
-  const showsPost = postEmbed !== null && (postEmbed.isOpen || postEmbed.showPost !== undefined);
-  const { embed, switcher, showsPlayer } = useCardPlayer(showsPost ? null : card, uri, 'default');
-  // A service's player loaded in the body: a card that plays whole in our player (a show's latest
-  // episodes, an episode's audio) gives way to it, as in a post's resource frame. A recording's
-  // preview, and the stand-in that loads nothing (platform embeds up front off, until its Play on
-  // is pressed), keep ours.
-  const ownPlayerAside = showsPlayer === true && playsInCard(card);
+  const showsPost =
+    postEmbed !== null && (postEmbed.isOpen || postEmbed.showPost !== undefined || postEmbed.isPostFromCard);
+  const { embed, switcher, showsPlayer, player } = useCardPlayer(showsPost ? null : card, uri, 'default', {
+    previewImage: postEmbed?.postImage,
+  });
+  // A service's player up front in the body: a card that plays whole in our player (a show's latest
+  // episodes, an episode's audio) gives way to it, as in a post's resource frame; a recording's
+  // preview keeps ours. With platform embeds up front off the card stays whole, as on every surface,
+  // the service's player inside it.
+  const ownPlayerAside = embedsUpFront && showsPlayer === true && playsInCard(card);
   const actions = (
     <ResourceActions
       uri={actionUri}
@@ -280,10 +286,15 @@ function ResourceKnown({
                   {embed}
                 </>
               )
-            : postEmbed?.renderBody
+            : postEmbed?.inCard
+              ? undefined
+              : postEmbed?.renderBody
         }
-        isBodyReplaced={postEmbed?.isOpen}
+        isBodyReplaced={postEmbed?.isOpen && !postEmbed.inCard}
         headerControl={switcher}
+        // With platform embeds up front off the card stays, the player or the post's embed inside it.
+        player={player ?? (postEmbed?.inCard ? postEmbed.embedInCard : undefined)}
+        asPost={!embedsUpFront}
       />
     </Container>
   );
@@ -293,7 +304,9 @@ function ResourceKnown({
  * An X post's own embed (a provider whose `resourceKind` is `post`) as the large card's body, chosen
  * as in a post (`chooseNativeEmbed`): up front, its only source (no switch). A post X cannot show
  * leaves our card without the pill. `null` for any other link. A viewer who turned platform embeds
- * up front off (Settings, Links & Media) gets our card with "Show on <site>".
+ * up front off (Settings, Links & Media) gets our card: a post it tells shows as a post from its data
+ * (`showsPostFromCard`), with nothing to press; one with a video, or one it cannot tell, keeps "Play on
+ * <site>" / "Show on <site>", which loads the post inside the card, under its text (`embedInCard`).
  */
 function usePostEmbed(card: TPinakesResourceDetail, uri: string) {
   const [isPostOpen, setIsPostOpen] = useState(false);
@@ -302,6 +315,9 @@ function usePostEmbed(card: TPinakesResourceDetail, uri: string) {
   const found = [uri, card.uri]
     .map((link) => parseUrlForLinkEmbed(link, false))
     .find(({ provider }) => provider?.resourceKind === 'post');
+  // An X post shows its video by its link preview's still (`hasPostVideo`): read as the card reads it.
+  const postPreview = usePostPreviewImage(card, !embedsUpFront && Boolean(found?.embed));
+  const postImage = postPreview.image;
   if (!found?.embed || !found.provider) return null;
   const { embed, provider } = found;
 
@@ -313,14 +329,21 @@ function usePostEmbed(card: TPinakesResourceDetail, uri: string) {
   // Platform embeds up front off and no card to show instead (Pinakes still reading it, or no name):
   // X's embed waits for Show on, as in a post (`NativeEmbedResource`).
   const onPress = !embedsUpFront && choice === 'embed';
-  const isOpen = !failed && ((choice === 'embed' && !onPress) || isPostOpen);
-  // The card player's pill, as on a post's card, on the page's surface.
+  // With them off, a post the card tells from its own data shows at once as a post (`ResourcePost`):
+  // nothing is asked from X, and there is no Show on.
+  const isPostFromCard = !embedsUpFront && choice === 'card' && showsPostFromCard(card, postImage);
+  const isOpen = !failed && !isPostFromCard && ((choice === 'embed' && !onPress) || isPostOpen);
+  // The card player's pill, as on a post's card, on the page's surface. While the link preview, which
+  // may name a video, is read, its place is held.
   const showPost =
-    (choice === 'card' || onPress) && !failed ? (
+    // Only where the pill could come: not once X could not show the post.
+    isPostFromCard && postPreview.pending && !failed ? (
+      <PlayOnPillPlaceholder uri={uri} surface="default" />
+    ) : (choice === 'card' || onPress) && !failed && !isPostFromCard ? (
       <PlayOnPill
         uri={uri}
         isOpen={isPostOpen}
-        label={getShowPostLabel(getResourceLinks(card, uri).siteName, isPostOpen)}
+        label={getShowPostLabel(getResourceLinks(card, uri).siteName, isPostOpen, hasPostVideo(card, postImage))}
         surface="default"
         aria-expanded={isPostOpen}
         onClick={() => setIsPostOpen((open) => !open)}
@@ -341,7 +364,15 @@ function usePostEmbed(card: TPinakesResourceDetail, uri: string) {
         </>
       )
     : undefined;
-  return { showPost, renderBody, isOpen };
+  // With platform embeds up front off, Show on loads the post inside our card, under its text.
+  const inCard = !embedsUpFront && choice === 'card';
+  const embedInCard =
+    inCard && isOpen ? (
+      <Container overrideDefaults className="min-w-0" data-testid="native-embed-body">
+        {provider.renderEmbed(embed, { isPostEmbed: true, onEmbedError: () => setFailed(true), fill: true })}
+      </Container>
+    ) : undefined;
+  return { showPost, renderBody, isOpen, inCard, embedInCard, isPostFromCard, postImage };
 }
 
 /**

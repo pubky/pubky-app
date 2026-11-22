@@ -1164,4 +1164,17 @@ describe('showsEmbedImage', () => {
       showsEmbedImage({ ...card('https://mastodon.social/@a/1', [], 'missing'), ...VIDEO_TYPE, embed: toot }),
     ).toBe(false);
   });
+
+  it('is true for a post shown from its card, whatever its type', () => {
+    expect(
+      showsEmbedImage(
+        {
+          ...card('https://x.com/jack/status/20'),
+          type: 'SocialMediaPosting',
+          type_path: ['Thing', 'CreativeWork', 'Article', 'SocialMediaPosting'],
+        },
+        { isPost: true },
+      ),
+    ).toBe(true);
+  });
 });

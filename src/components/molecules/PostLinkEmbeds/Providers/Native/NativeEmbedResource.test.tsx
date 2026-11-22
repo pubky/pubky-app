@@ -9,6 +9,7 @@ import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
 import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { useSettingsStore } from '@/stores/settings/settings.store';
 import { defaultMediaPreferences } from '@/stores/settings/settings.types';
+import { expectNoThirdPartyLoads } from '@/test-utils/third-party';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { NativeEmbedResource, type RenderNativeEmbed } from './NativeEmbedResource';
 
@@ -24,8 +25,11 @@ const viewport = vi.hoisted(() => ({ isVisible: true }));
 vi.mock('@/hooks/useViewportObserver/useViewportObserver', () => ({
   useViewportObserver: () => ({ ref: () => {}, isVisible: viewport.isVisible }),
 }));
+const og = vi.hoisted(() => ({
+  metadata: null as null | { url: string; type: 'website'; title: string; image: string },
+}));
 vi.mock('@/hooks/useOgMetadata/useOgMetadata', () => ({
-  useOgMetadata: () => ({ metadata: null, isLoading: false, error: null }),
+  useOgMetadata: (url: string | null) => ({ metadata: url ? og.metadata : null, isLoading: false, error: null }),
 }));
 vi.mock('@/molecules/ResourcePlayer/ResourcePlayerFrame', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/molecules/ResourcePlayer/ResourcePlayerFrame')>()),
@@ -197,29 +201,195 @@ describe('NativeEmbedResource', () => {
       expect(within(frame).getByTestId('resource-actions')).toHaveAttribute('data-has-also-on', 'true');
     });
 
-    it('with platform embeds up front off, shows an X post on our card from Show on, with X’s mark, and the same pill closes it', () => {
+    it('with platform embeds up front off, shows an X post from its card’s data at once: author, handle, text, date, no press', () => {
       useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
       onTestFinished(() => {
         useSettingsStore.setState({ media: upFrontMedia });
       });
-      mockCard(POST_WITH_ALSO_ON);
+      mockCard({
+        ...POST_WITH_ALSO_ON,
+        facts: { author: 'someone', author_name: 'Some One', published: '2026-11-20' },
+      });
+      render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
+
+      const post = screen.getByTestId('resource-card-post');
+      expect(within(post).getByTestId('resource-card-post-author')).toHaveTextContent('Some One@someone');
+      expect(within(post).getByTestId('resource-card-title')).toHaveTextContent('BREAKING: a post');
+      expect(within(post).getByTestId('resource-card-post-date')).toHaveTextContent('Nov 20, 2026');
+      // Nothing to press, nothing from X.
+      expect(screen.queryByTestId('show-embed')).not.toBeInTheDocument();
+      expect(embed).not.toHaveBeenCalled();
+      expectNoThirdPartyLoads();
+      // The card still opens the resource page.
+      fireEvent.click(screen.getByTestId('resource-card-type'));
+      expect(mockPush).toHaveBeenCalledWith(getResourceRoute(POST_WITH_ALSO_ON.uri));
+    });
+
+    it('shows the link preview’s image of an X post with no Pinakes image from the app’s image route only', () => {
+      useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
+      og.metadata = { url: POST_URL, type: 'website', title: 'A post', image: 'https://pbs.twimg.com/media/og.jpg' };
+      onTestFinished(() => {
+        useSettingsStore.setState({ media: upFrontMedia });
+        og.metadata = null;
+      });
+      mockCard(POST_CARD);
+      render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
+
+      // The link preview has been read: its image is named by the card on the app's route (its own link's preview), never loaded from X.
+      expect(within(screen.getByTestId('resource-card-image')).getByRole('img').getAttribute('src')).toMatch(
+        /^\/api\/image\?uri=.*&og=1&src=/,
+      );
+      expectNoThirdPartyLoads();
+      expect(embed).not.toHaveBeenCalled();
+    });
+
+    it('keeps Show on for an X post Pinakes could not reach: the card says so, the post is one press away', () => {
+      useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
+      onTestFinished(() => {
+        useSettingsStore.setState({ media: upFrontMedia });
+      });
+      mockCard({ ...POST_CARD, status: 'unreachable' });
+      render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
+
+      expect(screen.queryByTestId('resource-card-post')).not.toBeInTheDocument();
+      fireEvent.click(screen.getByTestId('show-embed'));
+      expect(within(screen.getByTestId('resource-card-player')).getByTestId('platform-embed')).toBeInTheDocument();
+    });
+
+    it('shows a video post’s text at once from its card and keeps a Play for its video', () => {
+      useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
+      onTestFinished(() => {
+        useSettingsStore.setState({ media: upFrontMedia });
+      });
+      // The candidate's X card shape, with a video it carries.
+      mockCard({
+        ...POST_CARD,
+        facts: { author: 'someone', author_name: 'Some One', published: '2026-11-20' },
+        stream: { url: 'https://video.twimg.com/a.mp4', type: 'video/mp4', preview: false },
+      });
+      render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
+
+      expect(screen.getByTestId('resource-card-post')).toHaveTextContent('BREAKING: a post');
+      expect(embed).not.toHaveBeenCalled();
+      expectNoThirdPartyLoads();
+      fireEvent.click(screen.getByRole('button', { name: 'Play on x.com' }));
+      expect(within(screen.getByTestId('resource-card-player')).getByTestId('platform-embed')).toBeInTheDocument();
+      expect(screen.getByTestId('resource-card-post')).toBeInTheDocument();
+    });
+
+    it.each([
+      ['its link preview’s image', null, 'https://pbs.twimg.com/ext_tw_video_thumb/1/pu/img/still.jpg'],
+      ['its own image', 'https://pbs.twimg.com/amplify_video_thumb/2/img/still.jpg', null],
+    ])(
+      'keeps "Play on x.com" for a real X card whose video still is %s, loading X only on the press',
+      (_case, image, ogImage) => {
+        useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
+        og.metadata = ogImage ? { url: POST_URL, type: 'website', title: 'A post', image: ogImage } : null;
+        onTestFinished(() => {
+          useSettingsStore.setState({ media: upFrontMedia });
+          og.metadata = null;
+        });
+        // The candidate's X card shape: SocialMediaPosting, embed kind post, no stream.
+        mockCard({
+          ...POST_CARD,
+          image,
+          group: null,
+          embed: {
+            provider: 'x',
+            kind: 'post',
+            src: 'https://platform.twitter.com/embed/Tweet.html?id=1&dnt=true',
+            height: null,
+            aspect: null,
+            allow: [],
+            autoplay_param: null,
+          },
+        });
+        render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
+
+        expect(screen.getByTestId('resource-card-post')).toHaveTextContent('BREAKING: a post');
+        expect(embed).not.toHaveBeenCalled();
+        expectNoThirdPartyLoads();
+        fireEvent.click(screen.getByRole('button', { name: 'Play on x.com' }));
+        expect(within(screen.getByTestId('resource-card-player')).getByTestId('platform-embed')).toBeInTheDocument();
+      },
+    );
+
+    it('holds the pill’s place, invisible, while the X post’s link preview is read, and drops it for a photo', () => {
+      useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
+      onTestFinished(() => {
+        useSettingsStore.setState({ media: upFrontMedia });
+        og.metadata = null;
+      });
+      mockCard({ ...POST_CARD, group: null });
+      const { rerender } = render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
+
+      // Not known yet whether the post has a video: the place is there, nothing to press or hear.
+      const placeholder = screen.getByTestId('show-embed-placeholder');
+      expect(placeholder).toHaveClass('invisible');
+      expect(placeholder).toHaveAttribute('aria-hidden', 'true');
+      expect(placeholder).toHaveAttribute('tabindex', '-1');
+      expect(screen.queryByRole('button', { name: /on x\.com/ })).not.toBeInTheDocument();
+      expectNoThirdPartyLoads();
+
+      og.metadata = { url: POST_URL, type: 'website', title: 'A post', image: 'https://pbs.twimg.com/media/photo.jpg' };
+      rerender(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
+      expect(screen.queryByTestId('show-embed-placeholder')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('show-embed')).not.toBeInTheDocument();
+    });
+
+    it('holds no pill’s place in the composer, where no Show on comes', () => {
+      useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
+      onTestFinished(() => {
+        useSettingsStore.setState({ media: upFrontMedia });
+      });
+      mockCard({ ...POST_CARD, group: null });
+      render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} isComposing />);
+
+      expect(screen.getByTestId('resource-card-post')).toBeInTheDocument();
+      expect(screen.queryByTestId('show-embed-placeholder')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('show-embed')).not.toBeInTheDocument();
+    });
+
+    it('shows an X post’s image from the app’s image route only', () => {
+      useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
+      onTestFinished(() => {
+        useSettingsStore.setState({ media: upFrontMedia });
+      });
+      mockCard({ ...POST_CARD, image: 'https://pbs.twimg.com/media/abc.jpg' });
+      render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
+
+      expect(within(screen.getByTestId('resource-card-image')).getByRole('img').getAttribute('src')).toMatch(
+        /^\/api\/image\?/,
+      );
+      expectNoThirdPartyLoads();
+      expect(embed).not.toHaveBeenCalled();
+    });
+
+    it('with platform embeds up front off, loads a post the card cannot tell (a video post) inside it from Show on, and the same pill closes it', () => {
+      useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
+      onTestFinished(() => {
+        useSettingsStore.setState({ media: upFrontMedia });
+      });
+      mockCard(POST_AS_VIDEO);
       render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
 
       expect(embed).not.toHaveBeenCalled();
+      expectNoThirdPartyLoads();
       const pill = screen.getByTestId('show-embed');
       expect(within(pill).getByTestId('resource-source-brand')).toBeInTheDocument();
-      // The post's text is its name: not repeated as its description.
-      expect(screen.getAllByText('BREAKING: a post')).toHaveLength(1);
 
       fireEvent.click(pill);
-      expect(screen.getByTestId('platform-embed')).toBeInTheDocument();
+      // The post loads inside the card, under its text: the card stays.
+      expect(within(screen.getByTestId('resource-card-player')).getByTestId('platform-embed')).toBeInTheDocument();
+      expect(screen.getByTestId('resource-card-title')).toHaveTextContent('BREAKING: a post');
+      expect(embed).toHaveBeenCalledTimes(1);
       expect(pill).toHaveAttribute('aria-expanded', 'true');
       // A click on the open post stays there; the card's header still opens the page.
       fireEvent.click(screen.getByTestId('native-embed-body'));
       expect(mockPush).not.toHaveBeenCalled();
       expect(screen.getByTestId('resource-card')).toHaveAttribute('data-click-through', 'true');
       fireEvent.click(screen.getByTestId('resource-card-type'));
-      expect(mockPush).toHaveBeenCalledWith(getResourceRoute(POST_WITH_ALSO_ON.uri));
+      expect(mockPush).toHaveBeenCalledWith(getResourceRoute(POST_AS_VIDEO.uri));
       fireEvent.click(pill);
       expect(screen.queryByTestId('platform-embed')).not.toBeInTheDocument();
       expect(screen.getByTestId('resource-card')).toHaveAttribute('data-click-through', 'true');
@@ -230,7 +400,7 @@ describe('NativeEmbedResource', () => {
       onTestFinished(() => {
         useSettingsStore.setState({ media: upFrontMedia });
       });
-      mockCard(POST_WITH_ALSO_ON);
+      mockCard(POST_AS_VIDEO);
       const { unmount } = render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
       expect(screen.getByTestId('show-embed')).toHaveClass('bg-card');
       unmount();
@@ -316,15 +486,36 @@ describe('NativeEmbedResource', () => {
       beforeEach(() => useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } }));
       afterEach(() => useSettingsStore.setState({ media: upFrontMedia }));
 
-      it('shows the player’s stand-in with Play on in the resource frame and loads nothing from the platform', () => {
+      const play = () => screen.getByRole('button', { name: `Play ${videoFixture.name} on YouTube` });
+
+      it('shows the video’s card with Play in its header and loads nothing from the platform', () => {
         mockCard(VIDEO_ALONE);
         render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
 
-        const frame = screen.getByTestId('resource-embed-frame');
-        expect(within(frame).getByTestId('embed-player')).toBeInTheDocument();
+        const card = screen.getByTestId('resource-card');
+        expect(screen.queryByTestId('resource-embed-frame')).not.toBeInTheDocument();
+        expect(within(card).getByTestId('resource-card-title')).toHaveTextContent(videoFixture.name!);
+        expect(within(card).getByTestId('card-player-controls')).toContainElement(play());
         expect(embed).not.toHaveBeenCalled();
+        expectNoThirdPartyLoads();
+      });
+
+      it('loads exactly one player inside the card on Play, started, and Close leaves the card alone', () => {
+        mockCard(VIDEO_ALONE);
+        render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
+
+        fireEvent.click(play());
+
+        const card = screen.getByTestId('resource-card');
+        expect(document.querySelectorAll('iframe')).toHaveLength(1);
+        const frame = within(within(card).getByTestId('resource-card-player')).getByTestId('resource-player-frame');
+        expect(frame.getAttribute('src')).toContain('autoplay=1');
+        expect(within(card).getByTestId('resource-card-title')).toHaveTextContent(videoFixture.name!);
+        expect(embed).not.toHaveBeenCalled();
+
+        fireEvent.click(within(card).getByRole('button', { name: 'Close YouTube' }));
         expect(document.querySelector('iframe')).toBeNull();
-        expect(within(frame).getByRole('button', { name: 'Play on YouTube' })).toBeInTheDocument();
+        expect(play()).toBeInTheDocument();
       });
 
       it('shows our card for a video the card player cannot play, its embed only from Play on', () => {
@@ -367,9 +558,10 @@ describe('NativeEmbedResource', () => {
         expect(within(frame).getByTestId('resource-embed-body')).toContainElement(screen.getByTestId('platform-embed'));
         expect(screen.queryByTestId('resource-card')).not.toBeInTheDocument();
 
-        // Closed, the player's stand-in takes its place.
+        // Closed, the card takes its place, its Play loading nothing until pressed.
         fireEvent.click(within(frame).getByRole('button', { name: 'Close the YouTube video' }));
-        expect(screen.getByTestId('embed-player')).toBeInTheDocument();
+        expect(screen.getByTestId('resource-card')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: `Play ${videoFixture.name} on YouTube` })).toBeInTheDocument();
         expect(screen.queryByTestId('platform-embed')).not.toBeInTheDocument();
       });
 
@@ -416,13 +608,22 @@ describe('NativeEmbedResource', () => {
         expect(screen.getByRole('button', { name: 'Play on YouTube' })).toBeInTheDocument();
       });
 
-      it('shows an X post on our card, its embed only from Show on', () => {
+      it('shows an X post on our card from its own data, never X’s embed', () => {
         mockCard(POST_CARD);
         render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
 
+        expect(screen.getByTestId('resource-card-post')).toHaveTextContent('BREAKING: a post');
+        expect(screen.queryByTestId('show-embed')).not.toBeInTheDocument();
         expect(embed).not.toHaveBeenCalled();
-        fireEvent.click(screen.getByTestId('show-embed'));
-        expect(screen.getByTestId('platform-embed')).toBeInTheDocument();
+      });
+
+      it('loads nothing from X for a card Pinakes is still reading: the frame and Show on as before', () => {
+        mockCard({ ...POST_CARD, status: 'pending', name: null, description: null });
+        render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
+
+        expect(embed).not.toHaveBeenCalled();
+        expectNoThirdPartyLoads();
+        expect(screen.getByTestId('show-embed')).toHaveAccessibleName('Show on x.com');
       });
     });
 
@@ -607,14 +808,14 @@ describe('NativeEmbedResource', () => {
       beforeEach(() => useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } }));
       afterEach(() => useSettingsStore.setState({ media: upFrontMedia }));
 
-      it('loads nothing from any service, and offers Play on in the player’s place', () => {
+      it('loads nothing from any service, and shows the song’s card with Play on YouTube', () => {
         mockCard(SONG);
         render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
 
-        expect(document.querySelector('iframe')).toBeNull();
+        expectNoThirdPartyLoads();
         expect(embed).not.toHaveBeenCalled();
-        expect(screen.getByTestId('embed-player')).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Play on YouTube' })).toBeInTheDocument();
+        expect(screen.getByTestId('resource-card')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: `Play ${SONG.name} on YouTube` })).toBeInTheDocument();
       });
     });
   });

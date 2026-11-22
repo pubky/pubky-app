@@ -480,14 +480,16 @@ describe('PostLinkEmbeds - an external resource inside a post preview (integrati
       expect(mocks.navigateToPost).toHaveBeenCalledWith(QUOTED);
     });
 
-    it('shows the stand-in and loads nothing with platform embeds up front off', () => {
+    it('shows the card with Play and loads nothing with platform embeds up front off', () => {
       act(() => useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } }));
       givenQuoteOfResource(SONG_WRITTEN, SONG_CARD);
       show(<PostContent postId={OUTER} />);
 
       const resource = resourceIn(quoteCard());
       expect(
-        within(within(resource).getByTestId('embed-player')).getByRole('button', { name: 'Play on Spotify' }),
+        within(within(resource).getByTestId('resource-card')).getByRole('button', {
+          name: `Play ${SONG_CARD.name} on Spotify`,
+        }),
       ).toBeInTheDocument();
       expect(within(resource).getByTestId('resource-actions')).toBeInTheDocument();
       expect(iframes()).toHaveLength(0);

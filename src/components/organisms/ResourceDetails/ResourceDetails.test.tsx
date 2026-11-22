@@ -18,6 +18,7 @@ import relatedFixture from '@/services/pinakes/fixtures/search.related.json';
 import type { TPinakesCard, TPinakesGroupDetail, TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { useSettingsStore } from '@/stores/settings/settings.store';
 import { defaultMediaPreferences } from '@/stores/settings/settings.types';
+import { expectNoThirdPartyLoads } from '@/test-utils/third-party';
 import { ResourceDetails } from './ResourceDetails';
 
 // These cases are for platform embeds up front (Settings, Links & Media) turned on; the default
@@ -213,6 +214,13 @@ const GROUP: TPinakesGroupDetail = groupFixture;
 const RELATED: TPinakesCard[] = relatedFixture.items;
 const NOT_KNOWN = 'https://example.com/pinakes-does-not-know-this-link-1104';
 const X_URL = 'https://x.com/joenakamoto/status/2119830751713829276';
+/** An X post the card cannot tell as a post (Pinakes types it a video): its embed comes from Show on. */
+const xVideoPost = (card: TPinakesResourceDetail): TPinakesResourceDetail => ({
+  ...card,
+  type: 'VideoObject',
+  type_path: ['Thing', 'CreativeWork', 'MediaObject', 'VideoObject'],
+});
+
 const X_POST: TPinakesResourceDetail = {
   ...VIDEO,
   uri: X_URL,
@@ -591,7 +599,7 @@ describe('ResourceDetails', () => {
         expect(within(card).getAllByTestId('resource-card-episode-audio')).toHaveLength(2);
       });
 
-      it('gives way to the service’s player once its Play on is pressed with platform embeds up front off', () => {
+      it('keeps the card whole, its episodes too, with the service’s player inside it, with platform embeds up front off', () => {
         useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
         onTestFinished(() => {
           useSettingsStore.setState({ media: upFrontMedia });
@@ -603,13 +611,15 @@ describe('ResourceDetails', () => {
         pick(card, 'Card', 'Apple Podcasts');
         expect(within(card).getAllByTestId('resource-card-episode-audio')).toHaveLength(2);
 
-        fireEvent.click(within(card).getByRole('button', { name: 'Play on Apple Podcasts' }));
+        fireEvent.click(within(card).getByRole('button', { name: `Play ${podcastFixture.name} on Apple Podcasts` }));
 
+        // Inside the card, under its text: the card stays.
+        expect(within(card).getByTestId('resource-card-title')).toHaveTextContent(podcastFixture.name!);
         expect(within(card).getByTestId('resource-player-frame').getAttribute('src')).toMatch(
           /^https:\/\/embed\.podcasts\.apple\.com\/us\/podcast\/173001861/,
         );
-        expect(within(card).queryByTestId('resource-card-episodes')).not.toBeInTheDocument();
-        expect(within(card).queryByTestId('resource-card-episode-audio')).not.toBeInTheDocument();
+        // As on every surface: the card stays whole, its own episodes with it.
+        expect(within(card).getAllByTestId('resource-card-episode-audio')).toHaveLength(2);
       });
     });
 
@@ -621,6 +631,26 @@ describe('ResourceDetails', () => {
         'src',
         'https://embed.tidal.com/tracks/534050211?hideOverlays=true',
       );
+    });
+
+    it('shows the large card with Play, loading nothing, and the player inside it on Play, with embeds up front off', () => {
+      useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
+      onTestFinished(() => {
+        useSettingsStore.setState({ media: upFrontMedia });
+      });
+      read = settled(mbRecordingEnrichedFixture);
+      renderDetails('https://tidal.com/track/534050211');
+
+      const card = screen.getByTestId('resource-card');
+      expect(within(card).getByTestId('resource-card-title')).toHaveTextContent(mbRecordingEnrichedFixture.name!);
+      expectNoThirdPartyLoads();
+      fireEvent.click(within(card).getByRole('button', { name: `Play ${mbRecordingEnrichedFixture.name} on TIDAL` }));
+
+      expect(document.querySelectorAll('iframe')).toHaveLength(1);
+      expect(
+        within(within(card).getByTestId('resource-card-player')).getByTestId('resource-player-frame'),
+      ).toHaveAttribute('src', expect.stringMatching(/^https:\/\/embed\.tidal\.com\/tracks\/534050211\?/));
+      expect(within(card).getByTestId('resource-card-title')).toBeInTheDocument();
     });
 
     it('names OpenStreetMap once under Sources on a place’s page, not on its card', () => {
@@ -753,7 +783,7 @@ describe('ResourceDetails', () => {
       expect(screen.queryByTestId('player-switch')).toBeNull();
     });
 
-    it('shows our card with Show on <site> to a viewer who turned platform embeds up front off, X’s embed only from there', () => {
+    it('shows an X post from its card’s data at once to a viewer who turned platform embeds up front off, never X’s embed', () => {
       useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
       onTestFinished(() => {
         useSettingsStore.setState({ media: upFrontMedia });
@@ -761,26 +791,53 @@ describe('ResourceDetails', () => {
       read = settled(X_POST_WITH_ALSO_ON);
       renderDetails(X_URL);
 
+      const post = screen.getByTestId('resource-card-post');
+      expect(within(post).getByTestId('resource-card-post-author')).toHaveTextContent('Joe Nakamoto@joenakamoto');
+      // The page's heading, not a link to the page itself.
+      expect(within(post).getByRole('heading', { level: 2 })).toHaveTextContent(X_POST.description!);
+      expect(within(post).queryByRole('link')).toBeNull();
+      expect(within(post).getByTestId('resource-card-post-date')).toHaveTextContent('Nov 9, 2026');
+      // Who wrote it and when are not said again under Details.
+      expect(screen.queryByTestId('resource-facts')?.textContent ?? '').not.toMatch(/joenakamoto|Nov 9, 2026/);
+      expect(screen.queryByTestId('show-embed')).toBeNull();
+      expect(screen.queryByTestId('twitter-tweet')).toBeNull();
+      expectNoThirdPartyLoads();
+    });
+
+    it('shows our card with Play on <site> for a video post, with platform embeds up front off, X’s embed only from there', () => {
+      useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
+      onTestFinished(() => {
+        useSettingsStore.setState({ media: upFrontMedia });
+      });
+      read = settled(xVideoPost(X_POST_WITH_ALSO_ON));
+      renderDetails(X_URL);
+
       expect(screen.getByTestId('resource-card-title')).toHaveTextContent(X_POST.name!);
       expect(screen.getByTestId('resource-facts')).toBeInTheDocument();
       expect(screen.queryByTestId('twitter-tweet')).toBeNull();
 
       const show = within(screen.getByTestId('resource-actions')).getByTestId('show-embed');
-      expect(show).toHaveAccessibleName('Show on x.com');
+      expect(show).toHaveAccessibleName('Play on x.com');
       fireEvent.click(show);
-      expect(within(screen.getByTestId('native-embed-body')).getByTestId('twitter-tweet')).toBeInTheDocument();
-      expect(screen.queryByTestId('resource-card-title')).toBeNull();
-      expect(screen.queryByTestId('resource-facts')).toBeNull();
-      expect(screen.getByTestId('show-embed')).toHaveAccessibleName('Close the x.com post');
+      // The post loads inside the card, under its text: the card, its title and Details stay.
+      expect(
+        within(within(screen.getByTestId('resource-card-player')).getByTestId('native-embed-body')).getByTestId(
+          'twitter-tweet',
+        ),
+      ).toBeInTheDocument();
+      expect(screen.getByTestId('resource-card-title')).toHaveTextContent(X_POST.name!);
+      expect(screen.getByTestId('resource-facts')).toBeInTheDocument();
+      expect(screen.getByTestId('show-embed')).toHaveAccessibleName('Close the x.com video');
 
       fireEvent.click(screen.getByTestId('show-embed'));
       expect(screen.getByTestId('resource-card-title')).toBeInTheDocument();
+      expect(screen.queryByTestId('twitter-tweet')).toBeNull();
     });
 
     it('shows our card with Show on 𝕏 to a viewer who turned platform embeds up front off', () => {
       useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
       try {
-        read = settled(X_POST);
+        read = settled(xVideoPost(X_POST));
         renderDetails(X_URL);
 
         expect(screen.getByTestId('resource-card-title')).toHaveTextContent(X_POST.name!);
@@ -832,7 +889,7 @@ describe('ResourceDetails', () => {
         useSettingsStore.setState({ media: upFrontMedia });
       });
       tweet.state = { data: null, error: new Error('gone'), isLoading: false };
-      read = settled(X_POST_WITH_ALSO_ON);
+      read = settled(xVideoPost(X_POST_WITH_ALSO_ON));
       renderDetails(X_URL);
 
       fireEvent.click(screen.getByTestId('show-embed'));

@@ -475,6 +475,39 @@ describe('ResourceCard', () => {
       expect(screen.getByTestId('resource-card-type-tile')).toBeInTheDocument();
     });
 
+    it('keeps the small image beside the text while a player plays in the card, and gives a video’s large image to it', () => {
+      const album: TPinakesResourceDetail = { ...mbReleaseGroupFixture, image: 'https://coverartarchive.org/a.jpg' };
+      const { unmount } = render(<ResourceCard card={album} href={album.uri} player={<div data-testid="player" />} />);
+      expect(screen.getByTestId('player')).toBeInTheDocument();
+      expect(screen.getByTestId('resource-card-image').compareDocumentPosition(title())).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+      unmount();
+
+      render(<ResourceCard card={VIDEO_PAGE} href={VIDEO_PAGE.uri} player={<div data-testid="player" />} />);
+      expect(screen.getByTestId('player')).toBeInTheDocument();
+      expect(screen.queryByTestId('resource-card-image')).not.toBeInTheDocument();
+    });
+
+    it('keeps a post’s photo at a post’s size in the post shown from its card, small otherwise', () => {
+      const post: TPinakesResourceDetail = {
+        ...ARTICLE,
+        uri: 'https://x.com/jack/status/20',
+        type: 'SocialMediaPosting',
+        type_path: ['Thing', 'CreativeWork', 'Article', 'SocialMediaPosting'],
+        name: 'just setting up my twttr',
+        description: 'just setting up my twttr',
+        facts: { author: 'jack', author_name: 'jack', published: '2006-03-21' },
+      };
+      const { unmount } = render(<ResourceCard card={post} href={post.uri} asPost />);
+      expect(screen.getByTestId('resource-card-image-fit')).toBeInTheDocument();
+      unmount();
+
+      render(<ResourceCard card={post} href={post.uri} />);
+      expect(screen.getByTestId('resource-card-image')).toHaveAttribute('data-shape', 'square');
+      expect(screen.queryByTestId('resource-card-image-fit')).not.toBeInTheDocument();
+    });
+
     describe('the small image beside the text', () => {
       const ALBUM: TPinakesResourceDetail = { ...mbReleaseGroupFixture, image: 'https://coverartarchive.org/a.jpg' };
       const PLAYLIST: TPinakesResourceDetail = {

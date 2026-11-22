@@ -5,8 +5,11 @@ import { isPinakesConfigured } from '@/config/pinakes';
 import { usePinakesCard } from '@/hooks/usePinakesCard/usePinakesCard';
 import { PostPreviewNestingProvider } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import articleFixture from '@/services/pinakes/fixtures/by-uri.article.json';
+import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
+import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { useSettingsStore } from '@/stores/settings/settings.store';
 import { defaultMediaPreferences } from '@/stores/settings/settings.types';
+import { expectNoThirdPartyLoads } from '@/test-utils/third-party';
 import { PostLinkEmbeds } from './PostLinkEmbeds';
 
 // These cases are for platform embeds up front (Settings, Links & Media) turned on; the default
@@ -136,6 +139,13 @@ vi.mock('@/config/pinakes', async (importOriginal) => ({
 vi.mock('@/hooks/usePinakesCard/usePinakesCard', () => ({
   usePinakesCard: vi.fn(() => ({ data: null, isLoading: false, isError: false })),
 }));
+// The link preview reads nothing unless a test gives it an answer.
+const og = vi.hoisted(() => ({
+  metadata: null as null | { url: string; type: 'website'; title: string; image: string },
+}));
+vi.mock('@/hooks/useOgMetadata/useOgMetadata', () => ({
+  useOgMetadata: (url: string | null) => ({ metadata: url ? og.metadata : null, isLoading: false, error: null }),
+}));
 // Off screen unless a test brings the embed near (jsdom has no layout).
 const viewport = vi.hoisted(() => ({ isVisible: false }));
 vi.mock('@/hooks/useViewportObserver/useViewportObserver', () => ({
@@ -194,6 +204,114 @@ describe('PostLinkEmbeds', () => {
       expect(document.querySelector('iframe')).toBeNull();
       fireEvent.click(screen.getByRole('button', { name: 'Play on YouTube' }));
       expect(screen.getByTestId('YouTube video player').getAttribute('src')).toContain('autoplay=1');
+    });
+  });
+
+  describe('a link in the text Pinakes has a card for (platform embeds up front off)', () => {
+    const VIDEO: TPinakesResourceDetail = { ...videoFixture, also_on: [] };
+    const X_LINK = 'https://x.com/user/status/1234567890';
+    const X_POST: TPinakesResourceDetail = {
+      ...videoFixture,
+      uri: X_LINK,
+      name: 'A post on X',
+      description: null,
+      site: 'x.com',
+      type: 'SocialMediaPosting',
+      type_path: ['Thing', 'CreativeWork', 'SocialMediaPosting'],
+      image: null,
+      also_on: [],
+    };
+    const givenCard = (data: TPinakesResourceDetail | null, isLoading = false) =>
+      vi.mocked(usePinakesCard).mockReturnValue({ data, isLoading, isError: false });
+
+    beforeEach(() => {
+      useSettingsStore.setState({ media: defaultMediaPreferences });
+      vi.mocked(isPinakesConfigured).mockReturnValue(true);
+      viewport.isVisible = true;
+    });
+
+    it('shows a YouTube link’s card, loading nothing from YouTube, and plays it inside the card on Play', () => {
+      givenCard(VIDEO);
+      render(<PostLinkEmbeds content={`Listen ${VIDEO.uri}`} />);
+
+      // Read only as a link already known, re-read while on screen: never asked to be read.
+      expect(usePinakesCard).toHaveBeenCalledWith(VIDEO.uri, { recheck: true });
+      expect(screen.getByTestId('resource-card-title')).toHaveTextContent(VIDEO.name!);
+      expectNoThirdPartyLoads();
+      // The link is the post's text, not its resource: no footer of its own.
+      expect(screen.queryByTestId('resource-actions')).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: `Play ${VIDEO.name} on YouTube` }));
+
+      expect(document.querySelectorAll('iframe')).toHaveLength(1);
+      const player = screen.getByTestId('resource-card-player');
+      expect(within(player).getByTestId('resource-player-frame').getAttribute('src')).toContain('autoplay=1');
+      expect(screen.getByTestId('resource-card-title')).toHaveTextContent(VIDEO.name!);
+    });
+
+    it('shows an X link’s post from its card’s data at once, nothing from X, no press', () => {
+      givenCard(X_POST);
+      render(<PostLinkEmbeds content={`See ${X_LINK}`} />);
+
+      expect(screen.getByTestId('resource-card-post')).toHaveTextContent('A post on X');
+      expect(screen.queryByRole('button', { name: 'Show on x.com' })).not.toBeInTheDocument();
+      expect(document.querySelector('[data-testid^="twitter-tweet"]')).toBeNull();
+      expectNoThirdPartyLoads();
+    });
+
+    it('shows the link preview’s image of a text X link’s card from the app’s image route only', () => {
+      og.metadata = { url: X_LINK, type: 'website', title: 'A post', image: 'https://pbs.twimg.com/media/og.jpg' };
+      try {
+        // No group to borrow an image from: the card falls back on the link's own preview.
+        givenCard({ ...X_POST, group: null });
+        render(<PostLinkEmbeds content={`See ${X_LINK}`} />);
+
+        expect(screen.getByTestId('resource-card-post')).toHaveTextContent('A post on X');
+        expect(within(screen.getByTestId('resource-card-image')).getByRole('img').getAttribute('src')).toMatch(
+          /^\/api\/image\?uri=.*&og=1&src=/,
+        );
+        expectNoThirdPartyLoads();
+      } finally {
+        og.metadata = null;
+      }
+    });
+
+    it('keeps a Play for a video post, loading X’s embed inside the card from it', () => {
+      givenCard({ ...X_POST, type: 'VideoObject', type_path: ['Thing', 'CreativeWork', 'MediaObject', 'VideoObject'] });
+      render(<PostLinkEmbeds content={`See ${X_LINK}`} />);
+
+      expect(document.querySelector('[data-testid^="twitter-tweet"]')).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: 'Play on x.com' }));
+      expect(within(screen.getByTestId('resource-card-player')).getByTestId('twitter-tweet')).toBeInTheDocument();
+      expect(screen.getByTestId('resource-card-title')).toHaveTextContent('A post on X');
+    });
+
+    it('keeps today’s pill for a link Pinakes does not know', () => {
+      givenCard(null);
+      render(<PostLinkEmbeds content={`Watch ${VIDEO.uri}`} />);
+
+      expect(screen.queryByTestId('resource-card')).not.toBeInTheDocument();
+      expect(screen.getByTestId('embed-on-press')).toBeInTheDocument();
+      expect(document.querySelector('iframe')).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: 'Play on YouTube' }));
+      expect(screen.getByTestId('YouTube video player').getAttribute('src')).toContain('autoplay=1');
+    });
+
+    it('holds the place with the card’s skeleton while Pinakes reads, loading nothing', () => {
+      givenCard(null, true);
+      render(<PostLinkEmbeds content={`Watch ${VIDEO.uri}`} />);
+
+      expect(screen.queryByRole('button', { name: /Play/ })).not.toBeInTheDocument();
+      expect(document.querySelector('iframe')).toBeNull();
+    });
+
+    it('reads nothing before the box first comes near the screen', () => {
+      viewport.isVisible = false;
+      givenCard(VIDEO);
+      render(<PostLinkEmbeds content={`Watch ${VIDEO.uri}`} />);
+
+      expect(usePinakesCard).not.toHaveBeenCalled();
+      expect(document.querySelector('iframe')).toBeNull();
     });
   });
 
