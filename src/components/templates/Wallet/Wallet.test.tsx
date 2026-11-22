@@ -225,6 +225,25 @@ describe('Pubky wallet', () => {
     const binding = { network: 'regtest', deviceId: 'this-phone', transferId: 'installed-receipt' };
     const checkout = <CheckoutFunding account={account} price={{ asset: 'BTC', amount: '1000' }} onState={vi.fn()} />;
     const feed = <main>Feed</main>;
+    const receipt = {
+      id: 'first-receipt',
+      kind: 'received',
+      status: 'completed',
+      title: 'Payment received',
+      description: 'Coffee',
+      timestamp: Date.UTC(2026, 0, 12),
+      reference: 'first-receipt',
+      amountSats: 850,
+      feeSats: 0,
+    };
+    function history(activity: (typeof receipt)[]) {
+      return {
+        wallet: record,
+        balance: { totalSats: 5000, availableSats: 5000, pendingSats: 0 },
+        primary: { connected: true },
+        activity,
+      };
+    }
 
     const makeLease = () => ({
       assertActive: vi.fn(),
@@ -238,6 +257,131 @@ describe('Pubky wallet', () => {
       wallet.acquireRingDevice.mockResolvedValueOnce(lease);
       return lease;
     }
+
+    it.each([
+      { state: 'receipts', rows: [receipt] },
+      { state: 'an empty list', rows: [] },
+    ])('shows $state immediately while checking for payments on return', async ({ rows }) => {
+      const previous = rows.length ? '+₿850' : 'Your payments and requests will appear here.';
+      wallet.snapshot.mockResolvedValue(history(rows));
+      const view = render(<Wallet />);
+      await unlock();
+      expect(await screen.findByText(previous)).toBeVisible();
+      view.rerender(feed);
+      expect(screen.queryByText(previous)).toBeNull();
+
+      const refresh = Promise.withResolvers<ReturnType<typeof history>>();
+      wallet.snapshot.mockClear().mockReturnValue(refresh.promise);
+      view.rerender(<Wallet />);
+      expect(screen.getByText(previous)).toBeVisible();
+      expect(screen.queryByText('Loading activity…')).toBeNull();
+      await waitFor(() => expect(wallet.snapshot).toHaveBeenCalledOnce());
+
+      const incoming = { ...receipt, id: 'new-receipt', reference: 'new-receipt', amountSats: 300 };
+      await act(async () => refresh.resolve(history([incoming, ...rows])));
+      expect(await screen.findByText('+₿300')).toBeVisible();
+      expect(screen.getAllByRole('listitem')).toHaveLength(rows.length + 1);
+      expect(wallet.open).toHaveBeenCalledOnce();
+    });
+
+    it('keeps saved receipts on return during startup until live Activity replaces them', async () => {
+      const start = Promise.withResolvers<void>();
+      const live = Promise.withResolvers<ReturnType<typeof history>>();
+      wallet.startWallet.mockReturnValue(start.promise);
+      wallet.savedActivity.mockResolvedValueOnce([receipt]);
+      wallet.snapshot.mockReturnValue(live.promise);
+      const view = render(<Wallet />);
+      await unlock();
+      expect(await screen.findByRole('heading', { name: 'Saved activity' })).toBeVisible();
+      expect(screen.getByText('+₿850')).toBeVisible();
+
+      view.rerender(feed);
+      view.rerender(<Wallet />);
+      expect(screen.getByRole('heading', { name: 'Saved activity' })).toBeVisible();
+      expect(screen.getByText('+₿850')).toBeVisible();
+      expect(wallet.savedActivity).toHaveBeenCalledOnce();
+      expect(wallet.snapshot).not.toHaveBeenCalled();
+      await act(async () => start.resolve());
+      await waitFor(() => expect(wallet.snapshot).toHaveBeenCalledOnce());
+      expect(screen.getByText('+₿850')).toBeVisible();
+
+      await act(async () => live.resolve(history([{ ...receipt, amountSats: 970 }])));
+      expect(await screen.findByText('+₿970')).toBeVisible();
+      expect(screen.getByRole('heading', { name: 'Activity' })).toBeVisible();
+      expect(screen.queryByText('+₿850')).toBeNull();
+      expect(screen.getAllByRole('listitem')).toHaveLength(1);
+    });
+
+    it.each(['locking', 'switching accounts'])('clears the previous Activity list after %s', async (change) => {
+      wallet.snapshot.mockResolvedValue(history([receipt]));
+      const view = render(<Wallet />);
+      await unlock();
+      expect(await screen.findByText('+₿850')).toBeVisible();
+
+      const previousRead = Promise.withResolvers<ReturnType<typeof history>>();
+      wallet.snapshot.mockClear().mockReturnValue(previousRead.promise);
+      const refreshButton = screen.getByRole('button', { name: 'Refresh wallet' });
+      await waitFor(() => expect(refreshButton).toBeEnabled());
+      fireEvent.click(refreshButton);
+      await waitFor(() => expect(wallet.snapshot).toHaveBeenCalledOnce());
+      if (change === 'locking') {
+        fireEvent.click(screen.getByRole('button', { name: 'Lock' }));
+      } else {
+        view.rerender(feed);
+        act(() =>
+          useAuthStore.setState({ currentUserPubky: 'account-two', session: mockRingSession(['/:rw'], 'account-two') }),
+        );
+        view.rerender(<Wallet />);
+      }
+      expect(await screen.findByLabelText('Password', { exact: true })).toBeVisible();
+      expect(screen.queryByText('+₿850')).toBeNull();
+
+      // Reuse the wallet ID to catch caches that outlive the session which supplied the receipts.
+      const refresh = Promise.withResolvers<ReturnType<typeof history>>();
+      wallet.snapshot.mockClear().mockReturnValue(refresh.promise);
+      await unlock();
+      await waitFor(() => expect(wallet.snapshot).toHaveBeenCalledOnce());
+      await act(async () => previousRead.resolve(history([{ ...receipt, amountSats: 999 }])));
+      expect(screen.queryByText('+₿850')).toBeNull();
+      expect(screen.queryByText('+₿999')).toBeNull();
+      await act(async () => refresh.resolve(history([])));
+      expect(await screen.findByText('Your payments and requests will appear here.')).toBeVisible();
+    });
+
+    it('settles a retained pending row in place while its receipt is open', async () => {
+      const paymentHash = 'ba'.repeat(32);
+      const pending = {
+        ...receipt,
+        id: 'submission:first',
+        reference: paymentHash,
+        paymentHash,
+        kind: 'sent',
+        title: 'Payment sent',
+        status: 'pending',
+      };
+      wallet.snapshot.mockResolvedValue(history([pending]));
+      const view = render(<Wallet />);
+      await unlock();
+      await screen.findByRole('button', { name: /₿850.*pending/i });
+      view.rerender(feed);
+      const refresh = Promise.withResolvers<ReturnType<typeof history>>();
+      wallet.snapshot.mockReturnValue(refresh.promise);
+      view.rerender(<Wallet />);
+      const row = screen.getByRole('button', { name: /₿850.*pending/i });
+      fireEvent.click(row);
+      const dialog = await screen.findByRole('dialog', { name: 'Payment receipt' });
+      expect(within(dialog).getByText('Coffee')).toBeVisible();
+
+      await act(async () =>
+        refresh.resolve(history([{ ...pending, id: `payment:${paymentHash}`, status: 'completed' }])),
+      );
+      expect(await within(row).findByText('completed')).toBeInTheDocument();
+      expect(screen.getByRole('dialog')).toBe(dialog);
+      expect(within(dialog).getByText('Payment sent')).toBeVisible();
+      fireEvent.keyDown(dialog, { key: 'Escape' });
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+      expect(screen.getByRole('button', { name: /₿850.*completed/i })).toBe(row);
+    });
 
     it('reuses the same signer and Ring lease across the feed, checkout and a new wallet route', async () => {
       const lease = openDevice();
@@ -2160,7 +2304,7 @@ describe('Pubky wallet', () => {
     expect(within(dialog).queryByText('bcrt1fallback')).toBeNull();
   });
 
-  it('reopens the original unpaid offline invoice from Activity after unlocking', async () => {
+  function prepareOfflineRequest() {
     const paymentHash = 'ab'.repeat(32);
     const request = {
       id: 'offline-receive-1234',
@@ -2198,6 +2342,11 @@ describe('Pubky wallet', () => {
         },
       ],
     });
+    return request;
+  }
+
+  it('reopens the original unpaid offline invoice from Activity after unlocking', async () => {
+    const request = prepareOfflineRequest();
     render(<Wallet />);
     await unlock();
     fireEvent.click(await screen.findByRole('button', { name: /₿750/ }));
@@ -2208,6 +2357,36 @@ describe('Pubky wallet', () => {
     expect(wallet.quoteReceive).not.toHaveBeenCalled();
     expect(wallet.issueOffline).not.toHaveBeenCalled();
   });
+
+  it.each(['before opening', 'after opening'])(
+    'keeps an offline invoice that expired %s its cached receipt closed',
+    async (when) => {
+      const request = prepareOfflineRequest();
+      const view = render(<Wallet />);
+      await unlock();
+      await screen.findByRole('button', { name: /₿750/ });
+      view.rerender(<main>Feed</main>);
+      const refresh = Promise.withResolvers<object>();
+      wallet.snapshot.mockReturnValue(refresh.promise);
+      view.rerender(<Wallet />);
+
+      const now = vi.spyOn(Date, 'now');
+      try {
+        if (when === 'before opening') now.mockReturnValue(request.expiresAt + 1);
+        fireEvent.click(screen.getByRole('button', { name: /₿750/ }));
+        const dialog = await screen.findByRole('dialog');
+        if (when === 'after opening') {
+          const show = within(dialog).getByRole('button', { name: 'Show invoice' });
+          now.mockReturnValue(request.expiresAt + 1);
+          fireEvent.click(show);
+        }
+        expect(within(dialog).queryByRole('button', { name: 'Show invoice' })).toBeNull();
+        expect(screen.queryByLabelText('Lightning invoice')).toBeNull();
+      } finally {
+        now.mockRestore();
+      }
+    },
+  );
 
   it('updates authoritative balance and Activity when an invoice settles after leaving Receive', async () => {
     const receipt = { phase: 'completed', receivedSats: 1000, confirmedSats: 1000, pendingSats: 0 };

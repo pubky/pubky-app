@@ -31,6 +31,14 @@ import { ActivityReceipt, activityReceiptAmount, activityReceiptTitle, WalletBal
 import { useWalletRecovery, WalletRecoveryNotice } from './WalletRecoveryStatus';
 
 type ActivityEntry = { key: string; row: Activity };
+export type WalletActivityHistory = {
+  source: 'vault' | 'live';
+  walletId: string;
+  network: Network;
+  imported: boolean;
+  entries: ActivityEntry[];
+  away: string[];
+};
 
 // Submissions acquire an engine ID when reconciled. A payment hash alone cannot
 // identify an attempt: two failed or retried submissions can share the same invoice.
@@ -103,6 +111,8 @@ export function WalletDashboard({
   interrupted,
   onPaymentReviewed,
   lastBalance,
+  history,
+  onHistory,
   network,
   recipient,
   lock,
@@ -119,6 +129,8 @@ export function WalletDashboard({
   interrupted: 'legacy' | 'payment' | null;
   onPaymentReviewed: () => void;
   lastBalance: LastWalletBalance | null;
+  history?: WalletActivityHistory;
+  onHistory: (history?: WalletActivityHistory) => void;
   network: Network;
   recipient?: string;
   lock: () => void;
@@ -137,9 +149,16 @@ export function WalletDashboard({
     lastAction.current = null;
   }, [view]);
   const [phrase, setPhrase] = useState('');
-  // Discard wallet balances, invoice details and request status with the unlocked screen.
+  // Payment controls and live query results belong to this visit. Only the Activity list follows the unlock.
   const [queries] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } }));
   const recovery = useWalletRecovery(session, queries, walletId, ready, recovering);
+  const retained =
+    history?.walletId === walletId &&
+    history.network === network &&
+    (!recovery.checked || history.imported === recovery.imported) &&
+    (history.source === 'vault' || !recovery.blocked || recovery.state === 'checking')
+      ? history
+      : undefined;
   const canUseWallet = ready && !recovery.blocked;
   const ringUnlockButton = onEnableRingUnlock && (
     <Button
@@ -156,9 +175,16 @@ export function WalletDashboard({
   const tracking = useReceiveTracker(session.client, queries, walletId, request);
   const savedActivity = useQuery(
     {
-      queryKey: ['saved-activity', walletId],
-      queryFn: () => session.savedActivity(walletId),
-      enabled: !canUseWallet,
+      queryKey: ['saved-activity', walletId, recovery.imported],
+      queryFn: async (): Promise<WalletActivityHistory> => ({
+        source: 'vault',
+        walletId,
+        network,
+        imported: recovery.imported,
+        entries: keepActivityOrder(await session.savedActivity(walletId)),
+        away: [],
+      }),
+      enabled: !canUseWallet && !retained,
       staleTime: Infinity,
     },
     queries,
@@ -191,16 +217,18 @@ export function WalletDashboard({
       queryFn: async ({ queryKey }) => {
         const live = await session.client.snapshot();
         const previous = queries.getQueryData<{
-          entries: ActivityEntry[];
-          away: string[];
+          history: WalletActivityHistory;
           settledAt: number;
           firstReadAt: number;
           connectedOnce: boolean;
         }>(queryKey);
+        const previousHistory = previous?.history ?? (retained?.imported === recovery.imported ? retained : undefined);
         const [activityChecked, away, balanceHold, primaryIssue] = await Promise.all([
           interrupted ? session.activityIncludesChannelSends(live.activity).catch(() => false) : false,
           live.wallet?.id === walletId && live.wallet.network === network
-            ? session.awayReceipts(walletId, live.activity, live.primary.connected).catch(() => previous?.away ?? [])
+            ? session
+                .awayReceipts(walletId, live.activity, live.primary.connected)
+                .catch(() => previousHistory?.away ?? [])
             : [],
           live.notes?.includes(channelHoldNote)
             ? session.channelBalanceHold(walletId).catch(() => 'held' as const)
@@ -209,15 +237,21 @@ export function WalletDashboard({
             ? session.primaryConnectionIssue(walletId).catch(() => null)
             : null,
         ]);
-        const newReceipt = away.some((hash) => !previous?.away.includes(hash));
+        const newReceipt = away.some((hash) => !previousHistory?.away.includes(hash));
         const settledAt = newReceipt ? Date.now() : (previous?.settledAt ?? 0);
         return {
           ...live,
           firstReadAt: previous?.firstReadAt ?? Date.now(),
           connectedOnce: previous?.connectedOnce || live.primary.connected,
-          entries: keepActivityOrder(live.activity, previous?.entries),
+          history: {
+            source: 'live' as const,
+            walletId,
+            network,
+            imported: recovery.imported,
+            entries: keepActivityOrder(live.activity, previousHistory?.entries),
+            away,
+          },
           activityChecked,
-          away,
           balanceHold,
           primaryIssue,
           settledAt,
@@ -309,9 +343,19 @@ export function WalletDashboard({
     lastBalance?.totalSats === 0 && !showLiveBalance && (recovering || recovery.blocked || heldChannels)
       ? null
       : lastBalance;
-  const entries = data?.entries ?? savedActivity.data?.map((row) => ({ key: row.id, row }));
+  // A returning view can paint prior receipts while recovery and the current snapshot are being read.
+  // Payment actions continue to use the live results above.
+  const activity =
+    (!recovery.checked && retained?.source === 'live' ? retained : undefined) ??
+    data?.history ??
+    retained ??
+    savedActivity.data;
+  useEffect(() => {
+    if (activity !== history) onHistory(activity);
+  }, [activity, history, onHistory]);
+  const entries = activity?.entries;
   const receivePrimary = data?.primaries?.find((primary) => primary.isReceiveTarget) ?? data?.primary;
-  const away = new Set(data?.away);
+  const away = new Set(activity?.away);
   const verifiedTotal =
     showLiveBalance && data.wallet?.id === walletId && data.wallet.network === network
       ? data.balance.totalSats
@@ -762,7 +806,10 @@ export function WalletDashboard({
           {ringUnlockButton}
         </WalletPanel>
       )}
-      <WalletPanel title={!data && entries?.length ? 'Saved activity' : 'Activity'} icon={ActivityIcon}>
+      <WalletPanel
+        title={activity?.source === 'vault' && entries?.length ? 'Saved activity' : 'Activity'}
+        icon={ActivityIcon}
+      >
         {needsPaymentReview && (
           <div role="status" className="grid gap-2 rounded-xl border border-border p-3 text-sm">
             <p>
@@ -790,7 +837,7 @@ export function WalletDashboard({
             )}
           </div>
         )}
-        {!entries || (!data && entries.length === 0) ? (
+        {!entries || (activity?.source === 'vault' && entries.length === 0) ? (
           <p className="text-sm text-muted-foreground">
             {recovery.blocked
               ? 'Activity will update after recovery.'
@@ -840,6 +887,7 @@ function ActivityRow({
   showInvoice: (invoice: ReceiveRequest) => void;
 }) {
   const reduced = useReducedMotion();
+  const [openedAt, setOpenedAt] = useState(0);
   const invoice = row.receiveRequest;
   const canShowInvoice =
     invoice?.offlineReceive &&
@@ -849,7 +897,7 @@ function ActivityRow({
     row.status === 'pending' &&
     row.receiveStatus?.phase === 'waiting' &&
     !row.receiveStatusUnavailable &&
-    invoice.expiresAt > checkedAt;
+    invoice.expiresAt > Math.max(checkedAt, openedAt);
   const completed = row.status === 'completed';
   const title =
     !completed && (row.title === 'Payment sent' || row.title === 'Payment received')
@@ -864,7 +912,7 @@ function ActivityRow({
         : ActivityIcon;
   return (
     <li>
-      <Dialog>
+      <Dialog onOpenChange={(open) => open && setOpenedAt(Date.now())}>
         <DialogTrigger asChild>
           <Button
             type="button"
@@ -916,7 +964,14 @@ function ActivityRow({
         >
           <ActivityReceipt row={row} receivedWhileAway={receivedWhileAway} />
           {canShowInvoice && (
-            <Button variant="outline" onClick={() => showInvoice(invoice)}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                const now = Date.now();
+                if (invoice.expiresAt > now) showInvoice(invoice);
+                else setOpenedAt(now);
+              }}
+            >
               Show invoice
             </Button>
           )}

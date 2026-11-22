@@ -31,7 +31,7 @@ import {
   WalletSession,
   type WalletStartProgress,
 } from '@/services/wallet/session';
-import { WalletDashboard } from './WalletDashboard';
+import { type WalletActivityHistory, WalletDashboard } from './WalletDashboard';
 import { WalletDeviceSwitch } from './WalletDeviceSwitch';
 import { WalletKeyApproval } from './WalletKeyApproval';
 import { WalletOpening } from './WalletOpening';
@@ -120,6 +120,7 @@ export function WalletAccount({
   const [ringBacked, setRingBacked] = useState<boolean | null>(null);
   const [stage, setStage] = useState<Stage>({ kind: 'checking' });
   const [lastBalance, setLastBalance] = useState<LastWalletBalance | null>(null);
+  const [history, setHistory] = useState<WalletActivityHistory>();
   const [recovering, setRecovering] = useState(false);
   const [progress, setProgress] = useState<number>();
   const [notice, setNotice] = useState('');
@@ -195,6 +196,7 @@ export function WalletAccount({
   function lostDevice(session: WalletSession) {
     if (live.current === session) {
       live.current = null;
+      setHistory(undefined);
       setNotice(
         'The wallet locked because it could not keep exclusive access to this Ring wallet. Reopen it to reconnect.',
       );
@@ -257,6 +259,7 @@ export function WalletAccount({
     if (!held) throw new RingEnrollmentError('Reopen the wallet on its current device.');
     held.assertActive();
     setNotice('');
+    setHistory(undefined);
     setStage({ kind: 'preparing-move' });
     let stopped = false;
     try {
@@ -977,6 +980,8 @@ export function WalletAccount({
         ) : (
           <WalletDashboard
             key={JSON.stringify([stage.id, recipient])}
+            history={history}
+            onHistory={setHistory}
             session={stage.session}
             connection={stage.status}
             connectionNotice={connectionNotice}
