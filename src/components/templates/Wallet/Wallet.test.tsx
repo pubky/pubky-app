@@ -236,10 +236,10 @@ describe('Pubky wallet', () => {
       amountSats: 850,
       feeSats: 0,
     };
-    function history(activity: (typeof receipt)[]) {
+    function history(activity: (typeof receipt)[], totalSats = 5000) {
       return {
         wallet: record,
-        balance: { totalSats: 5000, availableSats: 5000, pendingSats: 0 },
+        balance: { totalSats, availableSats: totalSats, pendingSats: 0 },
         primary: { connected: true },
         activity,
       };
@@ -257,6 +257,127 @@ describe('Pubky wallet', () => {
       wallet.acquireRingDevice.mockResolvedValueOnce(lease);
       return lease;
     }
+
+    it.each([
+      { total: 4700, amount: '₿4,700', preview: null },
+      { total: 0, amount: '₿0', preview: 4200 },
+    ])(
+      'shows the latest verified balance of $amount while refreshing on return',
+      async ({ total, amount, preview }) => {
+        wallet.open.mockImplementation(async () => {
+          wallet.unlocked?.(
+            preview === null ? null : { walletId: record.id, network: 'regtest', totalSats: preview, updatedAt: 1000 },
+          );
+          return { network: 'regtest' };
+        });
+        wallet.snapshot.mockResolvedValue(history([], preview ?? total));
+        const view = render(<Wallet />);
+        await unlock();
+        if (preview !== null) {
+          expect(await screen.findByRole('group', { name: '₿4,200' })).toBeVisible();
+          const refreshButton = screen.getByRole('button', { name: 'Refresh wallet' });
+          await waitFor(() => expect(refreshButton).toBeEnabled());
+          wallet.snapshot.mockResolvedValue(history([], total));
+          fireEvent.click(refreshButton);
+        }
+        expect(await screen.findByRole('group', { name: amount })).toBeVisible();
+        await waitFor(() => expect(wallet.rememberBalance).toHaveBeenCalledWith(record.id, 'regtest', total));
+
+        view.rerender(feed);
+        const refresh = Promise.withResolvers<ReturnType<typeof history>>();
+        wallet.snapshot.mockClear().mockReturnValue(refresh.promise);
+        view.rerender(<Wallet />);
+        expect(screen.getByText(amount)).toBeVisible();
+        expect(screen.queryByLabelText('Loading balance')).toBeNull();
+        expect(screen.queryByText('₿4,200')).toBeNull();
+        await waitFor(() => expect(wallet.snapshot).toHaveBeenCalledOnce());
+
+        fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+        expect(screen.queryByText('Available to send')).toBeNull();
+        const fresh = history([], 5250);
+        fresh.balance.availableSats = 3700;
+        await act(async () => refresh.resolve(fresh));
+        expect(await screen.findByText('Available to send')).toBeVisible();
+        expect(screen.getByText('₿3,700')).toBeVisible();
+        fireEvent.click(screen.getByRole('button', { name: 'Back to wallet' }));
+        expect(await screen.findByRole('group', { name: '₿5,250' })).toBeVisible();
+        expect(wallet.open).toHaveBeenCalledOnce();
+      },
+    );
+
+    it('identifies the last verified total after a failed return refresh and replaces it on retry', async () => {
+      wallet.snapshot.mockResolvedValue(history([], 2700));
+      const view = render(<Wallet />);
+      await unlock();
+      expect(await screen.findByRole('group', { name: '₿2,700' })).toBeVisible();
+      view.rerender(feed);
+
+      wallet.snapshot.mockRejectedValueOnce(new Error('Read interrupted')).mockResolvedValue(history([], 8100));
+      view.rerender(<Wallet />);
+      expect(screen.getByText('₿2,700')).toBeVisible();
+      expect(await screen.findByText('Could not refresh the wallet. Showing the last balance.')).toBeVisible();
+      const saved = screen.getByText('Last verified balance').parentElement!;
+      expect(within(saved).getByText('₿2,700')).toBeVisible();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Refresh wallet' }));
+      expect(await screen.findByRole('group', { name: '₿8,100' })).toBeVisible();
+      expect(screen.queryByText('Last verified balance')).toBeNull();
+      expect(screen.queryByText(/Could not refresh the wallet/)).toBeNull();
+    });
+
+    it('discards the retained balance and a late snapshot when recovery installs another balance', async () => {
+      wallet.snapshot.mockResolvedValue(history([], 4700));
+      const view = render(<Wallet />);
+      await unlock();
+      expect(await screen.findByRole('group', { name: '₿4,700' })).toBeVisible();
+      view.rerender(feed);
+
+      const installed = { state: 'running', importComplete: true, autoApply: { phase: 'applied' }, channels: [] };
+      const status = Promise.withResolvers<typeof installed>();
+      const beforeImport = Promise.withResolvers<ReturnType<typeof history>>();
+      const afterImport = Promise.withResolvers<ReturnType<typeof history>>();
+      wallet.getRecoveryStatus.mockReturnValue(status.promise);
+      wallet.snapshot.mockClear().mockReturnValueOnce(beforeImport.promise).mockReturnValue(afterImport.promise);
+      view.rerender(<Wallet />);
+      expect(screen.getByText('₿4,700')).toBeVisible();
+      await waitFor(() => expect(wallet.snapshot).toHaveBeenCalledTimes(1));
+      await act(async () => status.resolve(installed));
+      await waitFor(() => expect(wallet.snapshot).toHaveBeenCalledTimes(2));
+      expect(screen.queryByText('₿4,700')).toBeNull();
+      await act(async () => beforeImport.resolve(history([], 9800)));
+      expect(screen.queryByText('₿9,800')).toBeNull();
+      await act(async () => afterImport.resolve(history([], 6750)));
+      expect(await screen.findByRole('group', { name: '₿6,750' })).toBeVisible();
+    });
+
+    it.each([
+      {
+        state: 'waiting for a backup',
+        recovery: { importPending: true, channels: [] },
+        message: 'Waiting for your Lightning backup',
+      },
+      {
+        state: 'held channels',
+        recovery: { channels: [{ status: 'active', restoreRecencyUnproven: true }] },
+        message: 'Restored Lightning funds are on hold',
+      },
+    ])('withholds a previously verified zero when the new read reports $state', async ({ recovery, message }) => {
+      const empty = history([], 0);
+      wallet.snapshot.mockResolvedValue(empty);
+      const view = render(<Wallet />);
+      await unlock();
+      expect(await screen.findByRole('group', { name: '₿0' })).toBeVisible();
+      await waitFor(() => expect(wallet.rememberBalance).toHaveBeenCalledWith(record.id, 'regtest', 0));
+      view.rerender(feed);
+      wallet.rememberBalance.mockClear();
+      wallet.getRecoveryStatus.mockResolvedValue({ state: 'running', autoApply: { phase: 'idle' }, ...recovery });
+      view.rerender(<Wallet />);
+
+      expect(await screen.findByText(message)).toBeVisible();
+      await waitFor(() => expect(screen.getByText('Balance awaiting verification')).toBeVisible());
+      expect(screen.queryByText('₿0')).toBeNull();
+      expect(wallet.rememberBalance).not.toHaveBeenCalled();
+    });
 
     it.each([
       { state: 'receipts', rows: [receipt] },
@@ -312,11 +433,12 @@ describe('Pubky wallet', () => {
       expect(screen.getAllByRole('listitem')).toHaveLength(1);
     });
 
-    it.each(['locking', 'switching accounts'])('clears the previous Activity list after %s', async (change) => {
+    it.each(['locking', 'switching accounts'])('clears the previous balance and Activity after %s', async (change) => {
       wallet.snapshot.mockResolvedValue(history([receipt]));
       const view = render(<Wallet />);
       await unlock();
       expect(await screen.findByText('+₿850')).toBeVisible();
+      expect(screen.getByRole('group', { name: '₿5,000' })).toBeVisible();
 
       const previousRead = Promise.withResolvers<ReturnType<typeof history>>();
       wallet.snapshot.mockClear().mockReturnValue(previousRead.promise);
@@ -335,16 +457,20 @@ describe('Pubky wallet', () => {
       }
       expect(await screen.findByLabelText('Password', { exact: true })).toBeVisible();
       expect(screen.queryByText('+₿850')).toBeNull();
+      expect(screen.queryByText('₿5,000')).toBeNull();
 
       // Reuse the wallet ID to catch caches that outlive the session which supplied the receipts.
       const refresh = Promise.withResolvers<ReturnType<typeof history>>();
       wallet.snapshot.mockClear().mockReturnValue(refresh.promise);
       await unlock();
       await waitFor(() => expect(wallet.snapshot).toHaveBeenCalledOnce());
-      await act(async () => previousRead.resolve(history([{ ...receipt, amountSats: 999 }])));
+      await act(async () => previousRead.resolve(history([{ ...receipt, amountSats: 999 }], 9990)));
       expect(screen.queryByText('+₿850')).toBeNull();
       expect(screen.queryByText('+₿999')).toBeNull();
-      await act(async () => refresh.resolve(history([])));
+      expect(screen.queryByText('₿5,000')).toBeNull();
+      expect(screen.queryByText('₿9,990')).toBeNull();
+      await act(async () => refresh.resolve(history([], 7210)));
+      expect(await screen.findByRole('group', { name: '₿7,210' })).toBeVisible();
       expect(await screen.findByText('Your payments and requests will appear here.')).toBeVisible();
     });
 

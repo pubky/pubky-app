@@ -31,6 +31,8 @@ import { ActivityReceipt, activityReceiptAmount, activityReceiptTitle, WalletBal
 import { useWalletRecovery, WalletRecoveryNotice } from './WalletRecoveryStatus';
 
 type ActivityEntry = { key: string; row: Activity };
+// The encrypted unlock preview predates this session's recovery checks.
+export type WalletBalancePreview = LastWalletBalance & { imported?: boolean };
 export type WalletActivityHistory = {
   source: 'vault' | 'live';
   walletId: string;
@@ -111,6 +113,7 @@ export function WalletDashboard({
   interrupted,
   onPaymentReviewed,
   lastBalance,
+  onVerifiedBalance,
   history,
   onHistory,
   network,
@@ -128,7 +131,8 @@ export function WalletDashboard({
   onEnableRingUnlock?: () => void;
   interrupted: 'legacy' | 'payment' | null;
   onPaymentReviewed: () => void;
-  lastBalance: LastWalletBalance | null;
+  lastBalance: WalletBalancePreview | null;
+  onVerifiedBalance: (balance: WalletBalancePreview | null) => void;
   history?: WalletActivityHistory;
   onHistory: (history?: WalletActivityHistory) => void;
   network: Network;
@@ -149,7 +153,7 @@ export function WalletDashboard({
     lastAction.current = null;
   }, [view]);
   const [phrase, setPhrase] = useState('');
-  // Payment controls and live query results belong to this visit. Only the Activity list follows the unlock.
+  // Payment controls use this visit's live queries. Activity and the last verified total follow the unlock.
   const [queries] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } }));
   const recovery = useWalletRecovery(session, queries, walletId, ready, recovering);
   const retained =
@@ -338,11 +342,21 @@ export function WalletDashboard({
   const heldChannels = recovery.heldChannels || !!data?.balanceHold;
   const noticeState =
     recovery.state === 'ready' || recovery.state === 'held' ? (data?.balanceHold ?? recovery.state) : recovery.state;
-  const showLiveBalance = !!data && (data.balance.totalSats !== 0 || (recovery.checked && !heldChannels));
-  const savedBalance =
-    lastBalance?.totalSats === 0 && !showLiveBalance && (recovering || recovery.blocked || heldChannels)
-      ? null
-      : lastBalance;
+  const importChanged =
+    lastBalance?.imported !== undefined && recovery.checked && lastBalance.imported !== recovery.imported;
+  const awaitingImportCheck = lastBalance?.imported === true && !recovery.checked && !recovery.imported;
+  const showLiveBalance =
+    !!data && !awaitingImportCheck && (data.balance.totalSats !== 0 || (recovery.checked && !heldChannels));
+  const unverifiedZero =
+    lastBalance?.totalSats === 0 &&
+    !showLiveBalance &&
+    (recovery.blocked || heldChannels || (recovering && lastBalance.imported === undefined));
+  const savedBalance = importChanged || unverifiedZero ? null : lastBalance;
+  const retainedTotal =
+    savedBalance?.imported !== undefined && canUseWallet && !heldChannels && snapshot.isFetching
+      ? savedBalance.totalSats
+      : undefined;
+  const overviewTotal = showLiveBalance ? data.balance.totalSats : retainedTotal;
   // A returning view can paint prior receipts while recovery and the current snapshot are being read.
   // Payment actions continue to use the live results above.
   const activity =
@@ -360,6 +374,21 @@ export function WalletDashboard({
     showLiveBalance && data.wallet?.id === walletId && data.wallet.network === network
       ? data.balance.totalSats
       : undefined;
+  const checkedAt = snapshot.dataUpdatedAt;
+  const discardBalance = importChanged || (unverifiedZero && recovery.checked);
+  useEffect(() => {
+    if (verifiedTotal !== undefined) {
+      onVerifiedBalance({
+        walletId,
+        network,
+        totalSats: verifiedTotal,
+        updatedAt: checkedAt,
+        imported: recovery.imported,
+      });
+    } else if (discardBalance) {
+      onVerifiedBalance(null);
+    }
+  }, [walletId, network, verifiedTotal, checkedAt, recovery.imported, discardBalance, onVerifiedBalance]);
   const needsPaymentReview =
     interrupted === 'payment' ||
     (interrupted === 'legacy' &&
@@ -532,7 +561,8 @@ export function WalletDashboard({
       )}
       {snapshot.isError && !recovery.blocked && (
         <p role="status" className="text-sm text-muted-foreground">
-          Could not refresh the wallet. {data ? 'Showing the last balance.' : 'Try refreshing.'}
+          Could not refresh the wallet.{' '}
+          {showLiveBalance || savedBalance ? 'Showing the last balance.' : 'Try refreshing.'}
         </p>
       )}
       {ownershipIssue ? (
@@ -679,10 +709,12 @@ export function WalletDashboard({
           </Button>
         </div>
         <div>
-          {(showLiveBalance || !savedBalance) && <p className="text-sm text-muted-foreground">Total balance</p>}
-          {showLiveBalance ? (
+          {(overviewTotal !== undefined || !savedBalance) && (
+            <p className="text-sm text-muted-foreground">Total balance</p>
+          )}
+          {overviewTotal !== undefined ? (
             <p className="mt-1 text-4xl font-bold tracking-tight tabular-nums sm:text-6xl">
-              <WalletBalance amount={data.balance.totalSats} />
+              <WalletBalance amount={overviewTotal} />
             </p>
           ) : savedBalance ? (
             <SavedBalance balance={savedBalance} />
