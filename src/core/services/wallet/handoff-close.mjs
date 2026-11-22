@@ -8,26 +8,33 @@ const uncertain = () =>
     code: 'WALLET_CLOSE_UNCERTAIN',
   });
 
-function quietChannels(node) {
-  return node
-    .getChannelManager()
-    .listChannels()
-    .every((channel) => {
-      const state = channel.getFullState();
-      return (
-        state.htlcs?.size === 0 &&
-        state.pendingLocalUpdates?.length === 0 &&
-        !state.needsCommitment &&
-        !state.awaitingLocalFeeCommitment &&
-        !state.awaitingClosingSig &&
-        !state.dataLossDetected &&
-        !state.stateUncertain &&
-        !state.restoreRevokedRisk &&
-        !state.restoreRecencyUnproven &&
-        !state.reestablishRecencyUnproven &&
-        !state.reestablishSecretMissing
-      );
-    });
+function quietChannels(node, observedIds) {
+  const manager = node.getChannelManager();
+  return manager.listChannels().every((channel) => {
+    const id = channel.getChannelId();
+    if (id?.length !== 32) return false;
+    observedIds.add(id.toString('hex'));
+    const state = channel.getFullState();
+    if (!(state.htlcs instanceof Map)) return false;
+    if (state.state === 'CLOSED') {
+      // The engine retains the last commitment's HTLCs after on-chain resolution.
+      // Both monitor checks are required for its closeStatus.resolution to be 'resolved'.
+      const monitor = manager.getMonitor(id);
+      if (monitor?.isFullyResolved() !== true || monitor.isCommitmentConfirmed() !== true) return false;
+    } else if (state.state !== 'NORMAL' || state.htlcs.size !== 0) return false;
+    return (
+      state.pendingLocalUpdates?.length === 0 &&
+      !state.needsCommitment &&
+      !state.awaitingLocalFeeCommitment &&
+      !state.awaitingClosingSig &&
+      !state.dataLossDetected &&
+      !state.stateUncertain &&
+      !state.restoreRevokedRisk &&
+      !state.restoreRecencyUnproven &&
+      !state.reestablishRecencyUnproven &&
+      !state.reestablishSecretMissing
+    );
+  });
 }
 
 export function createHandoffClose() {
@@ -88,6 +95,7 @@ export function createHandoffClose() {
       const node = current.node;
       const wallet = current.wallet;
       const undo = [];
+      const observedIds = new Set();
       let nodeStopped = false;
       let walletStopped = false;
       let dbClosed = false;
@@ -113,11 +121,11 @@ export function createHandoffClose() {
           'gracefulShutdown',
           (original) =>
             function (...args) {
-              if (!quietChannels(node)) failure();
+              if (!quietChannels(node, observedIds)) failure();
               const result = original.apply(this, args);
               result
                 .then(() => {
-                  nodeStopped = quietChannels(node);
+                  nodeStopped = quietChannels(node, observedIds);
                 }, failure)
                 .catch(failure);
               return result;
@@ -148,13 +156,7 @@ export function createHandoffClose() {
                 const checked = db.prepare('PRAGMA quick_check').pluck().all();
                 if (checked.length !== 1 || checked[0] !== 'ok') failure();
                 const saved = new Set(db.prepare('SELECT channel_id FROM channels').pluck().all());
-                if (
-                  node
-                    .getChannelManager()
-                    .listChannels()
-                    .some((ch) => !saved.has(ch.getChannelId()?.toString('hex')))
-                )
-                  failure();
+                if (!quietChannels(node, observedIds) || [...observedIds].some((id) => !saved.has(id))) failure();
                 if (!failed && build === current && current.shutdown) backup = db.backup(capture.path).catch(failure);
               } catch {
                 failure();

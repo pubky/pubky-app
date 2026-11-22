@@ -185,6 +185,14 @@ test('a clean close requires graceful node and wallet stops and the exact flushe
     'abandoned',
     'persistence',
     'new htlc',
+    'archived htlc',
+    'archived htlc without monitor',
+    'archived htlc awaiting confirmation',
+    'archived htlc awaiting resolution',
+    'archived htlc reorg',
+    'archived htlc with recency hold',
+    'archived htlc missing from database',
+    'unresolved force close',
     'no database close',
   ]) {
     const observer = createHandoffClose();
@@ -197,11 +205,20 @@ test('a clean close requires graceful node and wallet stops and the exact flushe
     });
     const db = observer.opened(dbPath, factory(dbPath));
     db.exec('CREATE TABLE channels (channel_id TEXT PRIMARY KEY)');
-    const state = { htlcs: new Map(), pendingLocalUpdates: [] };
+    const archived = outcome.startsWith('archived htlc');
+    const channelId = Buffer.alloc(32, 42);
+    const state = {
+      state: archived ? 'CLOSED' : outcome === 'unresolved force close' ? 'FORCE_CLOSED' : 'NORMAL',
+      htlcs: new Map(),
+      pendingLocalUpdates: [],
+      restoreRecencyUnproven: outcome === 'archived htlc with recency hold',
+    };
+    if (archived) state.htlcs.set('received-1', { state: 'COMMITTED' });
     const channels = [];
     if (!['idle empty', 'live database changed'].includes(outcome)) {
-      db.prepare('INSERT INTO channels VALUES (?)').run('deadbeef');
-      channels.push({ getFullState: () => state, getChannelId: () => Buffer.from('deadbeef', 'hex') });
+      if (outcome !== 'archived htlc missing from database')
+        db.prepare('INSERT INTO channels VALUES (?)').run(channelId.toString('hex'));
+      channels.push({ getFullState: () => state, getChannelId: () => channelId });
     }
     const before = volume.get(dbPath);
     if (outcome === 'live database changed') {
@@ -210,10 +227,20 @@ test('a clean close requires graceful node and wallet stops and the exact flushe
       assert.deepEqual(db.pragma('user_version'), [{ user_version: 17 }]);
       assert.equal(volume.get(dbPath), before);
     }
+    let confirmed = outcome !== 'archived htlc awaiting confirmation';
+    const monitor = {
+      isCommitmentConfirmed: () => confirmed,
+      isFullyResolved: () => outcome !== 'archived htlc awaiting resolution',
+    };
     const node = Object.assign(new EventEmitter(), {
-      getChannelManager: () => ({ listChannels: () => channels }),
+      getChannelManager: () => ({
+        listChannels: () => channels,
+        getMonitor: (id) => (id.equals(channelId) && outcome !== 'archived htlc without monitor' ? monitor : undefined),
+      }),
       async gracefulShutdown() {
         if (outcome === 'new htlc') state.htlcs.set(1, 'pending');
+        if (outcome === 'archived htlc reorg') confirmed = false;
+        if (outcome === 'archived htlc missing from database') channels.length = 0;
         if (outcome === 'persistence') node.emit('node:error', { code: 'PERSISTENCE_ERROR' });
         if (outcome === 'fallback') throw new Error('destroy fallback');
       },
@@ -244,7 +271,7 @@ test('a clean close requires graceful node and wallet stops and the exact flushe
         volume.set(path, bytes.slice());
       },
     );
-    if (['clean', 'idle empty', 'live database changed'].includes(outcome)) {
+    if (['clean', 'idle empty', 'live database changed', 'archived htlc'].includes(outcome)) {
       assert.deepEqual(await close, sha256(volume.get(dbPath)));
       if (outcome === 'idle empty') assert.deepEqual(volume.get(dbPath), before);
       if (outcome === 'live database changed') {
