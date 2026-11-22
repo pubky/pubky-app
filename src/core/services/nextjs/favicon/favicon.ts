@@ -17,12 +17,13 @@ const FAVICON_TIMEOUT_MS = 5_000;
 const MAX_REDIRECTS = 3;
 
 /**
- * A browser identity, as the link preview uses: some sites answer anything else with a 403 page.
+ * A short browser identity. Some sites refuse a read without a browser User-Agent (HBO Max answers 403),
+ * and some answer a full desktop-Chrome string from a server with a bot check instead of the icon
+ * (Mixcloud's Cloudflare challenge, Instagram's HTML page). `Mozilla/5.0` gets the icon from both kinds.
  * No cookies, credentials or viewer headers are ever sent.
  */
 const FETCH_HEADERS = {
-  'User-Agent':
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+  'User-Agent': 'Mozilla/5.0',
   Accept: 'image/webp,image/png,image/x-icon,image/*;q=0.8',
 };
 

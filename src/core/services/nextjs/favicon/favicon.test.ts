@@ -53,6 +53,22 @@ describe('NextJsFaviconService.fetch', () => {
     // Nothing of the viewer's request is passed on: no cookie, authorization or forwarded address.
     const headers = new Headers(init.headers);
     expect([...headers.keys()].sort()).toEqual(['accept', 'user-agent']);
+    // The short identity: a full desktop-Chrome string gets a bot check from some sites instead of the icon.
+    expect(headers.get('user-agent')).toBe('Mozilla/5.0');
+    expect(headers.get('accept')).toBe('image/webp,image/png,image/x-icon,image/*;q=0.8');
+  });
+
+  it('sends the same headers on every redirect hop', async () => {
+    mockFetch.mockResolvedValueOnce(redirect('https://www.mixcloud.com/favicon.ico')).mockResolvedValueOnce(image(PNG));
+
+    await expect(NextJsFaviconService.fetch(new URL('https://mixcloud.com/favicon.ico'))).resolves.not.toBeNull();
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    for (const [, init] of mockFetch.mock.calls) {
+      const headers = new Headers(init.headers);
+      expect([...headers.keys()].sort()).toEqual(['accept', 'user-agent']);
+      expect(headers.get('user-agent')).toBe('Mozilla/5.0');
+      expect(headers.get('accept')).toBe('image/webp,image/png,image/x-icon,image/*;q=0.8');
+    }
   });
 
   it('never asks a host whose addresses are private', async () => {
