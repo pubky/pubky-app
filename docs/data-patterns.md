@@ -487,6 +487,37 @@ every spelling holding it.
   `src/libs/post/externalParent.ts`) and is disabled otherwise. Locally `replied` stays `null`; like Nexus, it is
   listed only in `author_replies` and counted as a reply (no timeline, author stream or post thread).
 
+**Card images.** A Pinakes card's images, a link preview's and the visual timeline's YouTube thumbnails never load
+from their host in the viewer's browser: every one goes through the app's `/api/image` (`getResourceImageUrl`,
+`getCardPreviewImageUrl`, `getLinkImageUrl`, `getYouTubeThumbnailUrl`), as site icons go through `/api/favicon`.
+`?uri=<card link>&src=<image>` reads that card from the app's Pinakes (`GET /v1/resources/by-uri`, read-only, never
+`POST /v1/resolve`) and reads the image only when the card is settled (anything but `pending`: a `missing` card keeps
+showing its last image, dimmed) and carries it: its own `image`, a latest episode's art (`episodes`), a settled group
+member's `image` (`GET /v1/groups/{id}`, the image it may borrow), or, with `&episode=<title>`, the art of the show's
+episodes by that title (`GET /v1/resources/{id}/episodes`). With `&og=1` a settled card with no image of its own shows
+its own web link's preview image (`getCardPreviewLink`), so a card never names a page by itself. `?link=<link>&src=`
+is for a link with no card (`ResourceLinkCard`, `GenericPreview`): it serves only that page's `og:image`, the page
+`/api/og-metadata` reads anyway. `?youtube=<video id>&variant=hq720|mqdefault` reads only
+`https://i.ytimg.com/vi/<id>/<variant>.jpg`. Anything else is a 404 with no image read; Pinakes unset or not knowing
+the card is a 404, a page or image host failing for now a 502. Images are JPEG, PNG, WebP or GIF by their bytes, at
+most 4 MB, read within 8 s over at most three redirects, each hop address-checked (`fetchGuardedImage`, shared with
+the icon route), an `https` image never followed to `http`; cards are kept five minutes (thirty seconds while unknown
+or pending, read once more before a 404 for an image they lacked), link previews an hour, images a day, all in bounded
+caches (`BoundedReadCache`) that keep a value until a new one replaces it. Pinakes reads and page reads each come
+from a budget of their own, part of the Pinakes one kept for cards already known; after Pinakes answers 429 or 5xx (for
+its `Retry-After`, else 30 s) it is not asked for a while, and a read not made now answers from the card, group or
+episodes known before, expired or not, else 503. A link Pinakes refuses is a card it does not know; none of these
+answers is reported. Images and pages are read at most 16 at once and 2 per site (`getFaviconSite`, every redirect
+hop of an image for its own site; a page's redirects take none, its budget bounds them); `?link=` leaves part of the
+page budget to cards' own links, a page not read now answers with its preview known before, and YouTube thumbnails
+have a budget and a cache of their own. The budgets are per server instance and there is no limit per client here (a
+forwarded address can be spoofed): a deployment limits `/api/image` per client at its edge, keyed by the address its
+own proxy trusts. A card asks a failed route image once more, then shows its next image or its type tile, never the
+image's own address.
+What remains: any public raster image that a real, settled card or a real page's preview names can be read through
+the app, within those caps. A calendar occurrence's image other than its calendar's is not one the route serves, and
+a post's text link straight to an image file still shows that file from its host.
+
 **Places and events (maps, agenda, dates).** A place's or an event's card shows where it is with `ResourceLocation`
 (`src/components/molecules/ResourceMap/`): a map of its `point` when that is on the map (`getMapPoint`), else, with
 only an address, one line; an event that names neither (an online one, a venue known by name alone) gets no map and

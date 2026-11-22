@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getResourceRoute } from '@/app/routes';
+import { getResourceImageUrl } from '@/libs/image/resourceImage';
 import { PostPreviewNavigableProvider } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import articleFixture from '@/services/pinakes/fixtures/by-uri.article.json';
 import bookFixture from '@/services/pinakes/fixtures/by-uri.book.json';
@@ -70,6 +71,8 @@ const title = () => screen.getByTestId('resource-card-title');
 const source = () => screen.getByTestId('resource-card-source');
 /** The card's image, inside its slot: small beside the text, or under it for an embed's image. */
 const cardImage = () => within(screen.getByTestId('resource-card-image')).getByRole('img');
+/** A card's own image as it shows it: on the app's image route, named by the card. */
+const imageOf = (card: Pick<TPinakesResourceDetail, 'uri' | 'image'>) => getResourceImageUrl(card.uri, card.image);
 
 describe('ResourceCard', () => {
   afterEach(() => {
@@ -318,7 +321,7 @@ describe('ResourceCard', () => {
         /^Bitcoin is the first decentralized/,
       );
       // A Wikimedia file is shown without a credit too.
-      expect(cardImage()).toHaveAttribute('src', ARTICLE.image);
+      expect(cardImage()).toHaveAttribute('src', imageOf(ARTICLE));
       expect(screen.queryByTestId('resource-card-type-tile')).not.toBeInTheDocument();
       expect(screen.queryByTestId('resource-card-status')).not.toBeInTheDocument();
     });
@@ -330,7 +333,7 @@ describe('ResourceCard', () => {
     ])('shows a Wikimedia image with %s', (_, extra, creditLine, attribution) => {
       render(<ResourceCard card={{ ...ARTICLE, ...extra }} href={ARTICLE.uri} />);
 
-      expect(cardImage()).toHaveAttribute('src', ARTICLE.image);
+      expect(cardImage()).toHaveAttribute('src', imageOf(ARTICLE));
       if (creditLine) expect(screen.getByTestId('resource-credits')).toHaveTextContent(creditLine);
       else expect(screen.queryByTestId('resource-credits')).not.toBeInTheDocument();
       if (attribution) expect(screen.getByTestId('resource-card-attribution')).toHaveTextContent(attribution);
@@ -402,6 +405,8 @@ describe('ResourceCard', () => {
       render(<ResourceCard card={musicRecordingFixture} href={musicRecordingFixture.uri} />);
 
       fireEvent.error(cardImage());
+      // The route is asked once more before the card moves on.
+      fireEvent.error(cardImage());
 
       expect(screen.queryByTestId('resource-card-image')).not.toBeInTheDocument();
       expect(screen.getByTestId('resource-card-type-tile').querySelector('svg')).toHaveClass('lucide-music');
@@ -460,7 +465,10 @@ describe('ResourceCard', () => {
       render(<ResourceCard card={VIDEO_PAGE} href={VIDEO_PAGE.uri} />);
       expect(screen.getByTestId('resource-card-image-fit')).toBeInTheDocument();
 
-      // Its one image fails, with no group or preview image to take its place.
+      // Its one image fails on the app's image route, which is asked once more first; no group or preview image
+      // takes its place.
+      fireEvent.error(cardImage());
+      expect(screen.getByTestId('resource-card-image-fit')).toBeInTheDocument();
       fireEvent.error(cardImage());
 
       expect(screen.queryByTestId('resource-card-image')).not.toBeInTheDocument();
@@ -490,7 +498,7 @@ describe('ResourceCard', () => {
         expect(slot).toHaveClass('shrink-0', 'self-start');
         expect(slot).toHaveAttribute('data-resource-controls');
         expect(slot).toHaveAttribute('data-shape', 'square');
-        expect(cardImage()).toHaveAttribute('src', fixture.image);
+        expect(cardImage()).toHaveAttribute('src', imageOf(fixture));
         expect(cardImage()).toHaveClass('size-20', 'sm:size-24', 'object-cover');
         expect(cardImage()).not.toHaveClass('max-h-96');
         expect(cardImage()).toHaveAccessibleName(fixture.name!);
@@ -591,7 +599,7 @@ describe('ResourceCard', () => {
         expect(within(lightbox).getByTestId('carousel-image-zoom-frame')).toHaveAttribute('data-zoomed', 'false');
         const lightboxImage = within(lightbox)
           .getAllByRole('img')
-          .find((img) => img.getAttribute('src') === ALBUM.image);
+          .find((img) => img.getAttribute('src') === imageOf(ALBUM));
         expect(lightboxImage).toBeDefined();
         expect(mockPush).not.toHaveBeenCalled();
         expect(onPostClick).not.toHaveBeenCalled();
@@ -632,6 +640,8 @@ describe('ResourceCard', () => {
 
         render(<ResourceCard card={ALBUM} href={ALBUM.uri} />);
         fireEvent.error(cardImage());
+        // The route is asked once more before the card moves on.
+        fireEvent.error(cardImage());
         expect(screen.queryByTestId('resource-card-image')).not.toBeInTheDocument();
         expect(screen.getByTestId('resource-card-type-tile')).toBeInTheDocument();
       });
@@ -663,7 +673,7 @@ describe('ResourceCard', () => {
         within(lightbox)
           .getAllByRole('img')
           .map((img) => img.getAttribute('src')),
-      ).toContain(ARTICLE.image);
+      ).toContain(imageOf(ARTICLE));
       fireEvent.click(lightbox);
       // The lightbox's images are the card's in React only: one failing there leaves the card's image as it is.
       fireEvent.error(within(lightbox).getAllByRole('img')[0]);
@@ -1309,7 +1319,7 @@ describe('ResourceCard', () => {
         'Image: Sony Music Entertainment · Wikimedia Commons · CC BY 4.0',
       ]);
       expect(screen.getByTestId('resource-card-description')).not.toHaveClass('line-clamp-2');
-      expect(cardImage()).toHaveAttribute('src', MB_GROUP.image);
+      expect(cardImage()).toHaveAttribute('src', imageOf(MB_GROUP));
     });
 
     it('lets a source in the line open its own page on a card that is a click-through', () => {
@@ -1340,6 +1350,8 @@ describe('ResourceCard', () => {
       render(<ResourceCard card={MB_GROUP} />);
 
       fireEvent.error(cardImage());
+      // The route is asked once more before the card moves on.
+      fireEvent.error(cardImage());
 
       expect(credits()).toHaveTextContent('Sources: Text: Wikipedia');
       expect(credits()).not.toHaveTextContent('Wikimedia Commons');
@@ -1363,13 +1375,13 @@ describe('ResourceCard', () => {
     it('still shows an image that has no credit and needs none', () => {
       render(<ResourceCard card={{ ...musicRecordingFixture, credits: [] }} />);
 
-      expect(cardImage()).toHaveAttribute('src', musicRecordingFixture.image);
+      expect(cardImage()).toHaveAttribute('src', imageOf(musicRecordingFixture));
     });
 
     it('shows a Wikimedia Commons image without its credit, crediting only the text', () => {
       render(<ResourceCard card={{ ...MB_GROUP, credits: MB_GROUP.credits?.slice(0, 1) }} />);
 
-      expect(cardImage()).toHaveAttribute('src', MB_GROUP.image);
+      expect(cardImage()).toHaveAttribute('src', imageOf(MB_GROUP));
       expect(credits()).toHaveTextContent('Sources: Text: Wikipedia');
       expect(credits()).not.toHaveTextContent('Wikimedia Commons');
     });

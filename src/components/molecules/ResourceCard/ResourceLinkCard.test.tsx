@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getResourceRoute } from '@/app/routes';
 import { useOgMetadata } from '@/hooks/useOgMetadata/useOgMetadata';
+import { getLinkImageUrl } from '@/libs/image/resourceImage';
 import { PostPreviewNavigableProvider } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import { ResourceLinkCard } from './ResourceLinkCard';
 
@@ -35,7 +36,11 @@ describe('ResourceLinkCard', () => {
     expect(screen.getByTestId('resource-link-card-title')).toHaveAttribute('href', getResourceRoute(URL));
     expect(screen.getByTestId('resource-link-card-title')).not.toHaveAttribute('target');
     expect(screen.getByTestId('resource-card-source')).toHaveAttribute('target', '_blank');
-    expect(screen.getByTestId('resource-link-card-image')).toHaveAttribute('src', 'https://cdn.example.com/a.png');
+    // From the app's image route, named by the link: never the image's host.
+    expect(screen.getByTestId('resource-link-card-image')).toHaveAttribute(
+      'src',
+      new globalThis.URL(getLinkImageUrl(URL, 'https://cdn.example.com/a.png')!, window.location.href).href,
+    );
     expect(screen.getByTestId('resource-card-source')).toHaveTextContent('example.com');
     expect(screen.getByTestId('resource-card-source')).toHaveAccessibleName('Open in example.com');
     expect(screen.getByTestId('resource-card-source')).not.toHaveTextContent('articles');

@@ -22,6 +22,7 @@ import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useEventDates } from '@/hooks/useEventDates/useEventDates';
 import { useOgMetadata } from '@/hooks/useOgMetadata/useOgMetadata';
+import { getCardPreviewImageUrl, getImageRetryUrl, getResourceImageUrl } from '@/libs/image/resourceImage';
 import { cn } from '@/libs/utils/utils';
 import { useIsPostPreviewNavigable } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import { getLocationRowText, isLocationRow, ResourceLocation } from '@/molecules/ResourceMap/ResourceLocation';
@@ -123,6 +124,8 @@ export function ResourceCard({
   const navigable = useIsPostPreviewNavigable();
   const [expanded, setExpanded] = useState(false);
   const [failedImages, setFailedImages] = useState<string[]>([]);
+  // Images whose route answer failed once: asked once more before the card moves on.
+  const [retriedImages, setRetriedImages] = useState<string[]>([]);
   const [wasOnScreen, setWasOnScreen] = useState(isOnScreen);
   if (isOnScreen && !wasOnScreen) setWasOnScreen(true);
 
@@ -162,20 +165,36 @@ export function ResourceCard({
   });
   const cardImage = ownImageShown ? imageUrl : (fallback.image?.value ?? null);
   const usableCardImage = cardImage && !failedImages.includes(cardImage) ? cardImage : null;
-  // A title or image the card still lacks comes from the link's own preview (`/api/og-metadata`),
-  // asked once the group has answered so a group image is never first replaced by the OG one. Not
-  // for a link whose site refused Pinakes' read: the app's read meets the same wall, and its
-  // preview is the site's sign-in page (its logo), not the object.
+  // A title or image the card still lacks comes from its own web link's preview (`/api/og-metadata`,
+  // the link the image route reads it from too), asked once the group has answered so a group image
+  // is never first replaced by the OG one. A gone (`missing`) card's link is not read. Nor is the link
+  // of a site that refused Pinakes' read: the app's read meets the same wall, and its preview is the
+  // site's sign-in page (its logo), not the object.
+  const previewUrl = isMissing || isBlockedCard(card) ? null : getResourceLinks(card).linkUrl;
   const needsOg =
-    canFillIn &&
-    titleUrl !== null &&
-    !fallback.pending &&
-    !isBlockedCard(card) &&
-    (!card.name?.trim() || usableCardImage === null);
-  const { metadata: og } = useOgMetadata(needsOg ? titleUrl : null);
+    canFillIn && previewUrl !== null && !fallback.pending && (!card.name?.trim() || usableCardImage === null);
+  const { metadata: og } = useOgMetadata(needsOg ? previewUrl : null);
   const ogImage = getHttpUrl(og?.image);
   const shownImage = usableCardImage ?? (ogImage && !failedImages.includes(ogImage) ? ogImage : null);
   const onImageError = (url: string) => setFailedImages((urls) => [...urls, url]);
+  // Every image comes from the app's image route, named by the card, so the viewer's browser never asks
+  // its host: Pinakes' (the card's own, a group member's it borrows), or its own link's preview image
+  // (`og`). The route serves an image only when that card, or its link's preview, carries it.
+  const routeImage =
+    shownImage === null
+      ? null
+      : shownImage === usableCardImage
+        ? getResourceImageUrl(card.uri, shownImage)
+        : getCardPreviewImageUrl(card.uri, shownImage);
+  const shownImageSrc =
+    routeImage && shownImage && retriedImages.includes(shownImage) ? getImageRetryUrl(routeImage) : routeImage;
+  // A route answer that failed is asked once more (it may have been busy); failed again, the image is
+  // remembered as the card names it, so the card moves on to its next one, never to the image's host.
+  const onShownImageError = () => {
+    if (!shownImage) return;
+    if (!retriedImages.includes(shownImage)) setRetriedImages((urls) => [...urls, shownImage]);
+    else onImageError(shownImage);
+  };
   // An image that stands in for an embed shows large under the text; every other one is a small
   // thumbnail beside it.
   const isEmbedImage = showsEmbedImage(card, { href });
@@ -329,15 +348,15 @@ export function ResourceCard({
           <Container overrideDefaults className="flex min-w-0 flex-col gap-3">
             <Container overrideDefaults className="flex min-w-0 gap-4">
               {/* Left of the text: the card's image, small, or without one the type's icon. */}
-              {!shownImage && <ResourceCardTypeTile typeIcon={getResourceTypeIcon(card)} isLarge={isLarge} />}
-              {shownImage && !isEmbedImage && (
+              {!shownImageSrc && <ResourceCardTypeTile typeIcon={getResourceTypeIcon(card)} isLarge={isLarge} />}
+              {shownImageSrc && !isEmbedImage && (
                 <ResourceCardCover
-                  imageUrl={shownImage}
+                  imageUrl={shownImageSrc}
                   name={title}
                   isLarge={isLarge}
                   wideByType={hasWideImage(card)}
                   dimmed={isMissing}
-                  onImageError={onImageError}
+                  onImageError={onShownImageError}
                 />
               )}
 
@@ -464,8 +483,13 @@ export function ResourceCard({
                 )}
               </Container>
             </Container>
-            {shownImage && isEmbedImage && (
-              <ResourceCardMedia imageUrl={shownImage} name={title} dimmed={isMissing} onImageError={onImageError} />
+            {shownImageSrc && isEmbedImage && (
+              <ResourceCardMedia
+                imageUrl={shownImageSrc}
+                name={title}
+                dimmed={isMissing}
+                onImageError={onShownImageError}
+              />
             )}
           </Container>,
         )}
@@ -482,7 +506,7 @@ export function ResourceCard({
               hideTitle
               length={formatDuration(card.stream?.duration_s)}
               from={show?.name ?? null}
-              image={shownImage}
+              image={shownImageSrc}
               surface={isLarge || onCard ? 'default' : 'muted'}
               data-testid="resource-card-audio"
             />

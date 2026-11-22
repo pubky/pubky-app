@@ -154,9 +154,9 @@ function VisualTileLinkVideoFallback({ hostLabel }: VisualTileLinkVideoFallbackP
 }
 
 /**
- * Tries the sharp `hq720` thumbnail, then `mqdefault`. i.ytimg answers a missing
- * one with a 404 that browsers report either as an error or as a load of its
- * 120x90 placeholder, so both move on. The image stays transparent until a real
+ * Tries the sharp `hq720` thumbnail, then `mqdefault`, from the app's image route. A missing one is a
+ * 404 there (i.ytimg's own answer), reported as an error; i.ytimg's 120x90 placeholder, should one come
+ * through as a load, counts as missing too, so both move on. The image stays transparent until a real
  * thumbnail has loaded, leaving the fallback card visible until then.
  */
 function VisualTileYouTubeThumbnail({ tile, onUnavailable }: VisualTileYouTubeThumbnailProps) {

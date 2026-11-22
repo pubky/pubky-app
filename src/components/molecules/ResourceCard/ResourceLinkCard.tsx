@@ -7,6 +7,7 @@ import { Image } from '@/atoms/Image/Image';
 import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useOgMetadata } from '@/hooks/useOgMetadata/useOgMetadata';
+import { getImageRetryUrl, getLinkImageUrl } from '@/libs/image/resourceImage';
 import { cn } from '@/libs/utils/utils';
 import { GenericPreview } from '@/molecules/PostLinkEmbeds/Providers/Generic/GenericPreview';
 import { useIsPostPreviewNavigable } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
@@ -42,6 +43,8 @@ export function ResourceLinkCard({ url, actions, size = 'default' }: ResourceLin
   const { metadata, isLoading } = useOgMetadata(linkUrl ? url : null);
   const navigable = useIsPostPreviewNavigable();
   const [failedImage, setFailedImage] = useState<string | null>(null);
+  // The preview image whose route answer failed once: asked once more before it is left out.
+  const [retried, setRetried] = useState<string | null>(null);
   const isLarge = size === 'large';
 
   if (isLoading) {
@@ -54,8 +57,10 @@ export function ResourceLinkCard({ url, actions, size = 'default' }: ResourceLin
   if (metadata && metadata.type !== 'website' && !isLarge) return <GenericPreview url={url} />;
 
   const title = metadata?.title?.trim() || (linkUrl ? getDisplayLink(url) : url);
-  const imageUrl = getHttpUrl(metadata?.image);
-  const showImage = imageUrl !== null && failedImage !== imageUrl;
+  // The preview's image from the app's image route, never its host.
+  const routeImage = getLinkImageUrl(url, getHttpUrl(metadata?.image));
+  const imageUrl = routeImage && retried === routeImage ? getImageRetryUrl(routeImage) : routeImage;
+  const showImage = imageUrl !== null && failedImage !== routeImage;
   // The large card heads the link's own page: no click-through to it.
   const clickThroughUrl = isLarge ? null : getResourceRoute(url);
 
@@ -80,7 +85,7 @@ export function ResourceLinkCard({ url, actions, size = 'default' }: ResourceLin
               width={isLarge ? 160 : 96}
               height={isLarge ? 160 : 96}
               data-testid="resource-link-card-image"
-              onError={() => setFailedImage(imageUrl)}
+              onError={() => (retried === routeImage ? setFailedImage(routeImage) : setRetried(routeImage))}
               className={cn(
                 'shrink-0 rounded-md object-cover object-center',
                 isLarge ? 'size-24 sm:size-40' : 'size-20 sm:size-24',

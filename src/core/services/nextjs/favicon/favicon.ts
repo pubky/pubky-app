@@ -1,10 +1,6 @@
-import type { Dispatcher } from 'undici';
 import type { TFavicon } from '@/application/favicon/favicon.types';
 import { getFaviconSite } from '@/libs/favicon/favicon';
-import { Logger } from '@/libs/logger/logger';
-import { checkDnsSafety, isHttpProtocol } from '../nextjs.utils';
-import { SAFE_OG_METADATA_DISPATCHER } from '../og-metadata/og-metadata';
-import { isFaviconContentType, readBodyBytes, sniffImageType } from './favicon.utils';
+import { fetchGuardedImage, GUARDED_IMAGE_BUSY, GUARDED_IMAGE_FAILED } from '../nextjs.image';
 
 /**
  * The largest icon served. Most favicons are a few KB, but an ICO holding several sizes is larger:
@@ -27,12 +23,13 @@ const FETCH_HEADERS = {
   Accept: 'image/webp,image/png,image/x-icon,image/*;q=0.8',
 };
 
-type FetchInitWithDispatcher = RequestInit & { dispatcher: Dispatcher };
+/** Every raster type `sniffImageType` names: ICO, PNG, GIF, JPEG and WebP. */
+const FAVICON_TYPES = ['image/x-icon', 'image/png', 'image/gif', 'image/jpeg', 'image/webp'];
 
 /**
  * Next.js favicon service: reads one site icon for the `/api/favicon` route.
  *
- * Every hop goes through the link preview's guards: the host's addresses are checked before the
+ * Every hop goes through the link preview's guards (`fetchGuardedImage`): the host's addresses are checked before the
  * request (`checkDnsSafety`) and the socket is pinned to checked addresses (the link preview's
  * guarded dispatcher), so a private, loopback or link-local address is never reached, also not
  * through a redirect. A redirect is followed only on the same site (`getFaviconSite`: `tidal.com` to
@@ -48,64 +45,17 @@ export class NextJsFaviconService {
    * a guard, not answered in time, not an image, too large, or any error. Never throws.
    */
   static async fetch(source: URL): Promise<TFavicon | null> {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), FAVICON_TIMEOUT_MS);
-    // The address check does not take a signal: the read's timeout ends the wait for it too.
-    const aborted = new Promise<never>((_resolve, reject) => {
-      controller.signal.addEventListener('abort', () => reject(controller.signal.reason), { once: true });
+    const site = getFaviconSite(source.hostname);
+    const icon = await fetchGuardedImage(source, {
+      maxBytes: FAVICON_MAX_BYTES,
+      timeoutMs: FAVICON_TIMEOUT_MS,
+      maxRedirects: MAX_REDIRECTS,
+      headers: FETCH_HEADERS,
+      allowsHop: (url) => url.protocol === 'https:' && url.port === '' && getFaviconSite(url.hostname) === site,
+      types: FAVICON_TYPES,
+      operation: 'favicon:fetch',
     });
-    aborted.catch(() => {});
-    try {
-      const site = getFaviconSite(source.hostname);
-      let url = source;
-      for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-        if (!isHttpProtocol(url) || url.username || url.password) return null;
-        if (url.protocol !== 'https:' || url.port !== '' || getFaviconSite(url.hostname) !== site) return null;
-        const dns = await Promise.race([checkDnsSafety(url.hostname), aborted]);
-        if (!dns.ok) return null;
-
-        const response = await fetch(url, {
-          headers: FETCH_HEADERS,
-          redirect: 'manual',
-          credentials: 'omit',
-          referrerPolicy: 'no-referrer',
-          signal: controller.signal,
-          dispatcher: SAFE_OG_METADATA_DISPATCHER,
-        } as FetchInitWithDispatcher);
-
-        if (response.status >= 300 && response.status < 400) {
-          const location = response.headers.get('location');
-          response.body?.cancel().catch(() => {});
-          if (!location) return null;
-          url = new URL(location, url);
-          continue;
-        }
-
-        if (!response.ok || !isFaviconContentType(response.headers.get('content-type'))) {
-          response.body?.cancel().catch(() => {});
-          return null;
-        }
-        const declaredLength = Number(response.headers.get('content-length'));
-        if (declaredLength > FAVICON_MAX_BYTES) {
-          response.body?.cancel().catch(() => {});
-          return null;
-        }
-
-        const bytes = await readBodyBytes(response, FAVICON_MAX_BYTES);
-        if (!bytes) return null;
-        const contentType = sniffImageType(bytes);
-        return contentType ? { body: bytes.buffer as ArrayBuffer, contentType } : null;
-      }
-      return null;
-    } catch (error) {
-      // A blocked address, a DNS miss, a timeout or a refused redirect: no icon, as for a 404.
-      Logger.debug('[favicon:fetch]', {
-        hostname: source.hostname,
-        errorName: error instanceof Error ? error.name : undefined,
-      });
-      return null;
-    } finally {
-      clearTimeout(timeoutId);
-    }
+    // A site that may answer later has no icon now, as before: the icon route has no failed answer.
+    return icon === GUARDED_IMAGE_FAILED || icon === GUARDED_IMAGE_BUSY ? null : icon;
   }
 }

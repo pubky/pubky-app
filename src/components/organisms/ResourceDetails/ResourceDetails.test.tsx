@@ -4,6 +4,7 @@ import { useOgMetadata } from '@/hooks/useOgMetadata/useOgMetadata';
 import { usePinakesGroup } from '@/hooks/usePinakesGroup/usePinakesGroup';
 import type { UsePinakesQueryResult } from '@/hooks/usePinakesQuery/usePinakesQuery.types';
 import { usePinakesRelated } from '@/hooks/usePinakesRelated/usePinakesRelated';
+import { getResourceImageUrl } from '@/libs/image/resourceImage';
 import bookFixture from '@/services/pinakes/fixtures/by-uri.book.json';
 import mbGroupEnrichedFixture from '@/services/pinakes/fixtures/by-uri.mb-group.enriched.json';
 import mbRecordingEnrichedFixture from '@/services/pinakes/fixtures/by-uri.mb-recording.enriched.json';
@@ -463,7 +464,7 @@ describe('ResourceDetails', () => {
       );
       expect(within(within(card).getByTestId('resource-card-image')).getByRole('img')).toHaveAttribute(
         'src',
-        mbGroupEnrichedFixture.image,
+        getResourceImageUrl(mbGroupEnrichedFixture.uri, mbGroupEnrichedFixture.image),
       );
       const sources = within(card).getByRole('region', { name: 'Sources' });
       const lines = within(sources)

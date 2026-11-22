@@ -243,7 +243,7 @@ export function PlayStandIn({
   surface?: PostActionSurface;
   href?: string | null;
   linkTarget?: '_blank';
-  /** A cover image (`http(s)`), or `null` for the type's tile; absent shows none. */
+  /** A cover on the app's image route (`getResourceImageUrl`), or `null` for the type's tile; absent shows none. */
   image?: string | null;
   titleLines?: 1 | 2;
   hideTitle?: boolean;

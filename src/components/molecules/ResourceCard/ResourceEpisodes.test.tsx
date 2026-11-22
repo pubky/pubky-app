@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
+import { getResourceImageUrl } from '@/libs/image/resourceImage';
 import { PostPreviewNavigableProvider } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import type { TPinakesEpisode } from '@/services/pinakes/pinakes.types';
 import { getPlayableEpisodes } from './ResourceCard.utils';
@@ -21,6 +22,9 @@ const episode = (n: number, overrides: Partial<TPinakesEpisode> = {}): TPinakesE
 });
 
 const rows = () => screen.queryAllByTestId('resource-card-episode');
+/** An art image's address, on the app's own origin: the image route, never the image's host. */
+const sameOrigin = (src: string | null) => new URL(src ?? '', window.location.href).href;
+const artOf = (image: string, episode?: string) => sameOrigin(getResourceImageUrl(SHOW.uri, image, { episode }));
 const route = (uri: string) => `/resource?uri=${encodeURIComponent(uri)}`;
 
 describe('ResourceEpisodes', () => {
@@ -48,8 +52,8 @@ describe('ResourceEpisodes', () => {
       '180: Episode 180',
     ]);
     const [lead, next] = rows();
-    // The show's cover stands in for an episode without its own image.
-    expect(within(lead).getByTestId('resource-audio-art')).toHaveAttribute('src', SHOW.image);
+    // The show's cover stands in for an episode without its own image, on the app's image route.
+    expect(sameOrigin(within(lead).getByTestId('resource-audio-art').getAttribute('src'))).toBe(artOf(SHOW.image));
     expect(within(lead).getByTestId('play-stand-in-title')).toHaveClass('line-clamp-2');
     expect(within(next).queryByTestId('resource-audio-art')).toBeNull();
     expect(within(next).getByTestId('play-stand-in-title')).toHaveClass('truncate');
@@ -60,7 +64,10 @@ describe('ResourceEpisodes', () => {
     const episodes = getPlayableEpisodes({ episodes: [episode(182, { image: 'https://cdn.example.com/182.jpg' })] });
     render(<ResourceEpisodes episodes={episodes} show={SHOW} />);
 
-    expect(screen.getByTestId('resource-audio-art')).toHaveAttribute('src', 'https://cdn.example.com/182.jpg');
+    // Named by its title too, so the route finds an episode the show's card no longer lists.
+    expect(sameOrigin(screen.getByTestId('resource-audio-art').getAttribute('src'))).toBe(
+      artOf('https://cdn.example.com/182.jpg', '182: Episode 182'),
+    );
   });
 
   it('opens each episode’s own resource page from its title, which covers the row but not Play', () => {

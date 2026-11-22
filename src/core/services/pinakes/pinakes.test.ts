@@ -37,7 +37,7 @@ import nearbyFixture from './fixtures/search.places-nearby.json';
 import relatedBecauseFixture from './fixtures/search.related.because.json';
 import relatedFixture from './fixtures/search.related.json';
 import typeFacetFixture from './fixtures/search.type-facet.json';
-import { PinakesService } from './pinakes';
+import { isPinakesBusy, PinakesService } from './pinakes';
 import { PINAKES_UNSETTLED_CARD_STALE_TIME_MS, pinakesQueryClient } from './pinakes.query-client';
 import {
   PinakesStatus,
@@ -745,6 +745,73 @@ describe('PinakesService.getCachedGroup', () => {
 
     expect(PinakesService.getCachedGroup(groupFixture.id)).toEqual(GROUP_FIXTURE);
     expect(PinakesService.getCachedGroup('00000000000000000000000000000000')).toBeUndefined();
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+});
+
+describe('reads for the server’s image route', () => {
+  it('reads a card past the shared cache every time and keeps it nowhere', async () => {
+    mockFetch.mockImplementation(async () => capturedResponse('by-uri.music-recording'));
+
+    await PinakesService.readCardForImage(musicRecordingFixture.uri);
+    await PinakesService.readCardForImage(musicRecordingFixture.uri);
+
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(requestedUrl().pathname).toBe('/v1/resources/by-uri');
+    expect(pinakesQueryClient.getQueryCache().getAll()).toHaveLength(0);
+  });
+
+  it('reads a group and a show’s episodes by title, past the shared cache', async () => {
+    mockFetch.mockImplementationOnce(async () => capturedResponse('group.video'));
+    await expect(PinakesService.readGroupForImage(groupFixture.id)).resolves.toEqual(GROUP_FIXTURE);
+    expect(requestedUrl().pathname).toBe(`/v1/groups/${groupFixture.id}`);
+
+    mockFetch.mockImplementationOnce(async () => new Response(JSON.stringify({ items: [] }), { status: 200 }));
+    await PinakesService.readEpisodesForImage('show', '12: Old');
+    expect(requestedUrl(1).pathname).toBe('/v1/resources/show/episodes');
+    expect(requestedUrl(1).searchParams.get('q')).toBe('12: Old');
+    expect(PinakesService.getCachedGroup(groupFixture.id)).toBeUndefined();
+  });
+
+  it('answers busy with its Retry-After for a 429 without building an error, so nothing is reported', async () => {
+    const reported = vi.spyOn(Logger, 'error');
+    mockFetch.mockImplementation(async () => new Response(null, { status: 429, headers: { 'retry-after': '60' } }));
+
+    await expect(PinakesService.readCardForImage(musicRecordingFixture.uri)).resolves.toEqual({
+      busy: true,
+      retryAfterMs: 60_000,
+    });
+    const group = await PinakesService.readGroupForImage(groupFixture.id);
+    expect(isPinakesBusy(group)).toBe(true);
+
+    expect(reported).not.toHaveBeenCalled();
+  });
+
+  it('answers busy for a server error without building an error, so nothing is reported', async () => {
+    const reported = vi.spyOn(Logger, 'error');
+    mockFetch.mockImplementation(async () => new Response(null, { status: 503 }));
+
+    await expect(PinakesService.readCardForImage(musicRecordingFixture.uri)).resolves.toEqual({
+      busy: true,
+      retryAfterMs: null,
+    });
+    expect(reported).not.toHaveBeenCalled();
+  });
+
+  it('answers a link Pinakes refuses (400) as no card, reporting nothing', async () => {
+    const reported = vi.spyOn(Logger, 'error');
+    mockFetch.mockImplementation(async () => new Response('{"error":"bad uri"}', { status: 400 }));
+
+    await expect(PinakesService.readCardForImage(musicRecordingFixture.uri)).resolves.toBeNull();
+    expect(reported).not.toHaveBeenCalled();
+  });
+
+  it('reads nothing without a Pinakes, or for a link it never reads', async () => {
+    await expect(PinakesService.readCardForImage('https://user:pass@a.example/')).resolves.toBeNull();
+    mocks.pinakesUrl = undefined;
+    await expect(PinakesService.readCardForImage(musicRecordingFixture.uri)).resolves.toBeNull();
+    await expect(PinakesService.readGroupForImage(groupFixture.id)).resolves.toBeNull();
+    await expect(PinakesService.readEpisodesForImage('show', 'x')).resolves.toBeNull();
     expect(mockFetch).not.toHaveBeenCalled();
   });
 });

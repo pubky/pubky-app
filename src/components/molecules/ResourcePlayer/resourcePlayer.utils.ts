@@ -301,7 +301,7 @@ export interface PlayerTarget {
 
 /** What the app's audio player shows of a plain audio file besides its title (`PlayerTarget.about`). */
 export interface AudioAbout {
-  /** An `http(s)` image: the episode's, else its show's. */
+  /** The cover on the app's image route (`getResourceImageUrl`): the episode's, else its show's. */
   image?: string | null;
   /** What it is from: a podcast show's name. */
   from?: string | null;

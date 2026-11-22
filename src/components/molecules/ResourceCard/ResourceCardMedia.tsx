@@ -10,7 +10,7 @@ import { cn } from '@/libs/utils/utils';
 import { PostAttachmentsImagesAndVideos } from '@/molecules/PostAttachmentsImagesAndVideos/PostAttachmentsImagesAndVideos';
 
 interface ResourceCardMediaProps {
-  /** An `http(s)` image. */
+  /** The image on the app's image route (`getResourceImageUrl`): never its host's address. */
   imageUrl: string;
   /** What the image shows: the card's title, its name here and in the lightbox. */
   name: string;

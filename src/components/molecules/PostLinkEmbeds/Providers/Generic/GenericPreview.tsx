@@ -9,6 +9,7 @@ import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
 import { Video } from '@/atoms/Video/Video';
 import { useOgMetadata } from '@/hooks/useOgMetadata/useOgMetadata';
+import { getLinkImageUrl } from '@/libs/image/resourceImage';
 import { getLinkHost } from '@/molecules/ResourceCard/ResourceCard.utils';
 import { PlayOnPill } from '@/molecules/ResourcePlayer/ResourcePlayerControls';
 import { useSettingsStore } from '@/stores/settings/settings.store';
@@ -62,7 +63,8 @@ export function GenericPreview({ url }: GenericPreviewProps) {
 
         {image && (
           <Image
-            src={image}
+            // From the app's image route: the preview's image only, never asked from its host.
+            src={getLinkImageUrl(url, image) ?? ''}
             alt="Website social image"
             width={180}
             height={100}
