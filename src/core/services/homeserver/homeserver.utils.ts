@@ -421,7 +421,7 @@ export const createCancelableAuthApproval = (
             continue;
           }
         }
-        if (isWrongSignerApproval(error)) throw createAuthApprovalMismatchError();
+        if (isWrongSignerApproval(error)) throw createAuthApprovalMismatchError('identity');
         // Keep transport, permission and authentication failures distinct for the grant flow.
         return handleError({ error, additionalContext: { operation: 'awaitApproval' } });
       }

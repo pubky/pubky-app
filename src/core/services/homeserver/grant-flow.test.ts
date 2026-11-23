@@ -170,7 +170,7 @@ describe('pending Ring grant flow', () => {
       const refuse = refusable();
       const flow = await GrantFlowService.start(makeSdk(), hinted);
       expect(sessionStorage.getItem(savedKey)).not.toBeNull();
-      refuse(createAuthApprovalMismatchError());
+      refuse(createAuthApprovalMismatchError('identity'));
       await expect(flow.awaitApproval).rejects.toSatisfy(isAuthApprovalMismatchError);
       expect(sessionStorage.getItem(savedKey)).toBeNull();
     });
@@ -183,7 +183,7 @@ describe('pending Ring grant flow', () => {
       await GrantFlowService.start(sdk, { ...hinted, fresh: true });
       const newer = sessionStorage.getItem(savedKey);
       expect(newer).not.toBeNull();
-      refuse(createAuthApprovalMismatchError());
+      refuse(createAuthApprovalMismatchError('identity'));
       await expect(first.awaitApproval).rejects.toSatisfy(isAuthApprovalMismatchError);
       expect(sessionStorage.getItem(savedKey)).toBe(newer);
     });

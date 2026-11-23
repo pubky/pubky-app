@@ -265,7 +265,7 @@ it('asks for the signed-in key when Shop reauthorization is approved with anothe
     vi.mocked(AuthController.getAuthUrl).mockResolvedValue(pending.value);
     const { result } = renderHook(() => useAuthUrl());
     await waitFor(() => expect(result.current.url).not.toBe(''));
-    await act(async () => pending.reject(createAuthApprovalMismatchError()));
+    await act(async () => pending.reject(createAuthApprovalMismatchError('identity')));
     expect(result.current.isExpired).toBe(true);
     expect(toast).toHaveBeenCalledWith(
       expect.objectContaining({ description: 'Authorization failed. Approve with the key you are signed in with.' }),
