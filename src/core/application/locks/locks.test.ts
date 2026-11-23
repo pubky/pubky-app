@@ -2513,7 +2513,7 @@ describe('LocksApplication.copySocialReaderFiles', () => {
     expect(mocks.copyFlag).not.toHaveBeenCalled();
   });
 
-  it('copies the rest when one file fails, and the next run copies that one and writes the flag', async () => {
+  it('copies the rest when one file fails, and the next page load copies that one and writes the flag', async () => {
     const replica = (lockId: string) => ({
       content: lockId,
       kind: 'image',
@@ -2534,7 +2534,8 @@ describe('LocksApplication.copySocialReaderFiles', () => {
       url(NEW, 'unlocked/OK/post.json'),
     ]);
 
-    // The next run finds OK complete at the new root and FULL still to do.
+    // The next page load finds OK complete at the new root and FULL still to do.
+    LocksApplication.resetSocialCopyStateForTests();
     mocks.putBlob.mockClear();
     roots(
       { unlocked: [url(SOCIAL, 'unlocked/FULL/post.json'), url(SOCIAL, 'unlocked/OK/post.json')] },
@@ -2575,6 +2576,56 @@ describe('LocksApplication.copySocialReaderFiles', () => {
     await Promise.all([first, second]);
 
     expect(second).toBe(first);
+    expect(written()).toEqual([url(NEW, 'unlocked/LOCK1/post.json'), url(NEW, '_social_copied.json')]);
+  });
+
+  it('runs once per page load: a later call after a failed run lists nothing again', async () => {
+    mocks.socialListAll.mockRejectedValueOnce(new Error('offline'));
+    vi.spyOn(Logger, 'warn').mockImplementation(() => {});
+
+    const first = LocksApplication.copySocialReaderFiles({ readerPubky: reader });
+    await first;
+    const second = LocksApplication.copySocialReaderFiles({ readerPubky: reader });
+    await second;
+
+    expect(second).toBe(first);
+    expect(mocks.socialListAll).toHaveBeenCalledTimes(2);
+    expect(mocks.putBlob).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['a raw failure', () => new Error('bug'), 1],
+    [
+      'not one already reported',
+      () =>
+        Err.server(ServerErrorCode.SERVICE_UNAVAILABLE, 'down', {
+          service: ErrorService.Homeserver,
+          operation: 'test',
+        }),
+      0,
+    ],
+  ])('never rejects, and logs %s', async (_label, failure, warnings) => {
+    mocks.socialListAll.mockRejectedValueOnce(failure());
+    const warn = vi.spyOn(Logger, 'warn').mockImplementation(() => {});
+
+    await expect(LocksApplication.copySocialReaderFiles({ readerPubky: reader })).resolves.toBeUndefined();
+
+    expect(warn).toHaveBeenCalledTimes(warnings);
+  });
+
+  it('starts a new run after a finished one once the session of that run has ended', async () => {
+    mocks.socialListAll.mockRejectedValueOnce(new Error('offline'));
+    vi.spyOn(Logger, 'warn').mockImplementation(() => {});
+    let current = true;
+    const first = LocksApplication.copySocialReaderFiles({ readerPubky: reader, isCurrent: () => current });
+    await first;
+    current = false;
+    oneReplica(1700);
+
+    const second = LocksApplication.copySocialReaderFiles({ readerPubky: reader, isCurrent: () => true });
+    await second;
+
+    expect(second).not.toBe(first);
     expect(written()).toEqual([url(NEW, 'unlocked/LOCK1/post.json'), url(NEW, '_social_copied.json')]);
   });
 

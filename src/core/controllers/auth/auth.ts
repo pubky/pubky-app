@@ -3,17 +3,11 @@ import { validateCapabilities } from '@synonymdev/pubky';
 import type { PersistStorage } from 'zustand/middleware';
 import { AuthApplication } from '@/application/auth/auth';
 import { BootstrapApplication, type BootstrapProgressCallback } from '@/application/bootstrap/bootstrap';
-import { LocksApplication } from '@/application/locks/locks';
 import { NotificationApplication } from '@/application/notification/notification';
 import { SettingsApplication } from '@/application/settings/settings';
 import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
 import { UserApplication } from '@/application/user/user';
-import {
-  APP_CAPABILITIES,
-  LOCKS_CAPABILITIES,
-  LOCKS_READER_COPY_CAPABILITIES,
-  SOCIAL_V1_APP_CAPABILITIES,
-} from '@/config/auth';
+import { APP_CAPABILITIES, LOCKS_CAPABILITIES, SOCIAL_V1_APP_CAPABILITIES } from '@/config/auth';
 import { getModerationId } from '@/config/moderation';
 import { getHomeserverCapabilities } from '@/config/network';
 import type { SessionReadiness } from '@/controllers/auth/auth.types';
@@ -453,7 +447,7 @@ export class AuthController {
         if (!isCurrent()) return false;
         if (useAuthStore.getState().hasProfile === null || useAuthStore.getState().needsAccountSync)
           await this.bootstrapProfile(result.session, generation, true);
-        if (isCurrent()) this.markSessionReady();
+        if (isCurrent()) useAuthStore.getState().setRestoreStatus('ready');
         return isCurrent();
       } catch (error) {
         if (isCurrent()) {
@@ -676,29 +670,6 @@ export class AuthController {
     }
   }
 
-  /** The Locks copy starts here, not in bootstrap: a reload of an account with a known profile skips bootstrap. */
-  private static markSessionReady(): void {
-    useAuthStore.getState().setRestoreStatus('ready');
-    this.startLocksReaderFileCopy();
-  }
-
-  /**
-   * Copies the reader's Locks files of builds before #3206 into the app's namespace, never awaited: it
-   * can download large attachments. Only when the grant reads the old root and writes the new one: a
-   * listing the grant refuses would fail and be reported on every page load. A failed run is reported
-   * once and the next page load copies what is still missing.
-   */
-  private static startLocksReaderFileCopy(): void {
-    const { session, hasProfile } = useAuthStore.getState();
-    if (!session || !hasProfile || !hasCapabilities(session.info.capabilities, LOCKS_READER_COPY_CAPABILITIES)) return;
-    const pubky = Identity.z32FromSession({ session });
-    const isCurrent = captureViewerSession();
-    void LocksApplication.copySocialReaderFiles({ readerPubky: pubky, isCurrent }).catch((error: unknown) => {
-      // AppError factories already report at their origin. Only unexpected raw failures need a warning.
-      if (!isAppError(error)) Logger.warn('Failed to copy the Locks reader files from /priv/social/', { pubky, error });
-    });
-  }
-
   /**
    * Session initialization shared by all sign-in flows; assumes the environment
    * guard already passed for this session.
@@ -834,7 +805,8 @@ export class AuthController {
         previous.needsAccountSync
       )
         await this.bootstrapProfile(session, generation);
-      if (this.isCurrentGeneration(generation) && useAuthStore.getState().session === session) this.markSessionReady();
+      if (this.isCurrentGeneration(generation) && useAuthStore.getState().session === session)
+        useAuthStore.getState().setRestoreStatus('ready');
       return true;
     } catch (error) {
       // The replacement is already durable. Never resurrect the previous session or erase this grant.
@@ -880,7 +852,7 @@ export class AuthController {
     if (this.profileBootstrap?.generation !== generation || this.profileBootstrap.session !== session) {
       const task = this.finishProfileBootstrap(session, generation, restoring).then(() => {
         if (this.isCurrentGeneration(generation) && useAuthStore.getState().session === session)
-          this.markSessionReady();
+          useAuthStore.getState().setRestoreStatus('ready');
       });
       this.profileBootstrap = { generation, session, task };
       void task

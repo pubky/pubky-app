@@ -2,7 +2,6 @@ import type { MigrationReport } from 'pubky-social-migrator';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthApplication } from '@/application/auth/auth';
 import { BootstrapApplication } from '@/application/bootstrap/bootstrap';
-import { LocksApplication } from '@/application/locks/locks';
 import { SettingsApplication } from '@/application/settings/settings';
 import { UserApplication } from '@/application/user/user';
 import { APP_CAPABILITIES, SOCIAL_V1_APP_CAPABILITIES } from '@/config/auth';
@@ -11,10 +10,6 @@ import { SOCIAL_MIGRATION_TRANSFORM_REV } from '@/config/social-migration';
 import { SocialMigrationController } from '@/controllers/social-migration/social-migration';
 import * as databaseHelpers from '@/database/franky/franky.helpers';
 import { isAuthFlowCanceledError } from '@/libs/error/auth-flow-canceled';
-import { ServerErrorCode } from '@/libs/error/error.codes';
-import { Err } from '@/libs/error/error.factories';
-import { ErrorService } from '@/libs/error/error.types';
-import { Logger } from '@/libs/logger/logger';
 import { readSocialMigrationRecord, writeSocialMigrationRecord } from '@/libs/social-migration/record';
 import { resetSocialMigrationReports } from '@/libs/social-migration/report-telemetry';
 import { HomeserverService } from '@/services/homeserver/homeserver';
@@ -163,7 +158,6 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
     vi.spyOn(AuthApplication, 'userIsSignedUp').mockResolvedValue(true);
     vi.spyOn(SettingsApplication, 'initializeSettings').mockResolvedValue(null);
     vi.spyOn(BootstrapApplication, 'initialize').mockResolvedValue(notificationInitialState);
-    vi.spyOn(LocksApplication, 'copySocialReaderFiles').mockResolvedValue(undefined);
     vi.spyOn(UserApplication, 'ensureModerationFollow').mockResolvedValue(undefined);
     vi.spyOn(HomeserverService, 'logout').mockResolvedValue(undefined);
     vi.spyOn(HomeserverService, 'logoutLegacyCookie').mockResolvedValue(undefined);
@@ -467,25 +461,6 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
       expect(readSocialMigrationRecord(pubky)?.migratedRev).toBe(SOCIAL_MIGRATION_TRANSFORM_REV);
     });
 
-    it('starts the Locks reader file copy on a sign-in of the account still in the store, which skips bootstrap', async () => {
-      useAuthStore.setState({
-        sessionReference: mockGrantReference('saved-grant'),
-        currentUserPubky: pubky,
-        hasProfile: true,
-        restoreStatus: 'reauth-required',
-      });
-      persistState();
-      vi.mocked(HomeserverService.getBytesIfExists).mockResolvedValue(flagBytes());
-
-      expect(await signInWithRing()).toBe(session);
-
-      expect(BootstrapApplication.initialize).not.toHaveBeenCalled();
-      expect(LocksApplication.copySocialReaderFiles).toHaveBeenCalledExactlyOnceWith({
-        readerPubky: pubky,
-        isCurrent: expect.any(Function),
-      });
-    });
-
     it('does not fail the sign-in when the flag read fails: it asks, and the run finds the account updated', async () => {
       vi.mocked(HomeserverService.getBytesIfExists).mockRejectedValue(new Error('offline'));
       const run = vi
@@ -555,97 +530,6 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
       await expect(signInWithRing()).rejects.toThrow('cleanup failed');
 
       expect(useAuthStore.getState()).toMatchObject({ session, restoreStatus: 'temporary-error' });
-    });
-  });
-
-  describe('the Locks reader file copy (#3206)', () => {
-    const copy = () => vi.mocked(LocksApplication.copySocialReaderFiles);
-    const started = { readerPubky: pubky, isCurrent: expect.any(Function) };
-    /** A restore the trusted record lets through with no request, with the grant holding `capabilities`. */
-    const restoreWith = ({
-      hasProfile = true,
-      capabilities = ['/:rw'],
-    }: { hasProfile?: boolean | null; capabilities?: string[] } = {}) => {
-      writeSocialMigrationRecord(pubky, { v: 1, migratedRev: SOCIAL_MIGRATION_TRANSFORM_REV, admittedGrantIds: [] });
-      useAuthStore.setState({
-        sessionReference: mockGrantReference('saved-grant'),
-        currentUserPubky: pubky,
-        hasProfile,
-        generation: 'copy-generation',
-      });
-      persistState();
-      vi.spyOn(AuthApplication, 'restorePersistedSession').mockResolvedValue({
-        status: 'restored',
-        session: mockSession({
-          info: asOpaque({ publicKey: { z32: () => pubky }, capabilities }),
-          grant: session.grant,
-        }),
-      });
-    };
-
-    // A restore that bootstraps calls it twice, from the bootstrap task and from the restore; the second joins the first run.
-    it.each([
-      ['a reload, which skips bootstrap', true, 0, 1],
-      ['a restore that bootstraps', null, 1, 2],
-    ])('starts on %s', async (_label, hasProfile, bootstraps, calls) => {
-      restoreWith({ hasProfile });
-
-      expect(await AuthController.restorePersistedSession()).toBe(true);
-
-      expect(BootstrapApplication.initialize).toHaveBeenCalledTimes(bootstraps);
-      expect(copy()).toHaveBeenCalledTimes(calls);
-      expect(copy()).toHaveBeenCalledWith(started);
-    });
-
-    it.each([
-      { capabilities: [APP_CAPABILITIES, ...SOCIAL_V1_APP_CAPABILITIES, '/priv/social/:r'], starts: true },
-      { capabilities: [APP_CAPABILITIES, ...SOCIAL_V1_APP_CAPABILITIES], starts: false },
-    ])('starts only when the grant reads the social root: $capabilities', async ({ capabilities, starts }) => {
-      restoreWith({ capabilities });
-
-      expect(await AuthController.restorePersistedSession()).toBe(true);
-
-      if (starts) expect(copy()).toHaveBeenCalledExactlyOnceWith(started);
-      else expect(copy()).not.toHaveBeenCalled();
-    });
-
-    it('does not start for an account without a profile', async () => {
-      restoreWith({ hasProfile: false });
-
-      expect(await AuthController.restorePersistedSession()).toBe(true);
-
-      expect(copy()).not.toHaveBeenCalled();
-    });
-
-    it('logs only a raw failure, not one already reported', async () => {
-      restoreWith();
-      const failure = new Error('offline');
-      copy().mockRejectedValue(failure);
-      const warn = vi.spyOn(Logger, 'warn');
-
-      await AuthController.restorePersistedSession();
-      await vi.waitFor(() =>
-        expect(warn).toHaveBeenCalledWith('Failed to copy the Locks reader files from /priv/social/', {
-          pubky,
-          error: failure,
-        }),
-      );
-
-      // An AppError was reported where it was made (Err.*): logging it here would double it.
-      warn.mockClear();
-      copy().mockRejectedValue(
-        Err.server(ServerErrorCode.SERVICE_UNAVAILABLE, 'Homeserver unavailable', {
-          service: ErrorService.Homeserver,
-          operation: 'listAll',
-        }),
-      );
-      await AuthController.restorePersistedSession();
-      await vi.waitFor(() => expect(copy()).toHaveBeenCalledTimes(2));
-      await Promise.resolve();
-      expect(warn).not.toHaveBeenCalledWith(
-        'Failed to copy the Locks reader files from /priv/social/',
-        expect.anything(),
-      );
     });
   });
 
@@ -758,11 +642,6 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
         restoreStatus: 'ready',
       });
       expect(BootstrapApplication.initialize).not.toHaveBeenCalled();
-      // `init` set `ready` first; the copy starts at the end of the adoption, with the upgraded grant.
-      expect(LocksApplication.copySocialReaderFiles).toHaveBeenCalledExactlyOnceWith({
-        readerPubky: pubky,
-        isCurrent: expect.any(Function),
-      });
       await vi.waitFor(() => expect(AuthApplication.logout).toHaveBeenCalledWith({ session: narrowSession }));
     });
     it('admits the grant of an upgrade adopted on a trusted record, which re-walks after a transform revision bump instead of signing out', async () => {

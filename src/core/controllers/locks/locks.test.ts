@@ -1,5 +1,5 @@
 import type { Session as LocksSdkSession } from '@synonymdev/locks-sdk';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LocksApplication } from '@/application/locks/locks';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -36,6 +36,7 @@ const mocks = vi.hoisted(() => ({
   replicateUnlockedContent: vi.fn(),
   fetchReplicatedContent: vi.fn(),
   fetchUnlockedList: vi.fn(),
+  copySocialReaderFiles: vi.fn(),
   fetchOwnContent: vi.fn(),
 }));
 
@@ -64,6 +65,7 @@ vi.mock('@/application/locks/locks', () => ({
     replicateUnlockedContent: mocks.replicateUnlockedContent,
     fetchReplicatedContent: mocks.fetchReplicatedContent,
     fetchUnlockedList: mocks.fetchUnlockedList,
+    copySocialReaderFiles: mocks.copySocialReaderFiles,
     fetchOwnContent: mocks.fetchOwnContent,
   },
 }));
@@ -928,6 +930,46 @@ describe('LocksController.fetchUnlockedList', () => {
 
     await expect(LocksController.fetchUnlockedList(params)).resolves.toEqual(items);
     expect(mocks.fetchUnlockedList).toHaveBeenCalledWith({ ...params, isCurrent: expect.any(Function) });
+  });
+});
+
+describe('LocksController reader file copy (#3206)', () => {
+  const READER = 'pubkyreader';
+  const signIn = (capabilities: string[]) =>
+    useAuthStore.setState({ currentUserPubky: READER, session: asOpaque({ info: { capabilities } }) });
+  const reads = [
+    ['a replica read', () => LocksController.fetchReplicatedContent({ lockUrl: VALID_LOCK_URL, readerPubky: READER })],
+    ['the Unlocked screen', () => LocksController.fetchUnlockedList({ readerPubky: READER })],
+  ] as const;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.fetchReplicatedContent.mockResolvedValue(null);
+    mocks.fetchUnlockedList.mockResolvedValue([]);
+    mocks.copySocialReaderFiles.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    useAuthStore.setState({ session: null });
+  });
+
+  it.each(reads)('starts it in the background on %s', async (_label, read) => {
+    signIn(['/priv/social/:rw', '/priv/app.pubky/v1/:rw']);
+
+    await read();
+
+    expect(mocks.copySocialReaderFiles).toHaveBeenCalledExactlyOnceWith({
+      readerPubky: READER,
+      isCurrent: expect.any(Function),
+    });
+  });
+
+  it.each(reads)('does not start it on %s when the grant cannot read /priv/social/', async (_label, read) => {
+    signIn(['/priv/app.pubky/v1/:rw']);
+
+    await read();
+
+    expect(mocks.copySocialReaderFiles).not.toHaveBeenCalled();
   });
 });
 

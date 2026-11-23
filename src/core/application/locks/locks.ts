@@ -10,6 +10,7 @@ import {
 } from '@/libs/image/imageUploadSizeLimit';
 import { isSvgType } from '@/libs/image/rasterizeSvg';
 import { stripImageMetadata } from '@/libs/image/stripImageMetadata';
+import { Logger } from '@/libs/logger/logger';
 import { getArticlePreviewSlots } from '@/libs/post/articleInlineMedia';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
 import type { LockModelSchema } from '@/models/locks/locks.schema';
@@ -111,7 +112,10 @@ export class LocksApplication {
   /** `hasCopiedSocialFiles` answers per reader, kept for the page's life. */
   private static readonly socialFilesCopied = new Map<string, Promise<boolean>>();
 
-  /** A restore while `copySocialReaderFiles` still runs for the same session joins that run instead of copying the same files again. */
+  /**
+   * One `copySocialReaderFiles` run per reader and session for the page's life: every lock on screen asks for it,
+   * and a run that failed would otherwise list both social roots again for each of them.
+   */
   private static readonly socialCopyRuns = new Map<
     string,
     { run: Promise<void>; isCurrent: TViewerScope['isCurrent'] }
@@ -714,19 +718,21 @@ export class LocksApplication {
 
   /**
    * Copies the reader's replicas and purchase files from `/priv/social/` to the app's namespace
-   * (#3206), in the background each time the session is ready. Only what is missing at the new root is
-   * written, so a run that stops midway is finished by the next one. A file that fails is left for the
-   * next run and the rest still copied; the flag goes last, only after a run with no failure. It stops
-   * the list reads only: `fetchResolvedPurchase` keeps reading the social root. The social files stay
-   * (#3207).
+   * (#3206), in the background when a lock's replica or the Unlocked screen is read. Only what is missing
+   * at the new root is written, so a run that stops midway is finished on a later page load. A file that
+   * fails is left for that load and the rest still copied; the flag goes last, only after a run with no
+   * failure. It stops the list reads only: `fetchResolvedPurchase` keeps reading the social root. The
+   * social files stay (#3207). Never rejects.
    */
   static copySocialReaderFiles(params: TFetchUnlockedListParams & TViewerScope): Promise<void> {
     const { readerPubky, isCurrent } = params;
-    const running = this.socialCopyRuns.get(readerPubky);
+    const previous = this.socialCopyRuns.get(readerPubky);
     // A run whose session ended stops before its next write and leaves no flag, so this session starts its own.
-    if (running && running.isCurrent?.() !== false) return running.run;
-    const run = this.runSocialCopy(params).finally(() => {
-      if (this.socialCopyRuns.get(readerPubky)?.run === run) this.socialCopyRuns.delete(readerPubky);
+    if (previous && previous.isCurrent?.() !== false) return previous.run;
+    const run = this.runSocialCopy(params).catch((error: unknown) => {
+      // AppError factories already report at their origin. Only unexpected raw failures need a warning.
+      if (!isAppError(error))
+        Logger.warn('Failed to copy the Locks reader files from /priv/social/', { readerPubky, error });
     });
     this.socialCopyRuns.set(readerPubky, { run, isCurrent });
     return run;
@@ -743,8 +749,8 @@ export class LocksApplication {
       HomeserverService.listAll({ baseDirectory: GuardedContentParser.socialUnlockedRootUrl(readerPubky) }),
       HomeserverService.listAll({ baseDirectory: GuardedContentParser.socialPurchasesRootUrl(readerPubky) }),
     ]);
-    // Empty for most accounts, which never used Locks before #3206. They still get the flag: without it,
-    // every page load lists both social roots again and reads a second marker for each lock on screen.
+    // Empty for most readers, who never used Locks before #3206. They still get the flag: without it, every
+    // page load with a lock on screen lists both social roots again and reads a second marker for each lock.
     if (socialUnlocked.length > 0 || socialPurchases.length > 0) {
       const [unlocked, purchases] = await Promise.all([
         HomeserverService.listAll({ baseDirectory: GuardedContentParser.unlockedRootUrl(readerPubky) }),

@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthApplication } from '@/application/auth/auth';
 import { BootstrapApplication } from '@/application/bootstrap/bootstrap';
-import { LocksApplication } from '@/application/locks/locks';
 import { SettingsApplication } from '@/application/settings/settings';
 import { UserApplication } from '@/application/user/user';
 import { LOCKS_CAPABILITIES } from '@/config/auth';
@@ -362,32 +361,6 @@ describe('AuthController', () => {
       );
       expect(storeMocks.notificationInit).toHaveBeenCalledWith(notification);
       expect(authStoreState.setHasProfile).toHaveBeenCalledWith(true);
-    });
-
-    it('does not start the Locks reader file copy: a new profile has nothing under /priv/social/', async () => {
-      vi.spyOn(BootstrapApplication, 'initialize').mockResolvedValue({
-        unread: 0,
-        lastRead: 1,
-        lastPolledTimestamp: undefined,
-      });
-      const copy = vi.spyOn(LocksApplication, 'copySocialReaderFiles').mockResolvedValue(undefined);
-      await spyOnSleep();
-      const session = buildMockSession({ info: asOpaque({ capabilities: ['/:rw'] }) });
-      vi.spyOn(useAuthStore, 'getState').mockReturnValue(
-        mockAuthStore({
-          ...storeMocks.getAuthState(),
-          session,
-          selectSession: () => session,
-          currentUserPubky: TEST_PUBKY as Pubky,
-          hasProfile: true,
-          selectCurrentUserPubky: vi.fn(() => TEST_PUBKY),
-          setHasProfile: vi.fn(),
-        }),
-      );
-
-      await AuthController.bootstrapWithDelay();
-
-      expect(copy).not.toHaveBeenCalled();
     });
 
     it('should use remote settings when initializeSettings returns non-null', async () => {
