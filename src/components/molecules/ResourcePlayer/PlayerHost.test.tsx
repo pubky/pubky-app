@@ -119,6 +119,24 @@ describe('PlayerHost', () => {
     expect(document.querySelector('[data-keep-playing]')).toBeNull();
   });
 
+  it('takes the keyboard from the card into its player laid over it, which sits at the end of the page', () => {
+    render(
+      <PlayerHost>
+        <Song testId="feed" />
+      </PlayerHost>,
+    );
+
+    const [frame] = frames();
+    const into = within(slotOf('feed')).getByRole('button', { name: /^Go to the player: / });
+    // Reached by Tab or Shift+Tab, it keeps the focus: nothing moves on focus alone.
+    act(() => into.focus());
+    expect(document.activeElement).toBe(into);
+
+    // Pressed (Enter or Space press it as a click): into the player.
+    fireEvent.click(into);
+    expect(document.activeElement).toBe(frame);
+  });
+
   it('keeps the same playing frame across pages: the dock with no card, then the next card of the same link', () => {
     const { rerender } = render(
       <PlayerHost>

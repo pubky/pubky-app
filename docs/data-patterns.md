@@ -543,7 +543,9 @@ included. A settled social post shows as a post from the card's own data at once
 it carries no video (`showsPostFromCard`) there is nothing to press. One with a video (a video frame or stream, a
 `VideoObject` type, or an X video thumbnail as its card or link preview image: `hasPostVideo`) keeps "Play on
 <site>": the press opens the site's post inside the card and its video plays there, inside the post (a post's frame
-takes no autoplay parameter). An X post whose card does not tell it (no card, or one without its text: unread,
+takes no autoplay parameter); a press inside that frame counts as its start, so what played stops, and the frame
+is loaded anew, stopped, when other media starts (`ResourcePlayerFrame`'s `holdsVideo`). A player the app's player
+host lays over its card is reached from the card by a skip link (`PlayerSlot`'s "Go to the player", shown while focused, acting only when pressed). An X post whose card does not tell it (no card, or one without its text: unread,
 pending, failed) is read by the app's own server (`/api/x-post?id=`, `XPostApplication`: X's
 syndication host at the one address `react-tweet` reads, only the post's ID sent, as `PubkyApp/<version>`, nothing
 of the viewer's, no redirect, 512 KB and 6 s; a 200 that is no JSON object is a failure, one that is no post none; posts kept an hour in a

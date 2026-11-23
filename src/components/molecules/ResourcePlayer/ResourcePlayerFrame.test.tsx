@@ -343,6 +343,47 @@ describe('ResourcePlayerFrame', () => {
     expect(region).toHaveAttribute('aria-busy', 'false');
   });
 
+  it.each([
+    ['post', true, true],
+    ['post', false, false],
+    ['map', true, false],
+  ] as const)('a press inside a %s frame (holding a video: %s) counts as a start: %s', (frame, holdsVideo, starts) => {
+    vi.useFakeTimers();
+    const FRAME = {
+      ...DEEZER,
+      provider: 'mastodon',
+      name: 'mastodon.social',
+      src: 'https://mastodon.social/@someone/1/embed',
+      frame,
+    };
+    render(
+      <>
+        <ResourcePlayerFrame
+          target={FRAME}
+          title="A post"
+          load="ready"
+          onLoaded={() => {}}
+          quiet
+          holdsVideo={holdsVideo}
+        />
+        <Player target={SPOTIFY} />
+      </>,
+    );
+    const shown = screen.getByLabelText('mastodon.social embed: A post', { selector: 'iframe' });
+    act(() => shown.dispatchEvent(new Event('load')));
+    act(() => {
+      fireEvent.mouseOver(shown);
+      shown.focus();
+      window.dispatchEvent(new Event('blur'));
+      vi.advanceTimersByTime(1);
+    });
+
+    // Other media starts: a post's video stops (loaded anew); a map stays as it is.
+    fireEvent.click(screen.getByRole('button', { name: 'play' }));
+    const after = screen.getByLabelText('mastodon.social embed: A post', { selector: 'iframe' });
+    expect(after === shown).toBe(!starts);
+  });
+
   it('loads anew an embed shown up front that said it plays, when other media starts', () => {
     render(
       <>

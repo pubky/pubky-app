@@ -236,6 +236,7 @@ export function useCardPlayer(
           preview={preview}
           pagePlayer={pagePlayer}
           startsOnLoad={!preview && !selected.frame}
+          holdsVideo={selected.frame === 'post' && hasPostVideo(card, previewImage)}
           onLetGo={() => setOptedIn(null)}
         />
       ) : undefined,
@@ -273,6 +274,8 @@ interface EmbedPlayerProps {
   startsOnLoad?: boolean;
   /** The player was let go (other media started, the dock closed it): the card's Play comes back. */
   onLetGo?: () => void;
+  /** A post frame that holds a video: a press inside it is a start (`ResourcePlayerFrame`'s `holdsVideo`). */
+  holdsVideo?: boolean;
 }
 
 /**
@@ -280,7 +283,16 @@ interface EmbedPlayerProps {
  * mounted by the card's Play (platform embeds up front off), started on load. Its playing makes it the
  * page's player, which then docks (never in a preview) until other media starts or Close.
  */
-function EmbedPlayer({ title, target, player, preview, pagePlayer, startsOnLoad = false, onLetGo }: EmbedPlayerProps) {
+function EmbedPlayer({
+  title,
+  target,
+  player,
+  preview,
+  pagePlayer,
+  startsOnLoad = false,
+  onLetGo,
+  holdsVideo = false,
+}: EmbedPlayerProps) {
   const boxRef = useRef<HTMLDivElement>(null);
   // The player was opened by the card's Play: it starts on load.
   const [autoStart, setAutoStart] = useState(startsOnLoad);
@@ -351,6 +363,7 @@ function EmbedPlayer({ title, target, player, preview, pagePlayer, startsOnLoad 
             onPlay={target.frame ? undefined : (media) => player.play(target, media)}
             // Paused or ended in its card, it does not go to the dock.
             onPause={player.pause}
+            holdsVideo={holdsVideo}
           />
         )}
       </PlayerDock>

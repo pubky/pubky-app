@@ -33,6 +33,12 @@ interface ResourcePlayerFrameProps {
    */
   takeFocus?: () => boolean;
   /**
+   * A post frame that holds a video (`hasPostVideo`: a Mastodon post with one): a press inside it counts
+   * as its start, so other media stops, and it is loaded anew, stopped, when other media starts. A press
+   * in any other post, map or document frame starts nothing.
+   */
+  holdsVideo?: boolean;
+  /**
    * An embed shown up front (a card without Also on, `GenericResourcePreview`), not opened by Play:
    * no status line, since nothing was asked to start; loaded once near the screen, like a post's
    * video embed.
@@ -122,7 +128,8 @@ function useFitScale(regionRef: RefObject<HTMLDivElement | null>, minWidth: numb
  * (Spotify, TIDAL). A service that cannot start that way (Mixcloud, Deezer) says a press inside its
  * player is needed, to screen readers only; the card never claims playback. One media plays on the
  * page (`useMediaBox`). A frame that is no player (`target.frame`: a post, a map, a document) is shown
- * the same way at the size Pinakes names, and a press inside it starts no media.
+ * the same way at the size Pinakes names; a press inside it starts no media, except in a post that holds
+ * a video (`holdsVideo`).
  */
 export function ResourcePlayerFrame({
   target,
@@ -133,6 +140,7 @@ export function ResourcePlayerFrame({
   onPlay,
   onPause,
   takeFocus,
+  holdsVideo = false,
 }: ResourcePlayerFrameProps) {
   const { frameRef, onLoad } = useStartMessage(target, onLoaded);
   const regionRef = useRef<HTMLDivElement>(null);
@@ -158,8 +166,9 @@ export function ResourcePlayerFrame({
       setStarted(true);
       if (frameRef.current) reportMediaStart(frameRef.current);
     },
-    // A post, map or document frame plays nothing: a press inside it (panning a map) starts no media.
-    !tells && !started && !target.frame,
+    // A post, map or document frame plays nothing: a press inside it (panning a map) starts no media,
+    // unless it is a post that holds a video (`holdsVideo`), which tells nothing of its own.
+    !tells && !started && (!target.frame || (target.frame === 'post' && holdsVideo)),
   );
   const startHere = (media: Element) => {
     setStarted(true);

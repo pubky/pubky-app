@@ -925,6 +925,32 @@ describe('useCardPlayer, a song', () => {
       expect(document.querySelector('[data-docked]')).toBeNull();
     });
 
+    it('stops what plays when the video in a post’s frame is pressed, and loads that frame anew when other media starts', () => {
+      vi.useFakeTimers();
+      setMedia({ embedsUpFront: false });
+      const VIDEO_TOOT = {
+        ...TOOT,
+        stream: { url: 'https://files.mastodon.social/a.mp4', type: 'video/mp4', preview: false },
+      };
+      render(
+        <>
+          <Song card={DEEZER_SONG} href={DEEZER_SONG.uri} testId="deezer" />
+          <Song card={VIDEO_TOOT} testId="toot" />
+        </>,
+      );
+      fireEvent.click(screen.getByRole('button', { name: playOn('Deezer') }));
+      const deezer = frameOf('deezer');
+      expect(deezer.closest('[data-keep-playing]')).not.toBeNull();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Play on mastodon.social' }));
+      const toot = frameOf('toot');
+      engage(toot);
+
+      // The post's video plays: Deezer is let go, its Play back.
+      expect(screen.getByRole('button', { name: playOn('Deezer') })).toBeInTheDocument();
+      expect(frameOf('toot')).toBe(toot);
+    });
+
     it('keeps what plays on Show on: a post’s frame shown on a press stops nothing', () => {
       setMedia({ embedsUpFront: false });
       render(

@@ -582,6 +582,7 @@ export function PlayerSlot({ owner, resource, target, title, onClose, children }
     () => '',
   );
   const away = view === 'away';
+  const shownHere = view.startsWith(FRAME_VIEW);
 
   return (
     <div
@@ -590,7 +591,7 @@ export function PlayerSlot({ owner, resource, target, title, onClose, children }
       data-testid="player-dock-slot"
       data-docked={away ? 'true' : undefined}
       // The frame sits elsewhere in the page: assistive technology reads it here.
-      aria-owns={view.startsWith('frame:') ? frameId(view.slice('frame:'.length)) : undefined}
+      aria-owns={shownHere ? frameId(view.slice(FRAME_VIEW.length)) : undefined}
     >
       {away && (
         <DockSlotBack
@@ -598,8 +599,34 @@ export function PlayerSlot({ owner, resource, target, title, onClose, children }
           onBack={() => slotRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
         />
       )}
+      {shownHere && (
+        // The frame sits at the end of the page: a skip link to it, for the keyboard, shown while focused.
+        // It moves the focus only when pressed (Enter, Space or a click), never on focus, so Tab and
+        // Shift+Tab pass it like any control.
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          className="sr-only focus-visible:not-sr-only focus-visible:absolute focus-visible:top-2 focus-visible:left-2 focus-visible:z-30"
+          data-testid="player-slot-focus"
+          onClick={() => focusFrame(view.slice(FRAME_VIEW.length))}
+        >
+          {`Go to the player: ${title}`}
+        </Button>
+      )}
     </div>
   );
 }
 
 const noSubscribe = () => () => undefined;
+
+/** What `viewOf` says of a slot whose frame the host lays over it: `frame:<id>`. */
+const FRAME_VIEW = 'frame:';
+
+/** Moves the focus into a hosted frame's player (its iframe, audio or video, else its first control). */
+function focusFrame(id: string): void {
+  document
+    .getElementById(frameId(id))
+    ?.querySelector<HTMLElement>('iframe, audio, video, button, [href], [tabindex]:not([tabindex="-1"])')
+    ?.focus();
+}
