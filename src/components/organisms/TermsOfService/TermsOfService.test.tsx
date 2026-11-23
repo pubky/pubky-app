@@ -26,7 +26,7 @@ describe('TermsOfService', () => {
       '9. COMPLIANCE WITH APPLICABLE LAW',
       '10. PRIVACY POLICY',
       '11. INTELLECTUAL PROPERTY',
-      '12. PUBKY SHOP AND PUBKY MARKET',
+      '12. PUBKY MARKET',
       '13. THIRD-PARTY MATERIALS',
       '14. PUBLISHING AND DISTRIBUTION OF CONTENT VIA THE PLATFORM',
       '15. PROHIBITED USES',
@@ -49,7 +49,11 @@ describe('TermsOfService', () => {
       'id',
       'user-identity-requirements',
     );
-    expect(screen.getByRole('heading', { level: 3, name: '12.2 What Pubky Market is' })).toHaveAttribute(
+    expect(screen.getByRole('heading', { level: 3, name: '12.1 What Pubky Market is' })).toHaveAttribute(
+      'id',
+      'what-pubky-shop-is',
+    );
+    expect(screen.getByRole('heading', { level: 3, name: '12.2 Other marketplaces' })).toHaveAttribute(
       'id',
       'what-pubky-market-is',
     );
@@ -122,26 +126,24 @@ describe('TermsOfService - regional availability', () => {
     );
   });
 
-  it('describes the Shop without Stripe', () => {
+  it('describes Pubky Market without Stripe', () => {
     const { container } = render(<TermsOfService />);
     const text = container.textContent ?? '';
 
-    expect(screen.getByRole('heading', { level: 2, name: '12. PUBKY SHOP AND PUBKY MARKET' })).toHaveAttribute(
-      'id',
-      'pubky-shop',
-    );
+    expect(screen.getByRole('heading', { level: 2, name: '12. PUBKY MARKET' })).toHaveAttribute('id', 'pubky-shop');
     expect(text).toContain('We are not the PayPal merchant of record for the sale.');
     expect(text).toContain('PayPal, Bitkit, and similar tools are Third-Party Materials.');
     expect(text).not.toMatch(/stripe/i);
   });
 
-  it('names the product Pubky Market, never Pubky Marketplace', () => {
+  it('names the product Pubky Market, never Pubky Shop or Pubky Marketplace', () => {
     const { container } = render(<TermsOfService />);
     const text = container.textContent ?? '';
 
-    expect(text).toContain('Pubky Market is the name we use for commerce on Pubky.');
-    expect(text).toContain('"Pubky Market" means the concept of commerce among Pubky identities.');
-    expect(text).toContain('Pubky Market is not a separate product or a second set of Terms.');
+    expect(text).toContain('These Terms govern Pubky Market.');
+    expect(text).toContain('"Pubky Market" means the Synonym-operated commerce client and related services');
+    expect(text).toContain('Pubky Market is not a second set of Terms.');
+    expect(text).not.toMatch(/Pubky\s+Shop/i);
     expect(text).not.toMatch(/Pubky Marketplace/i);
   });
 });
