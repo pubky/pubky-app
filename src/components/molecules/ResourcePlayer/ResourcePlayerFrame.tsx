@@ -1,6 +1,6 @@
 'use client';
 
-import { type CSSProperties, type ReactNode, type RefObject, useEffect, useRef, useState } from 'react';
+import { type CSSProperties, type ReactNode, type RefObject, useEffect, useEffectEvent, useRef, useState } from 'react';
 import { ArrowUpRight, Loader2 } from 'lucide-react';
 import { Container } from '@/atoms/Container/Container';
 import { Iframe } from '@/atoms/Iframe/Iframe';
@@ -28,8 +28,9 @@ interface ResourcePlayerFrameProps {
   /** Its media was paused or has ended, where its player tells (`useMediaBox`): paused in its card, it does not dock. */
   onPause?: () => void;
   /**
-   * The app's audio player asks, once mounted, whether a press opened it (`ResourceAudioPlayer`): its
-   * Play/Pause then takes the focus of the Play that is gone.
+   * Asked once mounted whether a press opened it: the app's audio player's Play/Pause then takes the
+   * focus of the Play that is gone (`ResourceAudioPlayer`); a service's frame its region, so the next Tab
+   * goes into the player (a card's drawing of it, `useCardPlayer`).
    */
   takeFocus?: () => boolean;
   /**
@@ -99,9 +100,9 @@ function useStartMessage(target: PlayerTarget, onLoaded: () => void) {
 /**
  * The scale that fits a frame laid out at `minWidth` (`getMinFrameWidth`) into its region: below 1
  * only while the region is narrower; 1 when it fits, without a minimum width, or before the width is
- * known.
+ * known. A card's drawing of the player (`ResourcePlayerFacade`) takes the same height with it.
  */
-function useFitScale(regionRef: RefObject<HTMLDivElement | null>, minWidth: number | undefined): number {
+export function useFitScale(regionRef: RefObject<HTMLDivElement | null>, minWidth: number | undefined): number {
   const [scale, setScale] = useState(1);
   useEffect(() => {
     const region = regionRef.current;
@@ -180,6 +181,16 @@ export function ResourcePlayerFrame({
     if (!tells) setRound((value) => value + 1);
   };
   useMediaBox(regionRef, onPlay ? { onStart: onPlay, onPause } : { onStart: startHere, onStop: stop });
+  // Loaded by a press on what stood here (a card's drawing of the player), now gone: the press's focus
+  // moves to the frame's region. Mounted again without a press (the host loads a hidden frame anew), it
+  // leaves the focus alone.
+  // The app's audio player moves it itself (`ResourceAudioControls`).
+  const focusOnOpen = useEffectEvent(() => {
+    if (target.element === 'audio') return;
+    const lost = !document.activeElement || document.activeElement === document.body;
+    if (takeFocus?.() && lost) regionRef.current?.focus({ preventScroll: true });
+  });
+  useEffect(() => focusOnOpen(), []);
   const label = `${target.name} ${target.frame ? 'embed' : 'player'}: ${title}`;
   const isVideo = target.layout.kind === 'video';
   // An embed with a minimum width (Apple's) is laid out at it and scaled to the region, the region's
@@ -212,12 +223,14 @@ export function ResourcePlayerFrame({
         data-provider={target.provider}
         data-load={load}
         data-player-region
+        // Focusable from script only, where a press may load the frame: that press leaves its focus here.
+        tabIndex={takeFocus ? -1 : undefined}
         style={style}
         // The services draw their own rounded corners (TIDAL, Spotify: 12 px, `rounded-lg` here): ours
         // match them, and our background shows only until the player has loaded, so none peeks out at a
         // corner; never behind a plain file, whose own pill is rounder than the box.
         className={cn(
-          'relative w-full overflow-hidden rounded-lg',
+          'relative w-full overflow-hidden rounded-lg outline-none',
           target.element !== 'audio' && load !== 'ready' && 'bg-card',
           // A tall frame (a 9:16 video) stays within the screen; the app's audio player is as tall as its controls.
           isVideo ? 'aspect-video max-h-[80vh]' : !isAudioFile && 'h-(--player-h)',

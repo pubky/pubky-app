@@ -247,13 +247,15 @@ describe('PostLinkEmbeds', () => {
       viewport.isVisible = true;
     });
 
-    it('shows a YouTube link’s card, loading nothing from YouTube, and plays it inside the card on Play', () => {
+    it('draws a YouTube link’s player from its card, loading nothing from YouTube, and plays it in place on a press', () => {
       givenCard(VIDEO);
       render(<PostLinkEmbeds content={`Listen ${VIDEO.uri}`} />);
 
       // Re-read while on screen, and sent to be read once near the screen when Pinakes does not know it.
       expect(usePinakesCard).toHaveBeenCalledWith(VIDEO.uri, { recheck: true, resolveOnView: true });
-      expect(screen.getByTestId('resource-card-title')).toHaveTextContent(VIDEO.name!);
+      const facade = within(screen.getByTestId('resource-embed-frame')).getByTestId('player-facade');
+      expect(facade).toHaveTextContent(VIDEO.name!);
+      expect(document.querySelector('iframe')).toBeNull();
       expectNoThirdPartyLoads();
       // The link is the post's text, not its resource: no footer of its own.
       expect(screen.queryByTestId('resource-actions')).not.toBeInTheDocument();
@@ -261,9 +263,8 @@ describe('PostLinkEmbeds', () => {
       fireEvent.click(screen.getByRole('button', { name: `Play ${VIDEO.name} on YouTube` }));
 
       expect(document.querySelectorAll('iframe')).toHaveLength(1);
-      const player = screen.getByTestId('resource-card-player');
-      expect(within(player).getByTestId('resource-player-frame').getAttribute('src')).toContain('autoplay=1');
-      expect(screen.getByTestId('resource-card-title')).toHaveTextContent(VIDEO.name!);
+      expect(screen.getByTestId('resource-player-frame').getAttribute('src')).toContain('autoplay=1');
+      expect(screen.queryByTestId('player-facade')).not.toBeInTheDocument();
     });
 
     it('shows an X link’s post from its card’s data at once, nothing from X, no press', () => {

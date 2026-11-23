@@ -16,8 +16,9 @@ interface ResourceEmbedFrameProps {
   /** The resource's footer (`ResourceActions`). */
   actions: ReactNode;
   /**
-   * The platform's own embed (an X post, a video, a music player); none while it is loaded only on
-   * a press (platform embeds up front off): the frame is then its header and footer.
+   * The platform's own embed (an X post, a video, a music player), or the app's drawing of a service's
+   * player until a press (platform embeds up front off, `ResourcePlayerFacade`); none while an embed
+   * is loaded only on a press: the frame is then its header and footer.
    */
   children?: ReactNode;
   /** What the embed is, named in the header when there is no card to say it ("Post", "Video"). */

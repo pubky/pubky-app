@@ -529,34 +529,34 @@ describe('NativeEmbedResource', () => {
 
       const play = () => screen.getByRole('button', { name: `Play ${videoFixture.name} on YouTube` });
 
-      it('shows the video’s card with Play in its header and loads nothing from the platform', () => {
+      it('draws the video’s player in the resource frame from its card, no Play in the header, nothing from the platform', () => {
         mockCard(VIDEO_ALONE);
         render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
 
-        const card = screen.getByTestId('resource-card');
-        expect(screen.queryByTestId('resource-embed-frame')).not.toBeInTheDocument();
-        expect(within(card).getByTestId('resource-card-title')).toHaveTextContent(videoFixture.name!);
-        expect(within(card).getByTestId('card-player-controls')).toContainElement(play());
+        const frame = screen.getByTestId('resource-embed-frame');
+        expect(screen.queryByTestId('resource-card')).not.toBeInTheDocument();
+        const facade = within(frame).getByTestId('player-facade');
+        expect(facade).toBe(play());
+        expect(facade).toHaveTextContent(videoFixture.name!);
+        // The drawing is the one Play: none in the header.
+        expect(screen.getAllByRole('button', { name: /^Play / })).toEqual([facade]);
+        expect(document.querySelector('iframe')).toBeNull();
         expect(embed).not.toHaveBeenCalled();
         expectNoThirdPartyLoads();
       });
 
-      it('loads exactly one player inside the card on Play, started, and Close leaves the card alone', () => {
+      it('loads exactly one player in the drawing’s place on a press, started, with no dialog', () => {
         mockCard(VIDEO_ALONE);
         render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
 
         fireEvent.click(play());
 
-        const card = screen.getByTestId('resource-card');
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
         expect(document.querySelectorAll('iframe')).toHaveLength(1);
-        const frame = within(within(card).getByTestId('resource-card-player')).getByTestId('resource-player-frame');
+        const frame = within(screen.getByTestId('resource-embed-frame')).getByTestId('resource-player-frame');
         expect(frame.getAttribute('src')).toContain('autoplay=1');
-        expect(within(card).getByTestId('resource-card-title')).toHaveTextContent(videoFixture.name!);
+        expect(screen.queryByTestId('player-facade')).not.toBeInTheDocument();
         expect(embed).not.toHaveBeenCalled();
-
-        fireEvent.click(within(card).getByRole('button', { name: 'Close YouTube' }));
-        expect(document.querySelector('iframe')).toBeNull();
-        expect(play()).toBeInTheDocument();
       });
 
       it('shows our card for a video the card player cannot play, its embed only from Play on', () => {
@@ -611,9 +611,9 @@ describe('NativeEmbedResource', () => {
         expect(screen.getByTestId('platform-embed')).toBe(player);
         expect(screen.queryByTestId('resource-card')).not.toBeInTheDocument();
 
-        // Closed, the card takes its place, its Play loading nothing until pressed.
+        // Closed, the card's drawing of the player takes its place, loading nothing until pressed.
         fireEvent.click(screen.getByRole('button', { name: 'Close the YouTube video' }));
-        expect(screen.getByTestId('resource-card')).toBeInTheDocument();
+        expect(screen.getByTestId('player-facade')).toBeInTheDocument();
         expect(screen.getByRole('button', { name: `Play ${videoFixture.name} on YouTube` })).toBeInTheDocument();
         expect(screen.queryByTestId('platform-embed')).not.toBeInTheDocument();
       });
@@ -861,14 +861,16 @@ describe('NativeEmbedResource', () => {
       beforeEach(() => useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } }));
       afterEach(() => useSettingsStore.setState({ media: upFrontMedia }));
 
-      it('loads nothing from any service, and shows the song’s card with Play on YouTube', () => {
+      it('loads nothing from any service, and draws the song’s YouTube player from its card', () => {
         mockCard(SONG);
         render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
 
         expectNoThirdPartyLoads();
         expect(embed).not.toHaveBeenCalled();
-        expect(screen.getByTestId('resource-card')).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: `Play ${SONG.name} on YouTube` })).toBeInTheDocument();
+        expect(document.querySelector('iframe')).toBeNull();
+        expect(screen.getByTestId('player-facade')).toBe(
+          screen.getByRole('button', { name: `Play ${SONG.name} on YouTube` }),
+        );
       });
     });
   });

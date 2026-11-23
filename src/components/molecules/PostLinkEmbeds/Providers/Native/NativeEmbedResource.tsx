@@ -101,10 +101,11 @@ function useIsLaidOut(box: React.RefObject<HTMLElement | null>): boolean {
  * X post, a video with nothing else to play, no card) follows `chooseNativeEmbed`: the platform's
  * own embed in the resource frame, its only source, so with no switch and no Card, also when
  * Pinakes knows it elsewhere (Also on, in the ⋯ menu). A viewer who turned platform embeds up
- * front off (Settings, Links & Media) gets our card whenever there is one, the card staying: a
- * video's player loads inside it from its Play (`useCardPlayer`); an X post shows as a post from
- * the card's own data at once (`ResourcePost`, nothing asked from X), and a post the card cannot
- * tell (a video post) loads X's embed inside it from "Show on <site>". A link Pinakes does not know is
+ * front off (Settings, Links & Media) sees the same, with nothing asked from the service before a
+ * press: a video's player is drawn by the app from its card until a press on it (`useCardPlayer`'s
+ * `embed`); an X post shows as a post from the card's own data at once (`ResourcePost`, nothing asked
+ * from X), and a post the card cannot tell (a video post) loads X's embed inside our card from "Show on
+ * <site>". A link Pinakes does not know is
  * sent to be read once its box is near the screen (`resolveOnView`); with no card even then, the link's
  * own preview shows as a card (`NativeEmbedLinkCard`), the platform's Play in its header and its embed
  * inside it once pressed. The card's skeleton holds the place while Pinakes is read (at most
@@ -311,8 +312,8 @@ function NativeEmbedChoice({
   }
 
   // Something to play shown as its card (its switch's Card, or Card (no player) above its service in
-  // Players) is our card too, the switch in its header. With platform embeds up front off the card
-  // stays: a video's player (`player.player`), or the post's embed from Show on, loads inside it.
+  // Players) is our card too, the switch in its header. With platform embeds up front off the post's
+  // embed from Show on loads inside it.
   if (showsCard || (player.isCard && card)) {
     const ownEmbed = !hasCardPlayer && !player.isCard;
     const postVideo = getXPostVideo(card);
@@ -336,7 +337,7 @@ function NativeEmbedChoice({
         renderBody={ownEmbed && !inCard ? (body: ReactNode) => postEmbed ?? body : undefined}
         isBodyReplaced={!inCard && postEmbed !== null}
         headerControl={player.switcher}
-        player={player.player ?? (inCard ? postEmbed : null)}
+        player={inCard ? postEmbed : null}
         // A post shows from the card's data, text and image at once; a video in it keeps its press.
         asPost={!embedsUpFront}
         imageUrl={xPost.imageUrl}

@@ -532,13 +532,19 @@ on `video.twimg.com`, loaded only on the press of its Play, with no Referer (a f
 `tiles.openfreemap.org`. A calendar occurrence's image other than its calendar's is not one the image route serves.
 
 **Players and posts in a card.** With "Show platform embeds up front" off (Settings, Links & Media; the default),
-a link with a Pinakes card shows that card on every surface (a post's embed, the composer, Edit and Repost, feeds and
-collections, the resource page, and a YouTube, Vimeo or X link that is only in a post's text) and nothing is asked
-from the service before a press. The card's header holds the service switch (when there are several services) and
-Play on the chosen one (`useCardPlayer` → `CardPlayControl`); Play loads that service's player with autoplay inside
-the card, under its text (`ResourceCard`'s `player`), and the same pill closes it again. Picking another service stops
-what plays and offers that service's Play. The card stays whole with a player open, a podcast's own episodes
-included. A settled social post shows as a post from the card's own data at once (`getResourcePost`,
+a link with a Pinakes card looks as it does with them on, on every surface (a post's embed, the composer, Edit and
+Repost, feeds and collections, the resource page, and a YouTube, Vimeo or X link that is only in a post's text), and
+nothing is asked from the service before a press. Where a service's player would show up front (a link that is
+itself on that service, unless Card (no player) ranks above it in Players), the app draws that player from the card's
+data in its place (`useCardPlayer`'s `embed` → `ResourcePlayerFacade`): the player's height (a video's 16:9 box, an
+audio player's own height), the cover or still through `/api/image`, the title, the card's summary line and the
+service's mark, one button named "Play <title> on <service>". A press on it (click, tap, Enter, Space) loads the
+service's player in its place with autoplay, as the page's player; there is no separate Play and no dialog: the press
+is the consent. The header holds only the service switch (Card, then the services): picking a service loads its player
+at once, started (the pick is the press), and Card shows the card and unloads the player. A player let go (other
+media started, the dock closed it) gives way to its drawing again. A generic link, a podcast that plays in its card,
+and a card whose Card ranks first show the card as before. A post, map or document frame that is the link's own
+shows the card first, the frame in the switch. A settled social post shows as a post from the card's own data at once (`getResourcePost`,
 `ResourcePost`: author, handle, text, date, its image through `/api/image`), with nothing loaded from its site; when
 it carries no video (`showsPostFromCard`) there is nothing to press. One with a video (a video frame or stream, a
 `VideoObject` type, or an X video thumbnail as its card or link preview image: `hasPostVideo`) keeps "Play on
@@ -558,7 +564,8 @@ the page's own referrer policy is untouched; a page-wide Content-Security-Policy
 `media-src https://video.twimg.com` and the frame's inline style), read from `/api/x-post` only then when the card told the post itself
 (`XPostPlayer`; the read starts as the viewer reaches for Play, pointer down or focus); one with no MP4 (a live
 broadcast), or a video that errs or has no data within 8 s, loads X's post there instead. A Mastodon or other post
-Pinakes could not read, or an X post the server could not read either, keeps "Show on <site>".
+Pinakes could not read shows its card first, its post frame in the switch, loaded when picked; an X post the server
+could not read either keeps "Show on <site>".
 A YouTube, Vimeo or X link Pinakes does not know (a post's embed or a link in its text) is sent to Pinakes once its
 box is near the screen (`usePinakesCard`'s `resolveOnView`: `POST /v1/resolve` from the viewer's browser, so it counts
 against the viewer's own Pinakes budget; once per link per page load, a refusal kept, never a `pubky://` or pubky.app

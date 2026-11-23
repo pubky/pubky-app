@@ -14,6 +14,7 @@ import {
 } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import { ResourceCard } from '@/molecules/ResourceCard/ResourceCard';
 import { getResourceLinks } from '@/molecules/ResourceCard/ResourceCard.utils';
+import { ResourceEmbedFrame } from '@/molecules/ResourceCard/ResourceEmbedFrame';
 import { hasPostVideo, showsPostFromCard } from '@/molecules/ResourceCard/ResourcePost';
 import { useResourceSurface } from '@/molecules/ResourceCard/ResourceSurfaceContext';
 import { usePostPreviewImage } from '@/molecules/ResourceCard/usePostPreviewImage';
@@ -46,8 +47,9 @@ import type { EmbedData, EmbedProvider, EmbedResourceKind } from './Providers/Pr
  * whose player the viewer removed from Players shows as any link does (the resource card, or the
  * link's own preview). With platform embeds up front off (the default), a platform embed that is not
  * shown as a resource (a link only in the text, or no Pinakes) shows the link's Pinakes card when
- * there is one (Pinakes asked to read the link once it is near the screen), the player inside it,
- * else the link's own preview as a card with the platform's Play inside it (`EmbedOnPress`).
+ * there is one (Pinakes asked to read the link once it is near the screen), a video's player drawn by
+ * the app in its place until a press, else the link's own preview as a card with the platform's Play
+ * inside it (`EmbedOnPress`).
  */
 export const PostLinkEmbeds = ({ content = '', url, isComposing = false }: PostLinkEmbedsProps) => {
   const isNested = useIsNestedPostPreview();
@@ -137,8 +139,9 @@ interface EmbedOnPressProps {
  * the link's Pinakes card is read (re-read while on screen); a link Pinakes does not know is sent to
  * be read once (`resolveOnView`; the composer's own `resolve` there), the card's skeleton holding the
  * place for at most `PINAKES_SLOW_READ_MS`. With a card (`EmbedOnPressCard`): the card as a post's
- * embed shows it, with no footer of its own (the link is the post's text, not its resource), its
- * player or the post's embed loading inside it on a press. Without one (Pinakes unset, no card, a
+ * embed shows it, with no footer of its own (the link is the post's text, not its resource): a video's
+ * player drawn by the app until a press loads it in place, or the post's embed loading inside the card on
+ * a press. Without one (Pinakes unset, no card, a
  * failed or slow read): the link's own preview as a card (`NativeEmbedLinkCard`), the platform's
  * embed loading inside it on its Play. An X post the card cannot tell (none, or no text) is read by the
  * app's own server (`useXPostCard`) and shows as a post. Nothing loads from the platform before the press.
@@ -184,11 +187,12 @@ function EmbedOnPressChoice({ isOnScreen, ...props }: EmbedOnPressProps & { isOn
 }
 
 /**
- * A text link's card (`EmbedOnPress`): a video the card player plays (`isPlayable`) has its switch
- * and Play in the header (`useCardPlayer`), its player loading inside the card; an X post the card
+ * A text link's card (`EmbedOnPress`): a video the card player plays (`isPlayable`) shows its player as
+ * the app draws it (`useCardPlayer`'s `embed`) in the resource frame, its switch in the header, the
+ * service's player loading in its place on a press; an X post the card
  * tells from its own data shows as a post at once (`ResourcePost`); any other X post, or a video
  * it cannot play, has the pill (Show on <site> / Play on <site>) there, the platform's embed loading
- * inside the card. The card stays; the pill closes what it opened.
+ * inside the card, which stays; the pill closes what it opened.
  */
 function EmbedOnPressCard({
   link,
@@ -236,6 +240,13 @@ function EmbedOnPressCard({
     isPostFromCard && postPreview.pending && !player.switcher ? (
       <PlayOnPillPlaceholder uri={link} surface={surface} />
     ) : undefined;
+  if (player.embed) {
+    return (
+      <ResourceEmbedFrame url={link} card={card} actions={null} headerControl={player.switcher}>
+        {player.embed}
+      </ResourceEmbedFrame>
+    );
+  }
   const embed =
     pill && isOpen ? (
       <Container overrideDefaults className="min-w-0" data-testid="native-embed-body">
@@ -248,7 +259,7 @@ function EmbedOnPressCard({
       card={card}
       href={link}
       headerControl={player.switcher ?? pill ?? placeholder}
-      player={player.player ?? embed}
+      player={embed}
       // A post shows from the card's data, text and image at once; a video in it keeps its press.
       asPost
       imageUrl={imageUrl}

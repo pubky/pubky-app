@@ -21,14 +21,6 @@ import { Container } from '@/atoms/Container/Container';
 import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useEventDates } from '@/hooks/useEventDates/useEventDates';
-import { useOgMetadata } from '@/hooks/useOgMetadata/useOgMetadata';
-import {
-  getCardPreviewImageUrl,
-  getImageRetryUrl,
-  getResourceImageUrl,
-  getYouTubeThumbnailUrl,
-  getYouTubeThumbnailVideoId,
-} from '@/libs/image/resourceImage';
 import { cn } from '@/libs/utils/utils';
 import { useIsPostPreviewNavigable } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import { getLocationRowText, isLocationRow, ResourceLocation } from '@/molecules/ResourceMap/ResourceLocation';
@@ -74,7 +66,7 @@ import {
 import { getResourcePost, RESOURCE_POST_FACTS, ResourcePost } from './ResourcePost';
 import { useResourceSurface } from './ResourceSurfaceContext';
 import { getResourceTypeIcon } from './ResourceTypeIcon';
-import { useResourceFallback } from './useResourceFallback';
+import { useCardImage } from './useCardImage';
 
 /** What a card that is not `ok` says about itself. Only `missing` has a documented meaning (`/llms.txt`). */
 const STATUS_NOTES: Readonly<
@@ -97,9 +89,6 @@ const LONG_DESCRIPTION_CHARS = 280;
 
 const DETAIL_ICON_SIZE = 14;
 
-/** The YouTube thumbnail sizes a card tries, in order: both 16:9 (`hq720` sharp, `mqdefault` there for every video). */
-const YOUTUBE_CARD_SIZES = ['hq720', 'mqdefault'] as const;
-
 /**
  * One card for every external resource Pinakes knows, in the frame of an embedded post: the type
  * and source on top, then the title with the card's image as a small thumbnail left of it
@@ -117,8 +106,8 @@ const YOUTUBE_CARD_SIZES = ['hq720', 'mqdefault'] as const;
  * click on the card outside its controls (`ResourceCardFrame`); a tap on the image opens it in the
  * post's lightbox. The header's source is the one link out (none on a `missing` card). A player or
  * embed in the body (`isBodyReplaced`) is its own set of controls, as the episode's audio is, and
- * takes the image's place too. A player loaded inside the card (`player`, platform embeds up front
- * off) sits under the text instead of a video's or a post's image under it, and the card stays. The `large` card heads
+ * takes the image's place too. An embed loaded inside the card (`player`: an X post's, platform embeds
+ * up front off) sits under the text instead of a video's or a post's image under it, and the card stays. The `large` card heads
  * the resource page, lists every fact under "Details" (not while an X post's embed is its body,
  * `isBodyReplaced`), with one plain line in place of a refused read's `blocked` fact (`getBlockedNote`),
  * and is no click-through.
@@ -139,11 +128,6 @@ export function ResourceCard({
 }: ResourceCardProps) {
   const navigable = useIsPostPreviewNavigable();
   const [expanded, setExpanded] = useState(false);
-  const [failedImages, setFailedImages] = useState<string[]>([]);
-  // Images whose route answer failed once: asked once more before the card moves on.
-  const [retriedImages, setRetriedImages] = useState<string[]>([]);
-  // One `<video id>/<size>` per YouTube thumbnail load that failed: each size is asked twice, then the next.
-  const [youTubeMisses, setYouTubeMisses] = useState<string[]>([]);
   const [wasOnScreen, setWasOnScreen] = useState(isOnScreen);
   if (isOnScreen && !wasOnScreen) setWasOnScreen(true);
 
@@ -170,67 +154,13 @@ export function ResourceCard({
   // A feed card reads what it lacks (its group, the link's preview) once it has been on screen.
   const canFillIn = isLarge || wasOnScreen;
 
-  const imageUrl = getHttpUrl(card.image);
   // A refused read's description is Pinakes' "Blocked by the site.", not the object's: the resource
   // page's Details say it in words (`getBlockedNote`), a feed card shows its title alone.
   const description = isBlockedCard(card) ? null : card.description?.trim() || null;
-  // An own image that failed to load leaves the slot to a group member's, like no image at all.
-  const ownImageShown = imageUrl !== null && !failedImages.includes(imageUrl);
-  const fallback = useResourceFallback(card, {
-    description: canFillIn && !description,
-    image: canFillIn && !ownImageShown,
-    skipImages: failedImages,
-  });
-  const cardImage = ownImageShown ? imageUrl : (fallback.image?.value ?? null);
-  const usableCardImage = cardImage && !failedImages.includes(cardImage) ? cardImage : null;
-  // A title or image the card still lacks comes from its own web link's preview (`/api/og-metadata`,
-  // the link the image route reads it from too), asked once the group has answered so a group image
-  // is never first replaced by the OG one. A gone (`missing`) card's link is not read. Nor is the link
-  // of a site that refused Pinakes' read: the app's read meets the same wall, and its preview is the
-  // site's sign-in page (its logo), not the object.
-  const previewUrl = isMissing || isBlockedCard(card) ? null : getResourceLinks(card).linkUrl;
-  const needsOg =
-    canFillIn && previewUrl !== null && !fallback.pending && (!card.name?.trim() || usableCardImage === null);
-  const { metadata: og } = useOgMetadata(needsOg ? previewUrl : null);
-  const ogImage = getHttpUrl(og?.image);
-  const shownImage = usableCardImage ?? (ogImage && !failedImages.includes(ogImage) ? ogImage : null);
-  const onImageError = (url: string) => setFailedImages((urls) => [...urls, url]);
-  // Every image comes from the app's image route, named by the card, so the viewer's browser never asks
-  // its host: Pinakes' (the card's own, a group member's it borrows), or its own link's preview image
-  // (`og`). The route serves an image only when that card, or its link's preview, carries it.
-  const routeImage =
-    shownImage === null
-      ? null
-      : shownImage === usableCardImage
-        ? getResourceImageUrl(card.uri, shownImage)
-        : getCardPreviewImageUrl(card.uri, shownImage);
-  const routeImageSrc =
-    routeImage && shownImage && retriedImages.includes(shownImage) ? getImageRetryUrl(routeImage) : routeImage;
-  // A route answer that failed is asked once more (it may have been busy); failed again, the image is
-  // remembered as the card names it, so the card moves on to its next one, never to the image's host.
-  const onRouteImageError = () => {
-    if (!shownImage) return;
-    if (!retriedImages.includes(shownImage)) setRetriedImages((urls) => [...urls, shownImage]);
-    else onImageError(shownImage);
-  };
-  // A YouTube thumbnail as cards name it (`hqdefault`) has bars above and below the video's frame: the card shows
-  // the video's 16:9 thumbnail from the route instead, `hq720`, else `mqdefault` (every video has it), each asked
-  // once more after a failure (the route may have been busy), and the image as the card names it only when neither
-  // loads.
-  const youTubeId = getYouTubeThumbnailVideoId(shownImage);
-  const missesOf = (size: string) => youTubeMisses.filter((miss) => miss === `${youTubeId}/${size}`).length;
-  const youTubeSize = youTubeId ? (YOUTUBE_CARD_SIZES.find((size) => missesOf(size) < 2) ?? null) : null;
-  const youTubeUrl = youTubeId && youTubeSize ? getYouTubeThumbnailUrl(youTubeId, youTubeSize) : null;
-  const youTubeSrc = youTubeUrl && youTubeSize && missesOf(youTubeSize) > 0 ? getImageRetryUrl(youTubeUrl) : youTubeUrl;
-  // A route address the caller made for the card's own image stands for it (a post the app read); once
-  // it fails the card shows its type's tile, as no other route serves that image.
-  const givenImage = ownImageUrl && !failedImages.includes(ownImageUrl) ? ownImageUrl : null;
-  const shownImageSrc = ownImageUrl ? givenImage : (youTubeSrc ?? routeImageSrc);
-  const onShownImageError = () => {
-    if (givenImage) onImageError(givenImage);
-    else if (youTubeSrc) setYouTubeMisses((misses) => [...misses, `${youTubeId}/${youTubeSize}`]);
-    else onRouteImageError();
-  };
+  const { fallback, og, ownImageShown, usableCardImage, youTubeSrc, shownImageSrc, onShownImageError } = useCardImage(
+    card,
+    { canFillIn, ownImageUrl },
+  );
   const title = card.name?.trim() || og?.title?.trim() || getDisplayLink(href || card.uri);
   const shownDescription = description ?? fallback.description?.value ?? null;
 

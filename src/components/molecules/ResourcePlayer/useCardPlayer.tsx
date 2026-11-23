@@ -10,7 +10,7 @@ import { getMapsDestination } from '@/molecules/ResourceMap/ResourceMap.utils';
 import type { PostActionSurface } from '@/organisms/PostActionsBar/PostActionButton';
 import { PinakesStatus, type TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { useSettingsStore } from '@/stores/settings/settings.store';
-import { usePlayerHost } from './PlayerHost';
+import { usePlayerHost, usePlaysElsewhere } from './PlayerHost';
 import {
   CARD_PLAYER,
   type EmbedProvider,
@@ -22,37 +22,32 @@ import {
   isCardFirstFor,
   type PlayerTarget,
 } from './resourcePlayer.utils';
-import { CardPlayControl, type PagePlayer, PlayerDock, PlayerSwitch } from './ResourcePlayerControls';
+import { type PagePlayer, PlayerDock, PlayerSwitch } from './ResourcePlayerControls';
+import { ResourcePlayerFacade } from './ResourcePlayerFacade';
 import { ResourcePlayerFrame } from './ResourcePlayerFrame';
 import { type ResourcePlayerState, useResourcePlayer } from './useResourcePlayer';
 
 export interface CardPlayer {
   /**
-   * With platform embeds up front on, the chosen service's player, shown where the card's image and
-   * text would be (`EmbedPlayer`). Absent while the card shows, with them off, and for a card on no
-   * service with a player.
+   * The chosen service's player, shown where the card's image and text would be: up front its embed
+   * (`EmbedPlayer`); with platform embeds up front off the app's drawing of it (`ResourcePlayerFacade`)
+   * until the viewer's press on it or pick in the switch, then its embed. Absent while the card shows
+   * and for a card on no service with a player.
    */
   embed?: ReactNode;
   /**
-   * For the header of the frame or card it is shown in. Up front: the embed/card switch
-   * (`PlayerSwitch`: Card, then the card's services), only with a choice to make (more than one
-   * service, a generic link, Card shown, or Card (no player) above the service in Players). With them
-   * off: the switch when there are several services, then Play on the chosen one (`CardPlayControl`).
+   * For the header of the frame or card it is shown in: the embed/card switch (`PlayerSwitch`: Card,
+   * then the card's services), only with a choice to make (more than one service, a generic link,
+   * Card shown, or Card (no player) above the service in Players). Never a Play of its own.
    */
   switcher?: ReactNode;
   /**
-   * The card shows (a generic link up front, its switch's Card, Card (no player) above its first
-   * service in Players, or any card with platform embeds up front off): no service's embed in its place.
+   * The card shows (a generic link, its switch's Card, Card (no player) above its first service in
+   * Players): no service's player in its place.
    */
   isCard?: boolean;
-  /** A service's player shows: always up front; with them off once Play was pressed (`player`). */
+  /** A service's player (or, with platform embeds up front off, its drawing) shows in the card's place. */
   showsPlayer?: boolean;
-  /**
-   * With platform embeds up front off, the chosen service's player once its Play is pressed, for the
-   * card to show inside it, under its text (`ResourceCard`'s `player`); the card stays. Absent before
-   * the press and after Close.
-   */
-  player?: ReactNode;
 }
 
 export interface CardPlayerOptions {
@@ -97,13 +92,15 @@ export interface CardPlayerOptions {
  * (never on mount or scroll); once it plays it is the page's one player and docks at the bottom of
  * the screen when its card scrolls away (`PlayerDock`).
  *
- * With platform embeds up front off (the default) the card is always the view (`isCard`) and nothing
- * loads from the services before a press: its header carries the switch when there are several
- * services, then Play on the chosen one (`CardPlayControl` in `switcher`). Play loads that service's
- * player with autoplay inside the card, under its text (`player`), and makes it the page's player;
- * the same pill closes it, back to the card alone. Picking another service stops what plays and
- * offers that service's Play; nothing loads until its own press. Card is no choice then, except for a
- * podcast that plays in its card, whose Card is its own player.
+ * With platform embeds up front off (the default) the view is the same, and nothing loads from the
+ * services before the viewer's press: where a service's player would show up front, the app draws it
+ * from the card's data (`ResourcePlayerFacade`: its place and height, cover, title, summary and the
+ * service's mark), one button. A press on it (or Enter) loads that service's player in its place,
+ * started where the service allows, as the page's player. A pick in the switch is the press: the
+ * picked service's player loads at once and starts; Card shows the card and unloads it. Let go (other
+ * media started, the dock closed it), the player gives way to its drawing again. A post the card tells
+ * from its own data and a map the card draws are no choice then; a post, map or document frame that is
+ * the link's own shows the card first, the frame in the switch.
  *
  * @param card - The card shown, or `null` (nothing to play: a link's own preview, a pending card)
  * @param href - The link as written, played first when it is on such a service
@@ -123,8 +120,16 @@ export function useCardPlayer(
   const { embedsUpFront } = media;
   // What the viewer picked in the switch, a service or Card, for this resource only.
   const [picked, setPicked] = useState<{ uri: string; choice: EmbedChoice } | null>(null);
-  // The resource whose Play was pressed with platform embeds up front off: its player shows.
+  // With platform embeds up front off, the resource whose player the viewer loaded (a press on its
+  // drawing, a pick in the switch): its embed shows instead of the drawing.
   const [optedIn, setOptedIn] = useState<string | null>(null);
+  // Set by a press on the drawing: the player that press loads takes the focus, once (`takeFocus`).
+  const pressed = useRef(false);
+  const takeFocus = () => {
+    const was = pressed.current;
+    pressed.current = false;
+    return was;
+  };
   // The Players of the card's kind: by its type, else by the service it plays on first.
   const category = getPlayerCategory(card, card ? getPlayerTargets(card, { href })[0]?.provider : undefined);
   const players = getCategoryPlayers(media, category);
@@ -146,8 +151,8 @@ export function useCardPlayer(
   // The link is itself on a service with a player, not gone upstream nor removed from Players: that
   // player goes first. Else the link is generic here: its card goes first.
   const ownTarget = card && getResourceStatus(card.status) !== PinakesStatus.MISSING ? getOwnPlayer(card, href) : null;
-  // A document frame (slides, an oEmbed) with platform embeds up front off: its card, the frame in the switch.
-  const own = ownTarget?.frame === 'rich' && !embedsUpFront ? null : ownTarget;
+  // A post, map or document frame with platform embeds up front off: its card, the frame in the switch.
+  const own = ownTarget?.frame && !embedsUpFront ? null : ownTarget;
   const linked = own !== null && targets.some((target) => target.provider === own.provider);
   // The app's player host keeps the frame of any player but a preview's: it plays on across pages.
   const hosted = usePlayerHost() !== null && !preview;
@@ -165,81 +170,91 @@ export function useCardPlayer(
   // again (its first service, or the card when Card (no player) is above that service).
   const builtIn = playsInCard(card);
   const cardFirst = !linked || isCardFirstFor(category, targets[0].provider, players.playerOrder, builtIn);
-  // With platform embeds up front off the card always shows: Card is a choice only where it is the
-  // card's own player (a podcast that plays in its card).
-  const choice =
-    (picked?.uri === card.uri ? picked.choice : null) ?? (cardFirst && (embedsUpFront || builtIn) ? CARD_PLAYER : null);
+  const choice = (picked?.uri === card.uri ? picked.choice : null) ?? (cardFirst ? CARD_PLAYER : null);
   const selected = choice === CARD_PLAYER ? null : (targets.find((target) => target.provider === choice) ?? targets[0]);
+  // Loads the service's player in the drawing's place (platform embeds up front off): it starts as the
+  // page's player; a post, map or document frame is shown, not played; a preview shows it paused.
+  const open = (target: PlayerTarget) => {
+    // A press on the drawing moves the focus into the player that replaces it (`takeFocus`).
+    pressed.current = true;
+    setOptedIn(card.uri);
+    if (!preview && !target.frame) player.play(target);
+  };
   const choose = (next: EmbedChoice) => {
-    // Switching is no Close: what played stops, the next service shows paused up front. With platform
-    // embeds up front off the card lets go of the pressed Play, so the next service (or Card) loads
-    // nothing until its own Play.
+    // Switching is no Close: what played stops. Up front the next service shows paused; with platform
+    // embeds up front off the pick is the viewer's press: the next service loads at once, Card unloads.
     if (player.current) player.close();
     setOptedIn(null);
     setPicked({ uri: card.uri, choice: next });
+    const target = next === CARD_PLAYER ? undefined : targets.find((each) => each.provider === next);
+    if (!embedsUpFront && target) open(target);
   };
   // A choice to make: several services, or Card when it comes first (a generic link, or Card above
   // the service in Players) or is shown. The link's own service alone, with no Card above it, has
-  // none: a viewer who wants cards turns platform embeds up front off.
-  const offersCard = embedsUpFront || builtIn;
+  // none.
   const switcher =
-    targets.length > 1 || (offersCard && (cardFirst || !selected)) ? (
+    targets.length > 1 || cardFirst || !selected ? (
       <PlayerSwitch
         targets={targets}
         current={selected}
         onSelect={(target) => {
           if (target.provider !== selected?.provider) choose(target.provider);
+          // The service drawn, picked again: the pick is the press that loads it.
+          else if (!embedsUpFront && optedIn !== card.uri) open(target);
         }}
-        onShowCard={
-          offersCard
-            ? () => {
-                if (selected) choose(CARD_PLAYER);
-              }
-            : undefined
-        }
+        onShowCard={() => {
+          if (selected) choose(CARD_PLAYER);
+        }}
         icons
         surface={surface}
       />
     ) : undefined;
   if (!selected) return { isCard: true, switcher };
   if (!embedsUpFront) {
+    const holdsVideo = selected.frame === 'post' && hasPostVideo(card, previewImage);
     const isOpen = optedIn === card.uri;
+    const embedPlayer = (slotOnly: boolean) => (
+      <EmbedPlayer
+        key={`${card.uri}|${selected.provider}`}
+        title={title}
+        target={selected}
+        player={player}
+        preview={preview}
+        pagePlayer={pagePlayer}
+        startsOnLoad={!preview && !selected.frame}
+        holdsVideo={holdsVideo}
+        onLetGo={() => setOptedIn(null)}
+        slotOnly={slotOnly}
+        takeFocus={takeFocus}
+      />
+    );
+    const facade = (
+      <ResourcePlayerFacade
+        key={`${card.uri}|${selected.provider}`}
+        card={card}
+        target={selected}
+        title={title}
+        preview={preview}
+        onPlay={() => open(selected)}
+      />
+    );
     return {
-      isCard: true,
-      showsPlayer: isOpen,
-      switcher: (
-        <CardPlayControl
-          switcher={switcher}
-          target={selected}
-          title={title}
-          isOpen={isOpen}
-          preview={preview}
-          hasVideo={selected.frame === 'post' && hasPostVideo(card, previewImage)}
-          surface={surface}
-          onPlay={() => {
-            setOptedIn(card.uri);
-            // A post, map or document frame is shown, not played; a preview shows its player paused.
-            if (!preview && !selected.frame) player.play(selected);
-          }}
-          onClose={() => {
-            if (player.current) player.close();
-            setOptedIn(null);
-          }}
-        />
-      ),
-      player: isOpen ? (
-        <EmbedPlayer
+      switcher,
+      showsPlayer: true,
+      embed: isOpen ? (
+        embedPlayer(false)
+      ) : pagePlayer ? (
+        <DrawnOrPlaying
           key={`${card.uri}|${selected.provider}`}
-          title={title}
-          target={selected}
-          player={player}
-          preview={preview}
-          pagePlayer={pagePlayer}
-          startsOnLoad={!preview && !selected.frame}
-          holdsVideo={selected.frame === 'post' && hasPostVideo(card, previewImage)}
-          onLetGo={() => setOptedIn(null)}
-        />
-      ) : undefined,
+          match={`${pagePlayer.resource}|${selected.provider}`}
+          owner={owner}
+          playing={() => embedPlayer(true)}
+        >
+          {facade}
+        </DrawnOrPlaying>
+      ) : (
+        facade
+      ),
     };
   }
   return {
@@ -270,17 +285,43 @@ interface EmbedPlayerProps {
   preview: boolean;
   /** The page's player it is, kept by the app's player host (`PlayerDock`); not in a preview. */
   pagePlayer?: PagePlayer;
-  /** Mounted by the card's Play (platform embeds up front off): the player starts on load. */
+  /** Loaded by the viewer's press on its drawing or pick (platform embeds up front off): it starts on load. */
   startsOnLoad?: boolean;
-  /** The player was let go (other media started, the dock closed it): the card's Play comes back. */
+  /** The player was let go (other media started, the dock closed it): its drawing comes back. */
   onLetGo?: () => void;
   /** A post frame that holds a video: a press inside it is a start (`ResourcePlayerFrame`'s `holdsVideo`). */
   holdsVideo?: boolean;
+  /**
+   * Platform embeds up front off, the same resource playing from another card (`usePlaysElsewhere`):
+   * only its slot, which the app's player host lays the playing frame over; no frame of its own.
+   */
+  slotOnly?: boolean;
+  /** Called once the frame mounts: `true` when it is to take the focus (`ResourcePlayerFrame`'s `takeFocus`). */
+  takeFocus?: () => boolean;
+}
+
+/**
+ * With platform embeds up front off, a card's player as the app draws it (`children`), or, while the
+ * same resource on the same service plays from another card (a song played in the feed, its post
+ * opened), the slot the app's player host lays that playing frame over (`playing`), as up front.
+ */
+function DrawnOrPlaying({
+  match,
+  owner,
+  playing,
+  children,
+}: {
+  match: string;
+  owner: string;
+  playing: () => ReactNode;
+  children: ReactNode;
+}) {
+  return usePlaysElsewhere(match, owner) ? playing() : children;
 }
 
 /**
  * A card's player: up front or picked in its switch, its service's embed, paused (`getUpFrontTarget`);
- * mounted by the card's Play (platform embeds up front off), started on load. Its playing makes it the
+ * loaded by a press on its drawing or a pick (platform embeds up front off), started on load. Its playing makes it the
  * page's player, which then docks (never in a preview) until other media starts or Close.
  */
 function EmbedPlayer({
@@ -292,9 +333,11 @@ function EmbedPlayer({
   startsOnLoad = false,
   onLetGo,
   holdsVideo = false,
+  slotOnly = false,
+  takeFocus,
 }: EmbedPlayerProps) {
   const boxRef = useRef<HTMLDivElement>(null);
-  // The player was opened by the card's Play: it starts on load.
+  // The player was loaded by the viewer's press: it starts on load.
   const [autoStart, setAutoStart] = useState(startsOnLoad);
   // A new frame for the same service: what played in the old one stops.
   const [round, setRound] = useState(0);
@@ -314,7 +357,7 @@ function EmbedPlayer({
       setAutoStart(false);
     }
   }
-  // With platform embeds up front off, the card's Play comes back once the player is let go.
+  // With platform embeds up front off, its drawing comes back once the player is let go.
   const wasPlaying = useRef(isActive);
   useEffect(() => {
     if (wasPlaying.current && !isActive) onLetGo?.();
@@ -350,12 +393,12 @@ function EmbedPlayer({
         dockable={isActive && !player.paused && !preview && !target.frame}
         pagePlayer={target.frame ? undefined : pagePlayer}
       >
-        {!(framed && isHidden) && (
+        {!slotOnly && !(framed && isHidden) && (
           <ResourcePlayerFrame
             key={frameKey}
             target={autoStart ? target : getUpFrontTarget(target)}
             title={title}
-            // Opened by the card's Play, it is the page's player (`player.current`): its load state, with the
+            // Loaded by the viewer's press, it is the page's player (`player.current`): its load state, with the
             // service's page when it has not answered. Up front, quiet, it only hides its placeholder.
             load={autoStart && isActive ? player.load : loadedKey === frameKey ? 'ready' : 'loading'}
             onLoaded={autoStart && isActive ? player.onLoaded : () => setLoadedKey(frameKey)}
@@ -364,6 +407,7 @@ function EmbedPlayer({
             // Paused or ended in its card, it does not go to the dock.
             onPause={player.pause}
             holdsVideo={holdsVideo}
+            takeFocus={takeFocus}
           />
         )}
       </PlayerDock>

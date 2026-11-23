@@ -169,6 +169,46 @@ describe('PlayerHost', () => {
     expect(slotOf('feed-again')).toHaveAttribute('aria-owns', frame.closest('[data-testid="hosted-player"]')!.id);
   });
 
+  it('lays the playing frame over the next card of the same link with platform embeds up front off, never a second one', () => {
+    useSettingsStore.setState({ media: defaultMediaPreferences });
+    const { rerender } = render(
+      <PlayerHost>
+        <Song key="feed" testId="feed" />
+      </PlayerHost>,
+    );
+    // Drawn by the app until a press: nothing loaded.
+    expect(frames()).toEqual([]);
+    fireEvent.click(within(screen.getByTestId('feed')).getByTestId('player-facade'));
+    const [frame] = frames();
+    expect(frame.getAttribute('src')).toContain('open.spotify.com/embed/');
+
+    // Its post opened: the new card of the same link shows the playing frame, not its drawing nor a frame of its own.
+    rerender(
+      <PlayerHost>
+        <Song key="post" testId="post" />
+      </PlayerHost>,
+    );
+    expect(within(screen.getByTestId('post')).queryByTestId('player-facade')).not.toBeInTheDocument();
+    expect(frames()).toEqual([frame]);
+    expect(slotOf('post')).toHaveAttribute('aria-owns', frame.closest('[data-testid="hosted-player"]')!.id);
+
+    // Another page, the frame in the dock, closed there: a card of the link shows its drawing again, nothing loaded.
+    rerender(
+      <PlayerHost>
+        <p key="profile">Profile</p>
+      </PlayerHost>,
+    );
+    expect(dock()).toContainElement(frame);
+    fireEvent.click(screen.getByTestId('player-dock-close'));
+    rerender(
+      <PlayerHost>
+        <Song key="feed-again" testId="feed-again" />
+      </PlayerHost>,
+    );
+    expect(frames()).toEqual([]);
+    expect(within(screen.getByTestId('feed-again')).getByTestId('player-facade')).toBeInTheDocument();
+  });
+
   it('lays the playing frame over the open post’s card of the same link while the feed is hidden, and back', () => {
     const page = (postOpen: boolean) => (
       <PlayerHost>

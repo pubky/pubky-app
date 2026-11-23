@@ -33,8 +33,8 @@ interface ProviderMenuProps {
   icons?: boolean;
   /** The menu's accessible name: what picking a row does. */
   label: string;
-  /** A "Card" row before the services: shows the link's card instead of a player, current while `current` is `null`. */
-  onShowCard?: () => void;
+  /** The "Card" row before the services: shows the link's card instead of a player, current while `current` is `null`. */
+  onShowCard: () => void;
 }
 
 /** A row of the app's menus in the post menu's style (the service menu, the audio player's speeds). */
@@ -59,36 +59,34 @@ function ProviderMenu({ targets, current, onSelect, trigger, icons = true, label
         className="flex w-56 flex-col gap-2.5"
         data-testid="play-on-menu"
       >
-        {onShowCard && (
-          <>
-            <DropdownMenuItem
-              data-testid="play-on-card"
-              aria-label="Show the link card instead of a player"
-              aria-current={cardShown || undefined}
-              onSelect={onShowCard}
-              className={MENU_ROW}
+        <>
+          <DropdownMenuItem
+            data-testid="play-on-card"
+            aria-label="Show the link card instead of a player"
+            aria-current={cardShown || undefined}
+            onSelect={onShowCard}
+            className={MENU_ROW}
+          >
+            {icons && (
+              <LinkIcon
+                aria-hidden="true"
+                className={cn(
+                  'size-4 shrink-0 transition-colors group-hover:text-foreground',
+                  cardShown ? 'text-foreground' : 'text-muted-foreground',
+                )}
+              />
+            )}
+            <Typography
+              as="span"
+              overrideDefaults
+              className={cn(MENU_ROW_TEXT, 'min-w-0 flex-1', cardShown ? 'text-foreground' : 'text-muted-foreground')}
             >
-              {icons && (
-                <LinkIcon
-                  aria-hidden="true"
-                  className={cn(
-                    'size-4 shrink-0 transition-colors group-hover:text-foreground',
-                    cardShown ? 'text-foreground' : 'text-muted-foreground',
-                  )}
-                />
-              )}
-              <Typography
-                as="span"
-                overrideDefaults
-                className={cn(MENU_ROW_TEXT, 'min-w-0 flex-1', cardShown ? 'text-foreground' : 'text-muted-foreground')}
-              >
-                Card
-              </Typography>
-              {cardShown && <Check aria-hidden="true" className="size-4 shrink-0 text-brand" />}
-            </DropdownMenuItem>
-            {targets.length > 0 && <DropdownMenuSeparator className="-mx-4 my-0" />}
-          </>
-        )}
+              Card
+            </Typography>
+            {cardShown && <Check aria-hidden="true" className="size-4 shrink-0 text-brand" />}
+          </DropdownMenuItem>
+          {targets.length > 0 && <DropdownMenuSeparator className="-mx-4 my-0" />}
+        </>
         {targets.map((target) => {
           const playing = current?.provider === target.provider;
           return (
@@ -121,12 +119,12 @@ function ProviderMenu({ targets, current, onSelect, trigger, icons = true, label
 /**
  * A card's embed/card switch, in the header of its frame or card (`useCardPlayer`'s `switcher`): the
  * shown service's favicon, name and a chevron, in the action row's pill style, opening Card and,
- * below a separator, the services to show instead (`ProviderMenu`). Picking one only switches
- * the player shown; it never starts it. While the card shows (`current` is `null`), the switch reads Card;
- * a service whose link is a match by metadata shows no label here either, its note in the hover text and name.
- * Without `onShowCard` (a card that always shows, platform embeds up front off) the menu lists the
- * services only. On a phone it shows the favicon (or the card's link icon) and the chevron only; the
- * name stays in its accessible name.
+ * below a separator, the services to show instead (`ProviderMenu`). Up front a pick only switches
+ * the player shown, paused; with platform embeds up front off it is the viewer's press: the picked
+ * service's player loads and starts (`useCardPlayer`). While the card shows (`current` is `null`), the
+ * switch reads Card; a service whose link is a match by metadata shows no label here either, its note in
+ * the hover text and name. On a phone it shows the favicon (or the card's link icon) and the chevron
+ * only; the name stays in its accessible name.
  */
 export function PlayerSwitch({
   targets,
@@ -140,8 +138,8 @@ export function PlayerSwitch({
   /** The service shown, or `null` while the card shows instead. */
   current: PlayerTarget | null;
   onSelect: (target: PlayerTarget) => void;
-  /** Card's row; none where the card always shows. */
-  onShowCard?: () => void;
+  /** Card's row. */
+  onShowCard: () => void;
   /** The services' favicons (served by the app, `ResourceSourceIcon`). */
   icons?: boolean;
   surface?: PostActionSurface;
@@ -180,7 +178,7 @@ export function PlayerSwitch({
 /**
  * The player pill in the action row's own buttons: ▶ and the service's logo, while open the logo and
  * ✕; the label (the service's name) is its accessible name and tooltip: an X post's "Show on" on
- * its card (`NativeEmbedResource`), a card's Play (`CardPlayControl`). `text` is a short word after
+ * its card (`NativeEmbedResource`), a text link's or a link card's (`NativeEmbedLinkCard`). `text` is a short word after
  * the logo while closed, from `sm` on (a phone shows the icons only).
  */
 export function PlayOnPill({
@@ -237,69 +235,6 @@ export function PlayOnPillPlaceholder({ uri, surface }: { uri: string; surface?:
       className="invisible"
       data-testid="show-embed-placeholder"
     />
-  );
-}
-
-/**
- * A card's player controls with platform embeds up front off (`useCardPlayer`), in its header: the
- * service switch when there is a choice (`switcher`), then Play on the chosen service (`PlayOnPill`:
- * ▶, its logo, and "Play" from `sm` on), which loads that service's player inside the card; while
- * it is open the same pill closes it (the logo and ✕), back to the card alone. Its accessible name
- * says what it plays where ("Play <title> on <service>"); a post, map or document frame is shown
- * ("Show on <service>"). A post's frame with a video in it reads "Play on <service>": the press opens the
- * post inside the card and its video is played there, inside the post (such a frame takes no autoplay
- * parameter). A preview (the composer) shows its player paused.
- */
-export function CardPlayControl({
-  switcher,
-  target,
-  title,
-  isOpen,
-  preview = false,
-  hasVideo = false,
-  onPlay,
-  onClose,
-  surface,
-}: {
-  switcher?: ReactNode;
-  /** The chosen service. */
-  target: PlayerTarget;
-  /** What it plays: the card's title. */
-  title: string;
-  /** Its player shows in the card. */
-  isOpen: boolean;
-  preview?: boolean;
-  /** A post's frame that carries a video (`hasPostVideo`): Play, not Show. */
-  hasVideo?: boolean;
-  onPlay: () => void;
-  onClose: () => void;
-  surface?: PostActionSurface;
-}) {
-  // A frame is shown, not played: but a post's frame with a video in it is a Play too.
-  const shows = Boolean(target.frame) && !hasVideo;
-  const label = isOpen
-    ? `Close ${target.name}`
-    : shows
-      ? `Show on ${target.name}`
-      : target.frame
-        ? `Play on ${target.name}`
-        : preview
-          ? `Show the ${target.name} player`
-          : `Play ${title} on ${target.name}`;
-  return (
-    <Container overrideDefaults className="flex min-w-0 items-center gap-2" data-testid="card-player-controls">
-      {switcher}
-      <PlayOnPill
-        uri={target.link}
-        isOpen={isOpen}
-        label={label}
-        text={shows ? 'Show' : 'Play'}
-        surface={surface}
-        aria-expanded={isOpen}
-        onClick={isOpen ? onClose : onPlay}
-        data-testid="card-play"
-      />
-    </Container>
   );
 }
 

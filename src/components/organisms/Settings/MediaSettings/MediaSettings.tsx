@@ -49,7 +49,9 @@ export function MediaSettings() {
       <SettingsSwitchItem
         id="media-switch-embedsUpFront"
         label={'Show platform embeds up front'}
-        description={'When off, links show their card, and the platform loads only when you press Play or Show on.'}
+        description={
+          'When off, links show their card or a preview of their player, and the platform loads only when you press it or pick its service.'
+        }
         checked={media.embedsUpFront}
         onChange={setEmbedsUpFront}
       />

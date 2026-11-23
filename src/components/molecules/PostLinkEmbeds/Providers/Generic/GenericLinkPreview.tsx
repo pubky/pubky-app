@@ -5,10 +5,13 @@ import { isPinakesConfigured, PINAKES_SLOW_READ_MS } from '@/config/pinakes';
 import { useOgMetadata } from '@/hooks/useOgMetadata/useOgMetadata';
 import { usePinakesCard } from '@/hooks/usePinakesCard/usePinakesCard';
 import { useViewportObserver } from '@/hooks/useViewportObserver/useViewportObserver';
+import { useIsPostPreviewNavigable } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import { ResourceCard } from '@/molecules/ResourceCard/ResourceCard';
+import { ResourceEmbedFrame } from '@/molecules/ResourceCard/ResourceEmbedFrame';
 import { useResourceSurface } from '@/molecules/ResourceCard/ResourceSurfaceContext';
 import { ResourceCardSkeleton } from '@/molecules/ResourceCardSkeleton/ResourceCardSkeleton';
 import { useCardPlayer } from '@/molecules/ResourcePlayer/useCardPlayer';
+import { useSettingsStore } from '@/stores/settings/settings.store';
 import { getNativeEmbedCard } from '../Native/nativeEmbed.utils';
 import { GenericPreview } from './GenericPreview';
 import { useSlowRead } from './useSlowRead';
@@ -19,7 +22,7 @@ import { useSlowRead } from './useSlowRead';
  * Pinakes is configured, Pinakes is asked to read the link once it is on screen (`usePinakesCard`'s
  * `resolveOnView`, with its bounds), the card's skeleton holding the place for at most
  * `PINAKES_SLOW_READ_MS`; a card it makes shows instead, as a text link's card does (no footer of its
- * own, its player inside it from its Play), else the preview stays. A preview with a title or an
+ * own; a service's player drawn by the app until a press, `useCardPlayer`), else the preview stays. A preview with a title or an
  * image is never sent. In the composer the composer's own resolve asks instead (once the link has stayed
  * as written, `PINAKES_RESOLVE_DEBOUNCE_MS`), and a card's player previews.
  */
@@ -55,8 +58,20 @@ function BarePreviewRead({ url, isComposing, isOnScreen }: BarePreviewProps & { 
   const isSlow = useSlowRead(url, isReading, PINAKES_SLOW_READ_MS);
   const surface = useResourceSurface() === 'card' ? 'default' : undefined;
   const card = getNativeEmbedCard(data);
-  const player = useCardPlayer(card, url, surface, { preview: isComposing });
+  const embedsUpFront = useSettingsStore((state) => state.media.embedsUpFront);
+  // A post being written (the composer, the Reply and Repost dialogs) previews its player.
+  const navigable = useIsPostPreviewNavigable();
+  const player = useCardPlayer(card, url, surface, { preview: isComposing || !navigable });
   if (isReading && !isSlow) return <ResourceCardSkeleton />;
   if (!card) return <GenericPreview url={url} />;
-  return <ResourceCard card={card} href={url} headerControl={player.switcher} player={player.player} asPost />;
+  // With platform embeds up front off, a service's player, drawn by the app until a press, in the
+  // resource frame, the switch in its header. Up front such a link keeps its card.
+  if (player.embed && !embedsUpFront) {
+    return (
+      <ResourceEmbedFrame url={url} card={card} actions={null} headerControl={player.switcher}>
+        {player.embed}
+      </ResourceEmbedFrame>
+    );
+  }
+  return <ResourceCard card={card} href={url} headerControl={player.switcher} asPost />;
 }

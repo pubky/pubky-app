@@ -601,7 +601,7 @@ describe('ResourceDetails', () => {
         expect(within(card).getAllByTestId('resource-card-episode-audio')).toHaveLength(2);
       });
 
-      it('keeps them beside a service’s stand-in with platform embeds up front off', () => {
+      it('loads a service picked in the switch at once with platform embeds up front off, Card brings them back', () => {
         useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
         onTestFinished(() => {
           useSettingsStore.setState({ media: upFrontMedia });
@@ -610,31 +610,20 @@ describe('ResourceDetails', () => {
         renderDetails(podcastFixture.uri);
 
         const card = screen.getByTestId('resource-card');
-        pick(card, 'Card', 'Apple Podcasts');
         expect(document.querySelector('iframe')).toBeNull();
         expect(within(card).getAllByTestId('resource-card-episode-audio')).toHaveLength(2);
-      });
-
-      it('keeps the card whole, its episodes too, with the service’s player inside it, with platform embeds up front off', () => {
-        useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
-        onTestFinished(() => {
-          useSettingsStore.setState({ media: upFrontMedia });
-        });
-        read = settled({ ...podcastFixture, episodes });
-        renderDetails(podcastFixture.uri);
-
-        const card = screen.getByTestId('resource-card');
+        expectNoThirdPartyLoads();
+        // The pick is the press: the player loads in place of the episodes, started, with no dialog.
         pick(card, 'Card', 'Apple Podcasts');
-        expect(within(card).getAllByTestId('resource-card-episode-audio')).toHaveLength(2);
 
-        fireEvent.click(within(card).getByRole('button', { name: `Play ${podcastFixture.name} on Apple Podcasts` }));
-
-        // Inside the card, under its text: the card stays.
-        expect(within(card).getByTestId('resource-card-title')).toHaveTextContent(podcastFixture.name!);
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
         expect(within(card).getByTestId('resource-player-frame').getAttribute('src')).toMatch(
           /^https:\/\/embed\.podcasts\.apple\.com\/us\/podcast\/173001861/,
         );
-        // As on every surface: the card stays whole, its own episodes with it.
+        expect(within(card).queryByTestId('resource-card-episodes')).not.toBeInTheDocument();
+
+        pick(card, 'Apple Podcasts', 'Show the link card instead of a player');
+        expect(document.querySelector('iframe')).toBeNull();
         expect(within(card).getAllByTestId('resource-card-episode-audio')).toHaveLength(2);
       });
     });
@@ -649,7 +638,7 @@ describe('ResourceDetails', () => {
       );
     });
 
-    it('shows the large card with Play, loading nothing, and the player inside it on Play, with embeds up front off', () => {
+    it('draws the page’s player in the large card’s body, loading nothing, and loads it there on a press, with embeds up front off', () => {
       useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
       onTestFinished(() => {
         useSettingsStore.setState({ media: upFrontMedia });
@@ -658,15 +647,22 @@ describe('ResourceDetails', () => {
       renderDetails('https://tidal.com/track/534050211');
 
       const card = screen.getByTestId('resource-card');
-      expect(within(card).getByTestId('resource-card-title')).toHaveTextContent(mbRecordingEnrichedFixture.name!);
-      expectNoThirdPartyLoads();
-      fireEvent.click(within(card).getByRole('button', { name: `Play ${mbRecordingEnrichedFixture.name} on TIDAL` }));
-
-      expect(document.querySelectorAll('iframe')).toHaveLength(1);
+      // The page keeps the title as its heading; the body is the player's drawing, one button.
       expect(
-        within(within(card).getByTestId('resource-card-player')).getByTestId('resource-player-frame'),
-      ).toHaveAttribute('src', expect.stringMatching(/^https:\/\/embed\.tidal\.com\/tracks\/534050211\?/));
-      expect(within(card).getByTestId('resource-card-title')).toBeInTheDocument();
+        within(card).getByRole('heading', { level: 2, name: mbRecordingEnrichedFixture.name }),
+      ).toBeInTheDocument();
+      const facade = within(card).getByTestId('player-facade');
+      expect(facade).toHaveAccessibleName(`Play ${mbRecordingEnrichedFixture.name} on TIDAL`);
+      expect(document.querySelector('iframe')).toBeNull();
+      expectNoThirdPartyLoads();
+      fireEvent.click(facade);
+
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(document.querySelectorAll('iframe')).toHaveLength(1);
+      expect(within(card).getByTestId('resource-player-frame')).toHaveAttribute(
+        'src',
+        expect.stringMatching(/^https:\/\/embed\.tidal\.com\/tracks\/534050211\?/),
+      );
     });
 
     it('names OpenStreetMap once under Sources on a place’s page, not on its card', () => {

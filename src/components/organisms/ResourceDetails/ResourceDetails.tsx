@@ -248,14 +248,13 @@ function ResourceKnown({
   // post's embed, or its Show on, is its only source; once X cannot show it, its card is generic.
   const showsPost =
     postEmbed !== null && (postEmbed.isOpen || postEmbed.showPost !== undefined || postEmbed.isPostFromCard);
-  const { embed, switcher, showsPlayer, player } = useCardPlayer(showsPost ? null : card, uri, 'default', {
+  const { embed, switcher, showsPlayer } = useCardPlayer(showsPost ? null : card, uri, 'default', {
     previewImage: postEmbed?.postImage,
   });
-  // A service's player up front in the body: a card that plays whole in our player (a show's latest
-  // episodes, an episode's audio) gives way to it, as in a post's resource frame; a recording's
-  // preview keeps ours. With platform embeds up front off the card stays whole, as on every surface,
-  // the service's player inside it.
-  const ownPlayerAside = embedsUpFront && showsPlayer === true && playsInCard(card);
+  // A service's player in the body (with platform embeds up front off, its drawing until a press): a
+  // card that plays whole in our player (a show's latest episodes, an episode's audio) gives way to it,
+  // as in a post's resource frame; a recording's preview keeps ours.
+  const ownPlayerAside = showsPlayer === true && playsInCard(card);
   const actions = (
     <ResourceActions
       uri={actionUri}
@@ -308,8 +307,8 @@ function ResourceKnown({
         }
         isBodyReplaced={postEmbed?.isOpen && !postEmbed.inCard}
         headerControl={switcher}
-        // With platform embeds up front off the card stays, the player or the post's embed inside it.
-        player={player ?? (postEmbed?.inCard ? postEmbed.embedInCard : undefined)}
+        // With platform embeds up front off an X post's embed loads inside the card.
+        player={postEmbed?.inCard ? postEmbed.embedInCard : undefined}
         asPost={!embedsUpFront}
         imageUrl={xPost.imageUrl}
       />
