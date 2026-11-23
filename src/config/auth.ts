@@ -32,7 +32,7 @@ export const LOCKS_CAPABILITIES = [
 
 /**
  * What the copy of the Locks reader files of builds before #3206 needs: read the old root, write the app's
- * namespace. Without it a listing the grant refuses would fail on every sign-in, so the copy does not start.
+ * namespace. Without it a listing the grant refuses would fail on every page load, so the copy does not start.
  */
 export const LOCKS_READER_COPY_CAPABILITIES = [
   '/priv/social/:r',

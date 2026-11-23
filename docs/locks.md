@@ -147,18 +147,21 @@ Builds before #3206 kept the replicas and purchase files under `/priv/social/unl
 `/priv/social/purchases/` (with the one-file-per-lock `<lockId>.json` of builds before #2827). `/priv/social/` is
 for objects the social spec defines, and only pubky.app reads these files, so they moved to the app's own namespace.
 
-1. **Copy.** After bootstrap, `AuthController` starts `LocksApplication.copySocialReaderFiles` and never waits for
-   it, only when the session's grant reads `/priv/social/` and writes the app's namespace (a refused listing would be
-   reported on every sign-in). It lists both roots and copies only what the new root lacks: purchase files (a legacy
+1. **Copy.** Each time the session becomes ready (a sign-in, and also a reload, which skips bootstrap when the
+   profile is known), `AuthController` starts `LocksApplication.copySocialReaderFiles` and never waits for it, only
+   for an account with a profile whose grant reads `/priv/social/` and writes the app's namespace (a refused listing
+   would be reported on every page load). A restore while a run is still going joins it. Once the flag exists, a
+   run reads only the flag. It lists both roots and copies only what the new root lacks: purchase files (a legacy
    `<lockId>.json` becomes `<lockId>/<bundleId>.json`), then each completed replica, attachments first and the marker
    last, its attachment URLs pointing at the copies, and the cached row replaced with it. The copied marker carries
    `unlocked_at`, the source marker's write time (0 when it has none), so the Unlocked screen keeps its order. A run
-   that stops midway, or whose account signs out, is finished by the next bootstrap; a file that fails (a full quota,
+   that stops midway, or whose account signs out, is finished on the next page load; a file that fails (a full quota,
    say) is left for the next run while the rest are copied. A legacy purchase file that cannot be parsed, or a name in
    neither layout, stays where it is.
 2. **Flag.** `/priv/app.pubky/v1/locks/_social_copied.json` (named apart from the migration gate's `_migrated.json`)
    is written last, after a run with no failure. An account whose social roots are empty (it never used Locks before
-   #3206) gets no flag file, so its export shows nothing new; the page remembers the answer instead.
+   #3206) gets the flag too: without it, every page load would list both social roots again and read a second marker
+   for each lock on screen.
 3. **Reads.** The flag is read once per reader and page load, before the new root: read after it, the flag can
    report a copy another tab finished after that read, and the file is then in neither answer. Until the flag
    exists, one replica is read from the new root, then from the social root only when the new one has no marker,

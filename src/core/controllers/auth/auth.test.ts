@@ -364,50 +364,13 @@ describe('AuthController', () => {
       expect(authStoreState.setHasProfile).toHaveBeenCalledWith(true);
     });
 
-    it.each([
-      { capabilities: ['/priv/social/:rw', '/priv/app.pubky/v1/:rw'], starts: true },
-      { capabilities: ['/:rw'], starts: true },
-      { capabilities: ['/priv/app.pubky/v1/:rw'], starts: false },
-      { capabilities: ['/priv/social/:rw'], starts: false },
-    ])(
-      'starts the Locks reader file copy after bootstrap only with $capabilities',
-      async ({ capabilities, starts }) => {
-        vi.spyOn(BootstrapApplication, 'initialize').mockResolvedValue({
-          unread: 0,
-          lastRead: 1,
-          lastPolledTimestamp: undefined,
-        });
-        const copy = vi.spyOn(LocksApplication, 'copySocialReaderFiles').mockReturnValue(new Promise(() => {}));
-        await spyOnSleep();
-        const session = buildMockSession({ info: asOpaque({ capabilities }) });
-        vi.spyOn(useAuthStore, 'getState').mockReturnValue(
-          mockAuthStore({
-            ...storeMocks.getAuthState(),
-            session,
-            selectSession: () => session,
-            currentUserPubky: TEST_PUBKY as Pubky,
-            selectCurrentUserPubky: vi.fn(() => TEST_PUBKY),
-            setHasProfile: vi.fn(),
-          }),
-        );
-
-        await AuthController.bootstrapWithDelay();
-
-        if (starts)
-          expect(copy).toHaveBeenCalledExactlyOnceWith({ readerPubky: TEST_PUBKY, isCurrent: expect.any(Function) });
-        else expect(copy).not.toHaveBeenCalled();
-      },
-    );
-
-    it('logs only a raw failure of the Locks reader file copy, not one already reported', async () => {
+    it('does not start the Locks reader file copy: a new profile has nothing under /priv/social/', async () => {
       vi.spyOn(BootstrapApplication, 'initialize').mockResolvedValue({
         unread: 0,
         lastRead: 1,
         lastPolledTimestamp: undefined,
       });
-      const failure = new Error('offline');
-      const copy = vi.spyOn(LocksApplication, 'copySocialReaderFiles').mockRejectedValue(failure);
-      const warn = vi.spyOn(Logger, 'warn');
+      const copy = vi.spyOn(LocksApplication, 'copySocialReaderFiles').mockResolvedValue(undefined);
       await spyOnSleep();
       const session = buildMockSession({ info: asOpaque({ capabilities: ['/:rw'] }) });
       vi.spyOn(useAuthStore, 'getState').mockReturnValue(
@@ -416,34 +379,15 @@ describe('AuthController', () => {
           session,
           selectSession: () => session,
           currentUserPubky: TEST_PUBKY as Pubky,
+          hasProfile: true,
           selectCurrentUserPubky: vi.fn(() => TEST_PUBKY),
           setHasProfile: vi.fn(),
         }),
       );
 
-      await expect(AuthController.bootstrapWithDelay()).resolves.toBeUndefined();
-      await vi.waitFor(() =>
-        expect(warn).toHaveBeenCalledWith('Failed to copy the Locks reader files from /priv/social/', {
-          pubky: TEST_PUBKY,
-          error: failure,
-        }),
-      );
-
-      // An AppError was reported where it was made (Err.*): logging it here would double it.
-      warn.mockClear();
-      copy.mockRejectedValue(
-        Err.server(ServerErrorCode.SERVICE_UNAVAILABLE, 'Homeserver unavailable', {
-          service: ErrorService.Homeserver,
-          operation: 'listAll',
-        }),
-      );
       await AuthController.bootstrapWithDelay();
-      await vi.waitFor(() => expect(copy).toHaveBeenCalledTimes(2));
-      await Promise.resolve();
-      expect(warn).not.toHaveBeenCalledWith(
-        'Failed to copy the Locks reader files from /priv/social/',
-        expect.anything(),
-      );
+
+      expect(copy).not.toHaveBeenCalled();
     });
 
     it('should use remote settings when initializeSettings returns non-null', async () => {

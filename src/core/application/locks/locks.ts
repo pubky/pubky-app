@@ -111,9 +111,16 @@ export class LocksApplication {
   /** `hasCopiedSocialFiles` answers per reader, kept for the page's life. */
   private static readonly socialFilesCopied = new Map<string, Promise<boolean>>();
 
-  /** Forgets `socialFilesCopied`: a test that signs one account in again needs a fresh flag read. */
+  /** A restore while `copySocialReaderFiles` still runs for the same session joins that run instead of copying the same files again. */
+  private static readonly socialCopyRuns = new Map<
+    string,
+    { run: Promise<void>; isCurrent: TViewerScope['isCurrent'] }
+  >();
+
+  /** Forgets the copy state: a test that signs one account in again needs a fresh flag read. */
   static resetSocialCopyStateForTests(): void {
     this.socialFilesCopied.clear();
+    this.socialCopyRuns.clear();
   }
 
   static generateConnectUrl(params: TGenerateConnectUrlParams): Promise<string> {
@@ -707,13 +714,25 @@ export class LocksApplication {
 
   /**
    * Copies the reader's replicas and purchase files from `/priv/social/` to the app's namespace
-   * (#3206), in the background after bootstrap. Only what is missing at the new root is written, so
-   * a run that stops midway is finished by the next one. A file that fails is left for the next run and
-   * the rest still copied; the flag goes last, only after a run with no failure. It stops the list reads
-   * only: `fetchResolvedPurchase` keeps reading the social root. An account whose social roots are empty
-   * gets no flag file, only this page's answer. The social files stay (#3207).
+   * (#3206), in the background each time the session is ready. Only what is missing at the new root is
+   * written, so a run that stops midway is finished by the next one. A file that fails is left for the
+   * next run and the rest still copied; the flag goes last, only after a run with no failure. It stops
+   * the list reads only: `fetchResolvedPurchase` keeps reading the social root. The social files stay
+   * (#3207).
    */
-  static async copySocialReaderFiles({
+  static copySocialReaderFiles(params: TFetchUnlockedListParams & TViewerScope): Promise<void> {
+    const { readerPubky, isCurrent } = params;
+    const running = this.socialCopyRuns.get(readerPubky);
+    // A run whose session ended stops before its next write and leaves no flag, so this session starts its own.
+    if (running && running.isCurrent?.() !== false) return running.run;
+    const run = this.runSocialCopy(params).finally(() => {
+      if (this.socialCopyRuns.get(readerPubky)?.run === run) this.socialCopyRuns.delete(readerPubky);
+    });
+    this.socialCopyRuns.set(readerPubky, { run, isCurrent });
+    return run;
+  }
+
+  private static async runSocialCopy({
     readerPubky,
     isCurrent,
   }: TFetchUnlockedListParams & TViewerScope): Promise<void> {
@@ -724,19 +743,19 @@ export class LocksApplication {
       HomeserverService.listAll({ baseDirectory: GuardedContentParser.socialUnlockedRootUrl(readerPubky) }),
       HomeserverService.listAll({ baseDirectory: GuardedContentParser.socialPurchasesRootUrl(readerPubky) }),
     ]);
-    // Most accounts never used Locks before #3206: nothing to copy, and no flag file in their export.
-    if (socialUnlocked.length === 0 && socialPurchases.length === 0) {
-      this.socialFilesCopied.set(readerPubky, Promise.resolve(true));
-      return;
+    // Empty for most accounts, which never used Locks before #3206. They still get the flag: without it,
+    // every page load lists both social roots again and reads a second marker for each lock on screen.
+    if (socialUnlocked.length > 0 || socialPurchases.length > 0) {
+      const [unlocked, purchases] = await Promise.all([
+        HomeserverService.listAll({ baseDirectory: GuardedContentParser.unlockedRootUrl(readerPubky) }),
+        HomeserverService.listAll({ baseDirectory: GuardedContentParser.purchasesRootUrl(readerPubky) }),
+      ]);
+      const purchasesCopied = await this.copySocialPurchases(readerPubky, socialPurchases, purchases, fence, isCurrent);
+      const replicasCopied = await this.copySocialReplicas(readerPubky, socialUnlocked, unlocked, fence, isCurrent);
+      if (!purchasesCopied || !replicasCopied) return;
     }
-    const [unlocked, purchases] = await Promise.all([
-      HomeserverService.listAll({ baseDirectory: GuardedContentParser.unlockedRootUrl(readerPubky) }),
-      HomeserverService.listAll({ baseDirectory: GuardedContentParser.purchasesRootUrl(readerPubky) }),
-    ]);
-    const purchasesCopied = await this.copySocialPurchases(readerPubky, socialPurchases, purchases, fence, isCurrent);
-    const replicasCopied = await this.copySocialReplicas(readerPubky, socialUnlocked, unlocked, fence, isCurrent);
-    // Signed out or switched account midway: the next bootstrap of this account finishes the copy.
-    if (!purchasesCopied || !replicasCopied || isCurrent?.() === false) return;
+    // Signed out or switched account midway: the next run for this account finishes the copy.
+    if (isCurrent?.() === false) return;
 
     const flag = new TextEncoder().encode(JSON.stringify({ copied_at: Date.now() }));
     await retryHomeserverWriteAfterReread(fence, () =>

@@ -453,7 +453,7 @@ export class AuthController {
         if (!isCurrent()) return false;
         if (useAuthStore.getState().hasProfile === null || useAuthStore.getState().needsAccountSync)
           await this.bootstrapProfile(result.session, generation, true);
-        if (isCurrent()) useAuthStore.getState().setRestoreStatus('ready');
+        if (isCurrent()) this.markSessionReady();
         return isCurrent();
       } catch (error) {
         if (isCurrent()) {
@@ -674,19 +674,25 @@ export class AuthController {
     if (settingsSyncSucceeded) {
       this.startModerationFollow(pubky);
     }
-    this.startLocksReaderFileCopy(pubky, isCurrent);
+  }
+
+  /** The Locks copy starts here, not in bootstrap: a reload of an account with a known profile skips bootstrap. */
+  private static markSessionReady(): void {
+    useAuthStore.getState().setRestoreStatus('ready');
+    this.startLocksReaderFileCopy();
   }
 
   /**
    * Copies the reader's Locks files of builds before #3206 into the app's namespace, never awaited: it
    * can download large attachments. Only when the grant reads the old root and writes the new one: a
-   * listing the grant refuses would fail and be reported on every sign-in. A failed run is reported once
-   * and the next bootstrap copies what is still missing.
+   * listing the grant refuses would fail and be reported on every page load. A failed run is reported
+   * once and the next page load copies what is still missing.
    */
-  private static startLocksReaderFileCopy(pubky: Pubky, isCurrent: () => boolean): void {
-    // The session's own grant: `hasCapabilities` answers false until a restore is `ready`, which comes after this.
-    const { session } = useAuthStore.getState();
-    if (!session || !hasCapabilities(session.info.capabilities, LOCKS_READER_COPY_CAPABILITIES)) return;
+  private static startLocksReaderFileCopy(): void {
+    const { session, hasProfile } = useAuthStore.getState();
+    if (!session || !hasProfile || !hasCapabilities(session.info.capabilities, LOCKS_READER_COPY_CAPABILITIES)) return;
+    const pubky = Identity.z32FromSession({ session });
+    const isCurrent = captureViewerSession();
     void LocksApplication.copySocialReaderFiles({ readerPubky: pubky, isCurrent }).catch((error: unknown) => {
       // AppError factories already report at their origin. Only unexpected raw failures need a warning.
       if (!isAppError(error)) Logger.warn('Failed to copy the Locks reader files from /priv/social/', { pubky, error });
@@ -828,8 +834,7 @@ export class AuthController {
         previous.needsAccountSync
       )
         await this.bootstrapProfile(session, generation);
-      if (this.isCurrentGeneration(generation) && useAuthStore.getState().session === session)
-        useAuthStore.getState().setRestoreStatus('ready');
+      if (this.isCurrentGeneration(generation) && useAuthStore.getState().session === session) this.markSessionReady();
       return true;
     } catch (error) {
       // The replacement is already durable. Never resurrect the previous session or erase this grant.
@@ -875,7 +880,7 @@ export class AuthController {
     if (this.profileBootstrap?.generation !== generation || this.profileBootstrap.session !== session) {
       const task = this.finishProfileBootstrap(session, generation, restoring).then(() => {
         if (this.isCurrentGeneration(generation) && useAuthStore.getState().session === session)
-          useAuthStore.getState().setRestoreStatus('ready');
+          this.markSessionReady();
       });
       this.profileBootstrap = { generation, session, task };
       void task

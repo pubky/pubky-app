@@ -2549,13 +2549,49 @@ describe('LocksApplication.copySocialReaderFiles', () => {
     ]);
   });
 
-  it('writes no flag file for an account whose social roots are empty, and lists no new root', async () => {
+  it('writes the flag for an account whose social roots are empty, without listing the new roots', async () => {
     await LocksApplication.copySocialReaderFiles({ readerPubky: reader });
     await LocksApplication.fetchUnlockedList({ readerPubky: reader });
 
-    expect(mocks.putBlob).not.toHaveBeenCalled();
+    expect(written()).toEqual([url(NEW, '_social_copied.json')]);
     expect(mocks.socialListAll).toHaveBeenCalledTimes(2);
     expect(mocks.listAll).toHaveBeenCalledOnce();
+  });
+
+  it('writes no flag for an empty account once the account it started for is gone', async () => {
+    await LocksApplication.copySocialReaderFiles({ readerPubky: reader, isCurrent: () => false });
+
+    expect(mocks.putBlob).not.toHaveBeenCalled();
+  });
+
+  it('joins a run still going instead of copying the same files again', async () => {
+    oneReplica(1700);
+    let release = () => {};
+    mocks.copyFlag.mockReturnValueOnce(new Promise((resolve) => (release = () => resolve(null))));
+
+    const first = LocksApplication.copySocialReaderFiles({ readerPubky: reader });
+    const second = LocksApplication.copySocialReaderFiles({ readerPubky: reader });
+    release();
+    await Promise.all([first, second]);
+
+    expect(second).toBe(first);
+    expect(written()).toEqual([url(NEW, 'unlocked/LOCK1/post.json'), url(NEW, '_social_copied.json')]);
+  });
+
+  it('starts a new run when the session of the run still going has ended', async () => {
+    oneReplica(1700);
+    let current = true;
+    let release = () => {};
+    mocks.copyFlag.mockReturnValueOnce(new Promise((resolve) => (release = () => resolve(null))));
+
+    const first = LocksApplication.copySocialReaderFiles({ readerPubky: reader, isCurrent: () => current });
+    current = false;
+    const second = LocksApplication.copySocialReaderFiles({ readerPubky: reader, isCurrent: () => true });
+    release();
+    await Promise.all([first, second]);
+
+    expect(second).not.toBe(first);
+    expect(written()).toEqual([url(NEW, 'unlocked/LOCK1/post.json'), url(NEW, '_social_copied.json')]);
   });
 });
 
