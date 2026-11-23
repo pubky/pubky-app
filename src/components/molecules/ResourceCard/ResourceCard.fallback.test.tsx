@@ -12,7 +12,7 @@ vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock('@/hooks/usePinakesGroup/usePinakesGroup', () => ({ usePinakesGroup: vi.fn() }));
 vi.mock('@/hooks/useOgMetadata/useOgMetadata', () => ({ useOgMetadata: vi.fn() }));
 
-/** The card's image: the post's single image, inside the card's image slot. */
+/** The card's image, inside its slot: small beside the text, or under it for an embed's image. */
 const cardImage = () => within(screen.getByTestId('resource-card-image')).getByRole('img');
 
 const GROUP_ID = 'g1';

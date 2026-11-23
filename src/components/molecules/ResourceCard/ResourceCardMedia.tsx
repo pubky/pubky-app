@@ -21,10 +21,10 @@ interface ResourceCardMediaProps {
 }
 
 /**
- * The card's image, under its text, shown as a post shows its one image (`PostAttachmentsImagesAndVideos`): whole,
- * in its own shape up to the post's height, and a tap opens the same lightbox, with pinch and double-tap zoom. A
- * press on the image never opens the resource page (`data-resource-controls`). Never wider than the image itself, so
- * a small one (a site's logo as its link's preview) is not blown up.
+ * An image that stands in for an embed (`showsEmbedImage`), under the card's text where the embed stands, shown as a
+ * post shows its one image (`PostAttachmentsImagesAndVideos`): whole, in its own shape up to the post's height, and a
+ * tap opens the same lightbox, with pinch and double-tap zoom. A press on the image never opens the resource page
+ * (`data-resource-controls`). Never wider than the image itself, so a small one is not blown up.
  */
 export function ResourceCardMedia({ imageUrl, name, dimmed, onImageError }: ResourceCardMediaProps) {
   const [loaded, setLoaded] = useState<{ url: string; width: number } | null>(null);
@@ -58,23 +58,34 @@ export function ResourceCardMedia({ imageUrl, name, dimmed, onImageError }: Reso
   );
 }
 
-/** From this width-to-height ratio on, a loaded cover shows as a 16:9 thumbnail instead of a square. */
+/** From this width-to-height ratio on, a loaded image shows as a 16:9 thumbnail instead of a square. */
 const WIDE_RATIO = 1.4;
 
 interface ResourceCardCoverProps extends ResourceCardMediaProps {
   /** The resource page's card: a larger thumbnail. */
   isLarge: boolean;
+  /** The type's own frame is 16:9 (a video, a film: `hasWideImage`): wide before the image loads. */
+  wideByType?: boolean;
 }
 
 /**
- * A song's, album's or playlist's cover (`hasCoverArt`): small, left of the card's text, a square (a 16:9 thumbnail
- * when the loaded image is wide), aligned to the top so a tall text column never stretches it. A tap opens it in
- * the post's lightbox (`PostAttachmentsImagesAndVideos`, its own trigger), with pinch and double-tap zoom; a press
- * on it never opens the resource page (`data-resource-controls`).
+ * A card's own image, not one that stands in for an embed (`showsEmbedImage`): its own, a group member's or its
+ * link's preview (an event's, an article's, a cover, a photo). Small, left of the card's text: a 16:9 thumbnail when
+ * the loaded image is wide (`WIDE_RATIO`), a square when it is upright, and by its type (`wideByType`) before it
+ * loads; aligned to the top so a tall text column never stretches it. A tap opens it in the post's lightbox
+ * (`PostAttachmentsImagesAndVideos`, its own trigger), with pinch and double-tap zoom; a press on it never opens the
+ * resource page (`data-resource-controls`), the rest of the card still does.
  */
-export function ResourceCardCover({ imageUrl, name, isLarge, dimmed, onImageError }: ResourceCardCoverProps) {
+export function ResourceCardCover({
+  imageUrl,
+  name,
+  isLarge,
+  wideByType = false,
+  dimmed,
+  onImageError,
+}: ResourceCardCoverProps) {
   const [loadedShape, setLoadedShape] = useState<{ url: string; wide: boolean } | null>(null);
-  const isWide = loadedShape?.url === imageUrl && loadedShape.wide;
+  const isWide = loadedShape?.url === imageUrl ? loadedShape.wide : wideByType;
   const squareSize = isLarge ? 'size-24 sm:size-40' : 'size-20 sm:size-24';
   const wideSize = isLarge ? 'aspect-video w-40 sm:w-64' : 'aspect-video w-28 sm:w-40';
   return (
@@ -87,7 +98,7 @@ export function ResourceCardCover({ imageUrl, name, isLarge, dimmed, onImageErro
         const image = getOwnImage(event);
         if (!image || image.naturalWidth <= 0 || image.naturalHeight <= 0) return;
         const ratio = image.naturalWidth / image.naturalHeight;
-        // Wide when the image is; square when it is upright, as a cover is.
+        // Wide when the image is; square when it is upright (a cover, a poster), whatever the type says.
         if (ratio >= WIDE_RATIO) setLoadedShape({ url: imageUrl, wide: true });
         else if (ratio < 1) setLoadedShape({ url: imageUrl, wide: false });
       }}

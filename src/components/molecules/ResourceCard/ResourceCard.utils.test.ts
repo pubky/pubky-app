@@ -28,7 +28,7 @@ import {
   getResourceTagsLabel,
   getResourceTarget,
   getResourceTypeLabel,
-  hasCoverArt,
+  hasWideImage,
   isCardSurfaceClick,
   isWritableResourceUri,
   MAX_LINK_SPELLINGS,
@@ -402,29 +402,29 @@ describe('getResourceTagsLabel', () => {
   });
 });
 
-describe('hasCoverArt', () => {
+describe('hasWideImage', () => {
+  it.each([
+    ['VideoObject', ['Thing', 'CreativeWork', 'MediaObject', 'VideoObject']],
+    ['Movie', ['Thing', 'CreativeWork', 'Movie']],
+    ['TVSeries', ['Thing', 'CreativeWork', 'Intangible', 'Series', 'CreativeWorkSeries', 'TVSeries']],
+  ])('shows a %s image as a 16:9 frame', (type, type_path) => {
+    expect(hasWideImage({ type, type_path })).toBe(true);
+  });
+
+  it('reads a wide type from the type_path of a narrower type it has never seen', () => {
+    expect(
+      hasWideImage({ type: 'LectureRecording', type_path: ['Thing', 'CreativeWork', 'MediaObject', 'VideoObject'] }),
+    ).toBe(true);
+  });
+
   it.each([
     ['MusicRecording', ['Thing', 'CreativeWork', 'MusicRecording']],
     ['MusicAlbum', ['Thing', 'CreativeWork', 'MusicPlaylist', 'MusicAlbum']],
-    ['MusicRelease', ['Thing', 'CreativeWork', 'MusicPlaylist', 'MusicRelease']],
-    ['MusicPlaylist', ['Thing', 'CreativeWork', 'MusicPlaylist']],
-  ])('reads a %s image as cover art', (type, type_path) => {
-    expect(hasCoverArt({ type, type_path })).toBe(true);
-  });
-
-  it('reads cover art from the type_path of a narrower type it has never seen', () => {
-    expect(hasCoverArt({ type: 'MusicMixtape', type_path: ['Thing', 'CreativeWork', 'MusicPlaylist'] })).toBe(true);
-  });
-
-  it.each([
-    ['MusicGroup', ['Thing', 'Organization', 'PerformingGroup', 'MusicGroup']],
-    ['Person', ['Thing', 'Person']],
-    ['VideoObject', ['Thing', 'CreativeWork', 'MediaObject', 'VideoObject']],
-    ['PodcastSeries', ['Thing', 'CreativeWork', 'Intangible', 'Series', 'CreativeWorkSeries', 'PodcastSeries']],
     ['Book', ['Thing', 'CreativeWork', 'Book']],
+    ['City', ['Thing', 'Place', 'AdministrativeArea', 'City']],
     ['Article', ['Thing', 'CreativeWork', 'Article']],
-  ])('reads a %s image as no cover', (type, type_path) => {
-    expect(hasCoverArt({ type, type_path })).toBe(false);
+  ])('keeps a %s image square', (type, type_path) => {
+    expect(hasWideImage({ type, type_path })).toBe(false);
   });
 });
 

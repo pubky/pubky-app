@@ -48,11 +48,26 @@ vi.mock('embla-carousel-react', () => {
 });
 
 const ARTICLE: TPinakesResourceDetail = articleFixture;
+/** An article's page that is a video with its player (`embed`): its image stands where the player stands. */
+const VIDEO_PAGE: TPinakesResourceDetail = {
+  ...ARTICLE,
+  type: 'VideoObject',
+  type_path: ['Thing', 'CreativeWork', 'MediaObject', 'VideoObject'],
+  embed: {
+    provider: 'youtube',
+    kind: 'video',
+    src: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1&rel=0',
+    height: null,
+    aspect: 1.7778,
+    allow: ['autoplay'],
+    autoplay_param: 'autoplay=1',
+  },
+};
 
 const card = () => screen.getByTestId('resource-card');
 const title = () => screen.getByTestId('resource-card-title');
 const source = () => screen.getByTestId('resource-card-source');
-/** The card's image: the post's single image, inside the card's image slot. */
+/** The card's image, inside its slot: small beside the text, or under it for an embed's image. */
 const cardImage = () => within(screen.getByTestId('resource-card-image')).getByRole('img');
 
 describe('ResourceCard', () => {
@@ -392,10 +407,10 @@ describe('ResourceCard', () => {
     });
 
     it.each([
-      ['an article', ARTICLE],
-      ['an artist', mbGroupEnrichedFixture],
+      ['a video', videoFixture],
+      ['a video page', VIDEO_PAGE],
     ])(
-      'shows the image of %s under the text as a post shows its one image, the type tile only without one',
+      'shows the image of %s with a player under the text as a post shows its one image, where the player stands',
       (_, fixture) => {
         render(<ResourceCard card={fixture} href={fixture.uri} />);
 
@@ -410,8 +425,7 @@ describe('ResourceCard', () => {
 
     it.each([
       ['video', videoFixture],
-      ['movie', movieFixture],
-      ['band', mbGroupEnrichedFixture],
+      ['video page', VIDEO_PAGE],
     ])('shows a %s’s image whole, in its own shape', (_, fixture) => {
       render(<ResourceCard card={fixture} href={fixture.uri} />);
 
@@ -419,7 +433,40 @@ describe('ResourceCard', () => {
       expect(cardImage()).not.toHaveClass('object-cover');
     });
 
-    describe('cover art', () => {
+    it('shows a video post’s still under the text, where its post stands', () => {
+      const post: TPinakesResourceDetail = {
+        ...VIDEO_PAGE,
+        uri: 'https://x.com/a/status/1',
+        embed: {
+          provider: 'x',
+          kind: 'post',
+          src: 'https://platform.twitter.com/embed/Tweet.html?id=1&dnt=true',
+          height: null,
+          aspect: null,
+          allow: [],
+          autoplay_param: null,
+        },
+      };
+      render(<ResourceCard card={post} href={post.uri} />);
+
+      expect(title().compareDocumentPosition(screen.getByTestId('resource-card-image'))).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+      expect(screen.getByTestId('resource-card-image-fit')).toBeInTheDocument();
+    });
+
+    it('falls back to the type tile when the large image fails to load', () => {
+      render(<ResourceCard card={VIDEO_PAGE} href={VIDEO_PAGE.uri} />);
+      expect(screen.getByTestId('resource-card-image-fit')).toBeInTheDocument();
+
+      // Its one image fails, with no group or preview image to take its place.
+      fireEvent.error(cardImage());
+
+      expect(screen.queryByTestId('resource-card-image')).not.toBeInTheDocument();
+      expect(screen.getByTestId('resource-card-type-tile')).toBeInTheDocument();
+    });
+
+    describe('the small image beside the text', () => {
       const ALBUM: TPinakesResourceDetail = { ...mbReleaseGroupFixture, image: 'https://coverartarchive.org/a.jpg' };
       const PLAYLIST: TPinakesResourceDetail = {
         ...musicRecordingFixture,
@@ -431,7 +478,10 @@ describe('ResourceCard', () => {
         ['song', musicRecordingFixture],
         ['album', ALBUM],
         ['playlist', PLAYLIST],
-      ])('shows a %s’s cover small, left of the title', (_, fixture) => {
+        ['article', ARTICLE],
+        ['artist', mbGroupEnrichedFixture],
+        ['event', eventFixture],
+      ])('shows a %s’s image small, left of the title', (_, fixture) => {
         render(<ResourceCard card={fixture} href={fixture.uri} />);
 
         const slot = screen.getByTestId('resource-card-image');
@@ -442,6 +492,7 @@ describe('ResourceCard', () => {
         expect(cardImage()).toHaveAttribute('src', fixture.image);
         expect(cardImage()).toHaveClass('size-20', 'sm:size-24', 'object-cover');
         expect(cardImage()).not.toHaveClass('max-h-96');
+        expect(cardImage()).toHaveAccessibleName(fixture.name!);
         const trigger = screen.getByRole('button', { name: fixture.name! });
         expect(slot).toContainElement(trigger);
         // The lightbox's own trigger, as on a post's image: a screen reader hears that it opens a dialog.
@@ -451,10 +502,64 @@ describe('ResourceCard', () => {
         expect(screen.queryByTestId('resource-card-type-tile')).not.toBeInTheDocument();
       });
 
-      it('shows a larger cover on the resource page’s card', () => {
-        render(<ResourceCard card={ALBUM} size="large" />);
+      it.each([
+        ['an album', ALBUM, ['size-24', 'sm:size-40']],
+        ['a film', movieFixture, ['aspect-video', 'w-40', 'sm:w-64']],
+      ])('shows a larger image of %s on the resource page’s card', (_, fixture, classes) => {
+        render(<ResourceCard card={fixture} size="large" />);
 
-        expect(cardImage()).toHaveClass('size-24', 'sm:size-40');
+        expect(cardImage()).toHaveClass(...classes);
+      });
+
+      it.each([
+        ['a film with no player', movieFixture],
+        ['a video with no player', { ...videoFixture, embed: null, also_on: [] }],
+      ])('shows the image of %s small, as a 16:9 thumbnail before it loads', (_, fixture) => {
+        render(<ResourceCard card={fixture} href={fixture.uri} />);
+
+        const slot = screen.getByTestId('resource-card-image');
+        expect(slot.compareDocumentPosition(title())).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+        expect(slot).toHaveAttribute('data-shape', 'wide');
+        expect(cardImage()).toHaveClass('aspect-video', 'w-28', 'sm:w-40', 'object-cover');
+        expect(screen.queryByTestId('resource-card-image-fit')).not.toBeInTheDocument();
+      });
+
+      it('shows an upright image square once it has loaded, whatever the type says', () => {
+        render(<ResourceCard card={movieFixture} href={movieFixture.uri} />);
+        Object.defineProperty(cardImage(), 'naturalWidth', { value: 600 });
+        Object.defineProperty(cardImage(), 'naturalHeight', { value: 900 });
+
+        fireEvent.load(cardImage());
+
+        expect(screen.getByTestId('resource-card-image')).toHaveAttribute('data-shape', 'square');
+        expect(cardImage()).toHaveClass('size-20', 'sm:size-24');
+      });
+
+      it.each([
+        ['film', movieFixture, 'wide'],
+        ['article', ARTICLE, 'square'],
+      ])('keeps a %s’s shape by type for an image between square and wide', (_, fixture, shape) => {
+        render(<ResourceCard card={fixture} href={fixture.uri} />);
+        Object.defineProperty(cardImage(), 'naturalWidth', { value: 1200 });
+        Object.defineProperty(cardImage(), 'naturalHeight', { value: 1000 });
+
+        fireEvent.load(cardImage());
+
+        expect(screen.getByTestId('resource-card-image')).toHaveAttribute('data-shape', shape);
+      });
+
+      it('starts the next image in the type’s shape again, not in the last image’s', () => {
+        const { rerender } = render(<ResourceCard card={movieFixture} href={movieFixture.uri} />);
+        Object.defineProperty(cardImage(), 'naturalWidth', { value: 600 });
+        Object.defineProperty(cardImage(), 'naturalHeight', { value: 900 });
+        fireEvent.load(cardImage());
+        expect(screen.getByTestId('resource-card-image')).toHaveAttribute('data-shape', 'square');
+
+        rerender(
+          <ResourceCard card={{ ...movieFixture, image: 'https://example.org/still.jpg' }} href={movieFixture.uri} />,
+        );
+
+        expect(screen.getByTestId('resource-card-image')).toHaveAttribute('data-shape', 'wide');
       });
 
       it('opens the cover in the post’s lightbox on a tap, while the rest of the card opens the page', async () => {
@@ -536,7 +641,7 @@ describe('ResourceCard', () => {
       const onPostClick = vi.fn();
       render(
         <div onClick={onPostClick}>
-          <ResourceCard card={ARTICLE} href={ARTICLE.uri} />
+          <ResourceCard card={VIDEO_PAGE} href={ARTICLE.uri} />
         </div>,
       );
       const slot = screen.getByTestId('resource-card-image');
@@ -572,7 +677,7 @@ describe('ResourceCard', () => {
     it('opens the lightbox where links may not navigate too, as a post’s image does', async () => {
       render(
         <PostPreviewNavigableProvider navigable={false}>
-          <ResourceCard card={ARTICLE} href={ARTICLE.uri} />
+          <ResourceCard card={VIDEO_PAGE} href={ARTICLE.uri} />
         </PostPreviewNavigableProvider>,
       );
 
@@ -586,7 +691,7 @@ describe('ResourceCard', () => {
       [64, '64px'],
       [1200, '1200px'],
     ])('never shows an image %ipx wide larger than it is, nor wider than a post’s media', (width, maxWidth) => {
-      render(<ResourceCard card={ARTICLE} href={ARTICLE.uri} />);
+      render(<ResourceCard card={VIDEO_PAGE} href={ARTICLE.uri} />);
       const fit = screen.getByTestId('resource-card-image-fit');
       expect(fit.style.maxWidth).toBe('');
       Object.defineProperty(cardImage(), 'naturalWidth', { value: width });
@@ -603,7 +708,7 @@ describe('ResourceCard', () => {
     });
 
     it('takes no size from the lightbox’s images', async () => {
-      render(<ResourceCard card={ARTICLE} href={ARTICLE.uri} />);
+      render(<ResourceCard card={VIDEO_PAGE} href={ARTICLE.uri} />);
       fireEvent.click(cardImage());
       const lightboxImage = within(await screen.findByRole('dialog')).getAllByRole('img')[0];
       Object.defineProperty(lightboxImage, 'naturalWidth', { value: 64 });
