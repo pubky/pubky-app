@@ -16,10 +16,28 @@ import { NativeEmbedResource, type RenderNativeEmbed } from './NativeEmbedResour
 // These cases are for platform embeds up front (Settings, Links & Media) turned on; the default
 // is off (`defaultMediaPreferences`): a card, nothing loaded from the platform before Play.
 const upFrontMedia = { ...defaultMediaPreferences, embedsUpFront: true };
-beforeEach(() => useSettingsStore.setState({ media: upFrontMedia }));
+beforeEach(() => {
+  useSettingsStore.setState({ media: upFrontMedia });
+  xPostRead.post = null;
+  xPostRead.pending = false;
+  xPostRead.ids = [];
+});
 
 const mockPush = vi.fn();
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: mockPush }) }));
+const xPostRead = vi.hoisted(() => ({
+  prefetched: [] as string[],
+  post: null as import('@/pipes/x-post/x-post').TXPost | null,
+  pending: false,
+  ids: [] as (string | null)[],
+}));
+vi.mock('@/hooks/useXPost/useXPost', () => ({
+  prefetchXPost: (link: string) => xPostRead.prefetched.push(link),
+  useXPost: (id: string | null) => {
+    xPostRead.ids.push(id);
+    return id ? { post: xPostRead.post, pending: xPostRead.pending } : { post: null, pending: false };
+  },
+}));
 vi.mock('@/hooks/usePinakesCard/usePinakesCard', () => ({ usePinakesCard: vi.fn() }));
 const viewport = vi.hoisted(() => ({ isVisible: true }));
 vi.mock('@/hooks/useViewportObserver/useViewportObserver', () => ({
@@ -291,7 +309,12 @@ describe('NativeEmbedResource', () => {
       expect(embed).not.toHaveBeenCalled();
       expectNoThirdPartyLoads();
       fireEvent.click(screen.getByRole('button', { name: 'Play on x.com' }));
-      expect(within(screen.getByTestId('resource-card-player')).getByTestId('platform-embed')).toBeInTheDocument();
+      // Its MP4 on X's video host plays in the app's player inside the post.
+      expect(within(screen.getByTestId('resource-card-player')).getByTestId('x-post-video')).toHaveAttribute(
+        'data-src',
+        'https://video.twimg.com/a.mp4',
+      );
+      expect(embed).not.toHaveBeenCalled();
       expect(screen.getByTestId('resource-card-post')).toBeInTheDocument();
     });
 
@@ -1115,5 +1138,192 @@ describe('NativeEmbedResource', () => {
     rerender(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} isComposing />);
     expect(screen.getByTestId('resource-player-frame')).toBeInTheDocument();
     expect(embed).not.toHaveBeenCalled();
+  });
+});
+
+describe('NativeEmbedResource: an X post’s video and a link Pinakes is still reading', () => {
+  const POST_ID = '2118393153103470770';
+  const MP4 = 'https://video.twimg.com/ext_tw_video/1/pu/vid/1280x720/a.mp4';
+  const STILL = 'https://pbs.twimg.com/ext_tw_video_thumb/1/pu/img/still.jpg';
+  const PHOTO = 'https://pbs.twimg.com/media/photo.jpg';
+  const SERVER_POST = {
+    id: POST_ID,
+    text: 'A video post',
+    authorName: 'Some One',
+    handle: 'someone',
+    published: null,
+    image: STILL,
+    images: [STILL, PHOTO],
+    hasVideo: true,
+    video: MP4 as string | null,
+    videoAspect: null,
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    viewport.isVisible = true;
+    useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
+  });
+
+  it('shows the still and our Play; the press plays the MP4 in the app’s player inside the post, nothing from X before', () => {
+    mockCard(null);
+    xPostRead.post = SERVER_POST;
+    render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
+
+    expect(screen.getByTestId('resource-card-post')).toHaveTextContent('A video post');
+    expect(within(screen.getByTestId('resource-card-image')).getByRole('img')).toHaveAttribute(
+      'src',
+      `/api/image?xpost=${POST_ID}&src=${encodeURIComponent(STILL)}`,
+    );
+    expect(document.querySelector('video')).toBeNull();
+    expectNoThirdPartyLoads();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Play on x.com' }));
+
+    const video = within(screen.getByTestId('resource-card-player')).getByTestId('x-post-video');
+    expect(video).toHaveAttribute('data-src', MP4);
+    // In a frame of its own that sends no Referer (X's video host refuses another site's), started on load.
+    const doc = video.querySelector('iframe')?.getAttribute('srcdoc') ?? '';
+    expect(doc).toContain('<meta name="referrer" content="no-referrer">');
+    expect(doc).toContain(`<video controls playsinline autoplay src="${MP4}">`);
+    expect(embed).not.toHaveBeenCalled();
+  });
+
+  it('reads the MP4 of a video post its Pinakes card tells only on Play, and plays it in the app’s player', () => {
+    mockCard({ ...POST_CARD, image: STILL });
+    xPostRead.post = SERVER_POST;
+    render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
+
+    // Before the press nothing is read, not even from the app's server.
+    expect(xPostRead.ids.every((id) => id === null)).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Play on x.com' }));
+
+    expect(xPostRead.ids).toContain(POST_ID);
+    expect(screen.getByTestId('x-post-video')).toHaveAttribute('data-src', MP4);
+    expect(embed).not.toHaveBeenCalled();
+  });
+
+  it('starts reading the post as the viewer reaches for Play (pointer down, focus), nothing before', () => {
+    mockCard({ ...POST_CARD, image: STILL });
+    xPostRead.prefetched = [];
+    render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
+    expect(xPostRead.prefetched).toEqual([]);
+
+    const play = screen.getByRole('button', { name: 'Play on x.com' });
+    fireEvent.pointerDown(play);
+    fireEvent.focus(play);
+    expect(xPostRead.prefetched).toEqual([POST_URL, POST_URL]);
+  });
+
+  it('holds the place while the MP4 is read, then shows X’s post for a video with no MP4', () => {
+    mockCard({ ...POST_CARD, image: STILL });
+    xPostRead.pending = true;
+    const { rerender } = render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Play on x.com' }));
+    expect(screen.getByTestId('x-post-video-loading')).toBeInTheDocument();
+    expect(embed).not.toHaveBeenCalled();
+
+    xPostRead.pending = false;
+    xPostRead.post = { ...SERVER_POST, video: null };
+    rerender(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
+    expect(within(screen.getByTestId('resource-card-player')).getByTestId('platform-embed')).toBeInTheDocument();
+  });
+
+  it('shows the post the server read while Pinakes still reads the link, without waiting for it', () => {
+    vi.mocked(usePinakesCard).mockReturnValue({ data: null, isLoading: false, isError: false, isResolving: true });
+    xPostRead.post = { ...SERVER_POST, hasVideo: false, video: null, image: PHOTO, images: [PHOTO] };
+    render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
+
+    expect(xPostRead.ids).toContain(POST_ID);
+    expect(screen.getByTestId('resource-card-post')).toHaveTextContent('A video post');
+    expect(screen.queryByTestId('resource-card-skeleton')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('show-embed')).not.toBeInTheDocument();
+  });
+});
+
+describe('NativeEmbedResource: an X post the card cannot tell, read by the app’s server', () => {
+  const POST_ID = '2118393153103470770';
+  const SERVER_POST = {
+    id: POST_ID,
+    text: 'Read by the app',
+    authorName: 'Some One',
+    handle: 'someone',
+    published: '2026-11-20T10:00:00.000Z',
+    image: 'https://pbs.twimg.com/media/photo.jpg',
+    images: ['https://pbs.twimg.com/media/photo.jpg'],
+    hasVideo: false,
+    video: null as string | null,
+    videoAspect: null,
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    viewport.isVisible = true;
+    useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
+  });
+
+  it('shows a post Pinakes has no card for as a post, its image from the app’s route only, nothing to press', () => {
+    mockCard(null);
+    xPostRead.post = SERVER_POST;
+    render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
+
+    expect(xPostRead.ids).toContain(POST_ID);
+    expect(screen.getByTestId('resource-card-post')).toHaveTextContent('Read by the app');
+    expect(screen.getByTestId('resource-card-post-author')).toHaveTextContent('Some One@someone');
+    expect(within(screen.getByTestId('resource-card-image')).getByRole('img')).toHaveAttribute(
+      'src',
+      `/api/image?xpost=${POST_ID}&src=${encodeURIComponent(SERVER_POST.image)}`,
+    );
+    expect(screen.queryByTestId('show-embed')).not.toBeInTheDocument();
+    expect(embed).not.toHaveBeenCalled();
+    expectNoThirdPartyLoads();
+  });
+
+  it('shows a post whose card has no text (still read) as the post the server read, the card’s footer kept', () => {
+    mockCard({ ...POST_CARD, id: 'pinakes-id', name: 'x.com', description: null, status: 'unreachable' });
+    xPostRead.post = SERVER_POST;
+    render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
+
+    expect(screen.getByTestId('resource-card-post')).toHaveTextContent('Read by the app');
+    expect(screen.getByTestId('resource-actions')).toHaveAttribute('data-card-id', 'pinakes-id');
+    expect(screen.queryByTestId('show-embed')).not.toBeInTheDocument();
+  });
+
+  it('keeps a Play for a video in the post, loading X’s embed inside the card only on that press', () => {
+    mockCard(null);
+    const poster = 'https://pbs.twimg.com/ext_tw_video_thumb/1/pu/img/still.jpg';
+    xPostRead.post = { ...SERVER_POST, image: poster, images: [poster], hasVideo: true };
+    render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
+
+    expect(screen.getByTestId('resource-card-post')).toHaveTextContent('Read by the app');
+    expect(embed).not.toHaveBeenCalled();
+    expectNoThirdPartyLoads();
+    fireEvent.click(screen.getByRole('button', { name: 'Play on x.com' }));
+    expect(within(screen.getByTestId('resource-card-player')).getByTestId('platform-embed')).toBeInTheDocument();
+  });
+
+  it('holds the skeleton while the post is read, then keeps the link card when it cannot be', () => {
+    mockCard(null);
+    xPostRead.pending = true;
+    const { rerender } = render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
+    expect(screen.getByTestId('resource-card-skeleton')).toBeInTheDocument();
+
+    xPostRead.pending = false;
+    rerender(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
+    expect(screen.getByTestId('resource-link-card')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Show on x.com' })).toBeInTheDocument();
+  });
+
+  it('reads nothing for a card that tells the post, a post gone upstream, or with platform embeds up front on', () => {
+    mockCard(POST_CARD);
+    const { unmount } = render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
+    unmount();
+    mockCard({ ...POST_CARD, status: 'missing' });
+    render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />).unmount();
+    useSettingsStore.setState({ media: upFrontMedia });
+    mockCard(null);
+    render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
+
+    expect(xPostRead.ids.every((id) => id === null)).toBe(true);
   });
 });

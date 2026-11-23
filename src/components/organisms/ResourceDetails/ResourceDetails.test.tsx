@@ -263,6 +263,22 @@ const pageReplies = () => ({
 const renderDetails = (uri: string | null) =>
   render(<ResourceDetails uri={uri} read={read} onRetry={onRetry} replies={pageReplies()} />);
 
+// The app's server read of an X post (`useXPost`): none unless a test gives one.
+const xPostRead = vi.hoisted(() => ({
+  prefetched: [] as string[],
+  post: null as import('@/pipes/x-post/x-post').TXPost | null,
+  pending: false,
+}));
+vi.mock('@/hooks/useXPost/useXPost', () => ({
+  prefetchXPost: (link: string) => xPostRead.prefetched.push(link),
+  useXPost: (id: string | null) =>
+    id ? { post: xPostRead.post, pending: xPostRead.pending } : { post: null, pending: false },
+}));
+beforeEach(() => {
+  xPostRead.post = null;
+  xPostRead.pending = false;
+});
+
 describe('ResourceDetails', () => {
   const mockGroup = vi.mocked(usePinakesGroup);
   const mockRelated = vi.mocked(usePinakesRelated);
@@ -771,6 +787,52 @@ describe('ResourceDetails', () => {
       expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(X_POST.name!);
       expect(screen.getByTestId('resource-actions')).toBeInTheDocument();
       expect(screen.queryByTestId('show-embed')).toBeNull();
+    });
+
+    describe('read by the app’s server, with platform embeds up front off', () => {
+      const SERVER_POST = {
+        id: '1234567890',
+        text: 'Read by the app',
+        authorName: 'Some One',
+        handle: 'someone',
+        published: null,
+        image: null,
+        images: [],
+        hasVideo: false,
+        video: null as string | null,
+        videoAspect: null,
+      };
+      beforeEach(() => {
+        useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } });
+      });
+
+      it('holds the skeleton for a card without its text while the post is read, then shows the post', () => {
+        read = settled({ ...X_POST, name: null, description: null, status: 'pending' });
+        xPostRead.pending = true;
+        const { rerender } = renderDetails(X_URL);
+        expect(screen.getByTestId('resource-card-skeleton')).toBeInTheDocument();
+        expect(screen.queryByTestId('show-embed')).toBeNull();
+
+        xPostRead.pending = false;
+        xPostRead.post = SERVER_POST;
+        rerender(<ResourceDetails uri={X_URL} read={read} onRetry={onRetry} replies={pageReplies()} />);
+        expect(screen.getByTestId('resource-card-post')).toHaveTextContent('Read by the app');
+      });
+
+      it('shows an X link Pinakes has no card for as the post, its video playing in the app’s player from Play', () => {
+        read = settled(null);
+        xPostRead.post = { ...SERVER_POST, hasVideo: true, video: 'https://video.twimg.com/a.mp4' };
+        renderDetails(X_URL);
+
+        const unknown = screen.getByTestId('resource-unknown');
+        expect(within(unknown).getByTestId('resource-card-post')).toHaveTextContent('Read by the app');
+        expect(document.querySelector('video')).toBeNull();
+        fireEvent.click(within(unknown).getByRole('button', { name: 'Play on x.com' }));
+        expect(within(unknown).getByTestId('x-post-video')).toHaveAttribute(
+          'data-src',
+          'https://video.twimg.com/a.mp4',
+        );
+      });
     });
 
     it('shows X’s embed when Pinakes knows it on other services too, its only source: no switch, no Show on', () => {

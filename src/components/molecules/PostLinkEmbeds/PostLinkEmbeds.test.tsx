@@ -136,6 +136,19 @@ vi.mock('@/config/pinakes', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/config/pinakes')>()),
   isPinakesConfigured: vi.fn(() => false),
 }));
+const xPostRead = vi.hoisted(() => ({
+  prefetched: [] as string[],
+  post: null as import('@/pipes/x-post/x-post').TXPost | null,
+  pending: false,
+  ids: [] as (string | null)[],
+}));
+vi.mock('@/hooks/useXPost/useXPost', () => ({
+  prefetchXPost: (link: string) => xPostRead.prefetched.push(link),
+  useXPost: (id: string | null) => {
+    xPostRead.ids.push(id);
+    return id ? { post: xPostRead.post, pending: xPostRead.pending } : { post: null, pending: false };
+  },
+}));
 vi.mock('@/hooks/usePinakesCard/usePinakesCard', () => ({
   usePinakesCard: vi.fn(() => ({ data: null, isLoading: false, isError: false })),
 }));
@@ -172,7 +185,11 @@ describe('PostLinkEmbeds', () => {
   });
 
   describe('with the default settings (platform embeds up front off)', () => {
-    beforeEach(() => useSettingsStore.setState({ media: defaultMediaPreferences }));
+    beforeEach(() => {
+      useSettingsStore.setState({ media: defaultMediaPreferences });
+      // On screen: a platform link's box reads its card, or the X post, once near the screen.
+      viewport.isVisible = true;
+    });
 
     it.each([
       ['YouTube', 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', 'YouTube video player'],
@@ -323,7 +340,7 @@ describe('PostLinkEmbeds', () => {
       render(<PostLinkEmbeds content={`Watch ${VIDEO.uri}`} />);
 
       expect(screen.getByTestId('resource-link-card')).toBeInTheDocument();
-      expect(usePinakesCard).not.toHaveBeenCalled();
+      expect(vi.mocked(usePinakesCard).mock.calls.every(([uri]) => uri === null)).toBe(true);
       expect(document.querySelector('iframe')).toBeNull();
     });
 

@@ -10,7 +10,8 @@ import { HttpStatusCode } from '@/libs/http/http.types';
  * `getYouTubeThumbnailUrl`). Takes what carries the image and one image of it:
  * `?uri=<card link>&src=<image>` (with `&episode=<title>` for a show's episode art, or `&og=1` for a
  * card's own preview image when it has none), `?link=<link with no card>&src=<its og:image>` (the page
- * `/api/og-metadata` reads anyway), or `?youtube=<video id>&variant=hq720|mqdefault` (`i.ytimg.com`
+ * `/api/og-metadata` reads anyway), `?xpost=<X post ID>&src=<one of its images>` (only a photo or video
+ * still of that post as the app's server read it, `/api/x-post`), or `?youtube=<video id>&variant=hq720|mqdefault` (`i.ytimg.com`
  * only). The image is read only when that settled card, or that page's preview, carries it
  * (`ImageApplication`): the route reads no address a caller names alone. What remains is that any
  * public raster image a real card or page names can be read through the app, within the route's caps.
@@ -46,6 +47,7 @@ export async function GET(request: NextRequest) {
       src: searchParams.get('src'),
       episode: searchParams.get('episode'),
       og: searchParams.get('og'),
+      xpost: searchParams.get('xpost'),
       youtube: searchParams.get('youtube'),
       variant: searchParams.get('variant'),
     });

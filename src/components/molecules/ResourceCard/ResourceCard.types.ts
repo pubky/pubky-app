@@ -79,4 +79,9 @@ export interface ResourceCardProps {
    * the post's site. Any other card is unchanged.
    */
   asPost?: boolean;
+  /**
+   * The card's image as an address of the app's image route its caller made, shown instead of the one
+   * made from `card.image`: a post the app's server read (`useXPostCard`, `/api/image?xpost=`).
+   */
+  imageUrl?: string | null;
 }

@@ -135,6 +135,7 @@ export function ResourceCard({
   headerControl,
   player,
   asPost = false,
+  imageUrl: ownImageUrl,
 }: ResourceCardProps) {
   const navigable = useIsPostPreviewNavigable();
   const [expanded, setExpanded] = useState(false);
@@ -221,9 +222,13 @@ export function ResourceCard({
   const youTubeSize = youTubeId ? (YOUTUBE_CARD_SIZES.find((size) => missesOf(size) < 2) ?? null) : null;
   const youTubeUrl = youTubeId && youTubeSize ? getYouTubeThumbnailUrl(youTubeId, youTubeSize) : null;
   const youTubeSrc = youTubeUrl && youTubeSize && missesOf(youTubeSize) > 0 ? getImageRetryUrl(youTubeUrl) : youTubeUrl;
-  const shownImageSrc = youTubeSrc ?? routeImageSrc;
+  // A route address the caller made for the card's own image stands for it (a post the app read); once
+  // it fails the card shows its type's tile, as no other route serves that image.
+  const givenImage = ownImageUrl && !failedImages.includes(ownImageUrl) ? ownImageUrl : null;
+  const shownImageSrc = ownImageUrl ? givenImage : (youTubeSrc ?? routeImageSrc);
   const onShownImageError = () => {
-    if (youTubeSrc) setYouTubeMisses((misses) => [...misses, `${youTubeId}/${youTubeSize}`]);
+    if (givenImage) onImageError(givenImage);
+    else if (youTubeSrc) setYouTubeMisses((misses) => [...misses, `${youTubeId}/${youTubeSize}`]);
     else onRouteImageError();
   };
   const title = card.name?.trim() || og?.title?.trim() || getDisplayLink(href || card.uri);

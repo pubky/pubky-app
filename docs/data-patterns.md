@@ -497,7 +497,8 @@ member's `image` (`GET /v1/groups/{id}`, the image it may borrow), or, with `&ep
 episodes by that title (`GET /v1/resources/{id}/episodes`). With `&og=1` a settled card with no image of its own shows
 its own web link's preview image (`getCardPreviewLink`), so a card never names a page by itself. `?link=<link>&src=`
 is for a link with no card (`ResourceLinkCard`, `GenericPreview`): it serves only that page's `og:image`, the page
-`/api/og-metadata` reads anyway. `?youtube=<video id>&variant=hq720|mqdefault` reads only
+`/api/og-metadata` reads anyway. `?xpost=<post ID>&src=` serves only a photo or video still on `pbs.twimg.com` that
+the X post the app's server read (`/api/x-post`) carries. `?youtube=<video id>&variant=hq720|mqdefault` reads only
 `https://i.ytimg.com/vi/<id>/<variant>.jpg`. Anything else is a 404 with no image read; Pinakes unset or not knowing
 the card is a 404, a page or image host failing for now a 502. Images are JPEG, PNG, WebP or GIF by their bytes, at
 most 4 MB, read within 8 s over at most three redirects, each hop address-checked (`fetchGuardedImage`, shared with
@@ -533,7 +534,20 @@ included. A settled social post shows as a post from the card's own data at once
 it carries no video (`showsPostFromCard`) there is nothing to press. One with a video (a video frame or stream, a
 `VideoObject` type, or an X video thumbnail as its card or link preview image: `hasPostVideo`) keeps "Play on
 <site>": the press opens the site's post inside the card and its video plays there, inside the post (a post's frame
-takes no autoplay parameter). A post Pinakes could not read keeps "Show on <site>".
+takes no autoplay parameter). An X post whose card does not tell it (no card, or one without its text: unread,
+pending, failed) is read by the app's own server (`/api/x-post?id=`, `XPostApplication`: X's
+syndication host at the one address `react-tweet` reads, only the post's ID sent, as `PubkyApp/<version>`, nothing
+of the viewer's, no redirect, 512 KB and 6 s; a 200 that is no JSON object is a failure, one that is no post none; posts kept an hour in a
+bounded cache, a per-instance budget, X paused 30 s after a 429, 5xx or no answer) as soon as the link's card read has
+answered (not waiting for a resolve, and also with Pinakes unset), and shows as a post the same way (`useXPostCard` →
+`withXPost`; on the resource page too, a link with no card included), its image through `?xpost=`. A video in it shows
+its still and Play: the press plays its MP4 (`video.twimg.com` only, at most 720p) in the app's own player inside the
+post (`XPostVideo`: a same-origin frame whose document sends no Referer, as X's video host refuses another site's;
+the page's own referrer policy is untouched; a page-wide Content-Security-Policy added later must allow
+`media-src https://video.twimg.com` and the frame's inline style), read from `/api/x-post` only then when the card told the post itself
+(`XPostPlayer`; the read starts as the viewer reaches for Play, pointer down or focus); one with no MP4 (a live
+broadcast), or a video that errs or has no data within 8 s, loads X's post there instead. A Mastodon or other post
+Pinakes could not read, or an X post the server could not read either, keeps "Show on <site>".
 A YouTube, Vimeo or X link Pinakes does not know (a post's embed or a link in its text) is sent to Pinakes once its
 box is near the screen (`usePinakesCard`'s `resolveOnView`: `POST /v1/resolve` from the viewer's browser, so it counts
 against the viewer's own Pinakes budget; once per link per page load, a refusal kept, never a `pubky://` or pubky.app

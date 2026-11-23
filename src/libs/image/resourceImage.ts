@@ -43,6 +43,15 @@ export function getLinkImageUrl(link: string, src: string | null | undefined): s
   return `${RESOURCE_IMAGE_ROUTE}?${new URLSearchParams({ link, src })}`;
 }
 
+/**
+ * The app's own address for an image of an X post its server read (`/api/image?xpost=<post ID>&src=<image>`),
+ * or `null` without an image: the route serves only a photo or video still that post carries.
+ */
+export function getXPostImageUrl(postId: string, src: string | null | undefined): string | null {
+  if (!src) return null;
+  return `${RESOURCE_IMAGE_ROUTE}?${new URLSearchParams({ xpost: postId, src })}`;
+}
+
 /** Where YouTube serves a video's thumbnails (`https://i.ytimg.com/vi/<id>/<size>.jpg`). */
 const YOUTUBE_THUMBNAIL_HOSTS = new Set(['i.ytimg.com', 'img.youtube.com']);
 

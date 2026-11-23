@@ -241,6 +241,15 @@ export class ImageApplication {
     return images?.includes(src) ? ImageApplication.readImage(src) : null;
   }
 
+  /**
+   * An image of an X post the app's server read, once its caller has checked that the post carries it
+   * (`XPostApplication.carriesImage`: one of its photos or its video's still, on X's media host). Read
+   * with the same guards, caps, cache and per-site slots as a card's image.
+   */
+  static async fetchPostImage(src: string): Promise<TResourceImageRead> {
+    return ImageApplication.readImage(src);
+  }
+
   /** A YouTube video's thumbnail (`getYouTubeThumbnailSource`: `i.ytimg.com`, the ID and a listed size). */
   static async fetchYouTubeThumbnail(thumbnail: TYouTubeThumbnail): Promise<TResourceImageRead> {
     // Its own cache and budget: any video ID can be asked for, so neither card images nor their reads

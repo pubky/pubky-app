@@ -5,6 +5,7 @@ import { Container } from '@/atoms/Container/Container';
 import { PINAKES_SLOW_READ_MS } from '@/config/pinakes';
 import { usePinakesCard } from '@/hooks/usePinakesCard/usePinakesCard';
 import { useViewportObserver } from '@/hooks/useViewportObserver/useViewportObserver';
+import { prefetchXPost } from '@/hooks/useXPost/useXPost';
 import { useIsPostPreviewNavigable } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import { ResourceAlsoOn } from '@/molecules/ResourceCard/ResourceAlsoOn';
 import { getMenuAlsoOn } from '@/molecules/ResourceCard/ResourceAlsoOn.utils';
@@ -21,6 +22,8 @@ import { ResourceEmbedFrame } from '@/molecules/ResourceCard/ResourceEmbedFrame'
 import { hasPostVideo, showsPostFromCard } from '@/molecules/ResourceCard/ResourcePost';
 import { useResourceSurface } from '@/molecules/ResourceCard/ResourceSurfaceContext';
 import { usePostPreviewImage } from '@/molecules/ResourceCard/usePostPreviewImage';
+import { useXPostCard } from '@/molecules/ResourceCard/useXPostCard';
+import { XPostPlayer } from '@/molecules/ResourceCard/XPostVideo';
 import { ResourceCardSkeleton } from '@/molecules/ResourceCardSkeleton/ResourceCardSkeleton';
 import {
   getCategoryPlayers,
@@ -35,6 +38,7 @@ import { AnimatedHeight } from '@/molecules/ResourcePlayer/ResourcePlayerFrame';
 import { useCardPlayer } from '@/molecules/ResourcePlayer/useCardPlayer';
 import { useFramePress } from '@/molecules/ResourcePlayer/useResourcePlayer';
 import { ResourceActions } from '@/organisms/ResourceActions/ResourceActions';
+import { getXPostVideo } from '@/pipes/x-post/x-post';
 import { useSettingsStore } from '@/stores/settings/settings.store';
 import { useSlowRead } from '../Generic/useSlowRead';
 import type { EmbedResourceKind } from '../Provider.types';
@@ -162,7 +166,11 @@ function NativeEmbedChoice({
   // In the composer a link Pinakes did not know is being read (`resolve`), and a post just published
   // waits for that read too, as does any link read on view: wait for it, so no platform embed loads only
   // to give way to the card.
-  const isReading = isLoading || Boolean(isResolving);
+  // An X post Pinakes' card cannot tell (none, or no text) is read by the app's own server as soon as the
+  // card read has answered, without waiting for Pinakes to read the link.
+  const pinakesCard = getNativeEmbedCard(data);
+  const xPost = useXPostCard(pinakesCard, url, kind === 'post' && !embedsUpFront && !isLoading);
+  const isReading = isLoading || xPost.pending || (Boolean(isResolving) && !xPost.card);
   const isSlow = useSlowRead(url, isReading, PINAKES_SLOW_READ_MS);
   const embedRef = useRef<HTMLDivElement>(null);
   const engaged = useEmbedEngaged(embedRef);
@@ -175,8 +183,8 @@ function NativeEmbedChoice({
   // A post being written (the composer, the Reply and Repost dialogs) previews the resource.
   const isPreview = isComposing || !navigable;
 
-  const card = getNativeEmbedCard(data);
-  const alsoOn = card ? getMenuAlsoOn(card, url) : null;
+  const card = xPost.card;
+  const alsoOn = pinakesCard ? getMenuAlsoOn(pinakesCard, url) : null;
   // Card (no player) above the video's service in Players: our card, its player from the switch.
   const videoProvider = kind === 'video' ? getPlayerTarget(url)?.provider : undefined;
   // The Players of its kind (`getPlayerCategory`: by the card's type, else Video for a video, else Music).
@@ -248,6 +256,9 @@ function NativeEmbedChoice({
         )}
         aria-expanded={isPostOpen}
         surface={actionSurface}
+        // Reaching for it starts reading the post, so its video is known by the press.
+        onPointerDown={() => prefetchXPost(url)}
+        onFocus={() => prefetchXPost(url)}
         onClick={() => {
           setIsPostOpen(!isPostOpen);
           setOpenedWithoutCard(!isPostOpen && card === null);
@@ -270,17 +281,18 @@ function NativeEmbedChoice({
 
   // The link to act on (`getResourceTarget`: the link as written, folded), card or not; the card's link
   // and its other spellings read along.
-  const target = getResourceTarget(card, url);
+  // The footer is Pinakes' card's, also under a post the app's server read.
+  const target = getResourceTarget(pinakesCard, url);
   const actions = (
     <ResourceActions
       uri={target.uri}
       spellings={target.spellings}
       postUri={url}
-      collectionsCount={card?.collections}
+      collectionsCount={pinakesCard?.collections}
       tagsLabel={getResourceTagsLabel(card)}
-      linkUrl={card ? getResourceLinks(card, url).linkUrl : getHttpUrl(url)}
+      linkUrl={pinakesCard ? getResourceLinks(pinakesCard, url).linkUrl : getHttpUrl(url)}
       title={card?.name}
-      card={card}
+      card={pinakesCard}
       playOn={showPost}
       extraMenuContent={
         alsoOn
@@ -303,10 +315,16 @@ function NativeEmbedChoice({
   // stays: a video's player (`player.player`), or the post's embed from Show on, loads inside it.
   if (showsCard || (player.isCard && card)) {
     const ownEmbed = !hasCardPlayer && !player.isCard;
+    const postVideo = getXPostVideo(card);
     const postEmbed =
       ownEmbed && isPostOpen && !failed ? (
         <Container overrideDefaults className="min-w-0" data-testid="native-embed-body">
-          {loadsEmbed && renderEmbed({ onError: onEmbedError, autoplay: true })}
+          {/* An X post's video the app's server read plays in the app's player, else the site's post shows. */}
+          <XPostPlayer
+            link={url}
+            src={postVideo}
+            fallback={() => loadsEmbed && renderEmbed({ onError: onEmbedError, autoplay: true })}
+          />
         </Container>
       ) : null;
     const inCard = !embedsUpFront;
@@ -321,6 +339,7 @@ function NativeEmbedChoice({
         player={player.player ?? (inCard ? postEmbed : null)}
         // A post shows from the card's data, text and image at once; a video in it keeps its press.
         asPost={!embedsUpFront}
+        imageUrl={xPost.imageUrl}
       />
     );
   }

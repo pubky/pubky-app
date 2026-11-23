@@ -6,6 +6,7 @@ import { isPinakesConfigured, PINAKES_SLOW_READ_MS } from '@/config/pinakes';
 import { usePauseMediaOutsideViewport } from '@/hooks/usePauseMediaOutsideViewport/usePauseMediaOutsideViewport';
 import { usePinakesCard } from '@/hooks/usePinakesCard/usePinakesCard';
 import { useViewportObserver } from '@/hooks/useViewportObserver/useViewportObserver';
+import { prefetchXPost } from '@/hooks/useXPost/useXPost';
 import { getFirstLinkUrl } from '@/libs/post/postLinkUrl';
 import {
   useIsNestedPostPreview,
@@ -16,11 +17,14 @@ import { getResourceLinks } from '@/molecules/ResourceCard/ResourceCard.utils';
 import { hasPostVideo, showsPostFromCard } from '@/molecules/ResourceCard/ResourcePost';
 import { useResourceSurface } from '@/molecules/ResourceCard/ResourceSurfaceContext';
 import { usePostPreviewImage } from '@/molecules/ResourceCard/usePostPreviewImage';
+import { useXPostCard } from '@/molecules/ResourceCard/useXPostCard';
+import { XPostPlayer } from '@/molecules/ResourceCard/XPostVideo';
 import { ResourceCardSkeleton } from '@/molecules/ResourceCardSkeleton/ResourceCardSkeleton';
 import { getCategoryPlayers, isPlayable, PlayerCategory } from '@/molecules/ResourcePlayer/resourcePlayer.utils';
 import { PlayOnPill, PlayOnPillPlaceholder } from '@/molecules/ResourcePlayer/ResourcePlayerControls';
 import { AnimatedHeight } from '@/molecules/ResourcePlayer/ResourcePlayerFrame';
 import { useCardPlayer } from '@/molecules/ResourcePlayer/useCardPlayer';
+import { getXPostVideo } from '@/pipes/x-post/x-post';
 import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { useSettingsStore } from '@/stores/settings/settings.store';
 import type { PostLinkEmbedsProps } from './PostLinkEmbeds.types';
@@ -136,14 +140,14 @@ interface EmbedOnPressProps {
  * embed shows it, with no footer of its own (the link is the post's text, not its resource), its
  * player or the post's embed loading inside it on a press. Without one (Pinakes unset, no card, a
  * failed or slow read): the link's own preview as a card (`NativeEmbedLinkCard`), the platform's
- * embed loading inside it on its Play. Nothing loads from the platform before the press.
+ * embed loading inside it on its Play. An X post the card cannot tell (none, or no text) is read by the
+ * app's own server (`useXPostCard`) and shows as a post. Nothing loads from the platform before the press.
  */
 function EmbedOnPress(props: EmbedOnPressProps) {
   // The default margin: the box counts as near 200px before it scrolls in.
   const { ref, isVisible } = useViewportObserver();
   const [wasNear, setWasNear] = useState(false);
   if (isVisible && !wasNear) setWasNear(true);
-  if (!isPinakesConfigured()) return <NativeEmbedLinkCard {...props} />;
   // The composer reads its preview at once and once (no re-reads); elsewhere the read waits for the box.
   const choice =
     props.isComposing || wasNear ? (
@@ -161,18 +165,22 @@ function EmbedOnPress(props: EmbedOnPressProps) {
 
 function EmbedOnPressChoice({ isOnScreen, ...props }: EmbedOnPressProps & { isOnScreen: boolean }) {
   // The box is near the screen (it is only mounted then): a link Pinakes does not know is read now.
+  // With Pinakes unset nothing is asked of it; an X post is still read by the app's server.
   const { data, isLoading, isResolving } = usePinakesCard(
-    props.link,
+    isPinakesConfigured() ? props.link : null,
     props.isComposing ? { resolve: true } : { recheck: isOnScreen, resolveOnView: true },
   );
-  const isReading = isLoading || Boolean(isResolving);
+  // An X post Pinakes' card cannot tell (none, or no text) is read by the app's own server as soon as the
+  // card read has answered, without waiting for Pinakes to read the link (also with Pinakes unset).
+  const xPost = useXPostCard(getNativeEmbedCard(data), props.link, props.kind === 'post' && !isLoading);
+  const isReading = isLoading || xPost.pending || (Boolean(isResolving) && !xPost.card);
   const isSlow = useSlowRead(props.link, isReading, PINAKES_SLOW_READ_MS);
   // The embed opened before a card was read: a card read later keeps the embed that plays.
   const [openedWithoutCard, setOpenedWithoutCard] = useState(false);
   if (isReading && !isSlow) return <ResourceCardSkeleton />;
-  const card = getNativeEmbedCard(data);
+  const { card } = xPost;
   if (!card || openedWithoutCard) return <NativeEmbedLinkCard {...props} onOpen={setOpenedWithoutCard} />;
-  return <EmbedOnPressCard {...props} card={card} />;
+  return <EmbedOnPressCard {...props} card={card} imageUrl={xPost.imageUrl} />;
 }
 
 /**
@@ -188,11 +196,13 @@ function EmbedOnPressCard({
   isComposing = false,
   renderEmbed,
   card,
-}: EmbedOnPressProps & { card: TPinakesResourceDetail }) {
+  imageUrl,
+}: EmbedOnPressProps & { card: TPinakesResourceDetail; imageUrl?: string | null }) {
   const [isOpen, setIsOpen] = useState(false);
   const navigable = useIsPostPreviewNavigable();
   const surface = useResourceSurface() === 'card' ? 'default' : undefined;
   const isVideo = kind === 'video';
+  const postVideo = getXPostVideo(card);
   // An X post shows its video by its link preview's still (`hasPostVideo`): read as the card reads it.
   const postPreview = usePostPreviewImage(card, kind === 'post');
   const player = useCardPlayer(isVideo && isPlayable(card, link) ? card : null, link, surface, {
@@ -214,6 +224,9 @@ function EmbedOnPressCard({
         )}
         aria-expanded={isOpen}
         surface={surface}
+        // Reaching for it starts reading the post, so its video is known by the press.
+        onPointerDown={() => prefetchXPost(link)}
+        onFocus={() => prefetchXPost(link)}
         onClick={() => setIsOpen(!isOpen)}
         data-testid="show-embed"
       />
@@ -226,7 +239,8 @@ function EmbedOnPressCard({
   const embed =
     pill && isOpen ? (
       <Container overrideDefaults className="min-w-0" data-testid="native-embed-body">
-        {renderEmbed()}
+        {/* An X post's video the app's server read plays in the app's player, else the site's post shows. */}
+        <XPostPlayer link={link} src={postVideo} fallback={renderEmbed} />
       </Container>
     ) : undefined;
   return (
@@ -237,6 +251,7 @@ function EmbedOnPressCard({
       player={player.player ?? embed}
       // A post shows from the card's data, text and image at once; a video in it keeps its press.
       asPost
+      imageUrl={imageUrl}
     />
   );
 }

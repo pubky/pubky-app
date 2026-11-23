@@ -3,18 +3,28 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { IMAGE_BUSY, IMAGE_UNAVAILABLE } from '@/application/image/image.types';
 import { GET } from './route';
 
-const { mockApplicationFetch, mockLinkFetch, mockYouTubeFetch } = vi.hoisted(() => ({
-  mockApplicationFetch: vi.fn(),
-  mockLinkFetch: vi.fn(),
-  mockYouTubeFetch: vi.fn(),
-}));
+const { mockApplicationFetch, mockLinkFetch, mockYouTubeFetch, mockPostImageFetch, mockCarriesImage } = vi.hoisted(
+  () => ({
+    mockApplicationFetch: vi.fn(),
+    mockLinkFetch: vi.fn(),
+    mockYouTubeFetch: vi.fn(),
+    mockPostImageFetch: vi.fn(),
+    mockCarriesImage: vi.fn(),
+  }),
+);
 
 vi.mock('@/application/image/image', () => ({
   ImageApplication: {
     fetchCardImage: mockApplicationFetch,
     fetchLinkImage: mockLinkFetch,
     fetchYouTubeThumbnail: mockYouTubeFetch,
+    fetchPostImage: mockPostImageFetch,
   },
+}));
+vi.mock('@/application/x-post/x-post', () => ({
+  X_POST_BUSY: 'busy',
+  X_POST_UNAVAILABLE: 'unavailable',
+  XPostApplication: { carriesImage: mockCarriesImage },
 }));
 
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0]);
@@ -33,6 +43,60 @@ beforeEach(() => {
   mockApplicationFetch.mockReset();
   mockLinkFetch.mockReset();
   mockYouTubeFetch.mockReset();
+  mockPostImageFetch.mockReset();
+  mockCarriesImage.mockReset();
+});
+
+describe('GET /api/image?xpost=', () => {
+  const POST_SRC = 'https://pbs.twimg.com/media/photo.jpg';
+  const post = (id: string, src = POST_SRC) => request(`?${new URLSearchParams({ xpost: id, src })}`);
+
+  it('serves an image the post the server read carries, as an image only', async () => {
+    mockCarriesImage.mockResolvedValueOnce(true);
+    mockPostImageFetch.mockResolvedValueOnce({ body: JPEG.buffer, contentType: 'image/jpeg' });
+
+    const response = await GET(post('123'));
+
+    expect(response.status).toBe(200);
+    expect(mockCarriesImage).toHaveBeenCalledWith('123', POST_SRC);
+    expect(mockPostImageFetch).toHaveBeenCalledWith(POST_SRC);
+    expectSafeHeaders(response);
+  });
+
+  it('refuses an image the post does not carry, reading nothing', async () => {
+    mockCarriesImage.mockResolvedValueOnce(false);
+
+    const response = await GET(post('123', 'https://pbs.twimg.com/media/other.jpg'));
+
+    expect(response.status).toBe(404);
+    expect(mockPostImageFetch).not.toHaveBeenCalled();
+  });
+
+  it.each(['abc', '12a', '1'.repeat(21), ''])('refuses the post ID %j without a read', async (id) => {
+    const response = await GET(post(id));
+
+    expect(response.status).toBe(400);
+    expect(mockCarriesImage).not.toHaveBeenCalled();
+  });
+
+  it('refuses a post with a second mode', async () => {
+    const response = await GET(request(`?${new URLSearchParams({ xpost: '1', uri: URI, src: POST_SRC })}`));
+
+    expect(response.status).toBe(400);
+  });
+
+  it.each([
+    ['busy', 503],
+    ['unavailable', 502],
+  ])('answers %s as %i, never cached', async (answer, status) => {
+    mockCarriesImage.mockResolvedValueOnce(answer);
+
+    const response = await GET(post('123'));
+
+    expect(response.status).toBe(status);
+    expect(response.headers.get('cache-control')).toBe('no-store');
+    expect(mockPostImageFetch).not.toHaveBeenCalled();
+  });
 });
 
 describe('GET /api/image', () => {
