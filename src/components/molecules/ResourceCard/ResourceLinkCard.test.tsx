@@ -101,8 +101,25 @@ describe('ResourceLinkCard', () => {
 
     render(<ResourceLinkCard url={URL} actions={<div data-testid="actions" />} />);
 
-    expect(screen.queryByTestId('resource-link-card')).not.toBeInTheDocument();
+    // The media file's own card (`GenericPreview`), with its Play and no footer.
+    expect(screen.getByTestId('media-preview')).toHaveAttribute('data-type', 'audio');
     expect(screen.queryByTestId('actions')).not.toBeInTheDocument();
+  });
+
+  it('keeps its frame for a file link when asked, the given title and type in it', () => {
+    mockUseOgMetadata.mockReturnValue({
+      metadata: { url: URL, title: null, image: null, type: 'image' },
+      isLoading: false,
+      error: null,
+    });
+
+    render(<ResourceLinkCard url={URL} title="photo.jpg" typeLabel="Image" keepFrame />);
+
+    expect(screen.getByTestId('resource-link-card-title')).toHaveTextContent('photo.jpg');
+    expect(screen.getByText('Image')).toBeInTheDocument();
+    // A file's page has nothing more: no click-through, the title no link.
+    expect(screen.getByTestId('resource-link-card')).not.toHaveAttribute('data-click-through');
+    expect(screen.getByTestId('resource-link-card-title').tagName).toBe('SPAN');
   });
 
   describe('large, atop the link’s resource page', () => {

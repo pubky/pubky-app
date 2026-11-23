@@ -518,9 +518,14 @@ image's own address. A card image that is a YouTube thumbnail (`getYouTubeThumbn
 `hqdefault`, which has bars above and below the video) shows the video's 16:9 `hq720`, else `mqdefault`, from
 `?youtube=`, and the image as the card names it only when neither loads; a song's, album's or playlist's cover then
 shows the thumbnail's middle square, where a label upload's cover sits.
+A link straight to an image file (`GenericPreview`), with platform embeds up front off, is read by Pinakes on view
+like a platform's link (`resolveOnView`): its card is an image's whose image is the file, served by `?uri=<link>&src=`
+as any card's; with no card it shows as a finished link card (its name and site). Up front on, the file loads from
+its host as before. A link straight to a video or
+audio file shows, with platform embeds up front off, a card from the app's origin (its kind, site and file name) with
+Play in its header; the press loads the file's player inside the card, started by it, and the same pill closes it.
 What remains: any public raster image that a real, settled card or a real page's preview names can be read through
-the app, within those caps. A calendar occurrence's image other than its calendar's is not one the route serves, and
-a post's text link straight to an image file still shows that file from its host.
+the app, within those caps. A calendar occurrence's image other than its calendar's is not one the route serves.
 
 **Players and posts in a card.** With "Show platform embeds up front" off (Settings, Links & Media; the default),
 a link with a Pinakes card shows that card on every surface (a post's embed, the composer, Edit and Repost, feeds and

@@ -442,6 +442,22 @@ describe('ImageApplication.fetchLinkImage', () => {
     expect(mockCard).not.toHaveBeenCalled();
   });
 
+  it('serves nothing for a link straight to an image file, the file itself included', async () => {
+    const FILE = new URL('https://files.example.com/photo.png');
+    mockOg.mockResolvedValue({ url: FILE.href, type: 'image' });
+
+    await expect(ImageApplication.fetchLinkImage(FILE, FILE.href)).resolves.toBeNull();
+    expect(mockImageFetch).not.toHaveBeenCalled();
+  });
+
+  it.each(['video', 'audio'])('serves nothing for a link to a %s file', async (type) => {
+    const FILE = new URL(`https://files.example.com/media.${type === 'video' ? 'mp4' : 'mp3'}`);
+    mockOg.mockResolvedValue({ url: FILE.href, type });
+
+    await expect(ImageApplication.fetchLinkImage(FILE, FILE.href)).resolves.toBeNull();
+    expect(mockImageFetch).not.toHaveBeenCalled();
+  });
+
   it('reads no image for a link whose preview names none', async () => {
     mockOg.mockResolvedValue({ url: LINK.href, type: 'website', title: 'A page', image: null });
     await expect(ImageApplication.fetchLinkImage(LINK, OG_IMAGE)).resolves.toBeNull();

@@ -28,6 +28,14 @@ interface ResourceLinkCardProps {
   size?: 'default' | 'large';
   /** The type the header names (a platform's link with no card: "Video", "Post"); none by default. */
   typeLabel?: string | null;
+  /** The title instead of the preview's (a file link's name). */
+  title?: string;
+  /**
+   * Always this frame, also for a link the preview reads as an image, video or audio file (which is
+   * else handed to `GenericPreview`): a file link's finished card. It is no click-through and its title
+   * no link: a file's resource page has nothing more to show or play.
+   */
+  keepFrame?: boolean;
   /** In the header, before the source: a platform's link's Play (`PostLinkEmbeds`). */
   headerControl?: ReactNode;
   /**
@@ -64,6 +72,8 @@ export function ResourceLinkCard({
   actions,
   size = 'default',
   typeLabel = null,
+  title: givenTitle,
+  keepFrame = false,
   headerControl,
   player,
   images,
@@ -85,9 +95,9 @@ export function ResourceLinkCard({
       <ResourceCardSkeleton withActions={Boolean(actions)} size={size} />
     );
   }
-  if (metadata && metadata.type !== 'website' && !isLarge) return <GenericPreview url={url} />;
+  if (metadata && metadata.type !== 'website' && !isLarge && !keepFrame) return <GenericPreview url={url} />;
 
-  const title = metadata?.title?.trim() || (linkUrl ? getDisplayLink(url) : url);
+  const title = givenTitle || metadata?.title?.trim() || (linkUrl ? getDisplayLink(url) : url);
   // The preview's image from the app's image route, never its host.
   const routeImage = getLinkImageUrl(url, getHttpUrl(metadata?.image));
   const imageUrl = routeImage && retried === routeImage ? getImageRetryUrl(routeImage) : routeImage;
@@ -95,7 +105,7 @@ export function ResourceLinkCard({
   // Under the title: `images` in order, then the preview's own image, each from the image route.
   const mediaImage = images ? ([...images, routeImage][failedMedia] ?? null) : null;
   // The large card heads the link's own page: no click-through to it.
-  const clickThroughUrl = isLarge ? null : getResourceRoute(url);
+  const clickThroughUrl = isLarge || keepFrame ? null : getResourceRoute(url);
 
   return (
     <ResourceCardFrame
@@ -133,7 +143,17 @@ export function ResourceLinkCard({
           )}
           {/* Like a card's title: the page's heading on the large card, else a link to the resource's
               page (in a new tab where links may not navigate). */}
-          {isLarge ? (
+          {keepFrame && !isLarge ? (
+            <Typography
+              as="span"
+              overrideDefaults
+              dir="auto"
+              data-testid="resource-link-card-title"
+              className="min-w-0 flex-1 text-base font-bold wrap-anywhere text-foreground"
+            >
+              {title}
+            </Typography>
+          ) : isLarge ? (
             <Typography
               as="h2"
               overrideDefaults
