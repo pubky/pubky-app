@@ -524,7 +524,7 @@ describe('PinakesService.resolveCard', () => {
     await expect(PinakesService.resolveCard(URI)).resolves.toEqual(pending);
   });
 
-  it.each([400, 404, 405, 429, 503])('answers no card, quietly, on a %i (a refusal or no route)', async (status) => {
+  it.each([400, 404, 405])('answers no card, quietly, on a %i (a refusal or no route)', async (status) => {
     const report = vi.spyOn(Logger, 'error').mockImplementation(() => {});
     mockFetch.mockResolvedValue(json({ error: 'no' }, status));
 
@@ -533,17 +533,49 @@ describe('PinakesService.resolveCard', () => {
     expect(report).not.toHaveBeenCalled();
   });
 
-  it.each([500, 502])('answers no card on a %i, and reports it', async (status) => {
+  it.each([429, 503])(
+    'answers busy, quietly, with its Retry-After on a %i (a budget used up for now)',
+    async (status) => {
+      const report = vi.spyOn(Logger, 'error').mockImplementation(() => {});
+      mockFetch.mockResolvedValue(
+        new Response('{"error":"busy"}', {
+          status,
+          headers: { 'Content-Type': 'application/json', 'Retry-After': '42' },
+        }),
+      );
+
+      await expect(PinakesService.resolveCard(URI)).resolves.toEqual({ busy: true, retryAfterMs: 42_000 });
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      expect(report).not.toHaveBeenCalled();
+    },
+  );
+
+  it('answers busy with no Retry-After when Pinakes names none', async () => {
+    mockFetch.mockResolvedValue(json({ error: 'busy' }, 429));
+
+    await expect(PinakesService.resolveCard(URI)).resolves.toEqual({ busy: true, retryAfterMs: null });
+  });
+
+  it.each([500, 502])('answers busy on a %i, and reports it', async (status) => {
     const report = vi.spyOn(Logger, 'error').mockImplementation(() => {});
     mockFetch.mockResolvedValue(json({ error: 'no' }, status));
 
-    await expect(PinakesService.resolveCard(URI)).resolves.toBeNull();
+    await expect(PinakesService.resolveCard(URI)).resolves.toEqual({ busy: true, retryAfterMs: null });
     expect(report).toHaveBeenCalledTimes(1);
     expect(report.mock.calls[0][0]).toBe(`[${ErrorService.Pinakes}:resolveCard]`);
   });
 
-  it('answers no card when the request fails', async () => {
+  it('answers busy when the request fails', async () => {
     mockFetch.mockRejectedValue(new TypeError('Failed to fetch'));
+
+    await expect(PinakesService.resolveCard(URI)).resolves.toEqual({ busy: true, retryAfterMs: null });
+  });
+
+  it('answers no card for a malformed answer', async () => {
+    vi.spyOn(Logger, 'error').mockImplementation(() => {});
+    mockFetch.mockResolvedValue(
+      new Response('not json', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    );
 
     await expect(PinakesService.resolveCard(URI)).resolves.toBeNull();
   });

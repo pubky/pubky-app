@@ -533,8 +533,18 @@ included. A settled social post shows as a post from the card's own data at once
 it carries no video (`showsPostFromCard`) there is nothing to press. One with a video (a video frame or stream, a
 `VideoObject` type, or an X video thumbnail as its card or link preview image: `hasPostVideo`) keeps "Play on
 <site>": the press opens the site's post inside the card and its video plays there, inside the post (a post's frame
-takes no autoplay parameter). A post Pinakes could not read keeps "Show on <site>". A link with no card keeps its
-pill.
+takes no autoplay parameter). A post Pinakes could not read keeps "Show on <site>".
+A YouTube, Vimeo or X link Pinakes does not know (a post's embed or a link in its text) is sent to Pinakes once its
+box is near the screen (`usePinakesCard`'s `resolveOnView`: `POST /v1/resolve` from the viewer's browser, so it counts
+against the viewer's own Pinakes budget; once per link per page load, a refusal kept, never a `pubky://` or pubky.app
+link; at most two asks at once, the others in turn; a `pending` answer is not polled by its ID, the link's on-screen
+card read follows it). After a 429, a 5xx or no answer, no link is asked until its `Retry-After` has passed (a minute
+without one, ten at most), and that link may be asked once more by a later view. A generic link only in a post's text
+is sent the same way only when its own preview says nothing (no title and no image: `GenericLinkPreview`). The card's skeleton holds the place meanwhile (at most
+`PINAKES_SLOW_READ_MS`); a link still without a card shows its own preview as a card (`NativeEmbedLinkCard` on
+`ResourceLinkCard`: the page's title and site, a YouTube video's thumbnail from `?youtube=`, else the page's preview
+image from `?link=`), the platform's Play (Show for a post) in its header, its embed loading inside the card on the
+press.
 With platform embeds up front on, the service's player or embed shows up front in place of the card's body.
 
 **Places and events (maps, agenda, dates).** A place's or an event's card shows where it is with `ResourceLocation`

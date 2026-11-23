@@ -39,6 +39,7 @@ import { useSettingsStore } from '@/stores/settings/settings.store';
 import { useSlowRead } from '../Generic/useSlowRead';
 import type { EmbedResourceKind } from '../Provider.types';
 import { chooseNativeEmbed, getNativeEmbedCard, getShowPostLabel } from './nativeEmbed.utils';
+import { NativeEmbedLinkCard } from './NativeEmbedLinkCard';
 
 /**
  * Renders the platform's own embed; `onError` is called when the platform says it cannot show it.
@@ -99,10 +100,12 @@ function useIsLaidOut(box: React.RefObject<HTMLElement | null>): boolean {
  * front off (Settings, Links & Media) gets our card whenever there is one, the card staying: a
  * video's player loads inside it from its Play (`useCardPlayer`); an X post shows as a post from
  * the card's own data at once (`ResourcePost`, nothing asked from X), and a post the card cannot
- * tell (a video post) loads X's embed inside it from "Show on <site>"; else the frame without the
- * embed until Play on / Show on loads it. The card's skeleton holds the place while Pinakes is read
- * (at most `PINAKES_SLOW_READ_MS`), so no embed loads only to be replaced. Nothing is read before
- * the box first comes near the screen.
+ * tell (a video post) loads X's embed inside it from "Show on <site>". A link Pinakes does not know is
+ * sent to be read once its box is near the screen (`resolveOnView`); with no card even then, the link's
+ * own preview shows as a card (`NativeEmbedLinkCard`), the platform's Play in its header and its embed
+ * inside it once pressed. The card's skeleton holds the place while Pinakes is read (at most
+ * `PINAKES_SLOW_READ_MS`), so no embed loads only to be replaced. Nothing is read before the box first
+ * comes near the screen.
  *
  * In the composer, and in the Reply and Repost dialogs (a post being written: `navigable` false),
  * the footer tags the resource before the post is sent, and a player never docks (`preview`).
@@ -149,12 +152,16 @@ function NativeEmbedChoice({
   isOnScreen,
   isLaidOut,
 }: NativeEmbedResourceProps & { isOnScreen: boolean; isLaidOut: boolean }) {
+  const embedsUpFront = useSettingsStore((state) => state.media.embedsUpFront);
+  // With platform embeds up front off, a link Pinakes does not know is sent to be read once its box is
+  // near the screen (`resolveOnView`), so it shows its card instead of waiting for a press.
   const { data, isLoading, isResolving } = usePinakesCard(
     url,
-    isComposing ? { resolve: true } : { recheck: isOnScreen },
+    isComposing ? { resolve: true } : { recheck: isOnScreen, resolveOnView: !embedsUpFront },
   );
   // In the composer a link Pinakes did not know is being read (`resolve`), and a post just published
-  // waits for that read too: wait for it, so no platform embed loads only to give way to the card.
+  // waits for that read too, as does any link read on view: wait for it, so no platform embed loads only
+  // to give way to the card.
   const isReading = isLoading || Boolean(isResolving);
   const isSlow = useSlowRead(url, isReading, PINAKES_SLOW_READ_MS);
   const embedRef = useRef<HTMLDivElement>(null);
@@ -163,7 +170,6 @@ function NativeEmbedChoice({
   const [isPostOpen, setIsPostOpen] = useState(false);
   // The embed was opened from the pill before Pinakes knew the link: a card read later keeps it.
   const [openedWithoutCard, setOpenedWithoutCard] = useState(false);
-  const embedsUpFront = useSettingsStore((state) => state.media.embedsUpFront);
   const media = useSettingsStore((state) => state.media);
   const navigable = useIsPostPreviewNavigable();
   // A post being written (the composer, the Reply and Repost dialogs) previews the resource.
@@ -221,13 +227,17 @@ function NativeEmbedChoice({
   // which may name a video, is read, the pill's place is held.
   const isPostFromCard = !embedsUpFront && kind === 'post' && showsCard && showsPostFromCard(card, postPreview.image);
   // An X post on our card: the card player's pill (`PlayOnPill`) shows the post's embed in the body. The
-  // same for a video on our card the card player cannot play, and for the frame of a link without a
-  // card while embeds load on a press, which offers it again after an embed the platform could not show.
+  // same for a video on our card the card player cannot play, and for the frame of an embed opened
+  // before its card was read. A link with no card shows its own preview as a card, the press in its
+  // header (`NativeEmbedLinkCard`).
+  // An embed opened there stays there when a card is read later, until it is closed.
+  const inLinkCard = isEmbedOnPress && !embedsUpFront && (card === null || openedWithoutCard);
   const showPost =
     // Only where the pill could come: never in the composer, nor once X could not show the post.
     isPostFromCard && postPreview.pending && !isComposing && !failed ? (
       <PlayOnPillPlaceholder uri={url} surface={actionSurface} />
-    ) : (showsCard && !hasCardPlayer && !isComposing && !failed && !isPostFromCard) || isEmbedOnPress ? (
+    ) : (showsCard && !hasCardPlayer && !isComposing && !failed && !isPostFromCard) ||
+      (isEmbedOnPress && !inLinkCard) ? (
       <PlayOnPill
         uri={url}
         isOpen={isPostOpen}
@@ -311,6 +321,21 @@ function NativeEmbedChoice({
         player={player.player ?? (inCard ? postEmbed : null)}
         // A post shows from the card's data, text and image at once; a video in it keeps its press.
         asPost={!embedsUpFront}
+      />
+    );
+  }
+
+  // No card, with platform embeds up front off: the link's own preview as a card, the platform's Play in
+  // its header, the embed loading inside it on the press.
+  if (inLinkCard) {
+    return (
+      <NativeEmbedLinkCard
+        link={url}
+        kind={kind}
+        actions={actions}
+        open={openedWithoutCard}
+        onOpen={setOpenedWithoutCard}
+        renderEmbed={() => loadsEmbed && renderEmbed({ onError: onEmbedError, autoplay: true })}
       />
     );
   }

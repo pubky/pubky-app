@@ -160,22 +160,27 @@ export class PinakesService {
    * Asks Pinakes to read a link now (`POST /v1/resolve`): the card within about 3 s (200), else a
    * `pending` card with its ID to read again (202). Pinakes keeps such a card for a few days unless
    * someone references the link; it is no reference and is not listed by search. Its own budget
-   * (`previews_per_minute`, `previews_per_uri_per_minute`) is small, so no retry here.
+   * (`previews_per_minute`, `previews_per_uri_per_minute`, new links per hour) is small and counted
+   * per client, so no retry here.
    *
-   * A card is optional: every refusal answers `null` quietly (see `QUIET_RESOLVE_STATUSES`; any
-   * other failure is reported), and the caller keeps the link's own preview. A link that carries
-   * credentials (`user:password@`) or does not parse is never sent.
+   * A card is optional: every refusal answers quietly (see `QUIET_RESOLVE_STATUSES`; any other
+   * failure is reported), and the caller keeps the link's own preview. A 429 or 503 (a budget used up
+   * for now), any other server error and a failed connection answer `TPinakesBusy` (with its
+   * `Retry-After`, if any), so a caller can stop asking for a while instead of asking for every link;
+   * any other refusal answers `null`. A link that carries credentials (`user:password@`) or does not
+   * parse is never sent.
    *
-   * @returns The card (`pending` while still read), or `null`
+   * @returns The card (`pending` while still read), `TPinakesBusy`, or `null`
    */
-  static async resolveCard(uri: string): Promise<TPinakesResourceDetail | null> {
+  static async resolveCard(uri: string): Promise<TPinakesResourceDetail | TPinakesBusy | null> {
     const base = getPinakesBaseUrl();
     if (!base || new TextEncoder().encode(uri).length > PINAKES_URI_MAX_BYTES || !isResolvableLink(uri)) {
       return null;
     }
     const endpoint = `${base}${RESOLVE_PATH}`;
+    let response: Response;
     try {
-      const response = await safeFetch(
+      response = await safeFetch(
         endpoint,
         {
           method: HttpMethod.POST,
@@ -186,12 +191,22 @@ export class PinakesService {
         ErrorService.Pinakes,
         'resolveCard',
       );
+    } catch {
+      // A failed connection or a timeout (reported by `safeFetch`, dropped by the `pinakes-transport`
+      // Sentry rule): Pinakes may answer later.
+      return { busy: true, retryAfterMs: null };
+    }
+    try {
       if (response.status !== HttpStatusCode.OK && response.status !== ACCEPTED) {
         // Refusals Pinakes documents for this route stay quiet; anything else is reported.
         if (!QUIET_RESOLVE_STATUSES.has(response.status)) {
           httpResponseToError(response, ErrorService.Pinakes, 'resolveCard', endpoint);
         }
         response.body?.cancel().catch(() => {});
+        if (response.status === HttpStatusCode.TOO_MANY_REQUESTS || response.status >= 500) {
+          const seconds = parseRetryAfterHeader(response.headers.get('retry-after'));
+          return { busy: true, retryAfterMs: seconds === undefined ? null : seconds * 1000 };
+        }
         return null;
       }
       return await parseResponseOrThrow<TPinakesResourceDetail>(
@@ -201,8 +216,7 @@ export class PinakesService {
         endpoint,
       );
     } catch {
-      // A transport failure or a malformed body was already reported as an AppError (the
-      // `pinakes-transport` Sentry rule drops the transport ones); the link keeps its own preview.
+      // A malformed body was already reported as an AppError; the link keeps its own preview.
       return null;
     }
   }

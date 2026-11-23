@@ -12,17 +12,12 @@ import {
   useIsPostPreviewNavigable,
 } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import { ResourceCard } from '@/molecules/ResourceCard/ResourceCard';
-import { getLinkHost, getResourceLinks } from '@/molecules/ResourceCard/ResourceCard.utils';
+import { getResourceLinks } from '@/molecules/ResourceCard/ResourceCard.utils';
 import { hasPostVideo, showsPostFromCard } from '@/molecules/ResourceCard/ResourcePost';
 import { useResourceSurface } from '@/molecules/ResourceCard/ResourceSurfaceContext';
 import { usePostPreviewImage } from '@/molecules/ResourceCard/usePostPreviewImage';
 import { ResourceCardSkeleton } from '@/molecules/ResourceCardSkeleton/ResourceCardSkeleton';
-import {
-  getCategoryPlayers,
-  getPlayerTarget,
-  isPlayable,
-  PlayerCategory,
-} from '@/molecules/ResourcePlayer/resourcePlayer.utils';
+import { getCategoryPlayers, isPlayable, PlayerCategory } from '@/molecules/ResourcePlayer/resourcePlayer.utils';
 import { PlayOnPill, PlayOnPillPlaceholder } from '@/molecules/ResourcePlayer/ResourcePlayerControls';
 import { AnimatedHeight } from '@/molecules/ResourcePlayer/ResourcePlayerFrame';
 import { useCardPlayer } from '@/molecules/ResourcePlayer/useCardPlayer';
@@ -32,6 +27,7 @@ import type { PostLinkEmbedsProps } from './PostLinkEmbeds.types';
 import { parseUrlForLinkEmbed } from './PostLinkEmbeds.utils';
 import { useSlowRead } from './Providers/Generic/useSlowRead';
 import { getNativeEmbedCard, getShowPostLabel } from './Providers/Native/nativeEmbed.utils';
+import { NativeEmbedLinkCard } from './Providers/Native/NativeEmbedLinkCard';
 import { NativeEmbedResource } from './Providers/Native/NativeEmbedResource';
 import type { EmbedData, EmbedProvider, EmbedResourceKind } from './Providers/Provider.types';
 
@@ -46,7 +42,8 @@ import type { EmbedData, EmbedProvider, EmbedResourceKind } from './Providers/Pr
  * whose player the viewer removed from Players shows as any link does (the resource card, or the
  * link's own preview). With platform embeds up front off (the default), a platform embed that is not
  * shown as a resource (a link only in the text, or no Pinakes) shows the link's Pinakes card when
- * there is one, the player inside it, else waits for its Play on / Show on (`EmbedOnPress`).
+ * there is one (Pinakes asked to read the link once it is near the screen), the player inside it,
+ * else the link's own preview as a card with the platform's Play inside it (`EmbedOnPress`).
  */
 export const PostLinkEmbeds = ({ content = '', url, isComposing = false }: PostLinkEmbedsProps) => {
   const isNested = useIsNestedPostPreview();
@@ -133,20 +130,20 @@ interface EmbedOnPressProps {
 /**
  * A platform's embed (an X post, a YouTube or Vimeo video) that is not shown as a resource, with
  * platform embeds up front off. Once the box first comes near the screen (at once in the composer),
- * the link's Pinakes card is read (read-only, re-read while on screen; never asked to read the link),
- * the card's skeleton holding the place for at most `PINAKES_SLOW_READ_MS`. With a card
- * (`EmbedOnPressCard`): the card as a post's embed shows it, with no footer of its own (the link is the
- * post's text, not its resource), its player or the post's embed loading inside it on a press.
- * Without one (Pinakes unset, no card, a failed or slow read): only the card player's pill (Play on
- * <site> / Show on <site>), the platform's embed under it once pressed. Nothing loads from the
- * platform before the press.
+ * the link's Pinakes card is read (re-read while on screen); a link Pinakes does not know is sent to
+ * be read once (`resolveOnView`; the composer's own `resolve` there), the card's skeleton holding the
+ * place for at most `PINAKES_SLOW_READ_MS`. With a card (`EmbedOnPressCard`): the card as a post's
+ * embed shows it, with no footer of its own (the link is the post's text, not its resource), its
+ * player or the post's embed loading inside it on a press. Without one (Pinakes unset, no card, a
+ * failed or slow read): the link's own preview as a card (`NativeEmbedLinkCard`), the platform's
+ * embed loading inside it on its Play. Nothing loads from the platform before the press.
  */
 function EmbedOnPress(props: EmbedOnPressProps) {
   // The default margin: the box counts as near 200px before it scrolls in.
   const { ref, isVisible } = useViewportObserver();
   const [wasNear, setWasNear] = useState(false);
   if (isVisible && !wasNear) setWasNear(true);
-  if (!isPinakesConfigured()) return <EmbedPill {...props} />;
+  if (!isPinakesConfigured()) return <NativeEmbedLinkCard {...props} />;
   // The composer reads its preview at once and once (no re-reads); elsewhere the read waits for the box.
   const choice =
     props.isComposing || wasNear ? (
@@ -163,13 +160,18 @@ function EmbedOnPress(props: EmbedOnPressProps) {
 }
 
 function EmbedOnPressChoice({ isOnScreen, ...props }: EmbedOnPressProps & { isOnScreen: boolean }) {
-  const { data, isLoading } = usePinakesCard(props.link, { recheck: isOnScreen });
-  const isSlow = useSlowRead(props.link, isLoading, PINAKES_SLOW_READ_MS);
-  // The pill opened before a card was read: a card read later keeps the embed that plays.
+  // The box is near the screen (it is only mounted then): a link Pinakes does not know is read now.
+  const { data, isLoading, isResolving } = usePinakesCard(
+    props.link,
+    props.isComposing ? { resolve: true } : { recheck: isOnScreen, resolveOnView: true },
+  );
+  const isReading = isLoading || Boolean(isResolving);
+  const isSlow = useSlowRead(props.link, isReading, PINAKES_SLOW_READ_MS);
+  // The embed opened before a card was read: a card read later keeps the embed that plays.
   const [openedWithoutCard, setOpenedWithoutCard] = useState(false);
-  if (isLoading && !isSlow) return <ResourceCardSkeleton />;
+  if (isReading && !isSlow) return <ResourceCardSkeleton />;
   const card = getNativeEmbedCard(data);
-  if (!card || openedWithoutCard) return <EmbedPill {...props} onOpen={setOpenedWithoutCard} />;
+  if (!card || openedWithoutCard) return <NativeEmbedLinkCard {...props} onOpen={setOpenedWithoutCard} />;
   return <EmbedOnPressCard {...props} card={card} />;
 }
 
@@ -236,41 +238,5 @@ function EmbedOnPressCard({
       // A post shows from the card's data, text and image at once; a video in it keeps its press.
       asPost
     />
-  );
-}
-
-/**
- * A platform's embed with no card to show it on: only the card player's pill (Play on <site> / Show
- * on <site>, as on a resource's card) until it is pressed, then the platform's embed under it, a
- * video started by that press; the pill closes it again. Nothing loads from the platform before the
- * press.
- */
-function EmbedPill({
-  link,
-  kind,
-  renderEmbed,
-  onOpen,
-}: EmbedOnPressProps & {
-  /** Told when the pill opens or closes the embed. */
-  onOpen?: (isOpen: boolean) => void;
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const siteName = getPlayerTarget(link)?.name ?? getLinkHost(link);
-  return (
-    <Container overrideDefaults className="flex min-w-0 flex-col gap-3" data-testid="embed-on-press">
-      <PlayOnPill
-        uri={link}
-        isOpen={isOpen}
-        label={getShowPostLabel(siteName, isOpen, kind === 'video')}
-        aria-expanded={isOpen}
-        className="self-start"
-        onClick={() => {
-          setIsOpen(!isOpen);
-          onOpen?.(!isOpen);
-        }}
-        data-testid="show-embed"
-      />
-      {isOpen && renderEmbed()}
-    </Container>
   );
 }

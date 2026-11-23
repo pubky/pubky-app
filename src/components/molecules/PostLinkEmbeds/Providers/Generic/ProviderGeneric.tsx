@@ -1,5 +1,5 @@
 import type { EmbedData, EmbedProvider, EmbedRenderOptions } from '../Provider.types';
-import { GenericPreview } from './GenericPreview';
+import { GenericLinkPreview } from './GenericLinkPreview';
 import { GenericResourcePreview } from './GenericResourcePreview';
 
 /**
@@ -24,13 +24,14 @@ export const Generic: EmbedProvider = {
 
   /**
    * Render the link a post embeds as an external resource card (when Pinakes is configured); a link
-   * that is only in the post's text keeps the generic website preview
+   * that is only in the post's text keeps the generic website preview, or its card when that preview
+   * says nothing (`GenericLinkPreview`)
    */
   renderEmbed: (embedData: EmbedData, options?: EmbedRenderOptions) => {
     // Type guard: ensure we have a URL type
     if (embedData.type !== 'url') return null;
 
-    if (!options?.isPostEmbed) return <GenericPreview url={embedData.value} />;
+    if (!options?.isPostEmbed) return <GenericLinkPreview url={embedData.value} isComposing={options?.isComposing} />;
 
     return <GenericResourcePreview url={embedData.value} isComposing={options.isComposing} />;
   },

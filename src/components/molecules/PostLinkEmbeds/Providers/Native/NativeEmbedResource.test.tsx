@@ -119,7 +119,25 @@ describe('NativeEmbedResource', () => {
     mockCard(VIDEO_ALONE);
     render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
 
-    expect(usePinakesCard).toHaveBeenCalledWith(VIDEO_URL, { recheck: true });
+    expect(usePinakesCard).toHaveBeenCalledWith(VIDEO_URL, { recheck: true, resolveOnView: false });
+  });
+
+  it('asks Pinakes to read a link it does not know once near the screen, with platform embeds up front off', () => {
+    useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
+    mockCard(VIDEO_ALONE);
+    render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
+
+    expect(usePinakesCard).toHaveBeenCalledWith(VIDEO_URL, { recheck: true, resolveOnView: true });
+  });
+
+  it('holds the skeleton while Pinakes reads a link it did not know on view, loading nothing', () => {
+    useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
+    vi.mocked(usePinakesCard).mockReturnValue({ data: null, isLoading: false, isError: false, isResolving: true });
+    render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
+
+    expect(screen.getByTestId('resource-card-skeleton')).toBeInTheDocument();
+    expect(embed).not.toHaveBeenCalled();
+    expectNoThirdPartyLoads();
   });
 
   it('reads nothing and mounts no footer before it first comes near the screen, then keeps it', () => {
@@ -140,7 +158,7 @@ describe('NativeEmbedResource', () => {
     viewport.isVisible = false;
     rerender(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
     expect(screen.getByTestId('platform-embed')).toBeInTheDocument();
-    expect(usePinakesCard).toHaveBeenLastCalledWith(VIDEO_URL, { recheck: false });
+    expect(usePinakesCard).toHaveBeenLastCalledWith(VIDEO_URL, { recheck: false, resolveOnView: false });
   });
 
   it('reads the composer’s link at once, wherever the box is', () => {
@@ -529,21 +547,32 @@ describe('NativeEmbedResource', () => {
         expect(screen.getByTestId('show-embed')).toHaveAccessibleName('Close the YouTube video');
       });
 
-      it('keeps the frame of a link Pinakes does not know, its embed only from Play on, and closes it again', () => {
+      it('shows a link Pinakes does not know as a finished card from the app, its embed inside it on Play', () => {
         mockCard(null);
         render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
 
-        const frame = screen.getByTestId('resource-embed-frame');
-        expect(within(frame).getByTestId('resource-actions')).toHaveAttribute('data-uri', VIDEO_URL);
+        const card = screen.getByTestId('resource-link-card');
+        expect(within(card).getByTestId('resource-actions')).toHaveAttribute('data-uri', VIDEO_URL);
+        expect(within(card).getByTestId('resource-card-type')).toHaveTextContent('Video');
+        // The video's thumbnail from the app's image route, no pill standing in for content.
+        expect(within(card).getByTestId('resource-card-image').querySelector('img')).toHaveAttribute(
+          'src',
+          '/api/image?youtube=dQw4w9WgXcQ&variant=hq720',
+        );
         expect(embed).not.toHaveBeenCalled();
-        // No empty body under the header while nothing is loaded
-        expect(within(frame).queryByTestId('resource-embed-body')).not.toBeInTheDocument();
+        expectNoThirdPartyLoads();
+        expect(screen.queryByTestId('resource-embed-frame')).not.toBeInTheDocument();
 
-        fireEvent.click(within(frame).getByRole('button', { name: 'Play on YouTube' }));
-        expect(within(frame).getByTestId('resource-embed-body')).toContainElement(screen.getByTestId('platform-embed'));
-        fireEvent.click(within(frame).getByRole('button', { name: 'Close the YouTube video' }));
+        fireEvent.click(within(card).getByRole('button', { name: 'Play on YouTube' }));
+        expect(embed).toHaveBeenLastCalledWith(expect.objectContaining({ autoplay: true }));
+        expect(within(card).getByTestId('resource-link-card-player')).toContainElement(
+          screen.getByTestId('platform-embed'),
+        );
+        // The player takes the thumbnail's place.
+        expect(within(card).queryByTestId('resource-card-image')).not.toBeInTheDocument();
+        fireEvent.click(within(card).getByRole('button', { name: 'Close the YouTube video' }));
         expect(screen.queryByTestId('platform-embed')).not.toBeInTheDocument();
-        expect(within(frame).queryByTestId('resource-embed-body')).not.toBeInTheDocument();
+        expect(within(card).getByTestId('resource-card-image')).toBeInTheDocument();
       });
 
       it('keeps an embed opened before Pinakes knew the link when its card is read later', () => {
@@ -551,15 +580,16 @@ describe('NativeEmbedResource', () => {
         const { rerender } = render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
         fireEvent.click(screen.getByRole('button', { name: 'Play on YouTube' }));
 
+        const player = screen.getByTestId('platform-embed');
         mockCard(VIDEO_ALONE);
         rerender(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
 
-        const frame = screen.getByTestId('resource-embed-frame');
-        expect(within(frame).getByTestId('resource-embed-body')).toContainElement(screen.getByTestId('platform-embed'));
+        // The same embed, never loaded again.
+        expect(screen.getByTestId('platform-embed')).toBe(player);
         expect(screen.queryByTestId('resource-card')).not.toBeInTheDocument();
 
         // Closed, the card takes its place, its Play loading nothing until pressed.
-        fireEvent.click(within(frame).getByRole('button', { name: 'Close the YouTube video' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Close the YouTube video' }));
         expect(screen.getByTestId('resource-card')).toBeInTheDocument();
         expect(screen.getByRole('button', { name: `Play ${videoFixture.name} on YouTube` })).toBeInTheDocument();
         expect(screen.queryByTestId('platform-embed')).not.toBeInTheDocument();
@@ -586,7 +616,7 @@ describe('NativeEmbedResource', () => {
 
           fireEvent.click(screen.getByRole('button', { name: 'Close the YouTube video' }));
           expect(screen.queryByTestId('platform-embed')).not.toBeInTheDocument();
-          expect(screen.getByRole('button', { name: 'Play on YouTube' })).toBeInTheDocument();
+          expect(screen.getByRole('button', { name: `Play ${videoFixture.name} on YouTube` })).toBeInTheDocument();
         } finally {
           vi.useRealTimers();
         }

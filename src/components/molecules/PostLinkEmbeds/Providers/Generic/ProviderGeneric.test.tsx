@@ -5,6 +5,7 @@ import { useSettingsStore } from '@/stores/settings/settings.store';
 import { defaultMediaPreferences } from '@/stores/settings/settings.types';
 import { asInvalid } from '@/test-utils/type-assertions';
 import type { EmbedData } from '../../Providers/Provider.types';
+import { GenericLinkPreview } from './GenericLinkPreview';
 import { GenericPreview } from './GenericPreview';
 import { GenericResourcePreview } from './GenericResourcePreview';
 import { Generic } from './ProviderGeneric';
@@ -157,10 +158,10 @@ describe('ProviderGeneric', () => {
       expect(typeof result).toBe('object');
     });
 
-    it('keeps the generic website preview for a link that is only in the text', () => {
+    it('keeps the generic website preview for a link that is only in the text (its card when it says nothing)', () => {
       const result = Generic.renderEmbed({ type: 'url', value: 'https://example.com' }, { isComposing: true });
 
-      expect(result).toMatchObject({ type: GenericPreview, props: { url: 'https://example.com' } });
+      expect(result).toMatchObject({ type: GenericLinkPreview, props: { url: 'https://example.com' } });
     });
 
     it('renders the external resource preview for the link a post embeds', () => {

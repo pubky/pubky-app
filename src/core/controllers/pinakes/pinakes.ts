@@ -1,5 +1,6 @@
 import { PinakesApplication } from '@/application/pinakes/pinakes';
 import { getOccurrencesWindowStart, type TEventInstance } from '@/pipes/resource/resource.events';
+import type { TPinakesBusy } from '@/services/pinakes/pinakes';
 import type {
   TPinakesCard,
   TPinakesEpisodePage,
@@ -29,12 +30,21 @@ export class PinakesController {
 
   /**
    * Has Pinakes read a link now (`POST /v1/resolve`), for a link it does not know yet: the card
-   * once read (also cached for the link's card reads), or `null` when Pinakes refused or failed.
+   * once read (also cached for the link's card reads), `TPinakesBusy` (with its `Retry-After`) when its
+   * budget is used up for now or it fails (429, 5xx, no answer), or `null` when Pinakes refused the link.
    *
    * @param params.uri - The link as written in the post
+   * @param params.poll - Read a `pending` answer again by its ID until it settles (default); off for a
+   *   link read on view, whose card read is re-read while on screen
    */
-  static resolveCard({ uri }: { uri: string }): Promise<TPinakesResourceDetail | null> {
-    return PinakesApplication.resolveCard(uri);
+  static resolveCard({
+    uri,
+    poll,
+  }: {
+    uri: string;
+    poll?: boolean;
+  }): Promise<TPinakesResourceDetail | TPinakesBusy | null> {
+    return PinakesApplication.resolveCard(uri, { poll });
   }
 
   /**

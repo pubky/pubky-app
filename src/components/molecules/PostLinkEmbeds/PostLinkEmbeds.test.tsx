@@ -234,8 +234,8 @@ describe('PostLinkEmbeds', () => {
       givenCard(VIDEO);
       render(<PostLinkEmbeds content={`Listen ${VIDEO.uri}`} />);
 
-      // Read only as a link already known, re-read while on screen: never asked to be read.
-      expect(usePinakesCard).toHaveBeenCalledWith(VIDEO.uri, { recheck: true });
+      // Re-read while on screen, and sent to be read once near the screen when Pinakes does not know it.
+      expect(usePinakesCard).toHaveBeenCalledWith(VIDEO.uri, { recheck: true, resolveOnView: true });
       expect(screen.getByTestId('resource-card-title')).toHaveTextContent(VIDEO.name!);
       expectNoThirdPartyLoads();
       // The link is the post's text, not its resource: no footer of its own.
@@ -286,15 +286,45 @@ describe('PostLinkEmbeds', () => {
       expect(screen.getByTestId('resource-card-title')).toHaveTextContent('A post on X');
     });
 
-    it('keeps today’s pill for a link Pinakes does not know', () => {
+    it('shows a link Pinakes cannot read as its own preview card, the thumbnail from the app, the player inside it on Play', () => {
       givenCard(null);
       render(<PostLinkEmbeds content={`Watch ${VIDEO.uri}`} />);
 
       expect(screen.queryByTestId('resource-card')).not.toBeInTheDocument();
-      expect(screen.getByTestId('embed-on-press')).toBeInTheDocument();
+      expect(screen.queryByTestId('embed-on-press')).not.toBeInTheDocument();
+      const card = screen.getByTestId('resource-link-card');
+      expect(within(card).getByTestId('resource-card-image').querySelector('img')?.getAttribute('src')).toMatch(
+        /^\/api\/image\?youtube=/,
+      );
       expect(document.querySelector('iframe')).toBeNull();
-      fireEvent.click(screen.getByRole('button', { name: 'Play on YouTube' }));
-      expect(screen.getByTestId('YouTube video player').getAttribute('src')).toContain('autoplay=1');
+      expectNoThirdPartyLoads();
+      fireEvent.click(within(card).getByRole('button', { name: 'Play on YouTube' }));
+      expect(
+        within(screen.getByTestId('resource-link-card-player')).getByTestId('YouTube video player').getAttribute('src'),
+      ).toContain('autoplay=1');
+      expect(document.querySelectorAll('iframe')).toHaveLength(1);
+    });
+
+    it('shows the same card for a text X link with no card, X’s post only inside it from Show on', () => {
+      givenCard(null);
+      render(<PostLinkEmbeds content={`See ${X_LINK}`} />);
+
+      const card = screen.getByTestId('resource-link-card');
+      expect(within(card).getByText('Post')).toBeInTheDocument();
+      expect(document.querySelector('[data-testid^="twitter-tweet"]')).toBeNull();
+      expectNoThirdPartyLoads();
+      fireEvent.click(within(card).getByRole('button', { name: 'Show on x.com' }));
+      expect(within(screen.getByTestId('resource-link-card-player')).getByTestId('twitter-tweet')).toBeInTheDocument();
+    });
+
+    it('shows the preview card without Pinakes, asking it nothing', () => {
+      vi.mocked(isPinakesConfigured).mockReturnValue(false);
+      givenCard(null);
+      render(<PostLinkEmbeds content={`Watch ${VIDEO.uri}`} />);
+
+      expect(screen.getByTestId('resource-link-card')).toBeInTheDocument();
+      expect(usePinakesCard).not.toHaveBeenCalled();
+      expect(document.querySelector('iframe')).toBeNull();
     });
 
     it('holds the place with the card’s skeleton while Pinakes reads, loading nothing', () => {
@@ -302,6 +332,15 @@ describe('PostLinkEmbeds', () => {
       render(<PostLinkEmbeds content={`Watch ${VIDEO.uri}`} />);
 
       expect(screen.queryByRole('button', { name: /Play/ })).not.toBeInTheDocument();
+      expect(document.querySelector('iframe')).toBeNull();
+    });
+
+    it('holds the skeleton while Pinakes is asked to read a link it did not know', () => {
+      vi.mocked(usePinakesCard).mockReturnValue({ data: null, isLoading: false, isError: false, isResolving: true });
+      render(<PostLinkEmbeds content={`Watch ${VIDEO.uri}`} />);
+
+      expect(screen.getByTestId('resource-card-skeleton')).toBeInTheDocument();
+      expect(screen.queryByTestId('resource-link-card')).not.toBeInTheDocument();
       expect(document.querySelector('iframe')).toBeNull();
     });
 

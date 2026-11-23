@@ -14,6 +14,7 @@ import { useIsPostPreviewNavigable } from '@/molecules/PostPreviewCard/PostPrevi
 import { ResourceCardSkeleton } from '@/molecules/ResourceCardSkeleton/ResourceCardSkeleton';
 import { getDisplayLink, getHttpUrl, getLinkHost } from './ResourceCard.utils';
 import { CARD_MUTED_TEXT, ResourceCardFrame, ResourceCardHeader } from './ResourceCardFrame';
+import { ResourceCardMedia } from './ResourceCardMedia';
 
 interface ResourceLinkCardProps {
   /** The link as written in the post. */
@@ -25,6 +26,21 @@ interface ResourceLinkCardProps {
    * heading and no link, the source ("Open in <site>") is its one link out, and the card is no click-through.
    */
   size?: 'default' | 'large';
+  /** The type the header names (a platform's link with no card: "Video", "Post"); none by default. */
+  typeLabel?: string | null;
+  /** In the header, before the source: a platform's link's Play (`PostLinkEmbeds`). */
+  headerControl?: ReactNode;
+  /**
+   * A platform's player loaded inside the card by `headerControl`: under the title, in the image's
+   * place, its own controls (never a click-through).
+   */
+  player?: ReactNode;
+  /**
+   * Images from the app's image route to show under the title at a post's media size, tried in order
+   * (the next once one fails to load), then the preview's own image: a video's still. Without them
+   * the preview's own image shows beside the title.
+   */
+  images?: readonly string[];
 }
 
 /**
@@ -37,14 +53,29 @@ interface ResourceLinkCardProps {
  * A link the preview reads as an image, video or audio file keeps `GenericPreview`, which shows or
  * plays it inline; not on the resource page (`large`), which keeps the frame and its footer. There,
  * while the preview is read, its skeleton shows the link and the footer, as while Pinakes reads it.
+ *
+ * A platform's link with no card (a YouTube or Vimeo video, an X post: `PostLinkEmbeds`) is this card
+ * with its Play in the header (`headerControl`), its thumbnail under the title (`images`) and, once
+ * pressed, the platform's player in the thumbnail's place (`player`): a finished view from the app's
+ * own origin until the press.
  */
-export function ResourceLinkCard({ url, actions, size = 'default' }: ResourceLinkCardProps) {
+export function ResourceLinkCard({
+  url,
+  actions,
+  size = 'default',
+  typeLabel = null,
+  headerControl,
+  player,
+  images,
+}: ResourceLinkCardProps) {
   const linkUrl = getHttpUrl(url);
   const { metadata, isLoading } = useOgMetadata(linkUrl ? url : null);
   const navigable = useIsPostPreviewNavigable();
   const [failedImage, setFailedImage] = useState<string | null>(null);
   // The preview image whose route answer failed once: asked once more before it is left out.
   const [retried, setRetried] = useState<string | null>(null);
+  // How many of `images` failed to load: the next one shows.
+  const [failedMedia, setFailedMedia] = useState(0);
   const isLarge = size === 'large';
 
   if (isLoading) {
@@ -60,7 +91,9 @@ export function ResourceLinkCard({ url, actions, size = 'default' }: ResourceLin
   // The preview's image from the app's image route, never its host.
   const routeImage = getLinkImageUrl(url, getHttpUrl(metadata?.image));
   const imageUrl = routeImage && retried === routeImage ? getImageRetryUrl(routeImage) : routeImage;
-  const showImage = imageUrl !== null && failedImage !== routeImage;
+  const showImage = !images && imageUrl !== null && failedImage !== routeImage;
+  // Under the title: `images` in order, then the preview's own image, each from the image route.
+  const mediaImage = images ? ([...images, routeImage][failedMedia] ?? null) : null;
   // The large card heads the link's own page: no click-through to it.
   const clickThroughUrl = isLarge ? null : getResourceRoute(url);
 
@@ -76,7 +109,13 @@ export function ResourceLinkCard({ url, actions, size = 'default' }: ResourceLin
         overrideDefaults
         className={cn('flex min-w-0 flex-col gap-3', isLarge ? 'p-6' : 'p-4', clickThroughUrl && 'cursor-pointer')}
       >
-        <ResourceCardHeader typeLabel={null} sourceUri={url} href={linkUrl} siteName={getLinkHost(url)} />
+        <ResourceCardHeader
+          typeLabel={typeLabel}
+          sourceUri={url}
+          href={linkUrl}
+          siteName={getLinkHost(url)}
+          control={headerControl}
+        />
         <Container overrideDefaults className="flex min-w-0 gap-4">
           {showImage && (
             <Image
@@ -117,6 +156,25 @@ export function ResourceLinkCard({ url, actions, size = 'default' }: ResourceLin
             </Link>
           )}
         </Container>
+        {player ? (
+          // A player loaded in the card: its own controls, never a click-through.
+          <Container
+            overrideDefaults
+            data-resource-controls
+            data-testid="resource-link-card-player"
+            className="min-w-0 cursor-auto"
+          >
+            {player}
+          </Container>
+        ) : (
+          mediaImage && (
+            <ResourceCardMedia
+              imageUrl={mediaImage}
+              name={title}
+              onImageError={() => setFailedMedia((count) => count + 1)}
+            />
+          )
+        )}
       </Container>
 
       {actions}

@@ -75,7 +75,7 @@ describe('PinakesController', () => {
     vi.mocked(PinakesApplication.resolveCard).mockResolvedValue(videoFixture);
 
     await expect(PinakesController.resolveCard({ uri: videoFixture.uri })).resolves.toBe(videoFixture);
-    expect(PinakesApplication.resolveCard).toHaveBeenCalledWith(videoFixture.uri);
+    expect(PinakesApplication.resolveCard).toHaveBeenCalledWith(videoFixture.uri, { poll: undefined });
   });
 
   describe('fetchOccurrences', () => {
