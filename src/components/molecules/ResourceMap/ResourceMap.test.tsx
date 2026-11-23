@@ -216,17 +216,21 @@ describe('ResourceMap', () => {
   });
 
   describe('what the tile host gets', () => {
-    it('sends every map request without credentials or a referrer, to the address as the style gives it', async () => {
+    it('sends every map request to the app’s own map route, without credentials or a referrer', async () => {
       mocks.state.isVisible = true;
       renderMap();
       const map = await madeMap();
 
       const tile = 'https://tiles.openfreemap.org/planet/20261111_001001_pt/14/8581/5735.pbf';
       expect(map.options.transformRequest?.(tile)).toEqual({
-        url: tile,
+        url: `${window.location.origin}/api/map?p=planet%2F20261111_001001_pt%2F14%2F8581%2F5735.pbf`,
         credentials: 'omit',
         referrerPolicy: 'no-referrer',
       });
+      const font = 'https://tiles.openfreemap.org/fonts/Noto%20Sans%20Regular/0-255.pbf';
+      expect(map.options.transformRequest?.(font)?.url).toBe(
+        `${window.location.origin}/api/map?p=fonts%2FNoto%2520Sans%2520Regular%2F0-255.pbf`,
+      );
     });
 
     it('credits the map once it is drawn, each part linked, and draws no second credit of the library’s own', async () => {
@@ -566,19 +570,16 @@ describe('ResourceMap', () => {
   });
 
   describe('consent', () => {
-    it('loads nothing with platform embeds up front off, until Show map is pressed', async () => {
+    it('draws the map at once with platform embeds up front off: no Show map, every request to the app', async () => {
       mocks.state.isVisible = true;
       mocks.state.embedsUpFront = false;
       renderMap();
-      await act(async () => {});
-      expect(mocks.state.maps).toHaveLength(0);
-      // Nothing is on its way: no loading map, the button to ask for one
-      expect(screen.queryByTestId('resource-map-loading')).toBeNull();
 
-      fireEvent.click(screen.getByRole('button', { name: 'Show map' }));
-
-      await madeMap();
+      const map = await madeMap();
       expect(screen.queryByRole('button', { name: 'Show map' })).toBeNull();
+      expect(map.options.transformRequest?.(String(map.options.style))?.url).toBe(
+        `${window.location.origin}/api/map?p=styles%2Fdark`,
+      );
     });
   });
 

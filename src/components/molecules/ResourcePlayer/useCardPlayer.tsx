@@ -4,6 +4,9 @@ import { type ReactNode, useEffect, useId, useRef, useState } from 'react';
 import { pauseMedia, tellsWhenPlaying } from '@/libs/utils/mediaPlayback';
 import { getResourceStatus, playsInCard } from '@/molecules/ResourceCard/ResourceCard.utils';
 import { hasPostVideo, showsPostFromCard } from '@/molecules/ResourceCard/ResourcePost';
+import { isLocationRow } from '@/molecules/ResourceMap/ResourceLocation';
+import { useResourceLocationVariant } from '@/molecules/ResourceMap/ResourceLocationContext';
+import { getMapsDestination } from '@/molecules/ResourceMap/ResourceMap.utils';
 import type { PostActionSurface } from '@/organisms/PostActionsBar/PostActionButton';
 import { PinakesStatus, type TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { useSettingsStore } from '@/stores/settings/settings.store';
@@ -127,9 +130,17 @@ export function useCardPlayer(
   const players = getCategoryPlayers(media, category);
   // With platform embeds up front off, a post the card tells from its own data (`showsPostFromCard`)
   // shows as a post in the card: its site's post frame is no choice then.
+  // A place or event whose card draws its own map (`ResourceLocation`): a map service's embed would be a
+  // second map under it, so it is no choice; one with no map drawn (no point, a row) keeps it.
+  const locationVariant = useResourceLocationVariant();
+  const destination = card ? getMapsDestination(card) : null;
+  // With platform embeds up front on the map service's embed stays a choice, as before.
+  const drawsOwnMap = !embedsUpFront && destination !== null && !isLocationRow(destination, locationVariant);
   const targets = card
     ? getPlayerTargets(card, { href, players }).filter(
-        (target) => embedsUpFront || target.frame !== 'post' || !showsPostFromCard(card, previewImage),
+        (target) =>
+          (embedsUpFront || target.frame !== 'post' || !showsPostFromCard(card, previewImage)) &&
+          !(drawsOwnMap && target.frame === 'map'),
       )
     : [];
   // The link is itself on a service with a player, not gone upstream nor removed from Players: that

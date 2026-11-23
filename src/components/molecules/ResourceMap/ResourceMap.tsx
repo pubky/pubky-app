@@ -4,7 +4,7 @@ import { Fragment, type ReactNode, useEffect, useEffectEvent, useRef, useState }
 import { createPortal } from 'react-dom';
 import { MapPin, MapPinOff } from 'lucide-react';
 import type { Map as MapLibreMap, Marker } from 'maplibre-gl';
-import { Button, ButtonVariant } from '@/atoms/Button/Button';
+import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Link } from '@/atoms/Link/Link';
 import { Skeleton } from '@/atoms/Skeleton/Skeleton';
@@ -23,7 +23,6 @@ import { loadMapLibrary, toPrivateMapRequest } from '@/libs/maps/maplibre';
 import { cn } from '@/libs/utils/utils';
 import { getPointsBounds } from '@/pipes/resource/resource.cluster';
 import type { TPinakesPoint } from '@/services/pinakes/pinakes.types';
-import { useSettingsStore } from '@/stores/settings/settings.store';
 import { formatCoordinates } from './ResourceMap.utils';
 
 /** West, south, east, north in degrees. */
@@ -84,9 +83,9 @@ const FIT_OPTIONS = { padding: MAP_FIT_PADDING_PX, maxZoom: MAP_FIT_MAX_ZOOM };
  *
  * Nothing is loaded for a map before it is on screen: not a tile, and not the library unless the
  * Map view of a search already asked for it (`loadMapLibrary`). It is removed again when it leaves
- * the screen or its card goes away, so no card off screen holds a WebGL context. A viewer who
- * turned platform embeds up front off (Settings, Links & Media) gets "Show map" first. Every
- * request goes out without credentials or a referrer (`toPrivateMapRequest`).
+ * the screen or its card goes away, so no card off screen holds a WebGL context. Every request goes
+ * to the app's own map route, which reads the tile host itself, without credentials or a referrer
+ * (`toPrivateMapRequest`): the map is drawn at once, with nothing asked from another host.
  *
  * Until the map's style is read, a map that may load shows a loading skeleton, from the first render
  * on. The pins and the credit go on as soon as the style is read; the tiles fill in under them.
@@ -113,8 +112,6 @@ export function ResourceMap({
   // The viewport itself, with no margin: a map still below the fold asks the tile host for nothing
   const { ref, isVisible } = useViewportObserver({ rootMargin: '0px' });
   const { isLightApplied } = useThemePreference();
-  const embedsUpFront = useSettingsStore((state) => state.media.embedsUpFront);
-  const [optedIn, setOptedIn] = useState(false);
   const [isTapped, setIsTapped] = useState(false);
   const [loaded, setLoaded] = useState<{ key: string; status: TMapStatus } | null>(null);
   const [pins, setPins] = useState<{ marker: TResourceMapMarker; element: HTMLElement }[]>([]);
@@ -126,8 +123,7 @@ export function ResourceMap({
   const fitKey = JSON.stringify(fitPoints);
   const fitted = useRef(fitKey);
   const hasPoints = fitPoints.length > 0;
-  const isAllowed = embedsUpFront || optedIn;
-  const shouldLoad = isVisible && isAllowed && hasPoints;
+  const shouldLoad = isVisible && hasPoints;
   const status: TMapStatus = shouldLoad ? (loaded?.key === styleUrl ? loaded.status : 'loading') : 'idle';
   const isReady = status === 'ready';
   const isInteractive = mode === 'explore' || isTapped;
@@ -310,16 +306,8 @@ export function ResourceMap({
           className={cn('size-full', status === 'failed' && 'hidden')}
         />
         {/* Also before the viewport is known to show the map: an empty box reads as a map that failed */}
-        {(status === 'loading' || (status === 'idle' && isAllowed)) && (
+        {(status === 'loading' || status === 'idle') && (
           <Skeleton className="absolute inset-0 rounded-none" data-testid="resource-map-loading" />
-        )}
-        {status === 'idle' && !isAllowed && (
-          <Container overrideDefaults className="absolute inset-0 flex items-center justify-center">
-            <Button type="button" variant={ButtonVariant.SECONDARY} size="sm" onClick={() => setOptedIn(true)}>
-              <MapPin aria-hidden="true" />
-              Show map
-            </Button>
-          </Container>
         )}
         {status === 'failed' && (
           <Container

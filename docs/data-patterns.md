@@ -524,8 +524,12 @@ as any card's; with no card it shows as a finished link card (its name and site)
 its host as before. A link straight to a video or
 audio file shows, with platform embeds up front off, a card from the app's origin (its kind, site and file name) with
 Play in its header; the press loads the file's player inside the card, started by it, and the same pill closes it.
-What remains: any public raster image that a real, settled card or a real page's preview names can be read through
-the app, within those caps. A calendar occurrence's image other than its calendar's is not one the route serves.
+What remains, route by route: `/api/image` reads any public raster image that a real, settled card or a real page's
+preview names (anyone can have Pinakes read a page of theirs), within those caps; with `?xpost=` only a photo or video
+still on `pbs.twimg.com` of an X post the app's server read; with `?youtube=` only `i.ytimg.com` thumbnails.
+`/api/x-post` reads X's syndication answer for any well-formed post ID, and gives the browser that post's MP4 address
+on `video.twimg.com`, loaded only on the press of its Play, with no Referer (a frame of its own). `/api/map` reads only the allow-listed paths of
+`tiles.openfreemap.org`. A calendar occurrence's image other than its calendar's is not one the image route serves.
 
 **Players and posts in a card.** With "Show platform embeds up front" off (Settings, Links & Media; the default),
 a link with a Pinakes card shows that card on every surface (a post's embed, the composer, Edit and Repost, feeds and
@@ -575,8 +579,23 @@ end, a selected pin's card; its `geo:` entry ("Default maps app") shows on Andro
 - Nothing loads before a map is on screen (`ResourceMap`: no tile, and no library unless a search's Map button
   started it on hover or focus), and the map is removed when it leaves the screen or its card goes away, so a feed
   never holds one WebGL context per card. Until the style is read the box shows a loading skeleton; the pins go on
-  then, before the tiles. With platform embeds up front off (the default) a viewer gets "Show map" first. Every request goes out without credentials or a referrer (`toPrivateMapRequest`),
-  and nothing of the resource or the viewer is put into a tile address or an "Open in Maps" link.
+  then, before the tiles. Every request of a map (style, TileJSON, tiles, fonts, sprites) goes to the app's own
+  `/api/map?p=<path>` (`toPrivateMapRequest` → `toMapRouteUrl`), without credentials or a referrer, so a map is
+  drawn at once, also with platform embeds up front off, with nothing asked from another host. The route reads
+  `tiles.openfreemap.org` only, and only the paths `toMapTileRequest` allows (the two styles, the planet's TileJSON
+  and vector tiles to zoom 14 of a tile set that TileJSON named in the last two days; a set newer than every one
+  seen has the TileJSON read again past the cache, at most once a minute, before it is refused, Natural Earth relief to zoom 6, the styles' Noto Sans font ranges, the sprites; any
+  other path is a 400 with nothing read), no redirect, 2 MB and 8 s per file, each served as its pattern's type
+  (a PNG only when its bytes are one) with nosniff, sandbox and same-origin headers, the app naming itself
+  (`PubkyApp/<version>`). Files are kept a day (a style an hour, the TileJSON ten minutes, as long as browsers
+  and the CDN are told to keep it) in a bounded cache (64 MB, 2048
+  files), at most 24 reads at once, others waiting their turn up to 4 s (a cold map asks for 12-16 files, two maps
+  20-30; MapLibre never asks again for a tile that failed), from a per-instance budget; a read whose body breaks
+  off is a failure, not a missing file, and the host is not asked for 10 s after it failed. An address on another
+  host, or with a query, goes to the route with no path (refused), never to that host. With platform embeds up front
+  off, a card that draws its own map offers no map service's frame (Pinakes' OpenStreetMap `embed`, `useCardPlayer`): it would be a second map; a
+  card with no map drawn (no point, a row) keeps it. Nothing of the resource or the viewer is put into a tile
+  address or an "Open in Maps" link.
 - The library, its stylesheet and its worker file are one lazily imported unit (`src/libs/maps/maplibre.runtime.ts`),
   kept out of the service worker's precache (`docs/pwa.md`, _Precache diet_).
 - A card's map is inert until tapped; any map asks for two fingers or a modifier key, so the page's scroll never stops

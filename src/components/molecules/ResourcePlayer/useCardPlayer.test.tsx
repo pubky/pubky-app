@@ -1,5 +1,6 @@
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
+import { ResourceLocationProvider } from '@/molecules/ResourceMap/ResourceLocationContext';
 import eventFixture from '@/services/pinakes/fixtures/by-uri.event.json';
 import musicFixture from '@/services/pinakes/fixtures/by-uri.music-recording.json';
 import podcastFixture from '@/services/pinakes/fixtures/by-uri.podcast.json';
@@ -1625,6 +1626,39 @@ describe('useCardPlayer, a frame Pinakes names (`embed`)', () => {
     expect(screen.getByTestId('place')).toHaveAttribute('data-card', 'true');
     expect(within(screen.getByTestId('place')).queryByTestId('resource-player-frame')).not.toBeInTheDocument();
     expect(within(screen.getByTestId('place-header')).getByTestId('player-switch')).toHaveTextContent('Card');
+  });
+
+  it('offers no map service’s frame for a place whose card draws its own map, and keeps it where none is drawn', () => {
+    useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
+    onTestFinished(() => {
+      useSettingsStore.setState({ media: upFrontMedia });
+    });
+    const MAPPED = { ...PLACE, point: { lat: 46.0, lon: 8.95 } };
+    render(
+      <>
+        <Card card={MAPPED} testId="mapped" />
+        <ResourceLocationProvider variant="row">
+          <Card card={MAPPED} testId="row" />
+        </ResourceLocationProvider>
+        <Card card={PLACE} testId="unmapped" />
+      </>,
+    );
+
+    // The card's own map is the place's map: no Show on OpenStreetMap, no second map frame.
+    expect(within(screen.getByTestId('mapped-header')).queryByRole('button', { name: /OpenStreetMap/ })).toBeNull();
+    // A row draws no map, nor does a place with no point: the frame stays one press away.
+    expect(
+      within(screen.getByTestId('row-header')).getByRole('button', { name: 'Show on OpenStreetMap' }),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId('unmapped-header')).getByRole('button', { name: 'Show on OpenStreetMap' }),
+    ).toBeInTheDocument();
+  });
+
+  it('keeps the map service in the switch of a place that draws its map, with platform embeds up front on', () => {
+    render(<Card card={{ ...PLACE, point: { lat: 46.0, lon: 8.95 } }} testId="mapped" />);
+
+    expect(within(screen.getByTestId('mapped-header')).getByTestId('player-switch')).toHaveTextContent('Card');
   });
 
   it('keeps a rich link’s card with platform embeds up front off: its frame in the switch, then Show on', () => {
