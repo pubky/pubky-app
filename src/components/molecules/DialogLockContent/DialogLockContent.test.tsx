@@ -159,10 +159,17 @@ describe('DialogLockContent', () => {
 describe('price field editing (#2458)', () => {
   const field = () => screen.getByLabelText<HTMLInputElement>('Bitcoin Amount', { selector: 'input' });
 
+  const typeAfterSatsFocus = async (user: ReturnType<typeof userEvent.setup>, amount: string) => {
+    await user.click(field());
+    // The focus handler restores the caret in the ungrouped value on the next frame.
+    await act(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
+    await user.keyboard(amount);
+  };
+
   it('keeps the caret where the creator typed when the edit crosses a thousands boundary', async () => {
     const user = userEvent.setup();
     await setup();
-    await user.type(field(), '100');
+    await typeAfterSatsFocus(user, '100');
     field().setSelectionRange(1, 1);
     await user.keyboard('2');
 
@@ -175,7 +182,7 @@ describe('price field editing (#2458)', () => {
   it('lets backspace at the separator position delete a digit instead of a comma that comes back', async () => {
     const user = userEvent.setup();
     await setup();
-    await user.type(field(), '1000');
+    await typeAfterSatsFocus(user, '1000');
     field().setSelectionRange(2, 2); // after "10" while editing; after the comma when "1,000" is shown
     await user.keyboard('{Backspace}');
 
