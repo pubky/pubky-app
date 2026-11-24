@@ -26,6 +26,11 @@ body {
   overscroll-behavior-y: contain;
 }
 
+/* The embedded Shop takes its viewport width from the App body. */
+body:has([data-slot='shop-route']) {
+  min-width: 0;
+}
+
 @theme {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

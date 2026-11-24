@@ -61,7 +61,7 @@ export const DEFAULT_TAG_LIGHT_PALETTE: TagLightPalette = 'pastel';
  * Used for responsive design and media query hooks
  */
 export const BREAKPOINTS = {
-  /** Narrow phones — matches `body` min-width and `--breakpoint-xsm` in globals.css */
+  /** Matches `--breakpoint-xsm` and the default body minimum. On /shop the body follows the viewport. */
   xxs: 375,
   /** Compact mobile: 480px and up */
   xs: 480,
