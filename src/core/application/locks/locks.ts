@@ -60,6 +60,7 @@ import type {
   TPaymentLockParams,
   TReplicateUnlockedContentParams,
   TResolvedPurchase,
+  TSocialCopyScope,
   TStartPaymentParams,
   TStartPaymentResult,
   TViewerScope,
@@ -109,21 +110,16 @@ export class LocksApplication {
    */
   private static readonly inFlightPaidContent = new Map<string, Promise<TUnlockedContent>>();
 
-  /** `hasCopiedSocialFiles` answers per reader, kept for the page's life. */
-  private static readonly socialFilesCopied = new Map<string, Promise<boolean>>();
-
   /**
    * One `copySocialReaderFiles` run per reader and session for the page's life: every lock on screen asks for it,
    * and a run that failed would otherwise list both social roots again for each of them.
    */
   private static readonly socialCopyRuns = new Map<
     string,
-    { run: Promise<void>; isCurrent: TViewerScope['isCurrent'] }
+    { run: Promise<boolean>; isCurrent: TViewerScope['isCurrent'] }
   >();
 
-  /** Forgets the copy state: a test that signs one account in again needs a fresh flag read. */
   static resetSocialCopyStateForTests(): void {
-    this.socialFilesCopied.clear();
     this.socialCopyRuns.clear();
   }
 
@@ -532,11 +528,11 @@ export class LocksApplication {
   static async fetchUnlockedList({
     readerPubky,
     isCurrent,
-  }: TFetchUnlockedListParams & TViewerScope): Promise<TUnlockedListItem[]> {
-    const copied = await this.hasCopiedSocialFiles(readerPubky);
+    socialFilesCopied,
+  }: TFetchUnlockedListParams & TViewerScope & TSocialCopyScope): Promise<TUnlockedListItem[]> {
     const [files, socialFiles] = await Promise.all([
       HomeserverService.listAll({ baseDirectory: GuardedContentParser.unlockedRootUrl(readerPubky) }),
-      copied
+      socialFilesCopied
         ? []
         : HomeserverService.listAll({ baseDirectory: GuardedContentParser.socialUnlockedRootUrl(readerPubky) }),
     ]);
@@ -628,18 +624,18 @@ export class LocksApplication {
     readerPubky,
     preview,
     isCurrent,
-  }: TFetchReplicatedContentParams & TViewerScope): Promise<TUnlockedContent | null> {
+    socialFilesCopied,
+  }: TFetchReplicatedContentParams & TViewerScope & TSocialCopyScope): Promise<TUnlockedContent | null> {
     const lockId = LockContentParser.lockIdFromUrl(lockUrl);
     if (!lockId) return null;
 
     const operation = 'fetchReplicatedContent';
-    const copied = await this.hasCopiedSocialFiles(readerPubky);
     let replicatedPost = await this.readReplicatedMarker(
       GuardedContentParser.unlockedPostUrl(readerPubky, lockId),
       lockId,
       operation,
     );
-    if (!replicatedPost && !copied) {
+    if (!replicatedPost && !socialFilesCopied) {
       const socialMarkerUrl = GuardedContentParser.socialUnlockedPostUrl(readerPubky, lockId);
       replicatedPost = await this.readReplicatedMarker(socialMarkerUrl, lockId, operation);
     }
@@ -698,41 +694,22 @@ export class LocksApplication {
   }
 
   /**
-   * Whether the reader's files under `/priv/social/` are all copied to the app's namespace (#3206);
-   * until then the unlocked list and the replica read also look there. One flag read per reader and
-   * page load. A failed read counts as not copied: reading both roots is only slower. Await it before
-   * reading the new root: read after, it can report a copy that finished after that read, and the
-   * file is then in neither answer.
+   * Copies the reader's replicas and purchase files from `/priv/social/` to the app's namespace (#3206). Only what
+   * is missing at the new root is written, so a run that stops midway is finished on a later page load. A file that
+   * fails is left for that load and the rest still copied. True when no file failed (the social roots empty
+   * included) and the session is still current: `LocksController` then records it for this browser.
+   * `fetchResolvedPurchase` keeps reading the social root either way. Never rejects.
    */
-  private static hasCopiedSocialFiles(readerPubky: string): Promise<boolean> {
-    let copied = this.socialFilesCopied.get(readerPubky);
-    if (!copied) {
-      copied = HomeserverService.getBytesIfExists(GuardedContentParser.socialCopyFlagUrl(readerPubky)).then(
-        (flag) => flag !== null,
-        () => false,
-      );
-      this.socialFilesCopied.set(readerPubky, copied);
-    }
-    return copied;
-  }
-
-  /**
-   * Copies the reader's replicas and purchase files from `/priv/social/` to the app's namespace
-   * (#3206), in the background when a lock's replica or the Unlocked screen is read. Only what is missing
-   * at the new root is written, so a run that stops midway is finished on a later page load. A file that
-   * fails is left for that load and the rest still copied; the flag goes last, only after a run with no
-   * failure. It stops the list reads only: `fetchResolvedPurchase` keeps reading the social root. The
-   * social files stay (#3207). Never rejects.
-   */
-  static copySocialReaderFiles(params: TFetchUnlockedListParams & TViewerScope): Promise<void> {
+  static copySocialReaderFiles(params: TFetchUnlockedListParams & TViewerScope): Promise<boolean> {
     const { readerPubky, isCurrent } = params;
     const previous = this.socialCopyRuns.get(readerPubky);
-    // A run whose session ended stops before its next write and leaves no flag, so this session starts its own.
+    // A run whose session ended stops before its next write and reports false, so this session starts its own.
     if (previous && previous.isCurrent?.() !== false) return previous.run;
     const run = this.runSocialCopy(params).catch((error: unknown) => {
       // AppError factories already report at their origin. Only unexpected raw failures need a warning.
       if (!isAppError(error))
         Logger.warn('Failed to copy the Locks reader files from /priv/social/', { readerPubky, error });
+      return false;
     });
     this.socialCopyRuns.set(readerPubky, { run, isCurrent });
     return run;
@@ -741,16 +718,14 @@ export class LocksApplication {
   private static async runSocialCopy({
     readerPubky,
     isCurrent,
-  }: TFetchUnlockedListParams & TViewerScope): Promise<void> {
+  }: TFetchUnlockedListParams & TViewerScope): Promise<boolean> {
     // Every write follows a read, so the session is checked before each one, the first included.
     const fence = HomeserverService.createWriteFence({ guardFirstPass: true });
-    if (await this.hasCopiedSocialFiles(readerPubky)) return;
     const [socialUnlocked, socialPurchases] = await Promise.all([
       HomeserverService.listAll({ baseDirectory: GuardedContentParser.socialUnlockedRootUrl(readerPubky) }),
       HomeserverService.listAll({ baseDirectory: GuardedContentParser.socialPurchasesRootUrl(readerPubky) }),
     ]);
-    // Empty for most readers, who never used Locks before #3206. They still get the flag: without it, every
-    // page load with a lock on screen lists both social roots again and reads a second marker for each lock.
+    // Empty for most readers, who never used Locks before #3206: the new roots need no listing then.
     if (socialUnlocked.length > 0 || socialPurchases.length > 0) {
       const [unlocked, purchases] = await Promise.all([
         HomeserverService.listAll({ baseDirectory: GuardedContentParser.unlockedRootUrl(readerPubky) }),
@@ -758,16 +733,10 @@ export class LocksApplication {
       ]);
       const purchasesCopied = await this.copySocialPurchases(readerPubky, socialPurchases, purchases, fence, isCurrent);
       const replicasCopied = await this.copySocialReplicas(readerPubky, socialUnlocked, unlocked, fence, isCurrent);
-      if (!purchasesCopied || !replicasCopied) return;
+      if (!purchasesCopied || !replicasCopied) return false;
     }
     // Signed out or switched account midway: the next run for this account finishes the copy.
-    if (isCurrent?.() === false) return;
-
-    const flag = new TextEncoder().encode(JSON.stringify({ copied_at: Date.now() }));
-    await retryHomeserverWriteAfterReread(fence, () =>
-      HomeserverService.putBlob({ url: GuardedContentParser.socialCopyFlagUrl(readerPubky), blob: flag, fence }),
-    );
-    this.socialFilesCopied.set(readerPubky, Promise.resolve(true));
+    return isCurrent?.() !== false;
   }
 
   /**

@@ -338,14 +338,6 @@ describe('GuardedContentParser', () => {
     });
   });
 
-  describe('socialCopyFlagUrl', () => {
-    it("puts the flag beside the two roots in the app's namespace, outside both listings", () => {
-      expect(GuardedContentParser.socialCopyFlagUrl('readerpubky')).toBe(
-        'pubky://readerpubky/priv/app.pubky/v1/locks/_social_copied.json',
-      );
-    });
-  });
-
   describe('completedLockIds', () => {
     const url = (tail: string) => `pubky://readerpubky/priv/app.pubky/v1/locks/unlocked/${tail}`;
 

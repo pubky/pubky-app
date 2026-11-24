@@ -147,40 +147,48 @@ Builds before #3206 kept the replicas and purchase files under `/priv/social/unl
 `/priv/social/purchases/` (with the one-file-per-lock `<lockId>.json` of builds before #2827). `/priv/social/` is
 for objects the social spec defines, and only pubky.app reads these files, so they moved to the app's own namespace.
 
+The copy is permanent code; a reader who comes back at any time is copied the first time a locked post is read.
+
 1. **Copy.** `LocksController` starts `LocksApplication.copySocialReaderFiles` and never waits for it when a
    replica is read: another account's locked post whose content the local cache does not hold, in a feed or on its
    own page (`fetchReplicatedContent`), and the Unlocked screen (`fetchUnlockedList`). Only when the grant reads
    `/priv/social/` and writes the app's namespace (a refused listing would be reported on every page load with a
    lock). No sign-in or restore starts it, so an account that sees no locked post sends no request for it. Each
-   reader and session gets one run per page load,
-   which every lock on screen joins, finished or not. Once the flag exists, a run reads only the flag. It lists both
-   roots and copies only what the new root lacks: purchase files (a legacy `<lockId>.json` becomes
-   `<lockId>/<bundleId>.json`), then each completed replica, attachments first and the marker last, its attachment
-   URLs pointing at the copies, and the cached row replaced with it. The copied marker carries `unlocked_at`, the
-   source marker's write time (0 when it has none), so the Unlocked screen keeps its order. A run that stops midway
-   or fails is finished on a later page load; a run whose account signs out is also finished by the next read after
-   a sign-in on the same page. A file that fails (a full quota, say) is left for that run while the rest are copied.
-   A legacy purchase file that cannot be parsed, or a name in neither layout, stays where it is. A reader who never
-   reads a replica again is not copied, and #3207, which deletes the social files, has to account for that.
-2. **Flag.** `/priv/app.pubky/v1/locks/_social_copied.json` (named apart from the migration gate's `_migrated.json`)
-   is written last, after a run with no failure. A reader whose social roots are empty (who never used Locks before
-   #3206) gets the flag too once it sees a locked post: without it, every page load with a lock would list both social
-   roots again and read a second marker for each lock on screen.
-3. **Reads.** The flag is read once per reader and page load, before the new root: read after it, the flag can
-   report a copy another tab finished after that read, and the file is then in neither answer. Until the flag
-   exists, one replica is read from the new root, then from the social root only when the new one has no marker,
-   and the Unlocked screen reads both roots, the new one winning. After the flag they read only the new root.
-   Purchase files are read from both roots until #3207, flag or not: one lock's on every payment
-   (`fetchResolvedPurchase`) and all of them for `usePurchasedLocks`. A build before #3206 still open in another
-   tab or device writes its ids under the social root, and a lock with an unreadable file there is still refused
-   instead of paid twice.
+   reader and session gets one run per page load, which every lock on screen joins, finished or not. It lists both
+   social roots and, when they hold anything, both new roots, and copies only what the new root lacks: purchase files
+   (a legacy `<lockId>.json` becomes `<lockId>/<bundleId>.json`), then each completed replica, attachments first and
+   the marker last, its attachment URLs pointing at the copies, and the cached row replaced with it. The copied
+   marker carries `unlocked_at`, the source marker's write time (0 when it has none), so the Unlocked screen keeps
+   its order. A file that fails (a full quota, say) is left for a later page load while the rest are copied; a run
+   whose account signs out is finished by the next read after a sign-in on the same page. A legacy purchase file
+   that cannot be parsed, or a name in neither layout, stays where it is, and a replica whose marker cannot be parsed
+   is skipped.
+2. **Record.** A run in which no file failed to copy (empty social roots included) while its session is still
+   current is recorded by `LocksController` in localStorage, per browser and account
+   (`src/libs/locks/reader-files-copied.ts`). Nothing is written to the homeserver, so reading the record costs no
+   request. With the record, no copy starts. Without it, a read starts one (step 1); a failed run records nothing. A
+   second browser of the same account has no record: it lists the social roots once, finds nothing left to copy
+   when the first browser already copied it, and records it. The record keeps a version: #3207 raises it, so that
+   every browser runs the copy once more. A newer version counts as copied too, so a tab of the previous build open
+   beside a newer one does not copy on every load. Logout does not clear it.
+3. **Reads.** Without the record, one replica is read from the new root, then from the social root only when the
+   new one has no marker, and the Unlocked screen reads both roots, the new one winning. With it, they read only
+   the new root. The controller reads the record before the read starts, so a copy that finishes during that read
+   leaves the replica in the answer of at least one root. A replica that a build before #3206 completes under the
+   social root after the run listed it stays hidden in this browser until the version is raised; purchase recovery
+   finds its completed payment and downloads the content again, as for any listed purchase without a replica. Purchase
+   files are read from both roots, with or without the record: one lock's on every payment (`fetchResolvedPurchase`)
+   and all of them for `usePurchasedLocks`. A build before #3206 still open in another tab or device writes its ids
+   under the social root, and a lock with an unreadable file there is still refused instead of paid twice.
 4. **Writes.** A fresh bundle id is saved under the social root first, then under the new root, both before the
-   proof is submitted, until #3207. A build before #3206 on another device reads only the social root: without that
-   copy it would mint a second id for a lock already paid here. If the second PUT fails, the retry finds the id under
-   the social root, which every purchase read covers, and reuses it.
-5. **Left for #3207.** The social files are not deleted; removing them, the fallback reads, the copy, the social-root
-   write and `/priv/social/:rw` from the Locks scopes is #3207. Account deletion also sweeps `/priv/social/` with that scope, so
-   #3207 decides how a reader's leftover social files go.
+   proof is submitted. A build before #3206 on another device reads only the social root: without that copy it would
+   mint a second id for a lock already paid here. If the second PUT fails, the retry finds the id under the social
+   root, which every purchase read covers, and reuses it.
+5. **Left for #3207.** Three parts exist only for builds before #3206 that are still open: the replica read from
+   the social root, the purchase read from the social root (the legacy `<lockId>.json` included), and the bundle id
+   write under the social root. #3207 removes them some weeks after #3206 reaches production, once those builds are
+   gone. That date comes from the calendar, not from a count of copied readers. `/priv/social/:rw` stays in the
+   Locks scopes: account deletion sweeps the social root with it, and #3207 deletes the social files that have a copy.
 
 ---
 

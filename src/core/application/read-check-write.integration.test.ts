@@ -6,10 +6,12 @@ import { ProfileApplication } from '@/application/profile/profile';
 import { SettingsApplication } from '@/application/settings/settings';
 import { TagApplication } from '@/application/tag/tag';
 import { TagKind } from '@/application/tag/tag.types';
+import { LocksController } from '@/controllers/locks/locks';
 import { NotificationController } from '@/controllers/notification/notification';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { HttpMethod } from '@/libs/http/http.types';
+import { hasCopiedLocksReaderFiles, locksReaderFilesCopiedKey } from '@/libs/locks/reader-files-copied';
 import type { Pubky } from '@/models/models.types';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
 import { UserTtlModel } from '@/models/user/ttl/userTtl';
@@ -59,7 +61,13 @@ vi.mock('@synonymdev/pubky', () => {
   MockPubky.testnet = vi.fn().mockImplementation(createSdk);
   // @ts-expect-error withClient is a static constructor on the SDK class
   MockPubky.withClient = vi.fn().mockImplementation(createSdk);
-  return { Pubky: MockPubky, Client: vi.fn(), resolvePubky: (url: string) => url };
+  return {
+    Pubky: MockPubky,
+    Client: vi.fn(),
+    resolvePubky: (url: string) => url,
+    // The Locks copy checks its grant; the tests pass canonical capabilities only.
+    validateCapabilities: (capabilities: string) => capabilities,
+  };
 });
 
 const USER = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y' as Pubky;
@@ -490,7 +498,6 @@ describe('the copy of the Locks reader files from /priv/social/ (#3206)', () => 
   const BUNDLE = 'A'.repeat(26);
   const SOCIAL = '/priv/social/';
   const NEW = '/priv/app.pubky/v1/locks/';
-  const FLAG = `${NEW}_social_copied.json`;
   const seedReplica = (lockId: string) => {
     homeserver.files.set(`${SOCIAL}unlocked/${lockId}/img1`, 'image bytes');
     homeserver.files.set(
@@ -503,11 +510,15 @@ describe('the copy of the Locks reader files from /priv/social/ (#3206)', () => 
     );
   };
 
-  it('copies the replicas and the legacy purchase file, then writes the flag', async () => {
+  afterEach(() => {
+    localStorage.removeItem(locksReaderFilesCopiedKey(USER));
+  });
+
+  it('copies the replicas and the legacy purchase file, and reports it done', async () => {
     seedReplica('LOCK1');
     homeserver.files.set(`${SOCIAL}purchases/LOCK2.json`, JSON.stringify({ bundle_id: BUNDLE }));
 
-    await LocksApplication.copySocialReaderFiles({ readerPubky: USER });
+    await expect(LocksApplication.copySocialReaderFiles({ readerPubky: USER })).resolves.toBe(true);
 
     expect(homeserver.files.get(`${NEW}unlocked/LOCK1/img1`)).toBe('image bytes');
     expect(JSON.parse(homeserver.files.get(`${NEW}unlocked/LOCK1/post.json`) ?? '').attachments).toEqual([
@@ -516,11 +527,10 @@ describe('the copy of the Locks reader files from /priv/social/ (#3206)', () => 
     expect(JSON.parse(homeserver.files.get(`${NEW}purchases/LOCK2/${BUNDLE}.json`) ?? '')).toEqual({
       bundle_id: BUNDLE,
     });
-    expect(homeserver.files.has(FLAG)).toBe(true);
     expect(homeserver.files.has(`${SOCIAL}unlocked/LOCK1/post.json`)).toBe(true);
   });
 
-  it('sends nothing more once logout begins during a retry, and leaves the flag for the next run', async () => {
+  it('sends nothing more once logout begins during a retry, and reports it not done', async () => {
     seedReplica('LOCK1');
     seedReplica('LOCK2');
     homeserver.putBytes.mockRejectedValueOnce(sdkError(503));
@@ -528,9 +538,47 @@ describe('the copy of the Locks reader files from /priv/social/ (#3206)', () => 
       useAuthStore.setState({ isLoggingOut: true });
     };
 
-    await LocksApplication.copySocialReaderFiles({ readerPubky: USER });
+    await expect(LocksApplication.copySocialReaderFiles({ readerPubky: USER })).resolves.toBe(false);
 
     expect(homeserver.writes.filter((write) => write.isLoggingOut)).toEqual([]);
-    expect(homeserver.files.has(FLAG)).toBe(false);
+  });
+
+  it('records the copy per browser: a second browser lists the social roots once, writes nothing, records it', async () => {
+    const granted = session();
+    useAuthStore.setState({
+      session: asOpaque<Session>({
+        ...granted,
+        info: { ...granted.info, capabilities: ['/priv/social/:rw', '/priv/app.pubky/v1/:rw'] },
+      }),
+    });
+    seedReplica('LOCK1');
+    const list = vi.spyOn(HomeserverService, 'listAll');
+
+    await LocksController.fetchUnlockedList({ readerPubky: USER });
+    await vi.waitFor(() => expect(hasCopiedLocksReaderFiles(USER)).toBe(true));
+    expect(homeserver.files.has(`${NEW}unlocked/LOCK1/post.json`)).toBe(true);
+
+    // Another browser of the account: no record, and a page of its own.
+    localStorage.removeItem(locksReaderFilesCopiedKey(USER));
+    LocksApplication.resetSocialCopyStateForTests();
+    homeserver.writes = [];
+    list.mockClear();
+    await LocksController.fetchUnlockedList({ readerPubky: USER });
+    await vi.waitFor(() => expect(hasCopiedLocksReaderFiles(USER)).toBe(true));
+    expect(homeserver.writes).toEqual([]);
+    // The copy lists both social roots once; the Unlocked screen read lists the unlocked one too.
+    const socialListings = list.mock.calls
+      .map(([{ baseDirectory }]) => baseDirectory)
+      .filter((directory) => directory.includes(SOCIAL));
+    expect(socialListings.sort()).toEqual([
+      `pubky://${USER}${SOCIAL}purchases/`,
+      `pubky://${USER}${SOCIAL}unlocked/`,
+      `pubky://${USER}${SOCIAL}unlocked/`,
+    ]);
+
+    // Recorded: the next read lists only the new root and starts no copy.
+    list.mockClear();
+    await LocksController.fetchUnlockedList({ readerPubky: USER });
+    expect(list.mock.calls).toEqual([[{ baseDirectory: `pubky://${USER}${NEW}unlocked/` }]]);
   });
 });

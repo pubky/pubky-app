@@ -2,7 +2,6 @@ import { isOneOf, postKinds, tryDecodeObject } from 'pubky-social-specs';
 import type { ZodType } from 'zod';
 import {
   APP_LOCKS_PURCHASES_PATH,
-  APP_LOCKS_SOCIAL_COPY_FLAG_PATH,
   APP_LOCKS_UNLOCKED_PATH,
   SOCIAL_LOCKS_PURCHASES_PATH,
   SOCIAL_LOCKS_UNLOCKED_PATH,
@@ -212,11 +211,6 @@ export class GuardedContentParser {
   /** The purchases root of builds before #3206: `pubky://<reader>/priv/social/purchases/`. */
   static socialPurchasesRootUrl(readerPubky: string): string {
     return `pubky://${readerPubky}${SOCIAL_PURCHASES_PREFIX}`;
-  }
-
-  /** Present once every file under the social roots is copied to the app's namespace (#3206). */
-  static socialCopyFlagUrl(readerPubky: string): string {
-    return `pubky://${readerPubky}${APP_LOCKS_SOCIAL_COPY_FLAG_PATH}`;
   }
 
   /**

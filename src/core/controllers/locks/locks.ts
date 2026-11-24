@@ -23,6 +23,7 @@ import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { isAppError, isAuthError } from '@/libs/error/error.utils';
+import { hasCopiedLocksReaderFiles, markLocksReaderFilesCopied } from '@/libs/locks/reader-files-copied';
 import { sleep, stripPubkyPrefix } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
 import { LockContentParser, LockFileParser } from '@/pipes/locks/locks.parser';
@@ -459,8 +460,9 @@ export class LocksController {
   /** Loads already-unlocked content from the reader's `/priv`, or null if this lock isn't unlocked yet. */
   static fetchReplicatedContent(params: TFetchReplicatedContentParams): Promise<TUnlockedContent | null> {
     const isCurrent = captureViewerSession();
-    this.startReaderFileCopy(params.readerPubky, isCurrent);
-    return LocksApplication.fetchReplicatedContent({ ...params, isCurrent });
+    const socialFilesCopied = hasCopiedLocksReaderFiles(params.readerPubky);
+    if (!socialFilesCopied) this.startReaderFileCopy(params.readerPubky, isCurrent);
+    return LocksApplication.fetchReplicatedContent({ ...params, isCurrent, socialFilesCopied });
   }
 
   /** Loads the media bytes for one already-listed unlocked post. */
@@ -471,19 +473,23 @@ export class LocksController {
   /** Lists the reader's unlocked content (newest first) from their own `/priv/app.pubky/v1/locks/unlocked/`. */
   static fetchUnlockedList(params: TFetchUnlockedListParams): Promise<TUnlockedListItem[]> {
     const isCurrent = captureViewerSession();
-    this.startReaderFileCopy(params.readerPubky, isCurrent);
-    return LocksApplication.fetchUnlockedList({ ...params, isCurrent });
+    const socialFilesCopied = hasCopiedLocksReaderFiles(params.readerPubky);
+    if (!socialFilesCopied) this.startReaderFileCopy(params.readerPubky, isCurrent);
+    return LocksApplication.fetchUnlockedList({ ...params, isCurrent, socialFilesCopied });
   }
 
   /**
-   * Copies the reader files of builds before #3206 in the background. Started by the two replica reads, not at
-   * sign-in, so an account that sees no locked post sends no request for it. Only when the grant reads the old
-   * root and writes the new one: a listing the grant refuses would fail on every page load with a lock.
+   * Copies the reader files of builds before #3206 in the background and records the copy in this browser. Started
+   * by the two replica reads, not at sign-in, so an account that sees no locked post sends no request for it. Only
+   * when the grant reads the old root and writes the new one: a listing the grant refuses would fail on every page
+   * load with a lock.
    */
   private static startReaderFileCopy(readerPubky: string, isCurrent: () => boolean): void {
     const { session } = useAuthStore.getState();
     if (!session || !hasCapabilities(session.info.capabilities, LOCKS_READER_COPY_CAPABILITIES)) return;
-    void LocksApplication.copySocialReaderFiles({ readerPubky, isCurrent });
+    void LocksApplication.copySocialReaderFiles({ readerPubky, isCurrent }).then((copied) => {
+      if (copied && isCurrent()) markLocksReaderFilesCopied(readerPubky);
+    });
   }
 
   /** Creator reads their own locked content directly from the guarded original (owner == signed-in). */

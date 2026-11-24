@@ -16,10 +16,7 @@ export const APP_LOCKS_UNLOCKED_PATH = `${APP_PRIVATE_PATH}locks/unlocked/`;
 /** The Locks reader's purchase files, one per bundle id (`<lockId>/<bundleId>.json`). */
 export const APP_LOCKS_PURCHASES_PATH = `${APP_PRIVATE_PATH}locks/purchases/`;
 
-/** Written once the reader's Locks files of builds before #3206 are copied, so lists stop reading them. */
-export const APP_LOCKS_SOCIAL_COPY_FLAG_PATH = `${APP_PRIVATE_PATH}locks/_social_copied.json`;
-
-/** Where builds before #3206 kept the Locks reader files; read until copied, removed in #3207. */
+/** Where builds before #3206 kept the Locks reader files; the copy, which is permanent, reads them. */
 export const SOCIAL_LOCKS_UNLOCKED_PATH = '/priv/social/unlocked/';
 export const SOCIAL_LOCKS_PURCHASES_PATH = '/priv/social/purchases/';
 
