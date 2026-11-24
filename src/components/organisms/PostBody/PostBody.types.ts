@@ -9,6 +9,8 @@ export interface PostBodyProps {
   textClassName?: string;
   /** The web link the post embeds: previewed in place of the first link of `content`, also without text. */
   embedUrl?: string | null;
+  /** Whether the link embeds show (default); off when another part of the post already shows what they would. */
+  showLinkPreview?: boolean;
   /** Forwarded to `PostAttachments`. */
   mediaVariant?: 'default' | 'list';
   /** Forwarded to `PostAttachments`. */

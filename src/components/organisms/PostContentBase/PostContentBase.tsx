@@ -3,6 +3,8 @@ import { Container } from '@/atoms/Container/Container';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { isArticleContent } from '@/libs/post/articleContent';
 import { getShownEmbedUrl } from '@/libs/post/postEmbedUrl';
+import { getFirstLinkUrl } from '@/libs/post/postLinkUrl';
+import { getAppLinkReference } from '@/libs/pubkyApp/appLink';
 import { cn, isPostDeleted } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
 import { PostLinkEmbeds } from '@/molecules/PostLinkEmbeds/PostLinkEmbeds';
@@ -32,6 +34,7 @@ export function PostContentBase({
   textClassName,
   mediaVariant = 'default',
   embedUrl,
+  quotedPostId,
 }: PostContentBaseProps) {
   const localAttachments = useLocalFilesStore((s) => s.posts[postId]);
   const localArticleCover = useLocalFilesStore((s) => s.articleCovers[postId]);
@@ -95,6 +98,10 @@ export function PostContentBase({
 
   // An edit can drop the embedded link from the text: then the text's own first link is previewed
   const shownEmbedUrl = getShownEmbedUrl(embedUrl, postDetails.content);
+  // A post written with a link to a post on this host quotes that post (`usePost`): the quoted post
+  // shows under the text, so its link there is not previewed again.
+  const firstLink = quotedPostId ? getAppLinkReference(getFirstLinkUrl(postDetails.content) ?? '') : null;
+  const showLinkPreview = !(firstLink?.kind === 'post' && firstLink.compositeId === quotedPostId);
 
   if (!hasContent && !hasAttachments && !shownEmbedUrl) return null;
 
@@ -109,7 +116,9 @@ export function PostContentBase({
           className={cn('min-w-0', className)}
         >
           {hasContent && <PostText content={postDetails.content} className={textClassName} />}
-          {(hasContent || shownEmbedUrl) && <PostLinkEmbeds content={postDetails.content} url={shownEmbedUrl} />}
+          {showLinkPreview && (hasContent || shownEmbedUrl) && (
+            <PostLinkEmbeds content={postDetails.content} url={shownEmbedUrl} />
+          )}
         </PostAttachments>
       </PlayerFrom>
     );
@@ -124,6 +133,7 @@ export function PostContentBase({
           localAttachments={localAttachments}
           textClassName={textClassName}
           embedUrl={shownEmbedUrl}
+          showLinkPreview={showLinkPreview}
           {...(mediaVariant !== 'default' ? { mediaVariant } : {})}
         />
       </Container>

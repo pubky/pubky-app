@@ -1,16 +1,18 @@
 import { fakeOwner } from 'pubky-social-specs/testing';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { parseAddContentInput } from './useAddContentForm.utils';
 
 const AUTHOR = fakeOwner(1);
 const POST_ID = '00357R34CQ8Q0';
 const COMPOSITE_ID = `${AUTHOR}:${POST_ID}`;
+/** The test page's own origin: the host the app runs on. */
+const HERE = window.location.origin;
 
 describe('parseAddContentInput', () => {
   it.each([
-    ['a post link', `https://pubky.app/post/${AUTHOR}/${POST_ID}`],
-    ['a post link with a query', `https://pubky.app/post/${AUTHOR}/${POST_ID}?ref=share`],
-    ['a post link on another host', `https://example.com/post/${AUTHOR}/${POST_ID}`],
+    ['a post link', `${HERE}/post/${AUTHOR}/${POST_ID}`],
+    ['a post link with a query', `${HERE}/post/${AUTHOR}/${POST_ID}?ref=share`],
+    ['a post link with www.', `http://www.${window.location.host}/post/${AUTHOR}/${POST_ID}`],
     ['a v1 post reference', `pubky://${AUTHOR}/pub/social/v1/posts/${POST_ID}`],
     ['a 0.x post reference', `pubky://${AUTHOR}/pub/pubky.app/posts/${POST_ID}`],
   ])('reads %s as the post', (_, value) => {
@@ -26,6 +28,10 @@ describe('parseAddContentInput', () => {
     ['a plain http link', 'http://example.com'],
     ['a collection path on another host', `https://example.com/collections/${AUTHOR}/${POST_ID}`],
     ['a /post/ path cut short on another host', `https://example.com/post/${AUTHOR}/0035`],
+    ['a post link on another host', `https://example.com/post/${AUTHOR}/${POST_ID}`],
+    ['a post link on another instance of the app', `https://pubky.app/post/${AUTHOR}/${POST_ID}`],
+    ['a collection link on another instance of the app', `https://pubky.app/collections/${AUTHOR}/${POST_ID}`],
+    ['a profile tab of the app', `${HERE}/profile/${AUTHOR}/followers`],
   ])('reads %s as a link, as written', (_, value) => {
     expect(parseAddContentInput(`  ${value} `)).toEqual({ type: 'link', uri: value });
   });
@@ -50,19 +56,24 @@ describe('parseAddContentInput', () => {
       `pubky://${AUTHOR}/pub/social/v1/profile.json`,
       'Only Pubky posts can be added.',
     ],
-    [
-      'a collection link',
-      `https://pubky.app/collections/${AUTHOR}/${POST_ID}`,
-      'Collection can not be added to a collection.',
-    ],
-    ['a post link cut short', `https://pubky.app/post/${AUTHOR}/0035`, 'Enter a valid post URL.'],
-    ['a post link without its id', `https://pubky.app/post/${AUTHOR}`, 'Enter a valid post URL.'],
-    [
-      'a collection link on the host the app runs on',
-      `${window.location.origin}/collections/${AUTHOR}/${POST_ID}`,
-      'Collection can not be added to a collection.',
-    ],
+    ['a profile link', `${HERE}/profile/${AUTHOR}`, 'Only Pubky posts can be added.'],
+    ['a collection link', `${HERE}/collections/${AUTHOR}/${POST_ID}`, 'Collection can not be added to a collection.'],
+    ['a post link cut short', `${HERE}/post/${AUTHOR}/0035`, 'Enter a valid post URL.'],
+    ['a post link without its id', `${HERE}/post/${AUTHOR}`, 'Enter a valid post URL.'],
   ])('refuses %s', (_, value, message) => {
     expect(parseAddContentInput(value)).toEqual({ type: 'invalid', message });
+  });
+
+  describe('during server rendering', () => {
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it('reads every web link as a link, as written: there is no host to compare', () => {
+      const link = `http://localhost:3000/post/${AUTHOR}/${POST_ID}`;
+      vi.stubGlobal('window', undefined);
+
+      expect(parseAddContentInput(link)).toEqual({ type: 'link', uri: link });
+    });
   });
 });

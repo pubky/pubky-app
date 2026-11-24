@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { render, screen } from '@testing-library/react';
+import { fakeOwner } from 'pubky-social-specs/testing';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EnrichedPostDetails } from '@/application/moderation/moderation.types';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
@@ -416,6 +417,62 @@ describe('PostContentBase', () => {
       render(<PostContentBase postId="post-123" embedUrl={EMBED} />);
 
       expect(linkEmbedsUrl()).toBe(EMBED);
+    });
+  });
+
+  describe('a quote whose text links the quoted post', () => {
+    const AUTHOR = fakeOwner(6);
+    const QUOTED = `${AUTHOR}:00357R34CQ8Q0`;
+    const QUOTED_LINK = `${window.location.origin}/post/${AUTHOR}/00357R34CQ8Q0`;
+    const withContent = (content: string) =>
+      mockUsePostDetails.mockReturnValue({ postDetails: createMockPostDetails({ content }), isLoading: false });
+
+    /** Whether the Cards presentation hands PostAttachments a link preview among its children. */
+    const cardsPreviewLink = () =>
+      React.Children.toArray(mockPostAttachments.mock.lastCall?.[0].children).some(
+        (child) => React.isValidElement(child) && child.type === PostLinkEmbeds,
+      );
+
+    it('does not preview that link again', () => {
+      withContent(`Look ${QUOTED_LINK}`);
+
+      render(<PostContentBase postId="post-123" quotedPostId={QUOTED} />);
+
+      expect(vi.mocked(PostLinkEmbeds)).not.toHaveBeenCalled();
+      expect(mockPostText).toHaveBeenCalledWith(expect.objectContaining({ content: `Look ${QUOTED_LINK}` }), undefined);
+    });
+
+    it('does not preview that link again in the Cards presentation', () => {
+      withContent(`Look ${QUOTED_LINK}`);
+
+      const { rerender } = render(<PostContentBase postId="post-123" quotedPostId={QUOTED} mediaVariant="cards" />);
+      expect(cardsPreviewLink()).toBe(false);
+
+      rerender(<PostContentBase postId="post-123" mediaVariant="cards" />);
+      expect(cardsPreviewLink()).toBe(true);
+    });
+
+    it.each([
+      ['another post', `${window.location.origin}/post/${AUTHOR}/00357R34CQ8R0`],
+      ['the same post on another host', `https://pubky.app/post/${AUTHOR}/00357R34CQ8Q0`],
+      ['an external link', 'https://a.example/page'],
+    ])('still previews a first link to %s', (_, link) => {
+      withContent(`Look ${link}`);
+
+      render(<PostContentBase postId="post-123" quotedPostId={QUOTED} />);
+
+      expect(vi.mocked(PostLinkEmbeds)).toHaveBeenCalledWith(
+        expect.objectContaining({ content: `Look ${link}` }),
+        undefined,
+      );
+    });
+
+    it('previews the link in a post that quotes nothing', () => {
+      withContent(`Look ${QUOTED_LINK}`);
+
+      render(<PostContentBase postId="post-123" />);
+
+      expect(vi.mocked(PostLinkEmbeds)).toHaveBeenCalled();
     });
   });
 

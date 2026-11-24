@@ -1,4 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
+import { fakeOwner } from 'pubky-social-specs/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
 import { PinakesStatus } from '@/services/pinakes/pinakes.types';
@@ -48,6 +49,23 @@ describe('usePinakesCard', () => {
 
     expect(result.current.data).toBeNull();
     expect(mocks.fetchCardByUri).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['a post', `/post/${fakeOwner(2)}/00357R34CQ8Q0`],
+    ['a profile', `/profile/${fakeOwner(2)}`],
+  ])('neither reads nor asks Pinakes for a link to %s on the host the app runs on', async (_, path) => {
+    vi.useFakeTimers();
+    try {
+      const { result } = renderHook(() => usePinakesCard(`${window.location.origin}${path}`, { resolve: true }));
+      await act(() => vi.advanceTimersByTimeAsync(PINAKES_RESOLVE_DEBOUNCE_MS * 2));
+
+      expect(result.current).toEqual({ data: null, isLoading: false, isError: false });
+      expect(mocks.fetchCardByUri).not.toHaveBeenCalled();
+      expect(mocks.resolveCard).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   describe('recheck', () => {

@@ -15,7 +15,8 @@ const VIEWER = 'v'.repeat(52);
 const POST_ID = '00357R34CQ8Q0';
 const COMPOSITE_ID = `${AUTHOR}:${POST_ID}`;
 const POST_URI = `pubky://${AUTHOR}/pub/pubky.app/posts/${POST_ID}`;
-const POST_URL = `https://pubky.app/post/${AUTHOR}/${POST_ID}`;
+/** A post's link on the host the app runs on (the test page's own origin). */
+const POST_URL = `${window.location.origin}/post/${AUTHOR}/${POST_ID}`;
 const COLLECTION_ID = `${VIEWER}:collection-1`;
 const YOUTUBE_URL = 'https://www.youtube.com/watch?v=P65ZQL_m9zs';
 const OSM_URL = 'https://www.openstreetmap.org/relation/1682248';
@@ -180,7 +181,7 @@ describe('useAddContentForm', () => {
     };
 
     for (let length = 1; length < POST_ID.length; length++) {
-      await typeValue(`https://pubky.app/post/${AUTHOR}/${POST_ID.slice(0, length)}`);
+      await typeValue(`${window.location.origin}/post/${AUTHOR}/${POST_ID.slice(0, length)}`);
       expect(result.current.form.getFieldState(ADD_CONTENT_FORM_FIELDS.POST_URL).error?.message).toBe(
         'Enter a valid post URL.',
       );
@@ -754,10 +755,11 @@ describe('useAddContentForm', () => {
       ],
       [
         'a collection link',
-        `https://pubky.app/collections/${AUTHOR}/${POST_ID}`,
+        `${window.location.origin}/collections/${AUTHOR}/${POST_ID}`,
         'Collection can not be added to a collection.',
       ],
-      ['a post link cut short', `https://pubky.app/post/${AUTHOR}/0035`, 'Enter a valid post URL.'],
+      ['a post link cut short', `${window.location.origin}/post/${AUTHOR}/0035`, 'Enter a valid post URL.'],
+      ['a profile link', `${window.location.origin}/profile/${AUTHOR}`, 'Only Pubky posts can be added.'],
     ])('refuses %s', async (_, value, message) => {
       const { saved, error } = await submitTo(collectionTarget, value);
 

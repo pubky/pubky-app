@@ -14,7 +14,7 @@ import type { PostContentOrganismProps } from './PostContent.types';
  *
  * **Rendering logic:**
  * - **Repost with content (quote)**: PostContentBase (quote text) + PostPreviewCard (original, with
- *   its own tags and actions)
+ *   its own tags and actions); a link to the original in the quote's text is not previewed again
  * - **Repost without content (plain repost)**: PostContentBase returns null + PostPreviewCard, without
  *   a footer: the repost's own footer already acts on the original (`getInteractionPostId`)
  * - **Web link embed**: PostContentBase previews the embedded link in place of the text's first link
@@ -47,6 +47,7 @@ export function PostContent({ postId, className, textClassName, mediaVariant = '
         textClassName={textClassName}
         mediaVariant={mediaVariant}
         embedUrl={embedUrl}
+        quotedPostId={shouldRenderRepostPreview ? originalPostId : null}
       />
 
       {/* Show original post preview for reposts */}

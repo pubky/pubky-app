@@ -185,9 +185,14 @@ export function usePostInput({
   const openedEmbedUrl = editEmbedSeed?.opened ?? null;
   const [pickedEmbedUrl, setPickedEmbedUrl] = useState<string | null>(null);
   const [removedEmbedUrl, setRemovedEmbedUrl] = useState<string | null>(editEmbedSeed?.removed ?? null);
+  // A new post also offers a link to a post on this host, which it embeds as a quote of that post;
+  // an edit can't change which post a post quotes.
+  const embedOptions = { quotesAppPosts: variant === POST_INPUT_VARIANT.POST };
   const firstEmbedUrl =
-    (variant === POST_INPUT_VARIANT.POST || isEmbedEdit) && !isArticle ? getComposerEmbedUrl(content) : null;
-  const embedUrls = firstEmbedUrl ? getComposerEmbedUrls(content) : [];
+    (variant === POST_INPUT_VARIANT.POST || isEmbedEdit) && !isArticle
+      ? getComposerEmbedUrl(content, embedOptions)
+      : null;
+  const embedUrls = firstEmbedUrl ? getComposerEmbedUrls(content, embedOptions) : [];
   const isPickInText = pickedEmbedUrl !== null && embedUrls.includes(pickedEmbedUrl);
   // Forget a pick the text no longer holds (state adjusted while rendering, not in an effect)
   if (pickedEmbedUrl !== null && !isPickInText) setPickedEmbedUrl(null);

@@ -231,6 +231,11 @@ describe('PostContent', () => {
 
     expect(screen.getByTestId('post-preview-card')).toHaveAttribute('data-post-id', 'orig-author:orig-post');
     expect(screen.getByTestId('post-preview-card')).toHaveAttribute('data-show-tags-actions', 'true');
+    // The quote's text may link the original: the body is told which post shows under it
+    expect(vi.mocked(PostContentBase)).toHaveBeenLastCalledWith(
+      expect.objectContaining({ quotedPostId: 'orig-author:orig-post' }),
+      undefined,
+    );
   });
 
   it('shows no second footer in a plain repost’s preview: the repost’s own acts on the original', () => {
@@ -291,5 +296,9 @@ describe('PostContent', () => {
       'https://en.wikipedia.org/wiki/Bitcoin',
     );
     expect(screen.queryByTestId('post-preview-card')).not.toBeInTheDocument();
+    expect(vi.mocked(PostContentBase)).toHaveBeenLastCalledWith(
+      expect.objectContaining({ quotedPostId: null }),
+      undefined,
+    );
   });
 });

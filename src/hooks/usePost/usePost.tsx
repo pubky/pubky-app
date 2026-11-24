@@ -18,7 +18,9 @@ import {
   type SerializeArticleBodyError,
 } from '@/libs/post/articleInlineMedia';
 import { buildLockTeaserContent } from '@/libs/post/lockTeaser';
+import { getAppLinkReference } from '@/libs/pubkyApp/appLink';
 import { getStorageQuotaToastMessage } from '@/libs/storage/storageQuota';
+import { isPostDeleted } from '@/libs/utils/utils';
 import { toast } from '@/molecules/Toaster/toast';
 import { FileVariant } from '@/services/nexus/file/file.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
@@ -336,6 +338,7 @@ export function usePost({ keepInlineMedia = false, active = true }: UsePostOptio
       // the homeserver (ADR-0027, _Media lifetime_); the retry PUTs the same bytes to the same address.
       const coverFile: File | undefined = article ? attachments[0] : undefined;
       const uploads = article ? article.inlineFiles : attachments;
+      const embed = article ? {} : await toPostEmbed(embedUrl);
       const createdPostId = await PostController.commitCreate({
         content: article ? buildArticleContent(latestTitle, article.body) : content.trim(),
         authorId: currentUserId,
@@ -343,7 +346,7 @@ export function usePost({ keepInlineMedia = false, active = true }: UsePostOptio
         attachments: uploads.length > 0 ? uploads : undefined,
         coverImage: coverFile,
         isArticle,
-        embedUrl: article ? undefined : embedUrl,
+        ...embed,
       });
 
       if (article) {
@@ -653,4 +656,20 @@ export function usePost({ keepInlineMedia = false, active = true }: UsePostOptio
     // A locked article keeps its cover in slot 0 inside the lock, so its inline slots count from 1.
     serializeArticleForLock: (body) => serializeArticleWithSessionFiles(body, attachments.length > 0 ? 1 : 0),
   };
+}
+
+/**
+ * What a new post embeds for the link the composer chose: an external resource as written
+ * (`embedUrl`), or, for a link to a post on the host the app runs on (`getAppLinkReference`), that
+ * post by its reference (`originalPostId`: the new post quotes it, as a repost with text does), so
+ * Nexus counts it on the post and never keeps the web link as an external resource. A linked post
+ * that is gone, or not read yet, and a link to a profile make the post embed nothing: the text
+ * keeps the link and its in-app preview.
+ */
+async function toPostEmbed(embedUrl: string | undefined): Promise<{ embedUrl?: string; originalPostId?: string }> {
+  const appLink = embedUrl ? getAppLinkReference(embedUrl) : null;
+  if (!appLink) return { embedUrl };
+  if (appLink.kind !== 'post') return {};
+  const original = await PostController.getDetails({ compositeId: appLink.compositeId });
+  return original && !isPostDeleted(original) ? { originalPostId: appLink.compositeId } : {};
 }

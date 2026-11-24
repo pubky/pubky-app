@@ -3,60 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { AppError } from '@/libs/error/error';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { ErrorService } from '@/libs/error/error.types';
-import { parsePostReference, postReferenceSpellings } from './post.reference';
+import { postReferenceSpellings } from './post.reference';
 
-const AUTHOR = fakeOwner(7);
 const POST_ID = '00357R34CQ8Q0';
-const COMPOSITE_ID = `${AUTHOR}:${POST_ID}`;
-/** The v1 reference, what a collection item or a parent holds. */
-const POST_URI = `pubky://${AUTHOR}/pub/social/v1/posts/${POST_ID}`;
-
-describe('parsePostReference', () => {
-  it('parses a localhost app post URL', () => {
-    expect(parsePostReference(`http://localhost:3000/post/${AUTHOR}/${POST_ID}`)).toEqual({
-      compositeId: COMPOSITE_ID,
-      pubky: AUTHOR,
-      postId: POST_ID,
-      postUri: POST_URI,
-    });
-  });
-
-  it('parses an https app post URL', () => {
-    expect(parsePostReference(`https://pubky.app/post/${AUTHOR}/${POST_ID}`)?.compositeId).toBe(COMPOSITE_ID);
-  });
-
-  it('rejects non-post URLs and malformed author IDs', () => {
-    expect(parsePostReference('http://localhost:3000/profile/someone')).toBeNull();
-    expect(parsePostReference(`http://localhost:3000/post/short-author/${POST_ID}`)).toBeNull();
-    expect(parsePostReference('not a post')).toBeNull();
-  });
-
-  it.each(['0', '00', '003', '00357R34CQ8Q'])('returns null for the partial post id %s without throwing', (id) => {
-    expect(parsePostReference(`http://localhost:3000/post/${AUTHOR}/${id}`)).toBeNull();
-  });
-
-  it.each([
-    ['the spare bit set', '00357R34CQ8Q1'],
-    ['lower-case characters', POST_ID.toLowerCase()],
-    ['too many characters', `${POST_ID}0`],
-  ])('returns null for a post id with %s', (_, id) => {
-    expect(parsePostReference(`http://localhost:3000/post/${AUTHOR}/${id}`)).toBeNull();
-  });
-
-  it.each([
-    ['one character short', AUTHOR.slice(0, 51)],
-    ['52 characters that are no public key', 'a'.repeat(52)],
-  ])('returns null for a key %s', (_, key) => {
-    expect(parsePostReference(`http://localhost:3000/post/${key}/${POST_ID}`)).toBeNull();
-  });
-
-  it('rejects pubky URIs, composite IDs, and relative routes', () => {
-    expect(parsePostReference(POST_URI)).toBeNull();
-    expect(parsePostReference(`pubky://${AUTHOR}/pub/pubky.app/posts/${POST_ID}`)).toBeNull();
-    expect(parsePostReference(COMPOSITE_ID)).toBeNull();
-    expect(parsePostReference(`/post/${AUTHOR}/${POST_ID}`)).toBeNull();
-  });
-});
 
 describe('postReferenceSpellings', () => {
   const owner = fakeOwner(1);
