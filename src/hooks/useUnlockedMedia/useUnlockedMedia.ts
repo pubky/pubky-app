@@ -3,7 +3,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { LocksController } from '@/controllers/locks/locks';
 import { getArticlePreviewSlots } from '@/libs/post/articleInlineMedia';
-import { clearIfFilled, toPendingAttachments, toUnlockedMedia } from '@/libs/utils/unlockedMedia';
+import {
+  clearIfFilled,
+  toDisplayableAttachments,
+  toPendingAttachments,
+  toUnlockedMedia,
+} from '@/libs/utils/unlockedMedia';
 import type { AttachmentConstructed, PendingAttachment } from '@/organisms/PostAttachments/PostAttachments.types';
 import type { ReplicatedPost, TUnlockedAttachment } from '@/services/locks/locks.types';
 
@@ -37,7 +42,10 @@ export function useUnlockedMedia({ post, preview }: { post: ReplicatedPost; prev
     const request =
       pending.current?.key === attachmentKey
         ? pending.current
-        : { key: attachmentKey, promise: LocksController.fetchReplicatedAttachments({ post, preview }) };
+        : {
+            key: attachmentKey,
+            promise: LocksController.fetchReplicatedAttachments({ post, preview }).then(toDisplayableAttachments),
+          };
     pending.current = request;
     setPendingAttachments(toPendingAttachments(post));
     let cancelled = false;

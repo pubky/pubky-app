@@ -40,8 +40,8 @@ import { Typography } from '@/atoms/Typography/Typography';
 import {
   ARTICLE_INLINE_ACCEPT_STRING_BY_KIND,
   ARTICLE_INLINE_SUPPORTED_MIME_TYPES,
-  ARTICLE_MAX_CHARACTER_LENGTH,
-} from '@/config/posts';
+} from '@/config/attachmentMimeTypes';
+import { ARTICLE_MAX_CHARACTER_LENGTH } from '@/config/posts';
 import { useEmojiInsert } from '@/hooks/useEmojiInsert/useEmojiInsert';
 import { MarkdownMark } from '@/icons';
 import { getInlineMediaKindFromMime, INLINE_MEDIA_KINDS, type InlineMediaKind } from '@/libs/file/inlineMediaKind';

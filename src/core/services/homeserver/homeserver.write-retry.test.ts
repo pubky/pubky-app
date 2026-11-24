@@ -64,7 +64,7 @@ function requestError(statusCode: number): Error {
   });
 }
 
-/** The SDK's 0.16 rejection for a homeserver 409: the response body follows the status. */
+/** The SDK's rejection for a homeserver 409: the response body follows the status (`homeserver.storage.contract.test.ts` pins the shape). */
 function conflictError(body: string): Error {
   return Object.assign(new Error(`Request failed: Server responded with an error: 409 Conflict - ${body}`), {
     name: 'RequestError',

@@ -1,16 +1,19 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useReducer, useRef, useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
+import { Image } from '@/atoms/Image/Image';
 import { Typography } from '@/atoms/Typography/Typography';
 import { CONTENT_GUTTER_CLASS } from '@/config/layoutClasses';
 import { cn } from '@/libs/utils/utils';
 import { LANDING_FREEDOM_SECTION_ID } from './Landing.constants';
 
 const SLIDE_DURATION_MS = 6000;
+// A 2304 × 800 slide fills the 320px-tall mobile crop at 922 CSS pixels wide.
+const ARTWORK_SIZES = '(max-width: 767px) 922px, (max-width: 1200px) 100vw, 1200px';
 
 const FEATURES: Array<{ key: string; backgroundImage: string; title: string; description: string }> = [
   {
@@ -57,15 +60,46 @@ const FEATURES: Array<{ key: string; backgroundImage: string; title: string; des
   },
 ];
 
+interface Slides {
+  active: number;
+  artwork: number | null;
+  loaded: number[];
+  failed: number | null;
+}
+
+type SlideAction = { type: 'select' | 'loaded' | 'failed'; index: number } | { type: 'next' };
+
+function updateSlides(slides: Slides, action: SlideAction): Slides {
+  if (action.type === 'failed') {
+    // Show the selected slide's copy on the plain card if its artwork fails.
+    return {
+      ...slides,
+      failed: action.index === slides.active ? action.index : slides.failed,
+      artwork: action.index === slides.active || action.index === slides.artwork ? null : slides.artwork,
+      loaded: slides.loaded.filter((index) => index !== action.index),
+    };
+  }
+  if (action.type === 'loaded') {
+    if (slides.loaded.includes(action.index)) return slides;
+    return {
+      ...slides,
+      artwork: action.index === slides.active ? action.index : slides.artwork,
+      loaded: [...slides.loaded, action.index],
+    };
+  }
+
+  const active = action.type === 'next' ? (slides.active + 1) % FEATURES.length : action.index;
+  // Keep the outgoing artwork painted until the browser has decoded the incoming slide.
+  return { ...slides, active, failed: null, artwork: slides.loaded.includes(active) ? active : slides.artwork };
+}
+
 export function LandingFreedomSection() {
   const sectionRef = useRef<HTMLElement>(null);
-  const [activeSlide, setActiveSlide] = useState(0);
+  const [slides, dispatch] = useReducer(updateSlides, { active: 0, artwork: null, loaded: [], failed: null });
+  const activeSlide = slides.active;
   const [isSectionVisible, setIsSectionVisible] = useState(false);
   const [carouselRun, setCarouselRun] = useState(0);
-
-  const handleNextSlide = useCallback(() => {
-    setActiveSlide((currentSlide) => (currentSlide + 1) % FEATURES.length);
-  }, []);
+  const canAdvance = isSectionVisible && (slides.artwork === activeSlide || slides.failed === activeSlide);
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -77,7 +111,7 @@ export function LandingFreedomSection() {
         setIsSectionVisible(isVisible);
 
         if (isVisible) {
-          setActiveSlide(0);
+          dispatch({ type: 'select', index: 0 });
           setCarouselRun((currentRun) => currentRun + 1);
         }
       },
@@ -90,12 +124,12 @@ export function LandingFreedomSection() {
   }, []);
 
   useEffect(() => {
-    if (!isSectionVisible) return;
+    if (!canAdvance) return;
 
-    const timeoutId = window.setTimeout(handleNextSlide, SLIDE_DURATION_MS);
+    const timeoutId = window.setTimeout(() => dispatch({ type: 'next' }), SLIDE_DURATION_MS);
 
     return () => window.clearTimeout(timeoutId);
-  }, [activeSlide, carouselRun, handleNextSlide, isSectionVisible]);
+  }, [activeSlide, carouselRun, canAdvance]);
 
   const slideNumber = String(activeSlide + 1).padStart(2, '0');
 
@@ -121,23 +155,38 @@ export function LandingFreedomSection() {
           </Typography>
         </Container>
         <article className="relative min-h-[560px] overflow-hidden rounded-md bg-card/80 p-12 pb-80 shadow-sm backdrop-blur-sm md:min-h-[368px] md:pb-24">
-          {FEATURES.map(({ key, backgroundImage }, index) => (
-            <div
-              key={key}
-              className={`absolute inset-x-0 bottom-0 h-80 bg-[length:auto_100%] bg-no-repeat opacity-0 transition-opacity duration-500 ease-in-out [background-position:calc(50%+100px)_100%] md:inset-0 md:h-auto md:bg-cover md:bg-center ${
-                activeSlide === index ? 'opacity-100' : ''
-              }`}
-              style={{ backgroundImage: `url(${backgroundImage})` }}
-              aria-hidden
-            />
-          ))}
+          <div aria-hidden className="absolute inset-x-0 bottom-0 h-80 md:inset-0 md:h-auto">
+            {FEATURES.map(({ key, backgroundImage }, index) => {
+              if (slides.failed === index) return null;
+              if (!(isSectionVisible && activeSlide === index) && !slides.loaded.includes(index)) return null;
+              return (
+                <Image
+                  key={key}
+                  src={backgroundImage}
+                  alt=""
+                  fill
+                  unoptimized={false}
+                  sizes={ARTWORK_SIZES}
+                  loading="eager"
+                  onLoad={() => dispatch({ type: 'loaded', index })}
+                  onError={() => dispatch({ type: 'failed', index })}
+                  className={cn(
+                    'object-cover object-[calc(50%+100px)_100%] transition-opacity duration-500 ease-in-out md:object-center',
+                    slides.artwork === index ? 'opacity-100' : 'opacity-0',
+                  )}
+                />
+              );
+            })}
+          </div>
           <div className="relative z-10 flex items-start gap-5 md:ml-auto md:w-3/10 md:min-w-80">
             <div className="relative flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-md bg-brand/15 text-brand">
-              <div
-                key={`${carouselRun}-${activeSlide}`}
-                className="absolute inset-0 origin-bottom animate-[landing-carousel-progress-fill_6000ms_linear_forwards] bg-brand/32"
-                aria-hidden
-              />
+              {canAdvance && (
+                <div
+                  key={`${carouselRun}-${activeSlide}`}
+                  className="absolute inset-0 origin-bottom animate-[landing-carousel-progress-fill_6000ms_linear_forwards] bg-brand/32"
+                  aria-hidden
+                />
+              )}
               <Typography as="span" overrideDefaults className="text-xl font-semibold leading-none">
                 {slideNumber}
               </Typography>
@@ -172,7 +221,7 @@ export function LandingFreedomSection() {
                       aria-label={`Go to slide ${index + 1}: ${title}`}
                       aria-current={activeSlide === index ? 'true' : undefined}
                       onClick={() => {
-                        setActiveSlide(index);
+                        dispatch({ type: 'select', index });
                         setCarouselRun((currentRun) => currentRun + 1);
                       }}
                     >
@@ -190,7 +239,7 @@ export function LandingFreedomSection() {
                   overrideDefaults
                   type="button"
                   className="absolute right-8 bottom-8 z-10 ml-auto flex size-12 shrink-0 cursor-pointer items-center justify-center text-brand transition-all duration-200 hover:scale-110 hover:text-foreground focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none md:static"
-                  onClick={handleNextSlide}
+                  onClick={() => dispatch({ type: 'next' })}
                   aria-label={'Next slide'}
                 >
                   <ChevronRight className="size-10" strokeWidth={2.5} />

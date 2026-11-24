@@ -17,7 +17,7 @@ import {
 import { Input } from '@/atoms/Input/Input';
 import { Label } from '@/atoms/Label/Label';
 import { Spinner } from '@/atoms/Spinner/Spinner';
-import { ARTICLE_INLINE_ACCEPT_STRING_BY_KIND } from '@/config/posts';
+import { ARTICLE_INLINE_ACCEPT_STRING_BY_KIND } from '@/config/attachmentMimeTypes';
 import { getInlineMediaKindFromMime, inferMediaKindFromUrl, type InlineMediaKind } from '@/libs/file/inlineMediaKind';
 import { toast } from '@/molecules/Toaster/toast';
 import { INLINE_MEDIA_KIND_UI } from './InitializedMDXEditor.constants';

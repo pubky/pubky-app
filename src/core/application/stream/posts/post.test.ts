@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FileApplication } from '@/application/file/file';
 import { PostStreamApplication } from '@/application/stream/posts/post';
 import { COLLECTIONS_DISCOVER_MAX_FETCHES_PER_LOAD } from '@/config/collections';
-import { getStreamCacheMaxAgeMs } from '@/config/nexus';
+import { getStreamCacheMaxAgeMs, NEXUS_STREAM_MAX_LIMIT } from '@/config/nexus';
 import { FORCE_FETCH_NEW_POSTS, SKIP_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -2206,6 +2206,57 @@ describe('PostStreamApplication', () => {
           post_ids: expect.arrayContaining([`${originalAuthor1}:original-1`, `${originalAuthor2}:original-2`]),
         }),
       );
+    });
+  });
+
+  describe('fetchMissingPostsInBatches', () => {
+    const viewerId = 'user-viewer' as Pubky;
+    const isCurrent = () => true;
+    const cacheMissPostIds = Array.from({ length: NEXUS_STREAM_MAX_LIMIT * 2 + 1 }, (_, index) => `author:${index}`);
+    const batches = [
+      cacheMissPostIds.slice(0, NEXUS_STREAM_MAX_LIMIT),
+      cacheMissPostIds.slice(NEXUS_STREAM_MAX_LIMIT, NEXUS_STREAM_MAX_LIMIT * 2),
+      cacheMissPostIds.slice(NEXUS_STREAM_MAX_LIMIT * 2),
+    ];
+
+    it('hydrates the posts in batches of the Nexus limit, in order, under the same viewer guard', async () => {
+      const hydrate = vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus').mockResolvedValue(true);
+
+      const hydrated = await PostStreamApplication.fetchMissingPostsInBatches({
+        cacheMissPostIds,
+        viewerId,
+        isCurrent,
+      });
+
+      expect(hydrated).toBe(true);
+      expect(hydrate.mock.calls.map(([params]) => params)).toEqual(
+        batches.map((batch) => ({ cacheMissPostIds: batch, viewerId, isCurrent })),
+      );
+    });
+
+    it('ends at the first batch that does not hydrate', async () => {
+      const hydrate = vi
+        .spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus')
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(false);
+
+      const hydrated = await PostStreamApplication.fetchMissingPostsInBatches({
+        cacheMissPostIds,
+        viewerId,
+        isCurrent,
+      });
+
+      expect(hydrated).toBe(false);
+      expect(hydrate).toHaveBeenCalledTimes(2);
+    });
+
+    it('asks for nothing without ids', async () => {
+      const hydrate = vi.spyOn(PostStreamApplication, 'fetchMissingPostsFromNexus');
+
+      await expect(
+        PostStreamApplication.fetchMissingPostsInBatches({ cacheMissPostIds: [], viewerId, isCurrent }),
+      ).resolves.toBe(true);
+      expect(hydrate).not.toHaveBeenCalled();
     });
   });
 
