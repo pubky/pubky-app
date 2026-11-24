@@ -72,7 +72,7 @@ export function PubchiFeedBuilder({
               Reach: Following = people you follow; Friends = mutual follows; All = everyone; WoT = within two hops of
               your follows; Me = only you; Followers = not available in this App.
             </Typography>
-            <Typography size="xs">Sort: Recent or Popularity (bookmarks, reposts, replies).</Typography>
+            <Typography size="xs">Sort: Recent or Popularity (tags, reposts, replies).</Typography>
             <Typography size="xs">Layout: Columns, Wide, Visual, or List.</Typography>
             <Typography size="xs">Content: All, Short, Long, Image, Video, Link, File, or Collection.</Typography>
           </div>
