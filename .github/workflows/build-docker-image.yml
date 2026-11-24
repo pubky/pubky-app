@@ -129,7 +129,7 @@ jobs:
     needs: [check_image]
     if: ${{ needs.check_image.outputs.image_exists != 'true' }}
     runs-on: ['ubuntu-latest']
-    # Fast-fail a hung amd64 build (a warm one takes ~7min). Manual dispatches can
+    # Fast-fail a hung amd64 build (one without a layer cache takes ~4.5min). Manual dispatches can
     # pick emulated arm64 platforms, which legitimately run far longer.
     timeout-minutes: ${{ inputs.platforms == 'linux/amd64' && 20 || 60 }}
     steps:
@@ -156,16 +156,20 @@ jobs:
         uses: pubky/ci-workflows/.github/actions/docker/build_and_push@main
         with:
           image: 'pubky-app'
-          cache_from: type=gha
-          cache_to: type=gha,mode=max
+          # No BuildKit layer cache. Every layer after `COPY . .` is unique per commit, so
+          # `mode=max` exported ~1 GB of never-reused blobs per build (the export step alone
+          # took ~3.5 min of a ~7.5 min build) and filled the repo's 10 GB Actions cache,
+          # evicting the node_modules and Playwright caches other workflows rely on. The one
+          # reusable layer, `npm ci`, costs ~40 s to re-run against 20-70 s to restore, far
+          # less than the export it would need.
           context: '.'
           registry: ${{ env.registry }}
           platforms: ${{ inputs.platforms }}
           latest: ${{ inputs.latest }}
           # Content mode pushes the content tag together with the commit tag
           # (the composite's sha_tag), so consumers of either resolve the same
-          # image from the moment of push, even if the run is cancelled during
-          # cache export.
+          # image from the moment of push, even if the run is cancelled right
+          # after the push.
           tags: |
             type=raw,value=${{ needs.check_image.outputs.image_tag }},enable=${{ inputs.tag_mode == 'content' }}
           # NOTE: network values (NEXUS_URL, CDN_URL, HOMESERVER, HOMESERVER_URL, HOMEGATE_URL,
