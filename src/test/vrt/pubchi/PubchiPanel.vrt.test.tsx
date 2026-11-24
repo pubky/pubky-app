@@ -173,7 +173,12 @@ describe('PubchiPanel — visual regression', () => {
     });
     await expect.element(screen.getByTestId('pubchi-flyout-header')).toBeVisible();
     await expect.element(screen.getByTestId('pubchi-capabilities-compact')).toBeVisible();
-    await matchVrtElementScreenshot(screen.getByTestId(PUBCHI_PANEL_SURFACE), 'pubchi-panel-enrolled-desktop');
+    // Radix initially focuses the copy button. Set pointer modality for this resting-state capture.
+    await screen.getByRole('heading', { name: 'Pubchi', exact: true }).click();
+    const panel = screen.getByTestId(PUBCHI_PANEL_SURFACE);
+    // Chromium can pick either of two Linux monospace faces. Pin the face in the CI image for this key row.
+    panel.element().style.setProperty('--font-mono', '"WenQuanYi Zen Hei Mono", monospace');
+    await matchVrtElementScreenshot(panel, 'pubchi-panel-enrolled-desktop');
   });
 
   it('captures the no-bot create CTA', async () => {
