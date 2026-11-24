@@ -7,6 +7,13 @@ import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { toast } from '@/molecules/Toaster/toast';
 import { usePostSaveTargets } from './usePostSaveTargets';
 
+// A real key: the collection items carry the data model's v1 post reference
+const { AUTHOR, POST_ID, POST_URI } = vi.hoisted(() => {
+  const AUTHOR = 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy';
+  const POST_ID = `${AUTHOR}:0035QZPT4QG00`;
+  return { AUTHOR, POST_ID, POST_URI: `pubky://${AUTHOR}/pub/social/v1/posts/0035QZPT4QG00` };
+});
+
 const mocks = vi.hoisted(() => ({
   commitUpdateCollectionItem: vi.fn(),
   commitCreateCollection: vi.fn(),
@@ -47,15 +54,15 @@ vi.mock('@/hooks/useAuthoredCollections/useAuthoredCollections', () => ({
   useAuthoredCollections: (_enabled: boolean, version: number) => ({
     collections: [
       {
-        details: { id: 'author:collection1' },
+        details: { id: `${AUTHOR}:0035QZPT4QG10` },
         content: {
           name: 'Proof of Work',
           description: 'Bitcoin writing',
-          items: mocks.collection1Saved ? ['pubky://author/pub/pubky.app/posts/post1'] : [],
+          items: mocks.collection1Saved ? [POST_URI] : [],
         },
       },
       {
-        details: { id: 'author:collection2' },
+        details: { id: `${AUTHOR}:0035QZPT4QG20` },
         content: {
           name: 'AI Papers',
           description: '',
@@ -102,18 +109,18 @@ describe('usePostSaveTargets', () => {
       'another-user:collection3',
     ];
 
-    const open = renderHook(() => usePostSaveTargets('author:post1', { isPickerOpen: true }));
+    const open = renderHook(() => usePostSaveTargets(POST_ID, { isPickerOpen: true }));
 
     expect(mocks.postCollectionsEnabled).toBe(true);
     expect(open.result.current.otherCollectionIds).toEqual(['other-user:collection9', 'another-user:collection3']);
     expect(open.result.current.isOtherCollectionsLoading).toBe(false);
 
-    renderHook(() => usePostSaveTargets('author:post1', { isPickerOpen: false }));
+    renderHook(() => usePostSaveTargets(POST_ID, { isPickerOpen: false }));
     expect(mocks.postCollectionsEnabled).toBe(false);
   });
 
   it('paginates authored collections only while the picker is open', async () => {
-    const open = renderHook(() => usePostSaveTargets('author:post1', { isPickerOpen: true }));
+    const open = renderHook(() => usePostSaveTargets(POST_ID, { isPickerOpen: true }));
 
     expect(mocks.paginationEnabled).toBe(true);
     expect(open.result.current.hasMoreCollections).toBe(true);
@@ -124,30 +131,30 @@ describe('usePostSaveTargets', () => {
     });
     expect(mocks.loadMoreCollections).toHaveBeenCalledTimes(1);
 
-    renderHook(() => usePostSaveTargets('author:post1', { isPickerOpen: false }));
+    renderHook(() => usePostSaveTargets(POST_ID, { isPickerOpen: false }));
     expect(mocks.paginationEnabled).toBe(false);
   });
 
   it('combines bookmark state and collection membership', () => {
-    const { result } = renderHook(() => usePostSaveTargets('author:post1'));
+    const { result } = renderHook(() => usePostSaveTargets(POST_ID));
 
     expect(result.current.isBookmarked).toBe(true);
     expect(result.current.collections).toEqual([
-      expect.objectContaining({ id: 'author:collection1', name: 'Proof of Work', isSaved: true }),
-      expect.objectContaining({ id: 'author:collection2', name: 'AI Papers', isSaved: false }),
+      expect.objectContaining({ id: `${AUTHOR}:0035QZPT4QG10`, name: 'Proof of Work', isSaved: true }),
+      expect.objectContaining({ id: `${AUTHOR}:0035QZPT4QG20`, name: 'AI Papers', isSaved: false }),
     ]);
   });
 
   it('toggles collection membership separately from bookmarks', async () => {
-    const { result } = renderHook(() => usePostSaveTargets('author:post1'));
+    const { result } = renderHook(() => usePostSaveTargets(POST_ID));
 
     await act(async () => {
-      await result.current.toggleCollection('author:collection1');
+      await result.current.toggleCollection(`${AUTHOR}:0035QZPT4QG10`);
     });
 
     expect(mocks.commitUpdateCollectionItem).toHaveBeenCalledWith({
-      collectionId: 'author:collection1',
-      postId: 'author:post1',
+      collectionId: `${AUTHOR}:0035QZPT4QG10`,
+      postId: POST_ID,
       shouldAdd: false,
     });
     expect(mocks.toggleBookmark).not.toHaveBeenCalled();
@@ -157,15 +164,15 @@ describe('usePostSaveTargets', () => {
   });
 
   it('shows a generic toast when adding a post to a collection', async () => {
-    const { result } = renderHook(() => usePostSaveTargets('author:post1'));
+    const { result } = renderHook(() => usePostSaveTargets(POST_ID));
 
     await act(async () => {
-      await result.current.toggleCollection('author:collection2');
+      await result.current.toggleCollection(`${AUTHOR}:0035QZPT4QG20`);
     });
 
     expect(mocks.commitUpdateCollectionItem).toHaveBeenCalledWith({
-      collectionId: 'author:collection2',
-      postId: 'author:post1',
+      collectionId: `${AUTHOR}:0035QZPT4QG20`,
+      postId: POST_ID,
       shouldAdd: true,
     });
     expect(vi.mocked(toast)).toHaveBeenCalledWith({
@@ -183,10 +190,10 @@ describe('usePostSaveTargets', () => {
         operation: 'validateCollectionContent',
       }),
     );
-    const { result } = renderHook(() => usePostSaveTargets('author:post1'));
+    const { result } = renderHook(() => usePostSaveTargets(POST_ID));
 
     await act(async () => {
-      await result.current.toggleCollection('author:collection2');
+      await result.current.toggleCollection(`${AUTHOR}:0035QZPT4QG20`);
     });
 
     expect(vi.mocked(toast)).toHaveBeenCalledWith({
@@ -198,10 +205,10 @@ describe('usePostSaveTargets', () => {
   it('stays busy until the live query acknowledges a rollback, then accepts subsequent membership changes', async () => {
     const pending = Promise.withResolvers<void>();
     mocks.commitUpdateCollectionItem.mockReturnValueOnce(pending.promise);
-    const { result, rerender } = renderHook(() => usePostSaveTargets('author:post1'));
+    const { result, rerender } = renderHook(() => usePostSaveTargets(POST_ID));
     let update: Promise<boolean>;
     act(() => {
-      update = result.current.toggleCollection('author:collection1');
+      update = result.current.toggleCollection(`${AUTHOR}:0035QZPT4QG10`);
     });
     mocks.collection1Saved = false;
     rerender();
@@ -231,24 +238,24 @@ describe('usePostSaveTargets', () => {
   });
 
   it('keeps the other collections interactive while a completed toggle waits for its fresh read', async () => {
-    const { result, rerender } = renderHook(() => usePostSaveTargets('author:post1'));
+    const { result, rerender } = renderHook(() => usePostSaveTargets(POST_ID));
     mocks.completionReadPending = true;
     await act(async () => {
-      await result.current.toggleCollection('author:collection1');
+      await result.current.toggleCollection(`${AUTHOR}:0035QZPT4QG10`);
     });
     expect(result.current.collections.map((collection) => collection.isUpdating)).toEqual([true, false]);
 
     await act(async () => {
-      expect(await result.current.toggleCollection('author:collection1')).toBe(false);
+      expect(await result.current.toggleCollection(`${AUTHOR}:0035QZPT4QG10`)).toBe(false);
     });
     expect(mocks.commitUpdateCollectionItem).toHaveBeenCalledTimes(1);
 
     await act(async () => {
-      await result.current.toggleCollection('author:collection2');
+      await result.current.toggleCollection(`${AUTHOR}:0035QZPT4QG20`);
     });
     expect(mocks.commitUpdateCollectionItem).toHaveBeenLastCalledWith({
-      collectionId: 'author:collection2',
-      postId: 'author:post1',
+      collectionId: `${AUTHOR}:0035QZPT4QG20`,
+      postId: POST_ID,
       shouldAdd: true,
     });
     // The mocked list now reflects the first toggle's read; only the second waits.
@@ -259,7 +266,7 @@ describe('usePostSaveTargets', () => {
   });
 
   it('creates a collection with the current post URI as first item', async () => {
-    const { result } = renderHook(() => usePostSaveTargets('author:post1'));
+    const { result } = renderHook(() => usePostSaveTargets(POST_ID));
 
     await act(async () => {
       await result.current.createCollectionWithPost('New collection');
@@ -268,7 +275,7 @@ describe('usePostSaveTargets', () => {
     expect(mocks.commitCreateCollection).toHaveBeenCalledWith({
       authorId: 'current-user',
       name: 'New collection',
-      items: ['pubky://author/pub/pubky.app/posts/post1'],
+      items: [POST_URI],
       layout: COLLECTION_LAYOUT.CARDS,
     });
   });

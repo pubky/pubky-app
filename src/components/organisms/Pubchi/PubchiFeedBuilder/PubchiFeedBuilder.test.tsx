@@ -1,5 +1,4 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { FeedController } from '@/controllers/feed/feed';
 import { PubchiController } from '@/controllers/pubchi/pubchi';
@@ -34,10 +33,10 @@ const feed: FeedModelSchema = {
   name: 'Builders',
   tags: [],
   domain_tags: [],
-  reach: PubkyAppFeedReach.Following,
-  sort: PubkyAppFeedSort.Recent,
+  reach: 'following',
+  sort: 'recent',
   content: null,
-  layout: PubkyAppFeedLayout.Columns,
+  layout: 'columns',
   created_at: 1,
   updated_at: 1,
 };
@@ -104,7 +103,8 @@ describe('PubchiFeedBuilder', () => {
     vi.clearAllMocks();
   });
 
-  it('denies a stale session before creating a feed', async () => {
+  it('denies a legacy grant with Pubchi permissions but no private Social feed write', async () => {
+    authState.capabilities = ['/pub/pubky.app/:rw', '/pub/app.pubchi/v1/:rw', '/priv/app.pubchi/v1/:rw'];
     render(<PubchiFeedBuilder proposal={proposal} open onOpenChange={vi.fn()} onInterpret={vi.fn()} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Apply feed' }));
@@ -112,6 +112,18 @@ describe('PubchiFeedBuilder', () => {
     await vi.waitFor(() => expect(vi.mocked(FeedController.commitCreate)).not.toHaveBeenCalled());
     expect(vi.mocked(PubchiController.commitRecordBuiltFeed)).not.toHaveBeenCalled();
     expect(vi.mocked(publishPubchiSync)).not.toHaveBeenCalled();
+  });
+
+  it('skips provenance when the guarded feed write returns no row', async () => {
+    authState.capabilities = ['/:rw'];
+    vi.mocked(FeedController.commitCreate).mockResolvedValue(null);
+    render(<PubchiFeedBuilder proposal={proposal} open onOpenChange={vi.fn()} onInterpret={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Apply feed' }));
+
+    await vi.waitFor(() => expect(FeedController.commitCreate).toHaveBeenCalledOnce());
+    expect(PubchiController.commitRecordBuiltFeed).not.toHaveBeenCalled();
+    expect(publishPubchiSync).not.toHaveBeenCalled();
   });
 
   it('reports a provenance failure as a warning after applying the feed', async () => {

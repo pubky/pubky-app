@@ -1,7 +1,8 @@
 import type { Session } from '@synonymdev/pubky';
-import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthErrorCode } from '@/libs/error/error.codes';
+import { httpStatusCodeToError } from '@/libs/error/error.http';
+import { ErrorService } from '@/libs/error/error.types';
 import type { FeedProposalV1 } from '@/libs/pubchi/schemas/feed';
 import type { PubchiFeedProvenanceV1 } from '@/libs/pubchi/schemas/feed-provenance';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
@@ -12,7 +13,7 @@ import {
 } from '@/services/homeserver/write-retry';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { asOpaque } from '@/test-utils/type-assertions';
-import { recordPubchiBuiltFeed } from './feed-provenance';
+import { listPubchiFeedProvenance, provenanceUri, recordPubchiBuiltFeed } from './feed-provenance';
 
 const OWNER = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y';
 const FEED: FeedModelSchema = {
@@ -20,10 +21,10 @@ const FEED: FeedModelSchema = {
   name: 'Builders',
   tags: ['builders'],
   domain_tags: [],
-  reach: PubkyAppFeedReach.Following,
-  sort: PubkyAppFeedSort.Recent,
+  reach: 'following',
+  sort: 'recent',
   content: null,
-  layout: PubkyAppFeedLayout.Columns,
+  layout: 'columns',
   created_at: 1_700_000_000_000,
   updated_at: 1_700_000_000_000,
 };
@@ -54,9 +55,11 @@ function requestError(statusCode: number): Error {
 describe('Pubchi feed provenance with real homeserver retries', () => {
   let remote: RemoteRecord;
   const putJson = vi.fn<(path: string, body: RemoteRecord) => Promise<void>>();
-  const read = vi.fn<() => Promise<string>>();
+  const read = vi.fn<(url: string) => Promise<string>>();
+  const remove = vi.fn<(path: string) => Promise<void>>();
   const sleep = vi.fn<() => Promise<void>>();
-  const session = () => asOpaque<Session>({ info: { publicKey: { z32: () => OWNER } }, storage: { putJson } });
+  const session = () =>
+    asOpaque<Session>({ info: { publicKey: { z32: () => OWNER } }, storage: { putJson, delete: remove } });
 
   beforeEach(() => {
     remote = {
@@ -89,6 +92,76 @@ describe('Pubchi feed provenance with real homeserver retries', () => {
     installHomeserverWriteRetryDependenciesForTests(null);
     useAuthStore.setState({ session: null, currentUserPubky: null, generation: '', isLoggingOut: false });
     vi.restoreAllMocks();
+  });
+
+  function storedProvenance() {
+    const previousFeed = { ...FEED, id: 'prior-filter' };
+    const oldUrl = provenanceUri(OWNER, previousFeed.id);
+    const newUrl = provenanceUri(OWNER, FEED.id);
+    const records = new Map([[oldUrl, { ...remote, feed_id: previousFeed.id }]]);
+    const urlFor = (path: string) => `pubky://${OWNER}${path}`;
+    read.mockImplementation(async (url) => {
+      const value = records.get(url);
+      if (!value) throw httpStatusCodeToError(404, 'Missing provenance', ErrorService.Homeserver, 'get', url);
+      return JSON.stringify(value);
+    });
+    putJson.mockImplementation(async (path, body) => {
+      records.set(urlFor(path), structuredClone(body));
+    });
+    remove.mockReset().mockImplementation(async (path) => {
+      records.delete(urlFor(path));
+    });
+    vi.spyOn(HomeserverService, 'listAll').mockImplementation(async () => [...records.keys()]);
+    return { previousFeed, oldUrl, newUrl, records };
+  }
+
+  it('moves provenance to the changed filter id and lists the saved feed with its original metadata', async () => {
+    const { previousFeed, oldUrl, newUrl, records } = storedProvenance();
+    await expect(recordPubchiBuiltFeed(OWNER, PROPOSAL, FEED, previousFeed.id)).resolves.toBe(true);
+    expect(records.has(oldUrl)).toBe(false);
+    expect(records.get(newUrl)).toMatchObject({
+      feed_id: FEED.id,
+      created_at: remote.created_at,
+      extension: remote.extension,
+    });
+    await expect(listPubchiFeedProvenance(OWNER)).resolves.toEqual([records.get(newUrl)]);
+  });
+
+  it('retains the previous record if the destination PUT fails', async () => {
+    const { previousFeed, oldUrl, newUrl, records } = storedProvenance();
+    putJson.mockRejectedValue(requestError(503));
+    await expect(recordPubchiBuiltFeed(OWNER, PROPOSAL, FEED, previousFeed.id)).rejects.toThrow();
+    expect(records.has(oldUrl)).toBe(true);
+    expect(records.has(newUrl)).toBe(false);
+    expect(remove).not.toHaveBeenCalled();
+  });
+
+  it('keeps both records if the source changed while retrying cleanup', async () => {
+    const { previousFeed, oldUrl, newUrl, records } = storedProvenance();
+    remove.mockRejectedValueOnce(requestError(503));
+    sleep.mockImplementationOnce(async () => {
+      records.set(oldUrl, { ...records.get(oldUrl)!, extension: { note: 'updated after copy' } });
+    });
+    await expect(recordPubchiBuiltFeed(OWNER, PROPOSAL, FEED, previousFeed.id)).resolves.toBe(false);
+    expect(records.get(oldUrl)?.extension.note).toBe('updated after copy');
+    expect(records.get(newUrl)?.extension.note).toBe('old');
+    expect(remove).toHaveBeenCalledOnce();
+    expect(putJson).toHaveBeenCalledOnce();
+  });
+
+  it('does not remove the previous record if the account changes after the destination PUT', async () => {
+    const { previousFeed, oldUrl, newUrl, records } = storedProvenance();
+    const write = putJson.getMockImplementation()!;
+    putJson.mockImplementationOnce(async (path, body) => {
+      await write(path, body);
+      useAuthStore.setState({ generation: 'different-account' });
+    });
+    await expect(recordPubchiBuiltFeed(OWNER, PROPOSAL, FEED, previousFeed.id)).rejects.toMatchObject({
+      code: AuthErrorCode.SESSION_EXPIRED,
+    });
+    expect(records.has(oldUrl)).toBe(true);
+    expect(records.has(newUrl)).toBe(true);
+    expect(remove).not.toHaveBeenCalled();
   });
 
   it.each([429, 500, 503, 409])('rereads and retains concurrent changes after a %i write failure', async (status) => {

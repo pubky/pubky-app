@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { PUBKY_APP_POST_URI } from './answer';
+import { isPubchiPostUri } from '@/libs/pubchi/uri';
+import { PublicEvidenceUriSchema } from './answer';
 import { SHA256_HEX_RE } from './canonical';
 import { fromZod, zPubky, zUnix, zVersion1 } from './zod';
 
@@ -17,18 +18,10 @@ export const PubchiDraftPostReceiptSchema = z
     kind: z.enum(['short', 'long']),
     content: z.string().min(1),
     tags: z.array(z.string().min(1).max(20)).max(5).optional(),
-    parent_uri: z.string().optional(),
+    parent_uri: z.string().refine(isPubchiPostUri).optional(),
     rationale: z.string().min(1).max(120),
-    evidence: z
-      .array(
-        z
-          .string()
-          .min(1)
-          .max(512)
-          .refine((value) => value.startsWith('pubky://')),
-      )
-      .max(8),
-    post_uri: z.string().regex(PUBKY_APP_POST_URI).optional(),
+    evidence: z.array(PublicEvidenceUriSchema).max(8),
+    post_uri: z.string().refine(isPubchiPostUri).optional(),
     status: draftPostReceiptStatus,
     suggested_at: zUnix,
     applied_at: zUnix.optional(),

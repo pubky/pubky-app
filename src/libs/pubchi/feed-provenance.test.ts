@@ -1,11 +1,10 @@
 import { Keypair } from '@synonymdev/pubky';
-import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HttpMethod } from '@/libs/http/http.types';
 import type { FeedProposalV1 } from '@/libs/pubchi/schemas/feed';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import { HomeserverService } from '@/services/homeserver/homeserver';
-import { listPubchiFeedProvenance, recordPubchiBuiltFeed } from './feed-provenance';
+import { deletePubchiFeedProvenance, listPubchiFeedProvenance, recordPubchiBuiltFeed } from './feed-provenance';
 
 const OWNER = Keypair.random().publicKey.z32();
 const BOT = OWNER;
@@ -14,10 +13,10 @@ const FEED: FeedModelSchema = {
   name: 'Builders',
   tags: ['builders'],
   domain_tags: [],
-  reach: PubkyAppFeedReach.Following,
-  sort: PubkyAppFeedSort.Recent,
+  reach: 'following',
+  sort: 'recent',
   content: null,
-  layout: PubkyAppFeedLayout.Columns,
+  layout: 'columns',
   created_at: 1_700_000_000_000,
   updated_at: 1_700_000_000_000,
 };
@@ -41,6 +40,7 @@ vi.mock('@/services/homeserver/homeserver', () => ({
     request: vi.fn(),
     createWriteFence: () => ({ enter: () => undefined, assertCurrent: () => undefined }),
     listAll: vi.fn(),
+    deleteIdempotent: vi.fn(),
   },
 }));
 vi.mock('@/molecules/Toaster/toast', () => ({ toast: vi.fn() }));
@@ -48,6 +48,15 @@ vi.mock('@/molecules/Toaster/toast', () => ({ toast: vi.fn() }));
 describe('Pubchi feed provenance', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('validates the feed id before deriving its private provenance path', async () => {
+    for (const id of ['', 'not a feed id', 'two/segments']) {
+      await expect(deletePubchiFeedProvenance(OWNER, id)).rejects.toThrow();
+      await expect(recordPubchiBuiltFeed(OWNER, PROPOSAL, FEED, id)).rejects.toThrow();
+    }
+    expect(HomeserverService.deleteIdempotent).not.toHaveBeenCalled();
+    expect(HomeserverService.request).not.toHaveBeenCalled();
   });
 
   it('writes a strict homeserver record', async () => {

@@ -1,31 +1,24 @@
 /**
  * Vendored from @pubky/pubchi-schemas (pubky-ai-bot-pubchi).
  * Source commit: c5cf3c7 (uncommitted C5 diff)
- * Do not redefine these contracts.
+ * App adaptation for social v1. The deployed service must use the same contract.
  */
 
+import { limits } from 'pubky-social-specs';
 import { z } from 'zod';
+import { isPubchiPostUri, parsePubchiTarget, parsePublicSocialUri } from '@/libs/pubchi/uri';
 import { err, ok, type ParseResult } from './codes';
 import { isPubkyId, PUBKY_ID_RE } from './pubky';
 import { fromZod, zPubky, zUnix, zVersion1 } from './zod';
 
-export const SOURCE_URI = /^(?:pubky:\/\/[ybndrfg8ejkmcpqxot1uwisza345h769]{52}\/.+|https:\/\/nexus[^/]*\/.+)$/;
-export const PUBKY_APP_POST_URI =
-  /^pubky:\/\/[ybndrfg8ejkmcpqxot1uwisza345h769]{52}\/pub\/pubky\.app\/posts\/[A-Z0-9]{13}$/;
-const C5_POST_URI = PUBKY_APP_POST_URI;
-const C5_PROFILE_URI = /^pubky:\/\/[ybndrfg8ejkmcpqxot1uwisza345h769]{52}\/pub\/pubky\.app\/profile\.json$/;
+const SOURCE_URI = /^(?:pubky:\/\/[ybndrfg8ejkmcpqxot1uwisza345h769]{52}\/.+|https:\/\/nexus[^/]*\/.+)$/;
+
 /** Maximum length accepted for a public Pubky evidence URI. */
 export const PUBLIC_EVIDENCE_URI_MAX_LENGTH = 512;
-/** pubky-app-specs `tagLabelMaxLength`; tag policy reads this installed cap at runtime. */
-const C5_LABEL_MAX_LENGTH = 20;
 const C5_LABEL = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const C5_SHA256 = /^[a-f0-9]{64}$/;
-/** pubky-app-specs `postShortContentMaxLength`. */
-const C6_SHORT_CONTENT_MAX = 2000;
-/** App article body cap: `postLongContentMaxLength` − title 100 − JSON 22. */
+/** Long draft limit in the Pubchi service contract, in Unicode code points. */
 const C6_LONG_CONTENT_MAX = 49_878;
-/** pubky-app-specs `feedTagsMaxCount`. */
-const C6_TAG_MAX = 5;
 const codePointLength = (value: string): number => Array.from(value).length;
 
 /**
@@ -42,13 +35,24 @@ export function isCanonicalPublicEvidenceUri(uri: string): boolean {
   if (!PUBKY_ID_RE.test(id) || !path.startsWith('/pub/')) return false;
   const publicPath = path.slice('/pub/'.length);
   if (!publicPath || /[?#%\\\s\x00-\x1F\x7F]/.test(uri)) return false;
+  if (publicPath.startsWith('social/v1/')) return parsePublicSocialUri(uri) !== null;
   return publicPath.split('/').every((segment) => segment !== '' && segment !== '.' && segment !== '..');
 }
 
-const PublicEvidenceUriSchema = z
+export const PublicEvidenceUriSchema = z
   .string()
   .max(PUBLIC_EVIDENCE_URI_MAX_LENGTH)
   .refine(isCanonicalPublicEvidenceUri, 'evidence URI must be a canonical public Pubky URI');
+
+const SourceUriSchema = z
+  .string()
+  .regex(SOURCE_URI)
+  .refine((uri) => {
+    if (!uri.startsWith('pubky://')) return true;
+    const path = uri.slice('pubky://'.length + 52);
+    if (path.startsWith('/pub/social/v1/')) return isCanonicalPublicEvidenceUri(uri);
+    return !path.startsWith('/priv/');
+  });
 
 const C5TargetSchema = z
   .object({
@@ -58,9 +62,7 @@ const C5TargetSchema = z
   })
   .strict()
   .superRefine((target, ctx) => {
-    const post = C5_POST_URI.test(target.uri);
-    const profile = C5_PROFILE_URI.test(target.uri);
-    if ((!post && !profile) || (target.kind === 'post' ? !post : !profile)) {
+    if (!parsePubchiTarget(target)) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['uri'], message: 'target kind must match canonical URI' });
     }
   });
@@ -68,7 +70,7 @@ const C5TargetSchema = z
 const C5LabelSchema = z
   .string()
   .min(1)
-  .max(C5_LABEL_MAX_LENGTH)
+  .max(limits.tagLabelMaxLength)
   .refine((value) => C5_LABEL.test(value) && value.split('-').length <= 3, 'invalid tag label');
 
 const C5SuggestionSchema = z
@@ -90,8 +92,8 @@ const C6DraftPostSchema = z
   .object({
     content: z.string(),
     kind: z.enum(['short', 'long']),
-    tags: z.array(C5LabelSchema).max(C6_TAG_MAX).optional(),
-    parent_uri: z.string().regex(C5_POST_URI).optional(),
+    tags: z.array(C5LabelSchema).max(limits.feedTagsMaxCount).optional(),
+    parent_uri: z.string().refine(isPubchiPostUri).optional(),
     rationale: z
       .string()
       .refine(
@@ -102,7 +104,7 @@ const C6DraftPostSchema = z
   })
   .strict()
   .superRefine((draft, ctx) => {
-    const max = draft.kind === 'long' ? C6_LONG_CONTENT_MAX : C6_SHORT_CONTENT_MAX;
+    const max = draft.kind === 'long' ? C6_LONG_CONTENT_MAX : limits.postNoteContentMaxLength;
     const points = codePointLength(draft.content);
     if (points < 1 || draft.content.trim().length === 0 || points > max) {
       ctx.addIssue({
@@ -202,7 +204,7 @@ export const PubchiAnswerV1Schema = z
     question: z.string().min(1).max(500),
     summary: z.string().min(1).max(1200),
     evidence: z.array(EvidenceSchema).max(50),
-    sources: z.array(z.string().regex(SOURCE_URI)).max(50),
+    sources: z.array(SourceUriSchema).max(50),
     tool_trace_summary: ToolTraceSummarySchema,
     policy_version: z.literal(1),
     section: z.enum(['tag_suggestions', 'draft_post']).optional(),

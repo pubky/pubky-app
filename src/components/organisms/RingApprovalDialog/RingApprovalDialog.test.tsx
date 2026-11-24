@@ -1,8 +1,8 @@
 import type { Session } from '@synonymdev/pubky';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { PUBCHI_CAPABILITIES } from '@/config/auth';
 import { PubchiController } from '@/controllers/pubchi/pubchi';
-import { APP_SIGNIN_CAPABILITIES } from '@/libs/pubchi/capabilities';
 import { toast } from '@/molecules/Toaster/toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { asOpaque } from '@/test-utils/type-assertions';
@@ -38,7 +38,7 @@ describe('RingApprovalDialog', () => {
 
     await waitFor(() => {
       expect(screen.getAllByRole('img')[0]).toBeInTheDocument();
-      for (const capability of APP_SIGNIN_CAPABILITIES.split(',')) {
+      for (const capability of PUBCHI_CAPABILITIES) {
         expect(screen.getByText(capability)).toBeInTheDocument();
       }
       expect(screen.getByRole('link', { name: 'Authorize with Pubky Ring' })).toHaveAttribute(
@@ -184,18 +184,21 @@ describe('RingApprovalDialog', () => {
     });
   });
 
-  it('shows timeout copy when Ring approval expires', async () => {
+  it('reloads the expired approval QR from its keyboard-accessible control', async () => {
     vi.mocked(PubchiController.getCapabilityApprovalUrl).mockResolvedValue({
       authorizationUrl: 'pubkyauth://approve?token=expired',
       awaitApproval: Promise.reject(new Error('timeout')),
       cancelAuthFlow: vi.fn(),
     });
 
-    render(<RingApprovalDialog open onOpenChange={vi.fn()} onApproved={vi.fn()} />);
+    const onOpenChange = vi.fn();
+    render(<RingApprovalDialog open onOpenChange={onOpenChange} onApproved={vi.fn()} />);
 
     await waitFor(() => {
       expect(screen.getByText(/Ring request timed out/i)).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /Generate a new request/i })).toBeInTheDocument();
     });
+    fireEvent.click(screen.getByRole('button', { name: 'Reload approval QR code' }));
+    await waitFor(() => expect(onOpenChange.mock.calls).toEqual([[false], [true]]));
   });
 });

@@ -12,7 +12,7 @@
     {
       "kind": "post",
       "label": "Followed post",
-      "uri": "pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/pubky.app/posts/followed",
+      "uri": "pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/social/v1/posts/0032W6CBGDBP0",
       "claimants": [],
       "claimant_count": 0,
       "in_your_graph": true,
@@ -21,7 +21,7 @@
     {
       "kind": "post",
       "label": "Reply to you",
-      "uri": "pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/pubky.app/posts/reply",
+      "uri": "pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/social/v1/posts/0032W6CBGDBPG",
       "claimants": [],
       "claimant_count": 0,
       "in_your_graph": true,
@@ -30,7 +30,7 @@
     {
       "kind": "tag",
       "label": "bitcoin",
-      "uri": "pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/pubky.app/profile.json",
+      "uri": "pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/social/v1/profile.json",
       "claimants": [],
       "claimant_count": 0,
       "in_your_graph": true,

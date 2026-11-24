@@ -1,4 +1,5 @@
 import { Keypair } from '@synonymdev/pubky';
+import { buildTag, buildUri } from 'pubky-social-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppError } from '@/libs/error/error';
 import { AuthErrorCode, ClientErrorCode, ServerErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';
@@ -127,8 +128,8 @@ const QUERY_RESULT = {
   items: [
     {
       label: 'builder',
-      source_uri: `pubky://${OWNER}/pub/pubky.app/tags/builder`,
-      subject_uri: `pubky://${OWNER}/pub/pubky.app/profile.json`,
+      source_uri: buildTag(OWNER, buildUri(OWNER, 'user'), 'builder').url,
+      subject_uri: buildUri(OWNER, 'user'),
       claimant_count: 2,
     },
   ],
@@ -426,7 +427,7 @@ describe('PubchiApplication', () => {
   });
 
   it('allows read-only asks with a degraded session', async () => {
-    sessionIdentity.capabilities = ['/pub/pubky.app/:rw'];
+    sessionIdentity.capabilities = ['/pub/social/v1/:rw'];
     const querySpy = vi.spyOn(PubchiService, 'query').mockResolvedValue(QUERY_RESULT);
 
     await expect(
@@ -709,7 +710,7 @@ describe('PubchiApplication', () => {
   });
 
   it('refuses enrollment when the session lacks the Pubchi capability', async () => {
-    sessionIdentity.capabilities = ['/pub/pubky.app/:rw'];
+    sessionIdentity.capabilities = ['/pub/social/v1/:rw'];
     const requestSpy = vi.spyOn(HomeserverService, 'request');
     const upsertSpy = vi.spyOn(LocalPubchiBindingService, 'upsert');
     await expect(PubchiApplication.commitCreateBinding({ owner: OWNER, bot: BOT })).rejects.toThrow('PATH_FORBIDDEN');
@@ -819,7 +820,7 @@ describe('PubchiApplication', () => {
   });
 
   it('does not mint or publish when the session does not cover Pubchi', async () => {
-    sessionIdentity.capabilities = ['/pub/pubky.app/:rw'];
+    sessionIdentity.capabilities = ['/pub/social/v1/:rw'];
     const now = Math.floor(Date.now() / 1000);
     const mintSpy = vi.spyOn(deviceKey, 'loadOrGenerateDeviceKey');
     vi.spyOn(HomeserverService, 'request').mockImplementation(async (input) => {
@@ -979,7 +980,7 @@ describe('PubchiApplication', () => {
 
   it('revokes locally without Pubchi coverage and defers the homeserver DELETE', async () => {
     const signer = Keypair.random().publicKey.z32();
-    sessionIdentity.capabilities = ['/pub/pubky.app/:rw'];
+    sessionIdentity.capabilities = ['/pub/social/v1/:rw'];
     const requestSpy = vi.spyOn(HomeserverService, 'request');
     const deleteLocalSpy = vi.spyOn(deviceKey, 'deleteDeviceKey').mockResolvedValue(undefined);
 
@@ -1701,7 +1702,7 @@ describe('PubchiApplication', () => {
   });
 
   it('does not refresh a current delegation without Pubchi write coverage', async () => {
-    sessionIdentity.capabilities = ['/pub/pubky.app/:rw'];
+    sessionIdentity.capabilities = ['/pub/social/v1/:rw'];
     const request = vi.mocked(HomeserverService.request);
     request.mockReset();
 

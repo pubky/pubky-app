@@ -1,3 +1,4 @@
+import { toNexusPostKindFilter } from '@/pipes/post/post.kind';
 import { buildUrlWithQuery, encodePathSegment } from '@/services/nexus/nexus.utils';
 import {
   SEARCH_PATH_PARAMS,
@@ -13,13 +14,14 @@ import {
  * All API endpoints related to search operations
  */
 
-const PREFIX = 'v0/search';
+const PREFIX = 'search';
 
 export const searchApi = {
+  // `kind` goes out in the `/v1` vocabulary, like the stream filter (see `buildPostStreamUrl`).
   byContent: (params: TContentSearchParams) =>
     buildUrlWithQuery({
       baseRoute: `${PREFIX}/posts/by_content`,
-      params,
+      params: { ...params, kind: params.kind && toNexusPostKindFilter(params.kind) },
     }),
   byTag: (params: TTagSearchParams) => {
     const tag = encodePathSegment(params.tag);

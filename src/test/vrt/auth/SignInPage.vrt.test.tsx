@@ -96,8 +96,6 @@ vi.mock('@/controllers/auth/auth', async () => {
         };
       },
       initializeAuthenticatedSession: async () => {},
-      loginWithMnemonic: async () => false,
-      loginWithEncryptedFile: async () => false,
     },
   };
 });

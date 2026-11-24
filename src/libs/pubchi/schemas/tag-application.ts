@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { parsePublicSocialUri } from '@/libs/pubchi/uri';
+import { PublicEvidenceUriSchema } from './answer';
 import { PubchiTargetSchema } from './ask-body';
 import { SHA256_HEX_RE } from './canonical';
 import { fromZod, zPubky, zUnix, zVersion1 } from './zod';
@@ -13,20 +15,15 @@ export const PubchiTagApplicationSchema = z
     owner: zPubky,
     bot: zPubky,
     run_id: z.string().regex(/^[A-Za-z0-9_-]{1,64}$/),
-    target: PubchiTargetSchema.extend({ snapshot_sha256: z.string().regex(SHA256_HEX_RE) }).passthrough(),
+    target: PubchiTargetSchema.safeExtend({ snapshot_sha256: z.string().regex(SHA256_HEX_RE) }).passthrough(),
     label: z.string().min(1).max(80),
     source: z.enum(['vocab', 'open']),
-    evidence: z
-      .array(
-        z
-          .string()
-          .min(1)
-          .max(512)
-          .refine((value) => value.startsWith('pubky://')),
-      )
-      .max(8),
+    evidence: z.array(PublicEvidenceUriSchema).max(8),
     suggestion_sha256: z.string().regex(SHA256_HEX_RE),
-    tag_uri: z.url().optional(),
+    tag_uri: z
+      .string()
+      .refine((uri) => parsePublicSocialUri(uri)?.kind === 'tag')
+      .optional(),
     status: tagApplicationStatus,
     already_existed: z.boolean().nullable().optional(),
     suggested_at: zUnix,

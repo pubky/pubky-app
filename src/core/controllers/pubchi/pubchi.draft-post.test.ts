@@ -1,4 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
+import { buildUri } from 'pubky-social-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PubchiApplication } from '@/application/pubchi/pubchi';
 import { PostController } from '@/controllers/post/post';
@@ -23,7 +24,7 @@ const prepared = {
     kind: 'short' as const,
     tags: ['pubky-app'],
     rationale: 'Matches the public profile evidence.',
-    evidence: [`pubky://${owner}/pub/pubky.app/profile.json`],
+    evidence: [buildUri(owner, 'user')],
   },
   existingCompositePostId: undefined as string | undefined,
   existingPostUri: undefined as string | undefined,
@@ -34,7 +35,7 @@ describe('PubchiController draft post application', () => {
     vi.spyOn(useAuthStore, 'getState').mockReturnValue(
       asOpaque<ReturnType<typeof useAuthStore.getState>>({
         selectCurrentUserPubky: () => owner,
-        selectSession: () => ({ info: { capabilities: ['/pub/pubky.app/:rw', '/priv/app.pubchi/v1/:rw'] } }),
+        selectSession: () => ({ info: { capabilities: ['/pub/social/v1/:rw', '/priv/app.pubchi/v1/:rw'] } }),
       }),
     );
     vi.spyOn(PubchiApplication, 'prepareDraftPostApplication').mockResolvedValue(
@@ -68,7 +69,7 @@ describe('PubchiController draft post application', () => {
       'record',
       prepared.applicationId,
       'applied',
-      `pubky://${owner}/pub/pubky.app/posts/${postId}`,
+      buildUri(owner, 'post', postId),
       `${owner}:${postId}`,
     );
   });
@@ -115,7 +116,7 @@ describe('PubchiController draft post application', () => {
       asOpaque<Awaited<ReturnType<typeof PubchiApplication.prepareDraftPostApplication>>>({
         ...prepared,
         existingCompositePostId: `${owner}:${postId}`,
-        existingPostUri: `pubky://${owner}/pub/pubky.app/posts/${postId}`,
+        existingPostUri: buildUri(owner, 'post', postId),
       }),
     );
     const create = vi.spyOn(PostController, 'commitCreate');
@@ -125,7 +126,7 @@ describe('PubchiController draft post application', () => {
     expect(PubchiApplication.recordDraftPostApplyOutcome).toHaveBeenCalledWith(
       'record',
       `${owner}:${postId}`,
-      `pubky://${owner}/pub/pubky.app/posts/${postId}`,
+      buildUri(owner, 'post', postId),
     );
   });
 
@@ -185,13 +186,13 @@ describe('PubchiController draft post application', () => {
     expect(PubchiApplication.recordDraftPostApplyOutcome).toHaveBeenCalledWith(
       'record',
       `${owner}:${postId}`,
-      `pubky://${owner}/pub/pubky.app/posts/${postId}`,
+      buildUri(owner, 'post', postId),
     );
     expect(finalize).toHaveBeenCalledWith(
       'record',
       prepared.applicationId,
       'applied',
-      `pubky://${owner}/pub/pubky.app/posts/${postId}`,
+      buildUri(owner, 'post', postId),
       `${owner}:${postId}`,
     );
     expect(finalize).not.toHaveBeenCalledWith('record', prepared.applicationId, 'failed');

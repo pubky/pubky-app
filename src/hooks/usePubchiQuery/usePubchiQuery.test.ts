@@ -1,4 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
+import { buildUri } from 'pubky-social-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PubchiQuerySuccess } from '@/application/pubchi/pubchi.types';
 import { AppError } from '@/libs/error/error';
@@ -621,8 +622,8 @@ describe('usePubchiQuery', () => {
   it('discards an in-flight summarize when a later post-menu summarize starts', async () => {
     const owner = 'a'.repeat(52);
     usePubchiStore.getState().setConfig(null, owner);
-    const targetA = { kind: 'post' as const, uri: 'pubky://owner/pub/pubky.app/posts/post-A' };
-    const targetB = { kind: 'post' as const, uri: 'pubky://owner/pub/pubky.app/posts/post-B' };
+    const targetA = { kind: 'post' as const, uri: buildUri(OWNER, 'post', '0035Q0HAH8V40') };
+    const targetB = { kind: 'post' as const, uri: buildUri(OWNER, 'post', '0035Q0HAH8V50') };
     const questionA = `Summarize this thread ${targetA.uri}`;
     const questionB = `Summarize this thread ${targetB.uri}`;
     const summarizeAnswer = (question: string, summary: string): PubchiQuerySuccess => {

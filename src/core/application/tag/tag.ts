@@ -1,3 +1,4 @@
+import { decodeObject } from 'pubky-social-specs';
 import {
   TagKind,
   type TCreateTagListInput,
@@ -10,12 +11,10 @@ import { AppError } from '@/libs/error/error';
 import { AuthErrorCode, ClientErrorCode, ServerErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { hasHttpStatus } from '@/libs/error/error.utils';
 import { isAppError } from '@/libs/error/error.utils';
-import { HttpStatusCode } from '@/libs/http/http.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
-import { canonicalJson, sha256Hex } from '@/libs/pubchi/schemas/canonical';
+import { sha256Hex } from '@/libs/pubchi/schemas/canonical';
 import { TagNormalizer } from '@/pipes/tag/tag.normalizer';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { retryHomeserverWriteAfterReread } from '@/services/homeserver/write-retry';
@@ -38,7 +37,7 @@ export class TagApplication {
   static async commitCreate({ tagList, isCurrent, preserveExisting = false }: TCreateTagListInput) {
     const results: TCreateTagResult[] = [];
     // Sequential: a failed entry leaves no hidden in-flight writes for later tags.
-    for (const { taggerId, taggedId, label, tagUrl, tagJson, taggedKind } of tagList) {
+    for (const { taggerId, taggedId, label, tagUrl, tagBody, taggedKind } of tagList) {
       if (isCurrent && !isCurrent()) return;
       const local = taggedKind === TagKind.POST ? LocalPostTagService : LocalUserTagService;
       // The create records the URL it writes, so a delete can find it before Nexus reports it.
@@ -54,57 +53,18 @@ export class TagApplication {
           fence.assertCurrent();
           if (isCurrent && !isCurrent()) return undefined;
           if (!preserveExisting) {
-            await this.writeFixedTag(HttpMethod.PUT, tagUrl, tagJson);
+            await this.writeFixedTag(tagUrl, tagBody);
             return { tagUrl, alreadyExisted: false };
           }
           return retryHomeserverWriteAfterReread(fence, async () => {
             if (isCurrent && !isCurrent()) return undefined;
-            let bodyJson = tagJson;
-            let existed = false;
-            if (preserveExisting) {
-              try {
-                const raw = await HomeserverService.requestRawText(tagUrl);
-                if (new TextEncoder().encode(raw).byteLength > 64 * 1024) {
-                  throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Tag document is too large', {
-                    service: ErrorService.Homeserver,
-                    operation: 'commitCreate',
-                  });
-                }
-                let remote: unknown;
-                try {
-                  remote = JSON.parse(raw);
-                } catch (cause) {
-                  throw Err.validation(ValidationErrorCode.FORMAT_ERROR, 'Tag document is invalid', {
-                    service: ErrorService.Homeserver,
-                    operation: 'commitCreate',
-                    cause,
-                  });
-                }
-                if (
-                  !remote ||
-                  typeof remote !== 'object' ||
-                  Array.isArray(remote) ||
-                  !('uri' in remote) ||
-                  !('label' in remote) ||
-                  !('created_at' in remote) ||
-                  remote.uri !== tagJson.uri ||
-                  remote.label !== tagJson.label
-                ) {
-                  throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Tag identity mismatch', {
-                    service: ErrorService.Homeserver,
-                    operation: 'commitCreate',
-                  });
-                }
-                bodyJson = { ...tagJson, ...remote };
-                existed = true;
-              } catch (error) {
-                if (!hasHttpStatus(error, HttpStatusCode.NOT_FOUND)) throw error;
-              }
-            }
+            const stored = await HomeserverService.getFreshBytes(tagUrl, { notFoundAsNull: true });
+            if (stored) this.verifyStoredTag(tagUrl, stored);
+            const tagDocumentSha256 = await sha256Hex(stored ?? tagBody);
             if (isCurrent && !isCurrent()) return undefined;
-            const tagDocumentSha256 = preserveExisting ? await sha256Hex(canonicalJson(bodyJson)) : undefined;
-            await HomeserverService.request({ method: HttpMethod.PUT, url: tagUrl, bodyJson, fence });
-            return { tagUrl, alreadyExisted: existed, ...(tagDocumentSha256 && { tagDocumentSha256 }) };
+            fence.assertCurrent();
+            if (!stored) await HomeserverService.putBlob({ url: tagUrl, blob: tagBody, fence });
+            return { tagUrl, alreadyExisted: stored !== null, tagDocumentSha256 };
           });
         });
         if (result === undefined) {
@@ -211,34 +171,23 @@ export class TagApplication {
           fence.assertCurrent();
           if (isCurrent && !isCurrent()) return false;
           if (!proof) {
-            await this.writeFixedTag(HttpMethod.DELETE, resolvedUri);
+            await this.writeFixedTag(resolvedUri, null);
             return true;
           }
           return retryHomeserverWriteAfterReread(fence, async () => {
             if (isCurrent && !isCurrent()) return false;
-            const raw = await HomeserverService.requestRawText(resolvedUri);
-            if (new TextEncoder().encode(raw).byteLength > 64 * 1024) {
-              throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Tag document exceeds the verification limit', {
-                service: ErrorService.Pubchi,
-                operation: 'revertTagSuggestion',
-              });
-            }
-            let remote: unknown;
-            try {
-              remote = JSON.parse(raw);
-            } catch (cause) {
-              throw Err.validation(ValidationErrorCode.FORMAT_ERROR, 'Tag document cannot be verified for undo', {
-                service: ErrorService.Pubchi,
-                operation: 'revertTagSuggestion',
-                cause,
-              });
-            }
-            if ((await sha256Hex(canonicalJson(remote))) !== proof.expectedHash) {
+            const stored = await HomeserverService.getFreshBytes(resolvedUri, { notFoundAsNull: true });
+            if (isCurrent && !isCurrent()) return false;
+            fence.assertCurrent();
+            if (!stored) return true;
+            this.verifyStoredTag(resolvedUri, stored);
+            if ((await sha256Hex(stored)) !== proof.expectedHash) {
               throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Tag changed since this suggestion was applied', {
                 service: ErrorService.Pubchi,
                 operation: 'revertTagSuggestion',
               });
             }
+            if (isCurrent && !isCurrent()) return false;
             await HomeserverService.request({ method: HttpMethod.DELETE, url: resolvedUri, fence });
             return true;
           });
@@ -273,13 +222,23 @@ export class TagApplication {
     }
   }
 
+  /** The codec verifies that the stored target and label hash to the id in the URL. */
+  private static verifyStoredTag(url: string, bytes: Uint8Array): void {
+    try {
+      decodeObject(url, bytes, 'tag');
+    } catch (cause) {
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Stored tag does not match its address', {
+        service: ErrorService.Pubchi,
+        operation: 'verifyStoredTag',
+        cause,
+      });
+    }
+  }
+
   /** Ordinary actions have a fixed body; HomeserverService owns their retries. */
-  private static async writeFixedTag(
-    method: HttpMethod.PUT | HttpMethod.DELETE,
-    url: string,
-    bodyJson?: Record<string, unknown>,
-  ): Promise<void> {
-    await HomeserverService.request({ method, url, ...(bodyJson && { bodyJson }) });
+  private static async writeFixedTag(url: string, blob: Uint8Array | null): Promise<void> {
+    if (blob !== null) await HomeserverService.putBlob({ url, blob });
+    else await HomeserverService.request({ method: HttpMethod.DELETE, url });
   }
 
   /**

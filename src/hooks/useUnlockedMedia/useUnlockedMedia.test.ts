@@ -7,6 +7,11 @@ import { useUnlockedMedia } from './useUnlockedMedia';
 vi.mock('@/controllers/locks/locks', () => ({
   LocksController: { fetchReplicatedAttachments: vi.fn().mockResolvedValue([]) },
 }));
+// jsdom has no canvas to draw an SVG with.
+vi.mock('@/libs/image/rasterizeSvg', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/libs/image/rasterizeSvg')>()),
+  rasterizeSvg: vi.fn().mockResolvedValue(new Uint8Array([9])),
+}));
 
 const post: ReplicatedPost = {
   content: 'first',
@@ -51,6 +56,16 @@ describe('useUnlockedMedia', () => {
 
     expect(LocksController.fetchReplicatedAttachments).toHaveBeenCalledOnce();
     expect(result.current.media).toHaveLength(1);
+  });
+
+  it('shows a replicated SVG as a PNG (#2683)', async () => {
+    vi.mocked(LocksController.fetchReplicatedAttachments).mockResolvedValue([
+      { id: 'img1.svg', contentType: 'image/svg+xml', bytes: new Uint8Array([1]), slot: 0 },
+    ]);
+
+    const { result } = renderHook(() => useUnlockedMedia({ post, preview: false }));
+
+    await waitFor(() => expect(result.current.media.map((item) => item.type)).toEqual(['image/png']));
   });
 
   it('reads the rest of an article once the card leaves the preview', async () => {

@@ -1,16 +1,45 @@
+import { parseUri, ValidationError } from 'pubky-social-specs';
 import { getUserProfileUrl } from '@/app/routes';
 
-const POST_URI = /^pubky:\/\/([ybndrfg8ejkmcpqxot1uwisza345h769]{52})\/pub\/pubky\.app\/posts\/([^/?#]+)$/;
-const PROFILE_URI = /^pubky:\/\/([ybndrfg8ejkmcpqxot1uwisza345h769]{52})\/pub\/pubky\.app\/profile\.json$/;
-const OWNER_URI = /^pubky:\/\/([ybndrfg8ejkmcpqxot1uwisza345h769]{52})\/pub\/pubky\.app\//;
+/** Social objects the App can show as public evidence. Private feeds, mutes and bookmarks stay local. */
+export function parsePublicSocialUri(uri: string) {
+  if (!uri.startsWith('pubky://')) return null;
+  try {
+    const parsed = parseUri(uri);
+    if (parsed.root !== 'public' || !parsed.path) return null;
+    switch (parsed.kind) {
+      case 'user':
+      case 'post':
+      case 'tag':
+      case 'follow':
+      case 'file':
+        return parsed;
+      default:
+        return null;
+    }
+  } catch (error) {
+    if (error instanceof ValidationError) return null;
+    throw error;
+  }
+}
 
-/** Map a public `pubky://` evidence URI to an App route. */
-export function pubkyUriToAppHref(uri: string, currentUserPubky?: string | null): string | null {
-  const post = uri.match(POST_URI);
-  if (post) return `/post/${post[1]}/${post[2]}`;
-  const profile = uri.match(PROFILE_URI);
-  if (profile) return getUserProfileUrl(profile[1], currentUserPubky);
-  const owner = uri.match(OWNER_URI);
-  if (owner) return getUserProfileUrl(owner[1], currentUserPubky);
+export function parsePubchiTarget(target: { kind: 'post' | 'user'; uri: string }) {
+  const parsed = parsePublicSocialUri(target.uri);
+  if (parsed?.kind === 'user' && target.kind === 'user') return { kind: parsed.kind, owner: parsed.owner };
+  if (parsed?.kind === 'post' && target.kind === 'post' && !parsed.editId) {
+    return { kind: parsed.kind, owner: parsed.owner, id: parsed.id };
+  }
   return null;
+}
+
+export function isPubchiPostUri(uri: string): boolean {
+  return parsePubchiTarget({ kind: 'post', uri }) !== null;
+}
+
+/** Map a public evidence object to the underlying post or the owner's profile. */
+export function pubkyUriToAppHref(uri: string, currentUserPubky?: string | null): string | null {
+  const resource = parsePublicSocialUri(uri);
+  if (!resource) return null;
+  if (resource.kind === 'post') return `/post/${resource.owner}/${resource.id}`;
+  return getUserProfileUrl(resource.owner, currentUserPubky);
 }

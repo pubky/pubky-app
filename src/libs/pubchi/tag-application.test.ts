@@ -6,7 +6,7 @@ const owner = '4bfmrcuwfq4ksqoupn6wcfxrh5enr1izdeyszmhfrntuf1mzoh5o';
 const bot = 'wnpkm7d4c7caym93kzhpamjkn11hu8jdz4m9o3y1x9huopniwuay';
 const target = {
   kind: 'user' as const,
-  uri: `pubky://${owner}/pub/pubky.app/profile.json`,
+  uri: `pubky://${owner}/pub/social/v1/profile.json`,
   snapshot_sha256: 'a'.repeat(64),
 };
 
@@ -50,7 +50,7 @@ const binding = {
 };
 
 const session = {
-  info: { capabilities: ['/pub/pubky.app/:rw', '/priv/app.pubchi/v1/:rw'] },
+  info: { capabilities: ['/pub/social/v1/:rw', '/priv/app.pubchi/v1/:rw'] },
 };
 
 describe('tag suggestion apply binding', () => {
@@ -63,7 +63,7 @@ describe('tag suggestion apply binding', () => {
   it('rejects answer fields that differ from the stored signed request binding', () => {
     expect(
       canApplyTagSuggestion(
-        { ...binding, response: { ...answer, target: { ...target, uri: 'pubky://other/pub/pubky.app/profile.json' } } },
+        { ...binding, response: { ...answer, target: { ...target, uri: 'pubky://other/pub/social/v1/profile.json' } } },
         0,
         session,
         1_800_000_000,
@@ -89,12 +89,30 @@ describe('tag suggestion apply binding', () => {
     vi.useRealTimers();
   });
 
-  it('requires separate public and private capability coverage', () => {
+  it('requires v1 tag writes and private receipt writes', () => {
+    vi.setSystemTime(1_800_000_000_000);
+    expect(
+      canApplyTagSuggestion(
+        binding,
+        0,
+        { info: { capabilities: ['/pub/pubky.app/:rw', '/priv/app.pubchi/v1/:rw'] } },
+        1_800_000_000,
+      ),
+    ).toBe(false);
+    expect(
+      canApplyTagSuggestion(
+        binding,
+        0,
+        { info: { capabilities: ['/pub/social/v1/tags/:w', '/priv/app.pubchi/v1/:rw'] } },
+        1_800_000_000,
+      ),
+    ).toBe(true);
     expect(
       canApplyTagSuggestion(binding, 0, { info: { capabilities: ['/priv/app.pubchi/v1/:rw'] } }, 1_800_000_000),
     ).toBe(false);
-    expect(canApplyTagSuggestion(binding, 0, { info: { capabilities: ['/pub/pubky.app/:rw'] } }, 1_800_000_000)).toBe(
+    expect(canApplyTagSuggestion(binding, 0, { info: { capabilities: ['/pub/social/v1/:rw'] } }, 1_800_000_000)).toBe(
       false,
     );
+    vi.useRealTimers();
   });
 });

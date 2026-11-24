@@ -9,7 +9,7 @@
   "question": "Suggest tags for this user",
   "summary": "No safe tag suggestions were found.",
   "evidence": [],
-  "sources": ["https://nexus.pubky.app/v0/stream/resources"],
+  "sources": ["https://nexus.pubky.app/v1/stream/resources"],
   "tool_trace_summary": {
     "tools": [],
     "call_count": 0,
@@ -19,7 +19,7 @@
   "section": "tag_suggestions",
   "target": {
     "kind": "user",
-    "uri": "pubky://4bfmrcuwfq4ksqoupn6wcfxrh5enr1izdeyszmhfrntuf1mzoh5o/pub/pubky.app/profile.json",
+    "uri": "pubky://4bfmrcuwfq4ksqoupn6wcfxrh5enr1izdeyszmhfrntuf1mzoh5o/pub/social/v1/profile.json",
     "snapshot_sha256": null
   },
   "tag_suggestions": [],

@@ -1,7 +1,10 @@
+import { buildUri } from 'pubky-social-specs';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { usePubchiStore } from './pubchi.store';
 
 const OWNER = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo';
+const firstPost = buildUri(OWNER, 'post', '0032W6CBGDBP0');
+const secondPost = buildUri(OWNER, 'post', '0035Q0HAH8V6G');
 
 describe('PubchiStore', () => {
   beforeEach(() => {
@@ -94,14 +97,14 @@ describe('PubchiStore', () => {
 
   it('clears the conversation when opening a post-menu summarize', () => {
     const first = {
-      question: 'Summarize this thread pubky://owner/pub/pubky.app/posts/post-1',
+      question: `Summarize this thread ${firstPost}`,
       source: 'post-menu' as const,
-      target: { kind: 'post' as const, uri: 'pubky://owner/pub/pubky.app/posts/post-1' },
+      target: { kind: 'post' as const, uri: firstPost },
     };
     const second = {
-      question: 'Summarize this thread pubky://owner/pub/pubky.app/posts/post-2',
+      question: `Summarize this thread ${secondPost}`,
       source: 'post-menu' as const,
-      target: { kind: 'post' as const, uri: 'pubky://owner/pub/pubky.app/posts/post-2' },
+      target: { kind: 'post' as const, uri: secondPost },
     };
     usePubchiStore.getState().setConfig(null, OWNER);
     usePubchiStore.getState().openFlyout(first, OWNER);
@@ -117,9 +120,9 @@ describe('PubchiStore', () => {
 
   it('starts a fresh conversation when summarizing the same post from the menu again', () => {
     const prefill = {
-      question: 'Summarize this thread pubky://owner/pub/pubky.app/posts/post-1',
+      question: `Summarize this thread ${firstPost}`,
       source: 'post-menu' as const,
-      target: { kind: 'post' as const, uri: 'pubky://owner/pub/pubky.app/posts/post-1' },
+      target: { kind: 'post' as const, uri: firstPost },
     };
     usePubchiStore.getState().setConfig(null, OWNER);
     usePubchiStore.getState().openFlyout(prefill, OWNER);
@@ -143,7 +146,7 @@ describe('PubchiStore', () => {
       {
         question: 'Suggest tags for this user',
         source: 'chip',
-        target: { kind: 'user', uri: 'pubky://owner/pub/pubky.app/profile.json' },
+        target: { kind: 'user', uri: buildUri(OWNER, 'user') },
       },
       OWNER,
     );

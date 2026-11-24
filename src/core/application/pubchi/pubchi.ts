@@ -1,4 +1,4 @@
-import { PubkyAppTag } from 'pubky-app-specs';
+import { decodeObject } from 'pubky-social-specs';
 import { TagKind } from '@/application/tag/tag.types';
 import { AppError } from '@/libs/error/error';
 import {
@@ -73,7 +73,7 @@ import {
   withProactiveDayLock,
 } from '@/libs/pubchi/proactive';
 import { parsePubchiAnswerV1, type PubchiAnswerV1 } from '@/libs/pubchi/schemas/answer';
-import { parseConversation } from '@/libs/pubchi/schemas/ask-body';
+import { parseConversation, type PubchiTarget } from '@/libs/pubchi/schemas/ask-body';
 import { parsePubchiBotV1, type PubchiBotV1 } from '@/libs/pubchi/schemas/bot';
 import { bodySha256 } from '@/libs/pubchi/schemas/canonical';
 import { canonicalJson, sha256Hex } from '@/libs/pubchi/schemas/canonical';
@@ -113,7 +113,10 @@ import {
 import { parsePubchiTagApplication, type PubchiTagApplication } from '@/libs/pubchi/schemas/tag-application';
 import { type OwnerBindingV1, parseOwnerBindingV1 } from '@/libs/pubchi/schemas/tenant';
 import { canApplyTagSuggestion, tagApplicationBinding } from '@/libs/pubchi/tag-application';
+import { parsePubchiTarget } from '@/libs/pubchi/uri';
+import { buildCompositeId } from '@/models/models.utils';
 import { bindingRecordId } from '@/models/pubchi/binding.schema';
+import { pickHeadVersion } from '@/pipes/post/post.head';
 import { TagNormalizer } from '@/pipes/tag/tag.normalizer';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { retryHomeserverWriteAfterReread } from '@/services/homeserver/write-retry';
@@ -1337,6 +1340,7 @@ export class PubchiApplication {
         operation: 'prepareTagSuggestionApplication',
       });
     }
+    const tagParams = this.tagSuggestionParams(binding.target, binding.owner, suggestion.label);
     await this.assertTagSuggestionTargetUnchanged(binding);
     const applicationId = await sha256Hex(
       canonicalJson({
@@ -1354,7 +1358,7 @@ export class PubchiApplication {
       tag_document_sha256: { ...(record.tag_document_sha256 ?? {}), [suggestionIndex]: null },
       updated_at: Date.now(),
     });
-    return { binding, applicationId, suggestion };
+    return { applicationId, tagParams };
   }
 
   private static async assertTagSuggestionTargetUnchanged(
@@ -1368,16 +1372,11 @@ export class PubchiApplication {
       });
     }
     try {
-      const raw = await HomeserverService.requestRawText(binding.target.uri);
-      const source: unknown = JSON.parse(raw);
-      if (!source || Array.isArray(source) || typeof source !== 'object')
-        throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Target changed — ask again', {
-          service: ErrorService.Pubchi,
-          operation: 'validatePubchiState',
-        });
-      const value = source as Record<string, unknown>;
-      const projection = projectTargetSnapshot(binding.target, value);
-      if ((await sha256Hex(canonicalJson(projection))) !== expected)
+      const source =
+        binding.target.kind === 'post'
+          ? await this.readPublicPostHead(binding.target.uri)
+          : decodeObject(binding.target.uri, await HomeserverService.getFreshBytes(binding.target.uri), 'user');
+      if (!source || (await sha256Hex(canonicalJson(projectTargetSnapshot(binding.target, source)))) !== expected)
         throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Target changed — ask again', {
           service: ErrorService.Pubchi,
           operation: 'validatePubchiState',
@@ -1544,18 +1543,7 @@ export class PubchiApplication {
         operation: 'reconcileTagSuggestionApplication',
       });
     }
-    const target = /^pubky:\/\/([^/]+)\/pub\/pubky\.app\/(?:posts\/([^/]+)|profile\.json)$/.exec(binding.target.uri);
-    if (!target)
-      throw Err.validation(ValidationErrorCode.FORMAT_ERROR, 'Invalid tag suggestion target', {
-        service: ErrorService.Pubchi,
-        operation: 'reconcileTagSuggestionApplication',
-      });
-    const tag = TagNormalizer.from({
-      taggedKind: binding.target.kind === 'post' ? TagKind.POST : TagKind.USER,
-      taggedId: binding.target.kind === 'post' ? `${target[1]}:${target[2]}` : target[1],
-      label: suggestion.label,
-      taggerId: binding.owner,
-    });
+    const tag = TagNormalizer.from(this.tagSuggestionParams(binding.target, binding.owner, suggestion.label));
     try {
       const applicationId = await this.tagSuggestionApplicationId(binding, suggestion.label);
       const receipt = await this.readTagSuggestionReceipt(binding, applicationId);
@@ -1564,7 +1552,7 @@ export class PubchiApplication {
           service: ErrorService.Pubchi,
           operation: 'validatePubchiState',
         });
-      const tagState = await this.readTagSuggestionPublicTag(tag.tagUrl, tag.tagJson);
+      const tagState = await this.readTagSuggestionPublicTag(tag.tagUrl);
       const operation = record.operations?.[suggestionIndex] ?? 'apply';
       const receiptStatus = receipt.status;
 
@@ -1638,19 +1626,11 @@ export class PubchiApplication {
       }),
     );
     const receipt = await this.readTagSuggestionReceipt(binding, applicationId);
-    const target = /^pubky:\/\/([^/]+)\/pub\/pubky\.app\/(?:posts\/([^/]+)|profile\.json)$/.exec(binding.target.uri);
-    const tag = target
-      ? TagNormalizer.from({
-          taggedKind: binding.target.kind === 'post' ? TagKind.POST : TagKind.USER,
-          taggedId: binding.target.kind === 'post' ? `${target[1]}:${target[2]}` : target[1],
-          label: suggestion.label,
-          taggerId: binding.owner,
-        })
-      : undefined;
+    const tagParams = this.tagSuggestionParams(binding.target, binding.owner, suggestion.label);
+    const tag = TagNormalizer.from(tagParams);
     const tagDocumentSha256 = receipt?.tag_document_sha256;
     if (
       !receipt ||
-      !tag ||
       receipt.status !== 'applied' ||
       receipt.already_existed !== false ||
       receipt.owner !== binding.owner ||
@@ -1673,7 +1653,7 @@ export class PubchiApplication {
         operation: 'prepareTagSuggestionRevert',
       });
     }
-    return { binding, applicationId, suggestion, tagDocumentSha256 };
+    return { applicationId, tagParams, tagDocumentSha256 };
   }
 
   static async discoverTagSuggestions(
@@ -1725,18 +1705,8 @@ export class PubchiApplication {
             continue;
           const receipt = parsed.value;
           if (liveIds.has(receipt.application_id)) continue;
-          const targetMatch =
-            receipt.target.kind === 'post'
-              ? /^pubky:\/\/([^/]+)\/pub\/pubky\.app\/posts\/([^/]+)$/.exec(receipt.target.uri)
-              : /^pubky:\/\/([^/]+)\/pub\/pubky\.app\/profile\.json$/.exec(receipt.target.uri);
-          if (!targetMatch) continue;
-          const tag = TagNormalizer.from({
-            taggedKind: receipt.target.kind === 'post' ? TagKind.POST : TagKind.USER,
-            taggedId: receipt.target.kind === 'post' ? `${targetMatch[1]}:${targetMatch[2]}` : targetMatch[1],
-            label: receipt.label,
-            taggerId: owner,
-          });
-          const tagState = await this.readTagSuggestionPublicTag(tag.tagUrl, tag.tagJson);
+          const tag = TagNormalizer.from(this.tagSuggestionParams(receipt.target, owner, receipt.label));
+          const tagState = await this.readTagSuggestionPublicTag(tag.tagUrl);
           if (!isCurrent()) return;
           const { status } = reconcileTagSuggestionState({
             receiptStatus: receipt.status,
@@ -1777,14 +1747,14 @@ export class PubchiApplication {
         operation: 'validatePubchiState',
       });
     }
-    const tagParams = this.discoveredTagSuggestionParams(receipt);
+    const tagParams = this.tagSuggestionParams(receipt.target, receipt.owner, receipt.label);
     const tag = TagNormalizer.from(tagParams);
     if (receipt.tag_uri !== tag.tagUrl)
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Receipt tag URI is not canonical', {
         service: ErrorService.Pubchi,
         operation: 'validatePubchiState',
       });
-    if ((await this.readTagSuggestionPublicTag(tag.tagUrl, tag.tagJson)) !== 'present-canonical')
+    if ((await this.readTagSuggestionPublicTag(tag.tagUrl)) !== 'present-canonical')
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Receipt tag is not canonical', {
         service: ErrorService.Pubchi,
         operation: 'validatePubchiState',
@@ -1843,8 +1813,8 @@ export class PubchiApplication {
         service: ErrorService.Pubchi,
         operation: 'validatePubchiState',
       });
-    const tag = TagNormalizer.from(this.discoveredTagSuggestionParams(receipt));
-    const tagState = await this.readTagSuggestionPublicTag(tag.tagUrl, tag.tagJson);
+    const tag = TagNormalizer.from(this.tagSuggestionParams(receipt.target, receipt.owner, receipt.label));
+    const tagState = await this.readTagSuggestionPublicTag(tag.tagUrl);
     if (!isCurrent()) return undefined;
     const reconciled = reconcileTagSuggestionState({
       receiptStatus: receipt.status,
@@ -1924,18 +1894,18 @@ export class PubchiApplication {
     return parsed.value;
   }
 
-  private static discoveredTagSuggestionParams(receipt: PubchiTagApplication) {
-    const match = /^pubky:\/\/([^/]+)\/pub\/pubky\.app\/posts\/([^/]+)$/.exec(receipt.target.uri);
-    if (!match || receipt.target.kind !== 'post')
-      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Receipt target is invalid', {
+  private static tagSuggestionParams(target: PubchiTarget, owner: string, label: string) {
+    const parsed = parsePubchiTarget(target);
+    if (!parsed)
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Invalid tag suggestion target', {
         service: ErrorService.Pubchi,
-        operation: 'validatePubchiState',
+        operation: 'tagSuggestionParams',
       });
     return {
-      taggedKind: TagKind.POST,
-      taggedId: `${match[1]}:${match[2]}`,
-      label: receipt.label,
-      taggerId: receipt.owner,
+      taggedKind: parsed.kind === 'post' ? TagKind.POST : TagKind.USER,
+      taggedId: parsed.kind === 'post' ? buildCompositeId({ pubky: parsed.owner, id: parsed.id }) : parsed.owner,
+      label,
+      taggerId: owner,
     };
   }
 
@@ -2009,15 +1979,15 @@ export class PubchiApplication {
 
   private static async readTagSuggestionPublicTag(
     tagUrl: string,
-    expected: Record<string, unknown>,
   ): Promise<'absent' | 'present-canonical' | 'indeterminate'> {
     try {
-      const raw = await HomeserverService.requestRawText(tagUrl);
-      if (new TextEncoder().encode(raw).byteLength > 64 * 1024) return 'indeterminate';
-      const tag = PubkyAppTag.fromJson(JSON.parse(raw)).toJson() as Record<string, unknown>;
-      return tag.uri === expected.uri && tag.label === expected.label ? 'present-canonical' : 'indeterminate';
-    } catch (cause) {
-      return hasHttpStatus(cause, HttpStatusCode.NOT_FOUND) ? 'absent' : 'indeterminate';
+      const stored = await HomeserverService.getFreshBytes(tagUrl, { notFoundAsNull: true });
+      if (!stored) return 'absent';
+      // The codec checks the stored target and label against the hash in the expected tag URL.
+      decodeObject(tagUrl, stored, 'tag');
+      return 'present-canonical';
+    } catch {
+      return 'indeterminate';
     }
   }
 
@@ -2176,13 +2146,15 @@ export class PubchiApplication {
     }
     const applicationId = await this.draftPostApplicationId(binding);
     const receipt = await this.readDraftPostReceipt(binding, applicationId);
-    const expectedUri = `pubky://${owner}/pub/pubky.app/posts/${record.composite_post_id.slice(owner.length + 1)}`;
+    const post = record.post_uri && parsePubchiTarget({ kind: 'post', uri: record.post_uri });
     if (
-      !record.composite_post_id.startsWith(`${owner}:`) ||
+      !post ||
+      post.kind !== 'post' ||
+      post.owner !== owner ||
+      buildCompositeId({ pubky: owner, id: post.id }) !== record.composite_post_id ||
       !receipt ||
       receipt.status !== 'applied' ||
-      receipt.post_uri !== expectedUri ||
-      record.post_uri !== expectedUri
+      receipt.post_uri !== record.post_uri
     ) {
       throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Draft post receipt cannot be reverted', {
         service: ErrorService.Pubchi,
@@ -2402,14 +2374,25 @@ export class PubchiApplication {
     }
   }
 
+  private static async readPublicPostHead(postUri: string) {
+    if (!parsePubchiTarget({ kind: 'post', uri: postUri })) {
+      throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Invalid post reference', {
+        service: ErrorService.Pubchi,
+        operation: 'readPublicPostHead',
+      });
+    }
+    const directory = `${postUri}/`;
+    const entries = await HomeserverService.listAll({ baseDirectory: directory });
+    const head = pickHeadVersion(entries.filter((url) => url.startsWith(directory)));
+    return head ? decodeObject(head, await HomeserverService.getBytes(head), 'post') : null;
+  }
+
   private static async readDraftPostPublicPost(postUri: string): Promise<DraftPostPublicState> {
     try {
-      const raw = await HomeserverService.requestRawText(postUri);
-      if (new TextEncoder().encode(raw).byteLength > 64 * 1024) return 'indeterminate';
-      JSON.parse(raw);
-      return 'present';
-    } catch (cause) {
-      return hasHttpStatus(cause, HttpStatusCode.NOT_FOUND) ? 'absent' : 'indeterminate';
+      return (await this.readPublicPostHead(postUri)) ? 'present' : 'absent';
+    } catch {
+      // A listed version can disappear between LIST and GET while older versions still exist.
+      return 'indeterminate';
     }
   }
 

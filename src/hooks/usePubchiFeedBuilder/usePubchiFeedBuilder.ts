@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
 import { SETTINGS_ROUTES } from '@/app/routes';
+import { SOCIAL_V1_FEEDS_DIRECTORY } from '@/config/auth';
 import { TAGGED_AS_FILTER_KEY } from '@/config/feed';
 import { FeedController } from '@/controllers/feed/feed';
 import { PubchiController } from '@/controllers/pubchi/pubchi';
@@ -15,50 +15,6 @@ import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import { toast } from '@/molecules/Toaster/toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
-const reachValues: Record<string, PubkyAppFeedReach> = {
-  following: PubkyAppFeedReach.Following,
-  friends: PubkyAppFeedReach.Friends,
-  all: PubkyAppFeedReach.All,
-  wot: PubkyAppFeedReach.Wot,
-  me: PubkyAppFeedReach.Me,
-};
-
-const sortValues: Record<string, PubkyAppFeedSort> = {
-  recent: PubkyAppFeedSort.Recent,
-  popularity: PubkyAppFeedSort.Popularity,
-};
-
-const layoutValues: Record<string, PubkyAppFeedLayout> = {
-  columns: PubkyAppFeedLayout.Columns,
-  wide: PubkyAppFeedLayout.Wide,
-  visual: PubkyAppFeedLayout.Visual,
-  list: PubkyAppFeedLayout.List,
-};
-
-const contentValues: Record<string, PubkyAppPostKind> = {
-  short: PubkyAppPostKind.Short,
-  long: PubkyAppPostKind.Long,
-  image: PubkyAppPostKind.Image,
-  video: PubkyAppPostKind.Video,
-  link: PubkyAppPostKind.Link,
-  file: PubkyAppPostKind.File,
-  collection: PubkyAppPostKind.Collection,
-};
-
-function initialValues(proposal: FeedProposalV2): CustomFeedFormData {
-  const config = proposal.feed.feed;
-  return {
-    name: proposal.feed.name,
-    icon: proposal.feed.icon,
-    tags: config.tags ?? [],
-    domain_tags: config.domain_tags ?? [],
-    reach: reachValues[config.reach] ?? PubkyAppFeedReach.All,
-    sort: sortValues[config.sort] ?? PubkyAppFeedSort.Recent,
-    layout: layoutValues[config.layout] ?? PubkyAppFeedLayout.Columns,
-    content: config.content ? (contentValues[config.content] ?? CUSTOM_FEED_CONTENT_ALL) : CUSTOM_FEED_CONTENT_ALL,
-  };
-}
-
 export function usePubchiFeedBuilder({
   proposal,
   existingFeed,
@@ -70,7 +26,12 @@ export function usePubchiFeedBuilder({
 }) {
   const mapped = feedProposalV2ToCreateParams(proposal);
   const owner = useAuthStore((state) => state.currentUserPubky);
-  const [draft, setDraft] = useState<CustomFeedFormData>(() => initialValues(proposal));
+  const initialValues: CustomFeedFormData = {
+    ...mapped.params,
+    reach: mapped.params.reach === 'followers' ? 'all' : mapped.params.reach,
+    content: mapped.params.content ?? CUSTOM_FEED_CONTENT_ALL,
+  };
+  const [draft, setDraft] = useState(initialValues);
   const [preview, setPreview] = useState<{ ids: string[]; error: boolean }>({ ids: [], error: false });
 
   useEffect(() => {
@@ -83,7 +44,7 @@ export function usePubchiFeedBuilder({
       const feed: FeedModelSchema = {
         id: existingFeed?.id ?? 'pubchi-preview',
         ...draft,
-        reach: draft.reach === TAGGED_AS_FILTER_KEY ? PubkyAppFeedReach.Wot : draft.reach,
+        reach: draft.reach === TAGGED_AS_FILTER_KEY ? 'wot' : draft.reach,
         content: draft.content === CUSTOM_FEED_CONTENT_ALL ? null : draft.content,
         created_at: 0,
         updated_at: 0,
@@ -115,6 +76,7 @@ export function usePubchiFeedBuilder({
     const canWriteFeed =
       Boolean(owner) &&
       sessionOwner === owner &&
+      sessionCovers(capabilities, SOCIAL_V1_FEEDS_DIRECTORY) &&
       sessionCovers(capabilities, PUBCHI_HOMESERVER_DIRECTORY) &&
       sessionCovers(capabilities, PUBCHI_PRIVATE_DIRECTORY);
     if (!canWriteFeed) {
@@ -131,11 +93,11 @@ export function usePubchiFeedBuilder({
       });
       return false;
     }
-    let feed: FeedModelSchema;
+    let feed: FeedModelSchema | null;
     try {
       const changes = {
         ...data,
-        reach: data.reach === TAGGED_AS_FILTER_KEY ? PubkyAppFeedReach.Wot : data.reach,
+        reach: data.reach === TAGGED_AS_FILTER_KEY ? 'wot' : data.reach,
         content: data.content === CUSTOM_FEED_CONTENT_ALL ? null : data.content,
       };
       feed = existingFeed
@@ -145,7 +107,7 @@ export function usePubchiFeedBuilder({
       toast({ variant: 'error', title: "Couldn't save the feed. Try again." });
       return false;
     }
-    if (useAuthStore.getState().currentUserPubky !== owner) return false;
+    if (!feed || useAuthStore.getState().currentUserPubky !== owner) return false;
     let provenanceRecorded = true;
     try {
       provenanceRecorded = await PubchiController.commitRecordBuiltFeed({
@@ -167,5 +129,5 @@ export function usePubchiFeedBuilder({
     return true;
   };
 
-  return { mapped, initialValues: initialValues(proposal), preview, save, setDraft };
+  return { mapped, initialValues, preview, save, setDraft };
 }

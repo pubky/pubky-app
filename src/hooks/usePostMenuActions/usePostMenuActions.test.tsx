@@ -5,7 +5,7 @@ import { toast } from '@/molecules/Toaster/toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { authInitialState } from '@/stores/auth/auth.types';
 import { usePubchiStore } from '@/stores/pubchi/pubchi.store';
-import { mockSession } from '@/test-utils/pubky';
+import { mockSession, POST_ID_STAGING_FIXTURE, PUBKY_52_STAGING_FIXTURE } from '@/test-utils/pubky';
 import { usePostMenuActions } from './usePostMenuActions';
 import { POST_MENU_ACTION_IDS } from './usePostMenuActions.constants';
 
@@ -103,17 +103,17 @@ Object.defineProperty(window, 'location', {
 });
 
 describe('usePostMenuActions', () => {
-  const mockPostId = 'pk:author123:post456';
-  const mockAuthorId = 'author123';
+  const mockAuthorId = PUBKY_52_STAGING_FIXTURE;
+  const mockPostId = `pk:${mockAuthorId}:${POST_ID_STAGING_FIXTURE}`;
   const mockCurrentUserId = 'currentUser123';
 
   const defaultMocks = {
     currentUserPubky: mockCurrentUserId,
     postDetails: {
-      id: 'post456',
+      id: POST_ID_STAGING_FIXTURE,
       content: 'Test post',
       kind: 'short',
-      uri: 'pubky://author/pub/pubky.app/posts/post456',
+      uri: `pubky://${mockAuthorId}/pub/social/v1/posts/${POST_ID_STAGING_FIXTURE}`,
       indexed_at: Date.now(),
       attachments: null,
       is_moderated: false,
@@ -147,7 +147,7 @@ describe('usePostMenuActions', () => {
 
     mockParseCompositeId.mockReturnValue({
       pubky: mockAuthorId,
-      id: 'post456',
+      id: POST_ID_STAGING_FIXTURE,
     });
 
     mockUseCurrentUserProfile.mockReturnValue({
@@ -251,7 +251,9 @@ describe('usePostMenuActions', () => {
 
       expect(defaultMocks.copyToClipboard).toHaveBeenCalledWith(`pubky${mockAuthorId}`);
       expect(defaultMocks.copyToClipboard).toHaveBeenCalledWith('Test post');
-      expect(defaultMocks.shareUrl).toHaveBeenCalledWith('https://example.com/post/author123/post456');
+      expect(defaultMocks.shareUrl).toHaveBeenCalledWith(
+        `https://example.com/post/${mockAuthorId}/${POST_ID_STAGING_FIXTURE}`,
+      );
       expect(useAuthStore.getState().showSignInDialog).toBe(false);
     });
   });
@@ -283,7 +285,7 @@ describe('usePostMenuActions', () => {
         ownerPubky: mockCurrentUserId,
         target: {
           kind: 'post',
-          uri: 'pubky://author123/pub/pubky.app/posts/post456',
+          uri: `pubky://${mockAuthorId}/pub/social/v1/posts/${POST_ID_STAGING_FIXTURE}`,
         },
       },
     });
@@ -317,7 +319,7 @@ describe('usePostMenuActions', () => {
     expect(usePubchiStore.getState().flyout.prefill?.source).toBe('post-menu');
     expect(usePubchiStore.getState().flyout.prefill?.target).toEqual({
       kind: 'post',
-      uri: 'pubky://author123/pub/pubky.app/posts/post456',
+      uri: `pubky://${mockAuthorId}/pub/social/v1/posts/${POST_ID_STAGING_FIXTURE}`,
     });
   });
 
@@ -716,7 +718,9 @@ describe('usePostMenuActions', () => {
         await copyLinkItem?.onClick();
       });
 
-      expect(defaultMocks.shareUrl).toHaveBeenCalledWith('https://example.com/post/author123/post456');
+      expect(defaultMocks.shareUrl).toHaveBeenCalledWith(
+        `https://example.com/post/${mockAuthorId}/${POST_ID_STAGING_FIXTURE}`,
+      );
     });
 
     it('includes copy text action for short posts', () => {
@@ -731,7 +735,11 @@ describe('usePostMenuActions', () => {
 
     it('does not include copy text action for articles', () => {
       mockUsePostDetails.mockReturnValue({
-        postDetails: { id: 'post456', content: JSON.stringify({ title: 'Test article', body: 'Body' }), kind: 'long' },
+        postDetails: {
+          id: POST_ID_STAGING_FIXTURE,
+          content: JSON.stringify({ title: 'Test article', body: 'Body' }),
+          kind: 'long',
+        },
         isLoading: false,
       });
 
@@ -745,7 +753,7 @@ describe('usePostMenuActions', () => {
 
     it('includes copy text action for malformed long posts', async () => {
       mockUsePostDetails.mockReturnValue({
-        postDetails: { id: 'post456', content: 'Raw long content', kind: 'long' },
+        postDetails: { id: POST_ID_STAGING_FIXTURE, content: 'Raw long content', kind: 'long' },
         isLoading: false,
       });
 
@@ -881,7 +889,7 @@ describe('usePostMenuActions', () => {
       );
 
       const followItem = result.current.menuItems.find((item) => item.id === POST_MENU_ACTION_IDS.FOLLOW);
-      expect(followItem?.label).toContain(mockAuthorId);
+      expect(followItem?.label).toBe(`Follow ${mockAuthorId.slice(0, 15)}...`);
     });
   });
 

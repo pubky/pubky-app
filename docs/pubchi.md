@@ -12,7 +12,7 @@ subsequent App changes are merged into the same integration branch.
 It retains the current App's grant authentication, Shop integration, local-first data
 paths, runtime configuration, and test conventions. The source fork's historical
 Phase 0 proof documents describe earlier contracts and are not the operational guide
-for this port. The architecture decision is [ADR 0026](adr/0026-pubchi-assisted-integration.md).
+for this port. The architecture decision is [ADR 0031](adr/0031-pubchi-assisted-integration.md).
 
 ## Enablement and deployment
 
@@ -47,6 +47,15 @@ with the App origin allowed by its CORS policy. Frontend and service must agree 
 vendored document schemas and signed request v2 contract, including the configured
 audience. This frontend port does not attest which service revision is running at a
 public URL. Record the backend revision with deployment evidence before enabling it.
+
+The service must accept Social v1 profile and versionless post references in signed
+requests and return Social v1 URIs in answers and receipts. For a post target,
+both sides hash the snapshot from the latest decoded version, using the stored
+`note` or `article` kind. Tag IDs bind the target and label. Bookmarks, mutes and saved feeds live under the owner's private Social v1
+tree and cannot serve as public graph evidence. The service deployment branch at
+[`7751be4`](https://github.com/BitcoinErrorLog/pubky-ai-bot/blob/7751be49e86684817b85f7e8f55a2d71308d6e37/packages/pubchi-schemas/src/ask-body.ts)
+still validates 0.x targets. Verify a compatible service revision with a contextual
+post query, profile query, and assisted apply/undo before enabling this App build.
 
 The current feed builder requires `PUBCHI_FEED_PROPOSAL_V2=1` on the **service** as
 well as the App's request-level `proposal_version: 2`. Without that service flag,
@@ -96,8 +105,9 @@ tag application, and draft publishing require an explicit user action. The App u
 its existing feed, tag, and post write paths, with Pubchi records tracking provenance
 and outcomes.
 
-Tag receipts store a hash of the exact canonical tag document. Undo rereads and
-checks that document before every delete attempt, including retries. Older receipts
+Tag receipts store the SHA-256 digest of the exact Social v1 tag bytes on the homeserver.
+Applying an existing tag leaves those bytes in place. Undo rereads the stored bytes
+and checks the digest before each delete attempt, including retries. Older receipts
 without this proof cannot Undo through Pubchi. Draft Undo requires the post ID
 returned by that publishing operation and `publication_confirmed`; matching content
 does not establish which post the operation created. An unknown publication outcome
@@ -112,8 +122,9 @@ An existing session may lack access to `/pub/app.pubchi/v1/` and
 `AuthController.requestCapabilities(...)` and the App's existing signer approval
 flow. It does not silently broaden ordinary sign-in grants. The flow preserves the
 current grant until approval, requires the same identity, and uses the existing auth
-generation fence to reject stale results. App social writes additionally need their
-existing `/pub/pubky.app/` capability. See [grant authentication](adr/0024-grant-authentication.md).
+generation fence to reject stale results. Assisted actions use the Social v1 grant
+for the affected directory (public posts and tags, private feeds) and the Pubchi
+namespace for their records. See [grant authentication](adr/0024-grant-authentication.md).
 
 Bot identity creation and backup happen locally. Device request signers are separate,
 non-extractable Ed25519 `CryptoKey`s in this browser's IndexedDB. A published delegation
@@ -149,7 +160,7 @@ documents, their exact UTF-8 hashes, and owner relationships. Its optional histo
 means public request/suggestion/run records, not chat history. It excludes `/priv/`
 documents, including brain context and private receipts, and device private keys.
 There is no export/import UI or guided move flow yet, and a browser-local signer does
-not become portable custody. See [ADR 0026](adr/0026-pubchi-assisted-integration.md)
+not become portable custody. See [ADR 0031](adr/0031-pubchi-assisted-integration.md)
 for storage and layer boundaries.
 
 ## Scope and verification
@@ -169,7 +180,7 @@ build for the combined change. Review the Pubchi visual cases through the existi
 VRT workflow. Before enabling a deployment, exercise signer capability approval,
 enrollment/backup, query/feed responses, approved tag and post writes, revert and
 reconciliation, and logout/account switching across tabs against the chosen backend.
-A unit test pass alone does not prove that deployment contract.
+Record the service revision and the resulting receipt URIs during acceptance.
 
 Follow-up work includes persisted chat/readable memory, export/import with preview,
 guided move, and follower-history snapshots with an honest completeness indicator.

@@ -1,7 +1,7 @@
 'use client';
 
 import { Bot, Key, Link, Megaphone, MegaphoneOff, UserRoundMinus, UserRoundPlus } from 'lucide-react';
-import { userUriBuilder } from 'pubky-app-specs';
+import { buildUri } from 'pubky-social-specs';
 import { PROFILE_ROUTES } from '@/app/routes';
 import { PubchiController } from '@/controllers/pubchi/pubchi';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
@@ -75,7 +75,7 @@ export function useProfileMenuActions(userId: string, active = true): UseProfile
         PubchiController.openFlyout({
           question: 'Suggest tags for this user',
           source: 'chip',
-          target: { kind: 'user', uri: userUriBuilder(userId) },
+          target: { kind: 'user', uri: buildUri(userId, 'user') },
         });
       },
     });

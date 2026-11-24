@@ -36,7 +36,7 @@ describe('pubchi suggestion schema', () => {
       summary: answer.summary,
     });
     expect(suggestion.source_uris).toEqual([
-      'pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/pubky.app/profile.json',
+      'pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/social/v1/profile.json',
     ]);
     expect(suggestion.expires_at).toBe(nowSeconds + PUBCHI_SUGGESTION_TTL_SECONDS);
     expect(parsePubchiSuggestionV1(suggestion)).toEqual({ ok: true, value: suggestion });

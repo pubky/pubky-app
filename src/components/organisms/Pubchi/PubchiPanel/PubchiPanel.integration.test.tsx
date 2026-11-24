@@ -1,6 +1,6 @@
 import { StrictMode } from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
+import { buildUri } from 'pubky-social-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PubchiQuerySuccess } from '@/application/pubchi/pubchi.types';
 import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
@@ -14,7 +14,7 @@ import { mockRingSession } from '@/test-utils/pubky';
 import { PubchiPanel } from './PubchiPanel';
 
 const OWNER = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo';
-const TARGET = { kind: 'post' as const, uri: `pubky://${OWNER}/pub/pubky.app/posts/POST123456789` };
+const TARGET = { kind: 'post' as const, uri: buildUri(OWNER, 'post', '0035Q0HAH8V00') };
 const QUESTION = 'Summarize this thread';
 const beforeProposal: FeedProposalV2 = {
   schema: 'pubchi-feed-proposal',
@@ -175,9 +175,9 @@ describe('PubchiPanel feed interpretation with the real dialog and form', () => 
           expect.objectContaining({
             name: 'After',
             tags: ['new'],
-            reach: PubkyAppFeedReach.All,
-            sort: PubkyAppFeedSort.Popularity,
-            layout: PubkyAppFeedLayout.Wide,
+            reach: 'all',
+            sort: 'popularity',
+            layout: 'wide',
           }),
         ),
       );
@@ -308,7 +308,7 @@ describe('PubchiPanel contextual summary readiness', () => {
     PubchiController.openFlyout({ question: QUESTION, source: 'post-menu', target: TARGET });
     render(<PanelHarness />);
     await waitFor(() => expect(PubchiController.ensureDeviceReady).toHaveBeenCalled());
-    const nextTarget = { ...TARGET, uri: `pubky://${OWNER}/pub/pubky.app/posts/POST987654321` };
+    const nextTarget = { ...TARGET, uri: buildUri(OWNER, 'post', '0035Q0HAH8V10') };
     const nextQuestion = 'Summarize this thread';
     act(() => PubchiController.openFlyout({ question: nextQuestion, source: 'post-menu', target: nextTarget }));
     await act(async () => ready.resolve(true));

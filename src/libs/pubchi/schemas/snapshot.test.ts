@@ -1,4 +1,6 @@
+import { buildPost, buildUri, decodeObject } from 'pubky-social-specs';
 import { describe, expect, it } from 'vitest';
+import { withFrozenSpecClock } from '@/test-utils/spec-clock';
 import { canonicalJson, sha256Hex } from './canonical';
 import { projectTargetSnapshot } from './snapshot';
 
@@ -22,6 +24,20 @@ function fixtureName(path: string): string {
 }
 
 describe('shared snapshot projection fixtures', () => {
+  withFrozenSpecClock(1_800_000_000_000);
+
+  it('hashes a social v1 post with the versionless target and the stored post kind', async () => {
+    const author = '4bfmrcuwfq4ksqoupn6wcfxrh5enr1izdeyszmhfrntuf1mzoh5o';
+    const post = buildPost(author, { content: 'A public post.' });
+    const uri = buildUri(author, 'post', post.id);
+    const source = decodeObject(post.url, post.body, 'post');
+    const projection = projectTargetSnapshot({ kind: 'post', uri }, source);
+    expect(projection).toEqual({ kind: 'post', uri, author, content: 'A public post.', post_kind: 'note' });
+    expect(await sha256Hex(canonicalJson(projection))).toBe(
+      '758720484c8ee4c4eb7ee19529b6e4ce5c8120d5bd84df5c103e746909af4f77',
+    );
+  });
+
   it('matches the service manifest bytes', async () => {
     const manifest = Object.values(fixtures).find((fixture) => !('input' in fixture)) as Record<string, string>;
     for (const [path, fixture] of Object.entries(fixtures)) {

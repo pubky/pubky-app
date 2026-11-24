@@ -12,13 +12,13 @@
     {
       "kind": "user",
       "label": "Alice",
-      "uri": "pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/pubky.app/profile.json",
+      "uri": "pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/social/v1/profile.json",
       "claimants": ["o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo"],
       "claimant_count": 12,
       "in_your_graph": true
     }
   ],
-  "sources": ["pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/pubky.app/profile.json"],
+  "sources": ["pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/social/v1/profile.json"],
   "tool_trace_summary": { "tools": ["rank_users"], "call_count": 1, "truncated": false },
   "policy_version": 1,
   "scope": {

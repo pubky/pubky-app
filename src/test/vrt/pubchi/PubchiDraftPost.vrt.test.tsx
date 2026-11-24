@@ -13,7 +13,7 @@ import { PubchiController } from '@/controllers/pubchi/pubchi';
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: unknown) => unknown) =>
     selector({
-      selectSession: () => ({ info: { capabilities: ['/pub/pubky.app/:rw', '/priv/app.pubchi/v1/:rw'] } }),
+      selectSession: () => ({ info: { capabilities: ['/pub/social/v1/:rw', '/priv/app.pubchi/v1/:rw'] } }),
     }),
 }));
 

@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { buildTag, buildUri } from 'pubky-social-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PubchiQuerySuccess } from '@/application/pubchi/pubchi.types';
 import { PubchiController } from '@/controllers/pubchi/pubchi';
 import { usePubchiStore } from '@/stores/pubchi/pubchi.store';
 import { PUBCHI_PANEL_SURFACE, PubchiPanel } from './PubchiPanel';
+
+const TEST_OWNER = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo';
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
@@ -277,7 +280,7 @@ describe('PubchiPanel', () => {
 
   it('keeps the exact pasted post target outside the readable summary question', () => {
     const owner = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo';
-    const uri = `pubky://${owner}/pub/pubky.app/posts/POST123456789`;
+    const uri = buildUri(owner, 'post', '0035Q0HAH8V00');
     watchedQuestion.value = uri;
     render(<PubchiPanel open onOpenChange={() => {}} />);
 
@@ -287,7 +290,7 @@ describe('PubchiPanel', () => {
     expect(submit).toHaveBeenCalledWith('ask', { target: { kind: 'post', uri } });
     expect(screen.getByRole('link', { name: 'Selected thread' })).toHaveAttribute(
       'href',
-      `/post/${owner}/POST123456789`,
+      `/post/${owner}/0035Q0HAH8V00`,
     );
     expect(screen.getByTestId('pubchi-context')).not.toHaveTextContent(uri);
     submit.mockClear();
@@ -329,7 +332,7 @@ describe('PubchiPanel', () => {
   });
 
   it('submits immediately when opened from the post menu', () => {
-    const target = { kind: 'post' as const, uri: 'pubky://owner/pub/pubky.app/posts/post-1' };
+    const target = { kind: 'post' as const, uri: buildUri(TEST_OWNER, 'post', '0035Q0HAH8V20') };
     const prefill = {
       question: `Summarize this thread ${target.uri}`,
       source: 'post-menu' as const,
@@ -347,7 +350,7 @@ describe('PubchiPanel', () => {
     PubchiController.openFlyout({
       question: 'Suggest tags for this user',
       source: 'chip',
-      target: { kind: 'user', uri: 'pubky://owner/pub/pubky.app/profile.json' },
+      target: { kind: 'user', uri: buildUri(TEST_OWNER, 'user') },
     });
     const chipView = render(<PubchiPanel open onOpenChange={() => {}} />);
     expect(submit).not.toHaveBeenCalled();
@@ -362,8 +365,8 @@ describe('PubchiPanel', () => {
 
   it('starts a fresh conversation for a second post-menu summarize', () => {
     const owner = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo';
-    const firstTarget = { kind: 'post' as const, uri: 'pubky://owner/pub/pubky.app/posts/post-1' };
-    const secondTarget = { kind: 'post' as const, uri: 'pubky://owner/pub/pubky.app/posts/post-2' };
+    const firstTarget = { kind: 'post' as const, uri: buildUri(TEST_OWNER, 'post', '0035Q0HAH8V20') };
+    const secondTarget = { kind: 'post' as const, uri: buildUri(TEST_OWNER, 'post', '0035Q0HAH8V30') };
     usePubchiStore.getState().setConfig(null, owner);
     usePubchiStore
       .getState()
@@ -383,7 +386,7 @@ describe('PubchiPanel', () => {
 
   it('consumes a prefill that arrives while the flyout is already open', () => {
     const view = render(<PubchiPanel open onOpenChange={() => {}} />);
-    const target = { kind: 'post' as const, uri: 'pubky://owner/pub/pubky.app/posts/post-1' };
+    const target = { kind: 'post' as const, uri: buildUri(TEST_OWNER, 'post', '0035Q0HAH8V20') };
     const prefill = {
       question: `Summarize this thread ${target.uri}`,
       source: 'post-menu' as const,
@@ -398,7 +401,7 @@ describe('PubchiPanel', () => {
   });
 
   it('keeps the consumed post target through canonical button edits', () => {
-    const target = { kind: 'post' as const, uri: 'pubky://owner/pub/pubky.app/posts/POST123456789' };
+    const target = { kind: 'post' as const, uri: buildUri(TEST_OWNER, 'post', '0035Q0HAH8V00') };
     const question = `Summarize this thread ${target.uri}`;
     watchedQuestion.value = question;
     const prefill = { question, source: 'post-menu' as const, target };
@@ -417,7 +420,7 @@ describe('PubchiPanel', () => {
   it('renders target receipts with Revert and Already applied actions', async () => {
     const target = {
       kind: 'post' as const,
-      uri: 'pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/pubky.app/posts/0035Q0HAH8V6G',
+      uri: buildUri(TEST_OWNER, 'post', '0035Q0HAH8V6G'),
     };
     const applied = 'a'.repeat(64);
     const superseded = 'b'.repeat(64);
@@ -451,7 +454,7 @@ describe('PubchiPanel', () => {
   });
 
   it('does not suggest tags for a user target', () => {
-    const target = { kind: 'user' as const, uri: 'pubky://owner/pub/pubky.app/profile.json' };
+    const target = { kind: 'user' as const, uri: buildUri(TEST_OWNER, 'user') };
     const prefill = { question: 'Suggest tags for this user', source: 'chip' as const, target };
     watchedQuestion.value = prefill.question;
     PubchiController.openFlyout(prefill);
@@ -462,7 +465,7 @@ describe('PubchiPanel', () => {
   });
 
   it('drops a consumed target when the question changes or the flyout closes', async () => {
-    const target = { kind: 'post' as const, uri: 'pubky://owner/pub/pubky.app/posts/POST123456789' };
+    const target = { kind: 'post' as const, uri: buildUri(TEST_OWNER, 'post', '0035Q0HAH8V00') };
     const question = `Summarize this thread ${target.uri}`;
     let currentQuestion = question;
     watchedQuestion.value = currentQuestion;
@@ -492,7 +495,7 @@ describe('PubchiPanel', () => {
 
   it('drops a consumed target when starting a new conversation', () => {
     const owner = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo';
-    const target = { kind: 'user' as const, uri: 'pubky://owner/pub/pubky.app/profile.json' };
+    const target = { kind: 'user' as const, uri: buildUri(TEST_OWNER, 'user') };
     const question = 'Suggest tags for this user';
     watchedQuestion.value = question;
     usePubchiStore.getState().setConfig(null, owner);
@@ -881,14 +884,14 @@ describe('PubchiPanel', () => {
         items: [
           {
             label: 'builder',
-            source_uri: 'pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/pubky.app/tags/builder',
-            subject_uri: 'pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/pubky.app/profile.json',
+            source_uri: buildTag(TEST_OWNER, buildUri(TEST_OWNER, 'user'), 'builder').url,
+            subject_uri: buildUri(TEST_OWNER, 'user'),
             claimant_count: 1,
           },
           {
             label: 'rust',
-            source_uri: 'pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/pubky.app/tags/rust',
-            subject_uri: 'pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/pubky.app/profile.json',
+            source_uri: buildTag(TEST_OWNER, buildUri(TEST_OWNER, 'user'), 'rust').url,
+            subject_uri: buildUri(TEST_OWNER, 'user'),
             claimant_count: 3,
           },
         ],

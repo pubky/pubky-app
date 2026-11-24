@@ -1,3 +1,4 @@
+import { buildUri } from 'pubky-social-specs';
 import { describe, expect, it } from 'vitest';
 import type { PubchiAnswerV1 } from '@/libs/pubchi/schemas/answer';
 import { PubchiAnswerCard } from '@/organisms/Pubchi/PubchiAnswerCard/PubchiAnswerCard';
@@ -21,7 +22,7 @@ const baseAnswer: PubchiAnswerV1 = {
     {
       kind: 'post',
       label: 'A reply about Bitcoin',
-      uri: `pubky://${author}/pub/pubky.app/posts/reply-1`,
+      uri: buildUri(author, 'post', '0035Q0HAH8V60'),
       claimants: [author],
       claimant_count: 1,
       in_your_graph: true,
@@ -88,13 +89,13 @@ describe('PubchiAnswerCard — visual regression', () => {
     const screen = await renderForVRT(
       <PubchiAnswerCard
         answer={answer({
-          question: `Summarize this thread https://pubky.app/post/${author}/root-1`,
+          question: `Summarize this thread https://pubky.app/post/${author}/0035Q0HAH8V70`,
           summary: `The thread discusses Bitcoin. See pubky:${author}.`,
           evidence: [
             {
               kind: 'post',
               label: 'Root post',
-              uri: `pubky://${author}/pub/pubky.app/posts/root-1`,
+              uri: buildUri(author, 'post', '0035Q0HAH8V70'),
               claimants: [author],
               claimant_count: 1,
               in_your_graph: null,
@@ -102,7 +103,7 @@ describe('PubchiAnswerCard — visual regression', () => {
             {
               kind: 'post',
               label: 'Reply',
-              uri: `pubky://${owner}/pub/pubky.app/posts/reply-2`,
+              uri: buildUri(owner, 'post', '0035Q0HAH8V80'),
               claimants: [owner],
               claimant_count: 1,
               in_your_graph: null,

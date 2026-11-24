@@ -12,6 +12,13 @@ import {
   PREVIOUS_AUTH_PERSIST_KEY,
 } from '@/stores/persistedKeys';
 
+/** Same-document notification: localStorage emits storage events only in other tabs. */
+export const AUTH_CLEANUP_CHANGED_EVENT = 'pubky-auth-cleanup-changed';
+
+export function notifyAuthCleanupChanged(): void {
+  window.dispatchEvent(new Event(AUTH_CLEANUP_CHANGED_EVENT));
+}
+
 // Cookie references never reach live app state; old metadata is retained only for remote revocation.
 const oldReferenceSchema = z.union([
   sessionReferenceSchema,

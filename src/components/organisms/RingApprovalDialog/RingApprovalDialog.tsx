@@ -8,16 +8,16 @@ import { Button } from '@/atoms/Button/Button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
 import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
+import { PUBCHI_CAPABILITIES } from '@/config/auth';
 import { PubchiController } from '@/controllers/pubchi/pubchi';
-import { APP_SIGNIN_CAPABILITIES } from '@/libs/pubchi/capabilities';
 import { copyToClipboard } from '@/libs/utils/utils';
+import { AuthQrCopyButton } from '@/molecules/AuthQrCopyButton/AuthQrCopyButton';
 import { BalancedQrCard } from '@/molecules/BalancedQrCard/BalancedQrCard';
-import { QrCodeSlot } from '@/molecules/QrCodeSlot/QrCodeSlot';
 import { toast } from '@/molecules/Toaster/toast';
 import type { TGenerateAuthUrlResult } from '@/services/homeserver/homeserver.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
-export const PUBCHI_RING_CAPABILITIES = APP_SIGNIN_CAPABILITIES;
+export const PUBCHI_RING_CAPABILITIES = PUBCHI_CAPABILITIES.join(',');
 
 type RingApprovalDialogProps = {
   open: boolean;
@@ -167,16 +167,14 @@ export function RingApprovalDialog({
               />
             }
           >
-            <div className="relative flex size-48 items-center justify-center rounded-md bg-foreground p-2">
-              <QrCodeSlot
-                url={approval?.authorizationUrl ?? ''}
-                isLoading={loading && !approval}
-                isExpired={expired}
-                generatingLabel="Generating approval QR…"
-                clickToReloadLabel="Click to reload"
-                expiredReloadAction={{ onClick: reload, ariaLabel: 'Reload approval QR code' }}
-              />
-            </div>
+            <AuthQrCopyButton
+              url={approval?.authorizationUrl ?? ''}
+              isLoading={loading && !approval}
+              isExpired={expired}
+              onCopy={() => copyToClipboard({ text: approval?.authorizationUrl ?? '' })}
+              onReload={reload}
+              reloadAriaLabel="Reload approval QR code"
+            />
           </BalancedQrCard>
           {approval?.authorizationUrl ? (
             <div className="flex flex-wrap items-center justify-center gap-3">

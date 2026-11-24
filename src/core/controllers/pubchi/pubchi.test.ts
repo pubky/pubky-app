@@ -281,7 +281,7 @@ describe('PubchiController', () => {
     };
     const request = vi.spyOn(AuthController, 'requestCapabilities').mockResolvedValue(result);
     await expect(PubchiController.getCapabilityApprovalUrl()).resolves.toBe(result);
-    expect(request).toHaveBeenCalledWith(['/pub/pubky.app/:rw', '/pub/app.pubchi/v1/:rw', '/priv/app.pubchi/v1/:rw']);
+    expect(request).toHaveBeenCalledWith(['/pub/app.pubchi/v1/:rw', '/priv/app.pubchi/v1/:rw']);
   });
 
   it('reports an already-authorized grant without starting another approval', async () => {

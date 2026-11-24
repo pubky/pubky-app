@@ -1,4 +1,5 @@
 import { Keypair } from '@synonymdev/pubky';
+import { buildPost, buildUri } from 'pubky-social-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PostController } from '@/controllers/post/post';
 import { PubchiController } from '@/controllers/pubchi/pubchi';
@@ -20,8 +21,10 @@ import { PubchiApplication } from './pubchi';
 
 const owner = Keypair.random().publicKey.z32();
 const bot = Keypair.random().publicKey.z32();
-const postId = '0032W6CBGDBP0';
-const sessionIdentity = { pubky: owner, capabilities: ['/pub/pubky.app/:rw', '/priv/app.pubchi/v1/:rw'] as string[] };
+const publishedPost = buildPost(owner, { content: 'published' });
+const postId = publishedPost.id;
+const postUri = buildUri(owner, 'post', postId);
+const sessionIdentity = { pubky: owner, capabilities: ['/pub/social/v1/:rw', '/priv/app.pubchi/v1/:rw'] as string[] };
 type StoredRecord = {
   id: string;
   owner: string;
@@ -70,7 +73,7 @@ vi.mock('@/libs/pubchi/device-key', () => ({
 
 function answer(overrides: Record<string, unknown> = {}) {
   const now = Math.floor(Date.now() / 1000);
-  const evidenceUri = `pubky://${owner}/pub/pubky.app/profile.json`;
+  const evidenceUri = buildUri(owner, 'user');
   return {
     schema: 'pubchi-answer',
     version: 1,
@@ -138,7 +141,7 @@ describe('Pubchi draft post applications', () => {
     process.env[PUBKY_RUNTIME_ENV_NAMES.pubchiApiUrl] = 'https://pubchi.example.com';
     resetRuntimeConfigForTests();
     sessionIdentity.pubky = owner;
-    sessionIdentity.capabilities = ['/pub/pubky.app/:rw', '/priv/app.pubchi/v1/:rw'];
+    sessionIdentity.capabilities = ['/pub/social/v1/:rw', '/priv/app.pubchi/v1/:rw'];
     receiptText = undefined;
     postPresent = false;
     await setRecord();
@@ -162,10 +165,13 @@ describe('Pubchi draft post applications', () => {
         if (receiptText === undefined) throw notFound();
         return receiptText;
       }
-      if (url.includes('/pub/pubky.app/posts/')) {
-        if (!postPresent) throw notFound();
-        return JSON.stringify({ content: 'published' });
-      }
+      throw notFound();
+    });
+    vi.spyOn(HomeserverService, 'listAll').mockImplementation(async ({ baseDirectory }) =>
+      postPresent && baseDirectory === `${postUri}/` ? [publishedPost.url] : [],
+    );
+    vi.spyOn(HomeserverService, 'getBytes').mockImplementation(async (url) => {
+      if (url === publishedPost.url) return publishedPost.body;
       throw notFound();
     });
     vi.spyOn(HomeserverService, 'request').mockImplementation(async (input) => {
@@ -283,7 +289,7 @@ describe('Pubchi draft post applications', () => {
       expect(HomeserverService.requestRawText).not.toHaveBeenCalled();
       await setRecord();
     }
-    for (const capabilities of [['/priv/app.pubchi/v1/:rw'], ['/pub/pubky.app/:rw']]) {
+    for (const capabilities of [['/priv/app.pubchi/v1/:rw'], ['/pub/social/v1/:rw']]) {
       await expect(
         PubchiApplication.prepareDraftPostApplication(record.id, owner, capabilities),
       ).rejects.toBeInstanceOf(AppError);
@@ -360,9 +366,9 @@ describe('Pubchi draft post applications', () => {
     expect(remove).not.toHaveBeenCalled();
     expect(JSON.parse(receiptText!)).toMatchObject({
       status: 'applied',
-      post_uri: `pubky://${owner}/pub/pubky.app/posts/${postId}`,
+      post_uri: postUri,
     });
-    expect(record.post_uri).toBe(`pubky://${owner}/pub/pubky.app/posts/${postId}`);
+    expect(record.post_uri).toBe(postUri);
   });
 
   it('C wraps kind=long as App article JSON before commitCreate', async () => {
@@ -371,7 +377,7 @@ describe('Pubchi draft post applications', () => {
         content: 'Headline\nBody paragraph',
         kind: 'long',
         rationale: 'Matches the public profile evidence.',
-        evidence: [`pubky://${owner}/pub/pubky.app/profile.json`],
+        evidence: [buildUri(owner, 'user')],
       },
     });
     await setRecord(response);
@@ -404,14 +410,14 @@ describe('Pubchi draft post applications', () => {
     expect(create).toHaveBeenCalledTimes(1);
     resolveCreate(`${owner}:${postId}`);
     await expect(first).resolves.toBe('applied');
-    expect(record.post_uri).toBe(`pubky://${owner}/pub/pubky.app/posts/${postId}`);
+    expect(record.post_uri).toBe(postUri);
   });
 
   it('C retries a failed apply from a stored URI without creating a second post', async () => {
     record.status = 'failed';
     record.composite_post_id = `${owner}:${postId}`;
     record.publication_confirmed = true;
-    record.post_uri = `pubky://${owner}/pub/pubky.app/posts/${postId}`;
+    record.post_uri = postUri;
     const create = vi.spyOn(PostController, 'commitCreate');
 
     await expect(PubchiController.applyDraftPost(record.id)).resolves.toBe('applied');
@@ -419,7 +425,7 @@ describe('Pubchi draft post applications', () => {
     expect(create).not.toHaveBeenCalled();
     expect(JSON.parse(receiptText!)).toMatchObject({
       status: 'applied',
-      post_uri: `pubky://${owner}/pub/pubky.app/posts/${postId}`,
+      post_uri: postUri,
     });
   });
 
@@ -440,7 +446,7 @@ describe('Pubchi draft post applications', () => {
   it('refuses to revert a legacy content-matched post without confirmed publication provenance', async () => {
     record.status = 'applied';
     record.composite_post_id = `${owner}:${postId}`;
-    record.post_uri = `pubky://${owner}/pub/pubky.app/posts/${postId}`;
+    record.post_uri = postUri;
     receiptText = JSON.stringify({ ...receipt(), status: 'applied', post_uri: record.post_uri });
     const remove = vi.spyOn(PostController, 'commitDelete');
     await expect(PubchiController.revertDraftPost(record.id)).rejects.toThrow('Draft post cannot be reverted');
@@ -451,10 +457,10 @@ describe('Pubchi draft post applications', () => {
     record.status = 'applied';
     record.publication_confirmed = true;
     record.composite_post_id = `${owner}:${postId}`;
-    record.post_uri = `pubky://${owner}/pub/pubky.app/posts/${postId}`;
+    record.post_uri = postUri;
     const remove = vi.spyOn(PostController, 'commitDelete');
     for (const changes of [
-      { post_uri: `pubky://${owner}/pub/pubky.app/posts/OTHERPOST` },
+      { post_uri: buildUri(owner, 'post', '0035Q0HAH8V6G') },
       { application_id: 'f'.repeat(64) },
     ]) {
       receiptText = JSON.stringify({ ...receipt(), status: 'applied', post_uri: record.post_uri, ...changes });
@@ -470,7 +476,7 @@ describe('Pubchi draft post applications', () => {
         content: oversized,
         kind: 'long',
         rationale: 'Matches the public profile evidence.',
-        evidence: [`pubky://${owner}/pub/pubky.app/profile.json`],
+        evidence: [buildUri(owner, 'user')],
       },
     });
     await setRecord(response);
@@ -532,7 +538,7 @@ describe('Pubchi draft post applications', () => {
     record.status = 'applied';
     record.composite_post_id = `${owner}:${postId}`;
     record.publication_confirmed = true;
-    record.post_uri = `pubky://${owner}/pub/pubky.app/posts/${postId}`;
+    record.post_uri = postUri;
     receiptText = JSON.stringify({
       ...receipt(),
       status: 'applied',
@@ -568,7 +574,7 @@ describe('Pubchi draft post applications', () => {
     record.status = 'applied';
     record.composite_post_id = `${owner}:${postId}`;
     record.publication_confirmed = true;
-    record.post_uri = `pubky://${owner}/pub/pubky.app/posts/${postId}`;
+    record.post_uri = postUri;
     receiptText = JSON.stringify({ ...receipt(), status: 'applied', post_uri: record.post_uri });
     const remove = vi.spyOn(PostController, 'commitDelete').mockRejectedValue(notFound());
 
@@ -583,7 +589,7 @@ describe('Pubchi draft post applications', () => {
     record.status = 'applied';
     record.composite_post_id = `${owner}:${postId}`;
     record.publication_confirmed = true;
-    record.post_uri = `pubky://${owner}/pub/pubky.app/posts/${postId}`;
+    record.post_uri = postUri;
     receiptText = JSON.stringify({ ...receipt(), status: 'applied', post_uri: record.post_uri });
     const before = receiptText;
     vi.spyOn(PostController, 'commitDelete').mockRejectedValue(new Error('delete failed'));
@@ -598,7 +604,7 @@ describe('Pubchi draft post applications', () => {
     record.status = 'applied';
     record.composite_post_id = `${owner}:${postId}`;
     record.publication_confirmed = true;
-    record.post_uri = `pubky://${owner}/pub/pubky.app/posts/${postId}`;
+    record.post_uri = postUri;
     receiptText = JSON.stringify({ ...receipt(), status: 'applied', post_uri: record.post_uri });
     vi.spyOn(PostController, 'commitDelete').mockResolvedValue();
     vi.spyOn(HomeserverService, 'request').mockImplementation(async (input) => {
@@ -626,13 +632,29 @@ describe('Pubchi draft post applications', () => {
     record.operation = operation;
     record.publication_confirmed = true;
     record.composite_post_id = `${owner}:${postId}`;
-    record.post_uri = `pubky://${owner}/pub/pubky.app/posts/${postId}`;
+    record.post_uri = postUri;
     postPresent = present;
     receiptText = JSON.stringify({ ...receipt(), status: receiptStatus, post_uri: record.post_uri });
 
     await expect(PubchiApplication.reconcileDraftPostApplication(record.id, owner)).resolves.toBe(expected);
     expect(record.status).toBe(expected);
     expect(JSON.parse(receiptText!).status).toBe(expected);
+  });
+
+  it('leaves a draft pending when the listed head disappears before its version can be read', async () => {
+    record.status = 'reconciliation-pending';
+    record.operation = 'revert';
+    record.publication_confirmed = true;
+    record.composite_post_id = `${owner}:${postId}`;
+    record.post_uri = postUri;
+    receiptText = JSON.stringify({ ...receipt(), status: 'applied', post_uri: postUri });
+    postPresent = true;
+    vi.mocked(HomeserverService.getBytes).mockRejectedValue(notFound());
+
+    await expect(PubchiApplication.reconcileDraftPostApplication(record.id, owner)).resolves.toBe(
+      'reconciliation-pending',
+    );
+    expect(HomeserverService.request).not.toHaveBeenCalled();
   });
 
   it('does not reconcile while an apply operation is in flight', async () => {
@@ -684,7 +706,7 @@ function receipt() {
     content: 'Pubky keeps public social state on your homeserver.',
     tags: ['pubky-app'],
     rationale: 'Matches the public profile evidence.',
-    evidence: [`pubky://${owner}/pub/pubky.app/profile.json`],
+    evidence: [buildUri(owner, 'user')],
     status: 'applying',
     suggested_at: Math.floor(Date.now() / 1000),
   };

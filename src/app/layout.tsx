@@ -39,7 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <RootContainer>
       {/*
         Rendered as a sibling of AppShell below (not a descendant): AppShell gates {children}
-        behind IndexedDB/auth readiness on every route but the public documents, so anything
+        behind IndexedDB/auth readiness on app routes, so anything
         inside it is missing from the initial server-rendered HTML.
       */}
       <StructuredData />

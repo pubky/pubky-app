@@ -281,8 +281,8 @@ paid unlocks are paused."
 ### E-3. A session from before Locks (#2373)
 
 Setup: an older, still-valid grant whose capabilities lack the Locks `/priv` paths. Legacy cookie
-sessions must authorize again first; a fresh Ring grant already includes these paths. A recovery-file
-or recovery-phrase login obtains a root grant and does not enter this state. See the
+sessions must authorize again first; a fresh Ring grant already includes these paths. A root grant from
+the former recovery-file or recovery-phrase login does not enter this state. See the
 [grant migration guide](../migrations/2600-grant-auth-and-locks.md).
 
 1. Turn the switch on.
@@ -388,10 +388,10 @@ never sees these messages.
 | G-1 | Article: cover + 9 body images → switch on                                                  | Toast "Locked content supports up to 9 files of 9.5MB each.", switch off, no dialog (the cover counts)  |
 | G-2 | In G-1, remove one body image, wait half a second, switch on again                          | Continues normally (1 cover + 8 body images = 9)                                                        |
 | G-3 | Insert `big.png` into an article body (the insert works) → switch on                        | The G-1 toast, switch off                                                                               |
-| G-4 | `drawing.svg` in an article body → switch on. Also once with `drawing.svg` as the cover     | Toast "Locked content cannot include SVG images yet.", switch off                                       |
+| G-4 | `drawing.svg` in an article body → switch on. Also once with `drawing.svg` as the cover     | Continues normally. After the reader unlocks it, the drawing shows in the body (or as the cover)        |
 | G-5 | A normal post with 10 images attached → switch on                                           | The G-1 toast                                                                                           |
 | G-6 | A normal post with `big.png` attached → switch on                                           | The G-1 toast                                                                                           |
-| G-7 | A normal post with `drawing.svg` attached → switch on                                       | The G-4 toast                                                                                           |
+| G-7 | A normal post with `drawing.svg` attached → switch on                                       | Continues normally. After the reader unlocks it, the drawing shows in the image gallery                 |
 | G-8 | Apply the lock, then attach `drawing.svg` and `big.png` to the **teaser** → Post            | Not blocked. Teaser attachments are public files and are not checked. Both show in the published teaser |
 | G-9 | Lock and publish a normal post within the limits (text + 2 images), unlock it as the reader | Shows as an image gallery, as before                                                                    |
 
@@ -401,6 +401,6 @@ never sees these messages.
    second.
 2. The "9.5MB" in the limit toast is the server's 10,000,000 bytes rounded down in MiB, like the app's
    other size labels.
-3. Content with an SVG cannot be locked yet (#2683).
+3. A locked SVG shows as a PNG after an unlock, so it is blurry when zoomed in (#2683).
 4. Own posts show skeletons while their content loads. On a later visit, cached text can appear before
    attachment bytes; see "Reading your own post" (#2573, #2757, #2561).

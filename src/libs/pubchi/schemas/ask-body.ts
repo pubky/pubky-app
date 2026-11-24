@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { parsePubchiTarget } from '@/libs/pubchi/uri';
 import { type PubchiAnswerBasis, PubchiAnswerBasisSchema, PubchiCitationSchema } from './answer';
 import type { ParseResult } from './codes';
 import { fromZod } from './zod';
@@ -9,19 +10,15 @@ export const MAX_CONVERSATION_CODE_POINTS = 4_800;
 
 const codePointLength = (value: string) => Array.from(value).length;
 
-const PUBKY_APP_TARGET_RE =
-  /^pubky:\/\/([ybndrfg8ejkmcpqxot1uwisza345h769]{52})\/pub\/pubky\.app\/(?:posts\/[A-Z0-9]{13}|profile\.json)$/;
-
 export const PubchiTargetSchema = z
   .object({
     kind: z.enum(['post', 'user']),
-    uri: z.string().refine((value) => PUBKY_APP_TARGET_RE.test(value), 'INVALID_TARGET'),
+    uri: z.string(),
   })
   .strict()
   .superRefine((target, ctx) => {
-    const isPost = /\/posts\/[A-Z0-9]{13}$/.test(target.uri);
-    if ((target.kind === 'post') !== isPost) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['kind'], message: 'TARGET_KIND_MISMATCH' });
+    if (!parsePubchiTarget(target)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['uri'], message: 'INVALID_TARGET' });
     }
   });
 

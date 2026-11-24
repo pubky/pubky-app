@@ -1,41 +1,11 @@
-import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
+import { feedReaches, feedSorts, isOneOf } from 'pubky-social-specs';
 import { DEFAULT_CUSTOM_FEED_ICON } from '@/config/feed';
 import type { TFeedCreateParams } from '@/controllers/feed/feed.types';
 import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import type { FeedMappingV2, FeedProposalV1, FeedProposalV2 } from '@/libs/pubchi/schemas/feed';
-
-const REACH: Record<string, PubkyAppFeedReach> = {
-  following: PubkyAppFeedReach.Following,
-  friends: PubkyAppFeedReach.Friends,
-  all: PubkyAppFeedReach.All,
-  wot: PubkyAppFeedReach.Wot,
-  me: PubkyAppFeedReach.Me,
-  followers: PubkyAppFeedReach.Followers,
-};
-
-const SORT: Record<string, PubkyAppFeedSort> = {
-  recent: PubkyAppFeedSort.Recent,
-  popularity: PubkyAppFeedSort.Popularity,
-};
-
-const LAYOUT: Record<string, PubkyAppFeedLayout> = {
-  columns: PubkyAppFeedLayout.Columns,
-  wide: PubkyAppFeedLayout.Wide,
-  visual: PubkyAppFeedLayout.Visual,
-  list: PubkyAppFeedLayout.List,
-};
-
-const CONTENT: Record<string, PubkyAppPostKind> = {
-  short: PubkyAppPostKind.Short,
-  long: PubkyAppPostKind.Long,
-  image: PubkyAppPostKind.Image,
-  video: PubkyAppPostKind.Video,
-  link: PubkyAppPostKind.Link,
-  file: PubkyAppPostKind.File,
-  collection: PubkyAppPostKind.Collection,
-};
+import { toStoredPostKind } from '@/pipes/post/post.kind';
 
 export type FeedProposalV2ApplyReason = 'followers_not_authorable' | 'unmapped' | 'unsupported_mapping';
 
@@ -49,16 +19,14 @@ export type FeedProposalV2MapResult = {
 
 export function feedProposalToCreateParams(proposal: FeedProposalV1): TFeedCreateParams {
   const config = proposal.feed.feed;
-  const reach = REACH[config.reach];
-  const sort = SORT[config.sort];
-  const layout = LAYOUT[config.layout];
-  if (reach === undefined || sort === undefined || layout === undefined) {
+  const { reach, sort, layout } = config;
+  const content = config.content ? toStoredPostKind(config.content) : null;
+  if (!isOneOf(feedReaches, reach) || !isOneOf(feedSorts, sort) || (config.content && content === null)) {
     throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'FEED_SPECS_INVALID', {
       service: ErrorService.Pubchi,
       operation: 'feedProposalToCreateParams',
     });
   }
-  const content = config.content ? (CONTENT[config.content] ?? null) : null;
   return {
     name: proposal.feed.name,
     icon: proposal.feed.icon ?? DEFAULT_CUSTOM_FEED_ICON,
@@ -78,10 +46,10 @@ export function feedProposalV2ToCreateParams(proposal: FeedProposalV2): FeedProp
     icon: proposal.feed.icon,
     tags: config.tags ?? [],
     domain_tags: config.domain_tags ?? [],
-    reach: REACH[config.reach],
-    sort: SORT[config.sort],
-    content: config.content ? (CONTENT[config.content] ?? null) : null,
-    layout: LAYOUT[config.layout],
+    reach: config.reach,
+    sort: config.sort,
+    content: config.content ? toStoredPostKind(config.content) : null,
+    layout: config.layout,
   };
   const reasons: FeedProposalV2ApplyReason[] = [];
   if (config.reach === 'followers') reasons.push('followers_not_authorable');

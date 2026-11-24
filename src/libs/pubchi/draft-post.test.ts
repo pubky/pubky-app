@@ -53,9 +53,9 @@ describe('draft post receipt truncation', () => {
 
 const owner = '4bfmrcuwfq4ksqoupn6wcfxrh5enr1izdeyszmhfrntuf1mzoh5o';
 const bot = 'wnpkm7d4c7caym93kzhpamjkn11hu8jdz4m9o3y1x9huopniwuay';
-const evidenceUri = `pubky://${owner}/pub/pubky.app/profile.json`;
+const evidenceUri = `pubky://${owner}/pub/social/v1/profile.json`;
 
-const answer: PubchiAnswerV1 = {
+const answer = {
   schema: 'pubchi-answer',
   version: 1,
   bot,
@@ -86,7 +86,7 @@ const answer: PubchiAnswerV1 = {
     rationale: 'Matches the public profile evidence.',
     evidence: [evidenceUri],
   },
-};
+} satisfies PubchiAnswerV1;
 
 const binding = {
   owner,
@@ -100,7 +100,7 @@ const binding = {
 };
 
 const session = {
-  info: { capabilities: ['/pub/pubky.app/:rw', '/priv/app.pubchi/v1/:rw'] },
+  info: { capabilities: ['/pub/social/v1/:rw', '/priv/app.pubchi/v1/:rw'] },
 };
 
 describe('draft post apply binding', () => {
@@ -143,16 +143,28 @@ describe('draft post apply binding', () => {
     vi.useRealTimers();
   });
 
+  it('checks each write a draft needs before publishing', () => {
+    vi.setSystemTime(1_800_000_000_000);
+    const oldGrant = { info: { capabilities: ['/pub/pubky.app/:rw', '/priv/app.pubchi/v1/:rw'] } };
+    const postGrant = { info: { capabilities: ['/pub/social/v1/posts/:w', '/priv/app.pubchi/v1/:rw'] } };
+    expect(canPublishDraftPost(binding, oldGrant, 1_800_000_000)).toBe(false);
+    expect(canPublishDraftPost(binding, postGrant, 1_800_000_000)).toBe(false);
+    const draft = binding.response.draft_post;
+    const untagged = { ...binding, response: { ...binding.response, draft_post: { ...draft, tags: [] } } };
+    expect(canPublishDraftPost(untagged, postGrant, 1_800_000_000)).toBe(true);
+    vi.useRealTimers();
+  });
+
   it('requires public and private capability to publish and only private to reject', () => {
     vi.setSystemTime(1_800_000_000_000);
     expect(canPublishDraftPost(binding, { info: { capabilities: ['/priv/app.pubchi/v1/:rw'] } }, 1_800_000_000)).toBe(
       false,
     );
-    expect(canPublishDraftPost(binding, { info: { capabilities: ['/pub/pubky.app/:rw'] } }, 1_800_000_000)).toBe(false);
+    expect(canPublishDraftPost(binding, { info: { capabilities: ['/pub/social/v1/:rw'] } }, 1_800_000_000)).toBe(false);
     expect(canRejectDraftPost(binding, { info: { capabilities: ['/priv/app.pubchi/v1/:rw'] } }, 1_800_000_000)).toBe(
       true,
     );
-    expect(canRejectDraftPost(binding, { info: { capabilities: ['/pub/pubky.app/:rw'] } }, 1_800_000_000)).toBe(false);
+    expect(canRejectDraftPost(binding, { info: { capabilities: ['/pub/social/v1/:rw'] } }, 1_800_000_000)).toBe(false);
     vi.useRealTimers();
   });
 });

@@ -1,4 +1,3 @@
-import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
 import { describe, expect, it } from 'vitest';
 import { feedProposalToCreateParams, feedProposalV2ToCreateParams } from './feed-map';
 import type { FeedProposalV1, FeedProposalV2 } from './schemas/feed';
@@ -44,11 +43,11 @@ function proposalV2(overrides: Partial<FeedProposalV2['feed']['feed']> = {}): Fe
 }
 
 describe('feedProposalToCreateParams', () => {
-  it('maps following/recent/columns even when those enums are 0', () => {
+  it('maps the reach, sort and layout of a v1 proposal', () => {
     const params = feedProposalToCreateParams(proposal('following', 'recent', 'columns'));
-    expect(params.reach).toBe(PubkyAppFeedReach.Following);
-    expect(params.sort).toBe(PubkyAppFeedSort.Recent);
-    expect(params.layout).toBe(PubkyAppFeedLayout.Columns);
+    expect(params.reach).toBe('following');
+    expect(params.sort).toBe('recent');
+    expect(params.layout).toBe('columns');
     expect(params.name).toBe('Builders');
     expect(params.tags).toEqual(['builder']);
   });
@@ -59,12 +58,13 @@ describe('feedProposalToCreateParams', () => {
 
   it.each([
     ['following', 'recent', 'columns', 'short'],
+    ['all', 'recent', 'wide', 'long'],
     ['friends', 'recent', 'visual', 'image'],
     ['all', 'popularity', 'list', 'video'],
     ['wot', 'recent', 'columns', 'link'],
     ['me', 'popularity', 'wide', 'file'],
     ['following', 'recent', 'visual', 'collection'],
-  ] as const)('maps every specs enum value: %s/%s/%s/%s', (reach, sort, layout, content) => {
+  ] as const)('maps a v2 proposal to stored filters: %s/%s/%s/%s', (reach, sort, layout, content) => {
     const input = proposalV2({ reach, sort, layout, content });
     const parsed = parseFeedProposal(input);
     expect(parsed.ok).toBe(true);
@@ -72,7 +72,15 @@ describe('feedProposalToCreateParams', () => {
     const mapped = feedProposalV2ToCreateParams(parsed.value);
     expect(mapped.canApply).toBe(true);
     expect(mapped.reasons).toEqual([]);
-    expect(mapped.params).toMatchObject({ name: 'Builders', tags: [], domain_tags: [] });
+    expect(mapped.params).toMatchObject({
+      name: 'Builders',
+      tags: [],
+      domain_tags: [],
+      reach,
+      sort,
+      layout,
+      content: content === 'short' ? 'note' : content === 'long' ? 'article' : content,
+    });
   });
 
   it('blocks followers reach while preserving typed mapping data', () => {

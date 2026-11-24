@@ -24,7 +24,7 @@ import {
   UserRoundMinus,
   UserRoundPlus,
 } from 'lucide-react';
-import { postUriBuilder } from 'pubky-app-specs';
+import { buildUri } from 'pubky-social-specs';
 import { POST_ROUTES } from '@/app/routes';
 import { PubchiController } from '@/controllers/pubchi/pubchi';
 import { useCopyToClipboard } from '@/hooks/useCopyToClipboard/useCopyToClipboard';
@@ -143,7 +143,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
         PubchiController.openFlyout({
           question: 'Summarize this thread',
           source: 'post-menu',
-          target: { kind: 'post', uri: postUriBuilder(postAuthorId, parsedId.id) },
+          target: { kind: 'post', uri: buildUri(postAuthorId, 'post', parsedId.id) },
         });
       },
       variant: POST_MENU_ACTION_VARIANTS.DEFAULT,

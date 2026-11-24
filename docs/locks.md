@@ -86,8 +86,17 @@ picked them. The session keeps them while the lock draft exists (`keepInlineMedi
 the lock puts a working article back into the editor; releasing it only revokes the local previews.
 A locked article's images are therefore never public.
 
-_SVG files._ A locked SVG is stored without its image type, so it does not render after an unlock.
-Until that is fixed the switch refuses a draft that holds one, with a toast (`TODO:[Locks] #2683`).
+_SVG files._ A locked SVG is uploaded under a `.svg` path. The homeserver ignores the declared type
+and checks the first bytes before the path: a file that starts with an XML declaration is stored as
+`text/xml`, and one that starts with a comment as `text/html`. The SVG clean-up keeps only the
+`<svg>` element, so no check matches and the extension makes the stored type `image/svg+xml` (#2683). After
+an unlock the app shows a PNG drawing of the SVG, never the SVG itself: an unlocked file's object URL
+is on the app origin, so an SVG opened from it in a new tab would run its scripts there. The upload
+clean-up is not enough on its own, because a lock made by another client may skip it. An SVG that
+the browser cannot draw is not shown. Nor is a file whose type in the lock file is not one `type/subtype`:
+a list such as `image/png,image/svg+xml` would get an SVG past the check. Only an image, video, audio
+or PDF file gets an object URL, the kinds the app shows: the post spec also allows types such as
+`text/html`, which would open as a page on the app origin.
 
 _Lock limits._ The Lock Server takes 10 resources per lock, the locked post being one of them, and
 10,000,000 bytes per file. It refuses a lock only after its files were uploaded, so a draft over the
@@ -125,6 +134,12 @@ everything ever unlocked. The replica also survives the creator revoking the loc
 | reader's HS `/priv/social/unlocked/<lockId>/`                 | the reader's replica, written on unlock                                                                                | that reader only                                             |
 | reader's HS `/priv/social/purchases/<lockId>/<bundleId>.json` | one file per bundle id, written BEFORE the proof is submitted (#2297, #2827); the legacy `<lockId>.json` is still read | that reader only                                             |
 
+Account deletion and export (`ProfileApplication.commitDelete` / `downloadData`, `docs/data-patterns.md`) sweep the
+whole `/priv/social/` of the signed-in account, so a reader's `unlocked/` replicas and `purchases/` files go with
+the account. The creator's `/pub/app.locks/<lockId>.json` and `/priv/app.locks/content/` are Lock Server contracts
+under a read-only grant (`/priv/app.locks/content/:r`) and are left alone: deleting a lock is the Lock Server's job
+([Deleting an announcement](#deleting-an-announcement)).
+
 ---
 
 ## Detecting a lock post
@@ -145,8 +160,9 @@ Lock announcements use the existing `DialogEditPost` composer. The dialog detect
 `lock`, parses the public envelope with the reader's parse, and exposes only the teaser
 description and editable lock title. Saving rebuilds the envelope with
 `buildLockTeaserContent`, writing back the stored `content_kind` unchanged, including one this build does not
-know (`DialogEditPost` → `EditLock.contentKind` → `usePostInput` → `usePost.edit`); `PostNormalizer.toEdit` reconstructs the original post with
-`PubkyAppPost.new_with_lock` so the stored lock URL survives content, kind, and attachment edits.
+know (`DialogEditPost` → `EditLock.contentKind` → `usePostInput` → `usePost.edit`); `PostNormalizer.toEdit`
+spreads the stored head version and changes only the content, so the stored lock URL survives content, kind,
+and attachment edits.
 The price is read-only from the existing `lock.json`; the edit composer cannot change lock criteria
 or guarded content.
 
@@ -194,20 +210,28 @@ deleted-post fallback once Nexus drops it.
 
 ## Data shape
 
-| Field                    | Owner           | Meaning                                                                                             |
-| ------------------------ | --------------- | --------------------------------------------------------------------------------------------------- |
-| top-level `kind`         | Nexus / specs   | teaser display type (`image` / `link` / `short` / …; never `long` / `collection`)                   |
-| top-level `lock`         | Lock server     | URL of the public `lock.json` — the detection seam                                                  |
-| `content` (string)       | **FE-owned**    | stringified teaser JSON, Zod-validated: `lock_title`, `teaser_description`, optional `content_kind` |
-| `lock.json` → `LockFile` | **Lock server** | the public content-lock contract (see below)                                                        |
+| Field                    | Owner           | Meaning                                                                                                                                                |
+| ------------------------ | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| top-level `kind`         | Nexus / specs   | teaser display type (`image` / `link` / `short` / …; never `long` / `collection`; local names, stored and served by Nexus `/v1` as `note` / `article`) |
+| top-level `lock`         | Lock server     | URL of the public `lock.json` — the detection seam                                                                                                     |
+| `content` (string)       | **FE-owned**    | stringified teaser JSON, Zod-validated: `lock_title`, `teaser_description`, optional `content_kind`                                                    |
+| `lock.json` → `LockFile` | **Lock server** | the public content-lock contract (see below)                                                                                                           |
 
-- `content` is FE-owned (pubky-app-specs does not manage it) and validated at runtime
+- The announcement itself is an ordinary versioned v1 post (`/pub/social/v1/posts/<id>/<editId>.json`, ADR-0027):
+  `buildUri(authorId, 'post', id)` names it for the lock, a post edit spreads the stored head so the `lock` field
+  survives, and a delete removes every version. The **guarded primary** inside the lock is a v1 `Post` too, built by
+  `GuardedPostBuilder.toPrimary` (`core/pipes/locks/guardedPost.builder.ts`, `encodeObject` by kind, declared
+  `octet-stream` because the homeserver detects JSON as such); a locked article keeps the slot-0 cover convention
+  inside the lock, with `cover_image: null` in its envelope (ADR-0023). `GuardedContentParser.parsePost` reads a v1
+  primary first and falls back to the 0.x post shape a lock written before the port holds, so pre- and post-migration
+  locks both unlock.
+- `content` is FE-owned (pubky-social-specs does not manage it) and validated at runtime
   with Zod (`lockPostContentSchema`, `core/services/locks/locks.types.ts`). Bad / missing
   fields degrade to empty strings so the teaser still renders. The edit composer reads it with
   the same parse, so what the creator edits is what the reader sees (see
   [Editing an announcement](#editing-an-announcement)).
 - `content_kind` (#2433) is the locked post's kind, from `inferPostKindForCreate` at publish time, in its
-  pubky-app-specs v1.0.0-rc.1 name: `note | article | image | video | link | file` (`LOCK_CONTENT_KINDS`, mapped from
+  pubky-social-specs 1.x name: `note | article | image | video | link | file` (`LOCK_CONTENT_KINDS`, mapped from
   the internal post kind by `toLockContentKind`). The list is its own, not derived from the app's internal
   kinds, so renaming those never changes what a lock stores.
   The order is the normal post's: video over image over file, and audio is a file. Any string is kept raw, so
@@ -222,7 +246,7 @@ deleted-post fallback once Nexus drops it.
   `LOCK_TEASER_MAX_CHARACTER_LENGTH` minus the length of the `content_kind` entry actually written, so a lock
   without one keeps the old limit.
 - The reader's replica marker (`/priv/social/unlocked/<lockId>/post.json`, `replicatedPostSchema`) is
-  not a `PubkyAppPost`: each attachment carries its `content_type` inline so the copy renders without
+  not a v1 post object: each attachment carries its `content_type` inline so the copy renders without
   the creator's lock file, and `announcement` holds the `pubky://…/posts/<id>` URI of the post the
   content was unlocked from. Nexus cannot look a post up by its lock URL, so without that URI the
   Unlocked screen has no way back to the announcement. The field is optional, and a value that is not
@@ -623,8 +647,9 @@ is not kept. The cache is per server instance. Presence is not payment readiness
 readiness after either flow.
 
 `/setup/creator-held` first shipped in Paykit Server v0.1.1-rc2. An older Paykit Server answers it with `404`,
-which reads as "Paykit cannot say", so no creator could open setup: the Paykit Server behind an environment must
-run v0.1.1-rc2 or later before this app does.
+which reads as "Paykit cannot say", so no creator could open setup. The `paykit-setup-ready` report below first
+shipped in the same release, and without it every setup and reconnect page times out. For both reasons the Paykit
+Server behind an environment must run v0.1.1-rc2 or later before this app does.
 
 Locks unlocks after Paykit Server verifies a full, on-time payment on one accepted method.
 USDT requires successful Arbitrum block inclusion. Pubky App does not query Arbitrum or verify
@@ -642,11 +667,14 @@ A grant carries the capability list approved at sign-in for its whole life, and 
 each page load. Legacy cookie users sign in again during the grant-only migration. Locks added two
 entries to that list (`HOMESERVER_CAPABILITIES` in `@/config/network`: `/priv/social/:rw` for the
 reader's replicas and purchases, `/priv/app.locks/content/:r` for a creator's own originals). A user
-with a valid saved Ring grant issued before those entries shipped keeps a session without them: `/pub/pubky.app/` keeps
+with a valid saved Ring grant issued before those entries shipped keeps a session without them: the social trees keep
 working, so the feed, posting and profiles are unaffected, but the homeserver answers every read
 or write under the missing private scopes with **403** (insufficient permission; 401 means authentication failed).
-Keypair sign-in is unaffected: the SDK mints it with the root capability, `/:rw` — confirmed against
-the local stack, and root covers every required entry with no special case.
+Root grants saved by the former keypair sign-in are unaffected: the SDK minted them with the root capability, `/:rw` —
+confirmed against the local stack, and root covers every required entry with no special case. The social v1 scopes
+(`SOCIAL_V1_APP_CAPABILITIES`, `src/config/auth.ts`) are different: a grant that lacks them cannot run the app at all,
+so the migration gate signs that session out (`missing-scopes`) and the user signs in again with the full list
+(ADR-0026); only the Locks entries are upgraded in place.
 
 The app does not sign out a user merely because a valid grant lacks Locks scopes. Instead (#2373):
 
@@ -699,8 +727,8 @@ Never commit either.
 - No integration test spans UI → application → SDK for the unlock flow; the local stack
   (testnet + Lock Server + nexus) is driven manually. How to run it, approve as Bitkit and pay from
   the terminal: [`locks/locks-local-stack/README.md`](locks/locks-local-stack/README.md).
-- `cypress/e2e/locks.cy.ts` covers publish, owner view and payment unlock against the real Nexus and
-  homeserver, with the Lock Server / Paykit / Bitkit boundary stubbed. `PUBKY_RUNTIME_E2E_LOCKS_STUB_URL`
+- `cypress/e2e/locks.cy.ts` covers publish, owner view, payment unlock and delete against the real Nexus
+  and homeserver, with the Lock Server / Paykit / Bitkit boundary stubbed. `PUBKY_RUNTIME_E2E_LOCKS_STUB_URL`
   (the Locks CI job only, never a deploy) makes `initLockClient()` and `getLocksReads()` return
   `locks.e2eStub.ts`: it sends each Lock Server call as `POST <stub>/e2e/<operation>`, which the spec
   answers with `cy.intercept`. The stub never writes to the homeserver: as the real Lock Server does,
@@ -708,10 +736,13 @@ Never commit either.
   `cypress/plugins/lock-server.ts` and the `seedLockServerWrite` task in Cypress's Node process, with a
   session the creator's key granted for `/priv/app.locks/:rw,/pub/app.locks/:rw`. A non-2xx answer rejects with the pinned SDK's own error (`InvalidInput`, with the viewer,
   creator or code-exchange `... failed with HTTP <status>` message), so a stubbed 401, 404 or 451
-  takes the same path as the real Lock Server's. The pubky-e2e project will replace it with real end-to-end coverage.
-  Every stubbed answer is a `[locks-stub]` entry in the Cypress command log, with the redacted
-  request and response in its console details, and the same lines are printed in the terminal after
-  each `[locks-step]` marker (`cypress/support/locks-log.ts`).
+  takes the same path as the real Lock Server's. A lock a 0.x client published before the social v1
+  migration is seeded instead (its guarded 0.x post, `lock.json` and announcement, by the `seedLegacyLock`
+  task); the account migrates on sign-in, then the owner view, an unlock, a teaser edit and the delete run
+  on it. The pubky-e2e project will replace the stub with real end-to-end coverage. Every stubbed answer
+  is a `[locks-stub]` entry in the Cypress command log, with the redacted request and response in its
+  console details, and the same lines are printed in the terminal after each `[locks-step]` marker
+  (`cypress/support/locks-log.ts`).
 
 ## References
 
@@ -729,6 +760,8 @@ This branch pins the built Locks SDK to [Git commit `245253a6d7c9`](https://gith
 
 Deploy with [Locks #75](https://github.com/pubky/locks/pull/75) and Paykit Server's merged [#47](https://github.com/pubky/paykit-server/pull/47). The SDK's denomination-aware setup check requires the matching Locks server. Keep Paykit Server's `[usdt]` section absent for Bitcoin-only Bitkit clients, including [iOS #887](https://github.com/synonymdev/bitkit-ios/pull/887) and [Android #1437](https://github.com/synonymdev/bitkit-android/pull/1437).
 
-The creator dialog relies on one more Lock Server contract: the `/connect` shell posts `{ type: 'locks-auth-resize', height }` to the app as the first thing its script does. `useLocksAuthFlow` keeps the iframe invisible behind the spinner until that report arrives (same origin and iframe-source checks as the callback), and moves to the error step with Try again when it does not come within 5 s of the iframe's `load` event or 20 s of its mount (`CONNECT_READY_AFTER_LOAD_MS`, `CONNECT_MOUNT_TIMEOUT_MS`). A page that failed to render, such as a JSON error body, is never shown (#3027).
+The creator dialog relies on one more Lock Server contract: the `/connect` shell posts `{ type: 'locks-auth-resize', height }` to the app as the first thing its script does. `useLocksAuthFlow` keeps the iframe invisible behind the spinner until that report arrives (same origin and iframe-source checks as the callback), and moves to the error step with Try again when it does not come within 5 s of the iframe's `load` event or 20 s of its mount (`IFRAME_READY_AFTER_LOAD_MS`, `IFRAME_MOUNT_TIMEOUT_MS` in `useIframeReady`, which the Paykit `/setup` iframe shares). A page that failed to render, such as a JSON error body, is never shown (#3027).
+
+Paykit Server's `/setup` and `/setup/reconnect` follow the same contract: both render the same shell, which posts `{ type: 'paykit-setup-ready', state }` to the `return_to` origin as the first thing its script does ([paykit-server#125](https://github.com/pubky/paykit-server/pull/125), first in v0.1.1-rc2). `usePaykitSetupFlow` checks the origin, the iframe source, `type` and the echoed `state`, keeps the iframe invisible behind the spinner until the report arrives, and applies the same 5 s / 20 s limits (`useIframeReady`) before the error step with Try again. A ready report is never read as a callback. An environment whose Paykit Server predates rc2 never sends it, so every Enable Payments and reconnect attempt ends in that error step 5 s after `load`, and the only trace is a `Paykit setup page did not render` timeout.
 
 The pinned SDK takes no `AbortSignal`, so `LocksService` bounds every network request it makes through the SDK with `withLocksTimeout`: 30 s for a lookup or a small write, and 6 minutes for a request that carries a file's bytes (`registerGuardedResource`, `proxyReadGuardedResource`): the longest a user is expected to wait for a file. This is a UX limit, not a bandwidth guarantee: on a slow link, parallel uploads or downloads of large files can run out of it every time. A request that runs out of time fails with a retryable `Err.timeout`, so each screen shows the same failure state as for a network error. The request itself keeps running and a write may still land, so nothing retries a write automatically. When a late upload, content lock or session lands, the app tries to undo it: it deletes the upload or the lock, and signs out the session. An undo can fail, for example after a logout ended the session; the failure is reported, and the upload or lock stays on the server. A late proof submission needs no undo, because Try again resubmits the same saved bundle id. The setup dialog's server check builds the connect URL (up to 30 s) and then probes `/readyz` (up to 10 s), so it reports the server as unavailable within 40 s. `signout` has no limit of its own: logout waits for it at most `SIGNOUT_TIMEOUT_MS`, and the other callers (discarding a stale sign-in, undoing a late session) do not wait for it. Loading the SDK's wasm is not bounded (#3026).

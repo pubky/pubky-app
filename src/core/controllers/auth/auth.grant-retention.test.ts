@@ -5,11 +5,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthApplication } from '@/application/auth/auth';
 import { getAuthClientId } from '@/config/auth';
 import { getHomeserverCapabilities } from '@/config/network';
+import { SocialMigrationController } from '@/controllers/social-migration/social-migration';
 import type { SessionReference } from '@/libs/auth/session.types';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
-import { Identity } from '@/libs/identity/identity';
 import { Logger } from '@/libs/logger/logger';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { authInitialState } from '@/stores/auth/auth.types';
@@ -112,6 +112,9 @@ function failReferenceReads() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // These suites cover the auth lifecycle of a migrated account; the gate has its own suite.
+  vi.spyOn(SocialMigrationController, 'ensureMigrated').mockResolvedValue('passed');
+  vi.spyOn(SocialMigrationController, 'hasPassedLocally').mockReturnValue(true);
   vi.stubGlobal('crypto', webcrypto);
   vi.stubGlobal('indexedDB', new IDBFactory());
   Object.defineProperty(navigator, 'locks', {
@@ -389,26 +392,5 @@ describe('completed grant retention', () => {
     expect(Logger.warn).not.toHaveBeenCalled();
     expect(sdk.browserSessionStore.remove).not.toHaveBeenCalled();
     expect(active.signout).not.toHaveBeenCalled();
-  });
-
-  it('retains completed local-secret credentials after a transient recovery-login reference failure', async () => {
-    vi.spyOn(Identity, 'keypairFromMnemonic').mockReturnValue(asOpaque({}));
-    vi.spyOn(AuthApplication, 'signIn').mockResolvedValue({ session: candidate });
-    const failure = Err.database(DatabaseErrorCode.WRITE_FAILED, 'Storage unavailable', {
-      service: ErrorService.Local,
-      operation: 'test',
-    });
-    vi.spyOn(AuthApplication, 'commitPersistedAuth').mockRejectedValueOnce(failure);
-    vi.mocked(sdk.browserSessionStore.list).mockResolvedValueOnce([
-      asOpaque({ id: 'candidate', storageMode: 'local' }),
-    ]);
-    await expect(AuthController.loginWithMnemonic({ mnemonic: 'recovery phrase' })).rejects.toBe(failure);
-    expect(sdk.browserSessionStore.remove).not.toHaveBeenCalled();
-    expect(records.get('candidate')).toBe(candidate);
-    expect(useAuthStore.getState().session).toBe(active);
-    expect(AuthApplication.readPersistedAuth()?.sessionReference).toEqual(reference('active'));
-    expect(active.signout).not.toHaveBeenCalled();
-    expect(candidate.signout).not.toHaveBeenCalled();
-    expect(Logger.warn).toHaveBeenCalledWith(retainedWarning);
   });
 });

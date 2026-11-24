@@ -1,4 +1,5 @@
 import { Keypair } from '@synonymdev/pubky';
+import { buildPost, buildTag, buildUri, buildUser, editPost } from 'pubky-social-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TagKind } from '@/application/tag/tag.types';
 import { PubchiController } from '@/controllers/pubchi/pubchi';
@@ -9,6 +10,7 @@ import { ClientErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
+import type { PubchiTarget } from '@/libs/pubchi/schemas/ask-body';
 import { canonicalJson, sha256Hex } from '@/libs/pubchi/schemas/canonical';
 import { resetRuntimeConfigForTests } from '@/libs/runtime-config/runtime-config';
 import { PUBKY_RUNTIME_ENV_NAMES } from '@/libs/runtime-config/runtime-config.schema';
@@ -23,8 +25,8 @@ import { PubchiApplication } from './pubchi';
 const owner = Keypair.random().publicKey.z32();
 const bot = Keypair.random().publicKey.z32();
 const tagDocumentSha256 = 'e'.repeat(64);
-const target = { kind: 'user' as const, uri: `pubky://${owner}/pub/pubky.app/profile.json` };
-const sessionIdentity = { pubky: owner, capabilities: ['/pub/pubky.app/:rw', '/priv/app.pubchi/v1/:rw'] as string[] };
+const target: PubchiTarget = { kind: 'user', uri: buildUri(owner, 'user') };
+const sessionIdentity = { pubky: owner, capabilities: ['/pub/social/v1/:rw', '/priv/app.pubchi/v1/:rw'] as string[] };
 type StoredRecord = {
   id: string;
   owner: string;
@@ -104,7 +106,7 @@ function answer(overrides: Record<string, unknown> = {}) {
 
 async function setRecord(response = answer()) {
   response.target!.snapshot_sha256 = await sha256Hex(
-    canonicalJson({ kind: 'user', uri: target.uri, pubky: owner, name: '', bio: null }),
+    canonicalJson({ kind: 'user', uri: target.uri, pubky: owner, name: 'Alice', bio: null }),
   );
   record = {
     id: 'record-1',
@@ -136,7 +138,7 @@ describe('Pubchi tag suggestion applications', () => {
     process.env[PUBKY_RUNTIME_ENV_NAMES.pubchiApiUrl] = 'https://pubchi.example.com';
     resetRuntimeConfigForTests();
     sessionIdentity.pubky = owner;
-    sessionIdentity.capabilities = ['/pub/pubky.app/:rw', '/priv/app.pubchi/v1/:rw'];
+    sessionIdentity.capabilities = ['/pub/social/v1/:rw', '/priv/app.pubchi/v1/:rw'];
     receiptText = undefined;
     await setRecord();
     vi.mocked(getPubchiDatabase).mockReturnValue(
@@ -154,8 +156,10 @@ describe('Pubchi tag suggestion applications', () => {
     vi.spyOn(LocalPubchiBindingService, 'readActive').mockResolvedValue(
       asOpaque<Awaited<ReturnType<typeof LocalPubchiBindingService.readActive>>>({ owner, bot, status: 'active' }),
     );
-    vi.spyOn(HomeserverService, 'requestRawText').mockImplementation(async (url) => {
-      if (url === target.uri) return JSON.stringify({});
+    vi.spyOn(HomeserverService, 'getFreshBytes').mockImplementation(async (url) =>
+      url === target.uri ? buildUser(owner, { name: 'Alice' }).body : buildTag(owner, target.uri, 'builder').body,
+    );
+    vi.spyOn(HomeserverService, 'requestRawText').mockImplementation(async () => {
       if (receiptText === undefined) throw notFound();
       return receiptText;
     });
@@ -209,7 +213,7 @@ describe('Pubchi tag suggestion applications', () => {
         ext: { foo: { bytes: 'keep' }, bar: { second: true } },
       });
     }
-    expect(HomeserverService.requestRawText).toHaveBeenCalledTimes(6);
+    expect(HomeserverService.requestRawText).toHaveBeenCalledTimes(5);
     expect(HomeserverService.request).toHaveBeenCalledTimes(5);
     expect(vi.mocked(HomeserverService.request).mock.calls.every(([call]) => call.method === HttpMethod.PUT)).toBe(
       true,
@@ -229,12 +233,7 @@ describe('Pubchi tag suggestion applications', () => {
     ).rejects.toBeInstanceOf(AppError);
     expect(HomeserverService.request).not.toHaveBeenCalled();
 
-    vi.mocked(HomeserverService.requestRawText)
-      .mockReset()
-      .mockImplementation(async (url) => {
-        if (url === target.uri) return JSON.stringify({});
-        throw notFound();
-      });
+    vi.mocked(HomeserverService.requestRawText).mockRejectedValue(notFound());
     await expect(
       PubchiApplication.prepareTagSuggestionApplication(record.id, 0, owner, sessionIdentity.capabilities),
     ).resolves.toBeDefined();
@@ -246,7 +245,7 @@ describe('Pubchi tag suggestion applications', () => {
       () => ({ ...record, response: { ...record.response, summary: 'tampered' } }),
       () => ({ ...record, response_run_id: 'other' }),
       () => ({ ...record, question: 'other question' }),
-      () => ({ ...record, target: { ...target, uri: 'pubky://other/pub/pubky.app/profile.json' } }),
+      () => ({ ...record, target: { ...target, uri: buildUri(bot, 'user') } }),
       () => ({ ...record, submitted_at: Date.now() - 601_000 }),
       () => ({ ...record, response: { ...record.response, generated_at: Math.floor(Date.now() / 1000) - 601 } }),
     ];
@@ -255,46 +254,73 @@ describe('Pubchi tag suggestion applications', () => {
       await expect(
         PubchiApplication.prepareTagSuggestionApplication(record.id, 0, owner, sessionIdentity.capabilities),
       ).rejects.toBeInstanceOf(AppError);
+      expect(HomeserverService.getFreshBytes).not.toHaveBeenCalled();
       expect(HomeserverService.requestRawText).not.toHaveBeenCalled();
       record = structuredClone(record);
       await setRecord();
     }
-    for (const capabilities of [['/priv/app.pubchi/v1/:rw'], ['/pub/pubky.app/:rw']]) {
+    for (const capabilities of [['/priv/app.pubchi/v1/:rw'], ['/pub/social/v1/:rw']]) {
       await expect(
         PubchiApplication.prepareTagSuggestionApplication(record.id, 0, owner, capabilities),
       ).rejects.toBeInstanceOf(AppError);
+      expect(HomeserverService.getFreshBytes).not.toHaveBeenCalled();
       expect(HomeserverService.requestRawText).not.toHaveBeenCalled();
     }
   });
 
   it('B refuses an edited or deleted target before receipt or tag writes', async () => {
-    vi.mocked(HomeserverService.requestRawText).mockImplementation(async (url) => {
-      if (url === target.uri) return JSON.stringify({ name: 'edited' });
-      throw notFound();
-    });
+    vi.mocked(HomeserverService.getFreshBytes).mockResolvedValue(buildUser(owner, { name: 'edited' }).body);
     await expect(
       PubchiApplication.prepareTagSuggestionApplication(record.id, 0, owner, sessionIdentity.capabilities),
     ).rejects.toMatchObject({ message: 'Target changed — ask again' });
     expect(HomeserverService.request).not.toHaveBeenCalled();
 
-    vi.mocked(HomeserverService.requestRawText).mockRejectedValue(notFound());
+    vi.mocked(HomeserverService.getFreshBytes).mockRejectedValue(notFound());
     await expect(
       PubchiApplication.prepareTagSuggestionApplication(record.id, 0, owner, sessionIdentity.capabilities),
     ).rejects.toMatchObject({ message: 'Target changed — ask again' });
     expect(HomeserverService.request).not.toHaveBeenCalled();
+  });
+
+  it('checks a post suggestion against the latest version at its versionless reference', async () => {
+    const first = buildPost(bot, { content: 'First version' });
+    const latest = editPost(bot, first.url, { ...first.object, content: 'Latest version' });
+    const uri = buildUri(bot, 'post', first.id);
+    const snapshot = (content: string) =>
+      sha256Hex(canonicalJson({ kind: 'post', uri, author: bot, content, post_kind: 'note' }));
+    record.target = { kind: 'post', uri };
+    record.response.target = { ...record.target, snapshot_sha256: await snapshot(first.object.content) };
+    record.response_sha256 = await sha256Hex(canonicalJson(record.response));
+    vi.spyOn(HomeserverService, 'listAll').mockResolvedValue([latest.url, first.url]);
+    vi.spyOn(HomeserverService, 'getBytes').mockResolvedValue(latest.body);
+
+    await expect(
+      PubchiApplication.prepareTagSuggestionApplication(record.id, 0, owner, sessionIdentity.capabilities),
+    ).rejects.toMatchObject({ message: 'Target changed — ask again' });
+    expect(HomeserverService.request).not.toHaveBeenCalled();
+
+    record.response.target.snapshot_sha256 = await snapshot(latest.object.content);
+    record.response_sha256 = await sha256Hex(canonicalJson(record.response));
+    await expect(
+      PubchiApplication.prepareTagSuggestionApplication(record.id, 0, owner, sessionIdentity.capabilities),
+    ).resolves.toBeDefined();
+    expect(HomeserverService.listAll).toHaveBeenCalledWith({ baseDirectory: `${uri}/` });
+    expect(HomeserverService.getBytes).toHaveBeenCalledWith(latest.url);
+    expect(HomeserverService.getBytes).not.toHaveBeenCalledWith(first.url);
   });
 
   it('B rejects a current identity that is not the stored owner before target I/O', async () => {
     await expect(
       PubchiApplication.prepareTagSuggestionApplication(record.id, 0, bot, sessionIdentity.capabilities),
     ).rejects.toBeInstanceOf(AppError);
+    expect(HomeserverService.getFreshBytes).not.toHaveBeenCalled();
     expect(HomeserverService.requestRawText).not.toHaveBeenCalled();
   });
 
   it('B retains persisted target and label after the rendered query answer is mutated', async () => {
     const response = answer();
     response.target.snapshot_sha256 = await sha256Hex(
-      canonicalJson({ kind: 'user', uri: target.uri, pubky: owner, name: '', bio: null }),
+      canonicalJson({ kind: 'user', uri: target.uri, pubky: owner, name: 'Alice', bio: null }),
     );
     vi.spyOn(PubchiService, 'query').mockResolvedValue(
       asOpaque<Awaited<ReturnType<typeof PubchiService.query>>>(response),
@@ -315,7 +341,12 @@ describe('Pubchi tag suggestion applications', () => {
       owner,
       sessionIdentity.capabilities,
     );
-    expect(prepared.suggestion.label).toBe('builder');
+    expect(prepared.tagParams).toEqual({
+      taggedKind: TagKind.USER,
+      taggedId: owner,
+      label: 'builder',
+      taggerId: owner,
+    });
     expect(JSON.parse(receiptText!)).toMatchObject({ label: 'builder', target: { uri: target.uri } });
   });
 
@@ -349,7 +380,7 @@ describe('Pubchi tag suggestion applications', () => {
     [false, 'applied'],
   ] as const)('C records %s existing tag as %s through the controller', async (alreadyExisted, status) => {
     vi.spyOn(TagController, 'commitCreatePreservingExisting').mockResolvedValue({
-      tagUrl: `pubky://${owner}/pub/pubky.app/tags/builder`,
+      tagUrl: buildTag(owner, buildUri(owner, 'user'), 'builder').url,
       alreadyExisted,
       tagDocumentSha256,
     });
@@ -365,7 +396,7 @@ describe('Pubchi tag suggestion applications', () => {
 
   it('leaves a successful tag write pending when its document proof is unavailable', async () => {
     vi.spyOn(TagController, 'commitCreatePreservingExisting').mockResolvedValue({
-      tagUrl: `pubky://${owner}/pub/pubky.app/tags/builder`,
+      tagUrl: buildTag(owner, buildUri(owner, 'user'), 'builder').url,
       alreadyExisted: false,
     });
 
@@ -511,14 +542,7 @@ describe('Pubchi tag suggestion applications', () => {
     record.operations = { 0: operation };
     record.already_existed = { 0: alreadyExisted };
     receiptText = JSON.stringify({ ...receipt(), status: receiptStatus });
-    vi.mocked(HomeserverService.requestRawText).mockImplementation(async (url) => {
-      if (url.includes('/priv/app.pubchi/v1/tag-applications/')) return receiptText!;
-      if (url.includes('/pub/pubky.app/tags/')) {
-        if (!tagPresent) throw notFound();
-        return JSON.stringify({ uri: target.uri, label: 'builder', created_at: 1 });
-      }
-      return JSON.stringify({});
-    });
+    if (!tagPresent) vi.mocked(HomeserverService.getFreshBytes).mockResolvedValue(null);
 
     await expect(PubchiApplication.reconcileTagSuggestionApplication(record.id, 0, owner)).resolves.toBe(expected);
     expect(record.statuses[0]).toBe(expected);
@@ -540,7 +564,11 @@ describe('Pubchi tag suggestion applications', () => {
     expect(record.statuses[0]).toBe('applying');
     expect(HomeserverService.request).toHaveBeenCalledTimes(1);
     expect(JSON.parse(receiptText!).status).toBe('applying');
-    resolveCreate({ tagUrl: `pubky://${owner}/pub/pubky.app/tags/builder`, alreadyExisted: false, tagDocumentSha256 });
+    resolveCreate({
+      tagUrl: buildTag(owner, buildUri(owner, 'user'), 'builder').url,
+      alreadyExisted: false,
+      tagDocumentSha256,
+    });
     await expect(apply).resolves.toBe('applied');
   });
 
@@ -549,12 +577,6 @@ describe('Pubchi tag suggestion applications', () => {
     record.operations = { 0: 'apply' };
     record.already_existed = { 0: null };
     receiptText = JSON.stringify({ ...receipt(), status: 'applying', already_existed: null });
-    vi.mocked(HomeserverService.requestRawText).mockImplementation(async (url) => {
-      if (url.includes('/priv/app.pubchi/v1/tag-applications/')) return receiptText!;
-      if (url.includes('/pub/pubky.app/tags/'))
-        return JSON.stringify({ uri: target.uri, label: 'builder', created_at: 1 });
-      return JSON.stringify({});
-    });
 
     await expect(PubchiApplication.reconcileTagSuggestionApplication(record.id, 0, owner)).resolves.toBe(
       'reconciliation-pending',
@@ -572,11 +594,7 @@ describe('Pubchi tag suggestion applications', () => {
     record.operations = { 0: 'apply' };
     record.already_existed = { 0: false };
     receiptText = JSON.stringify({ ...receipt(), status: 'applying' });
-    vi.mocked(HomeserverService.requestRawText).mockImplementation(async (url) => {
-      if (url.includes('/priv/app.pubchi/v1/tag-applications/')) return receiptText!;
-      if (url.includes('/pub/pubky.app/tags/')) return raw;
-      return JSON.stringify({});
-    });
+    vi.mocked(HomeserverService.getFreshBytes).mockResolvedValue(new TextEncoder().encode(raw));
 
     await expect(PubchiApplication.reconcileTagSuggestionApplication(record.id, 0, owner)).resolves.toBe(
       'reconciliation-pending',
@@ -587,11 +605,7 @@ describe('Pubchi tag suggestion applications', () => {
     record.statuses = { 0: 'reconciliation-pending' };
     record.operations = { 0: 'revert' };
     receiptText = JSON.stringify({ ...receipt(), status: 'applied' });
-    vi.mocked(HomeserverService.requestRawText).mockImplementation(async (url) => {
-      if (url.includes('/priv/app.pubchi/v1/tag-applications/')) return receiptText!;
-      if (url.includes('/pub/pubky.app/tags/')) return '{';
-      return JSON.stringify({});
-    });
+    vi.mocked(HomeserverService.getFreshBytes).mockRejectedValue(new Error('offline'));
 
     await expect(PubchiApplication.reconcileTagSuggestionApplication(record.id, 0, owner)).resolves.toBe(
       'reconciliation-pending',

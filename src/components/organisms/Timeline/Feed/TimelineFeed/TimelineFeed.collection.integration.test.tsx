@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { postUriBuilder } from 'pubky-app-specs';
+import { buildUri } from 'pubky-social-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
@@ -23,6 +23,7 @@ import { StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 import { NexusUserStreamService } from '@/services/nexus/stream/users/userStream';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { LAYOUT } from '@/stores/home/home.types';
+import { stubMemoryHomeserver } from '@/test-utils/homeserver';
 import { mockSession } from '@/test-utils/pubky';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { resetViewport, setMobileViewport } from '@/test-utils/viewport';
@@ -51,7 +52,7 @@ const AUTHOR = 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy' as Pubky;
 const nextTimestamp = () => new Promise((resolve) => setTimeout(resolve, 2));
 const toUri = (compositeId: string) => {
   const { pubky, id } = parseCompositeId(compositeId);
-  return postUriBuilder(pubky, id);
+  return buildUri(pubky, 'post', id);
 };
 
 function ItemCount({ collectionId }: { collectionId: string }) {
@@ -63,7 +64,7 @@ describe('collection feed with local membership', () => {
   beforeEach(() => {
     postStreamQueue.clear();
     useAuthStore.setState({ currentUserPubky: AUTHOR, session: mockSession(), restoreStatus: 'ready' });
-    vi.spyOn(HomeserverService, 'request').mockResolvedValue(undefined);
+    stubMemoryHomeserver(AUTHOR);
     vi.spyOn(NexusUserStreamService, 'fetchByIds').mockResolvedValue([]);
     vi.spyOn(NexusPostStreamService, 'fetch').mockResolvedValue({ post_keys: [], last_post_score: null });
   });
@@ -81,7 +82,7 @@ describe('collection feed with local membership', () => {
     const collectionId = await PostController.commitCreateCollection({
       authorId: AUTHOR,
       name: 'Reading list',
-      items: saved ? [postUriBuilder(pubky, id)] : [],
+      items: saved ? [buildUri(pubky, 'post', id)] : [],
     });
     route.userId = AUTHOR;
     route.postId = parseCompositeId(collectionId).id;
@@ -200,8 +201,8 @@ describe('collection feed with local membership', () => {
       const { collectionId, postId } = await seed();
       showFeed(collectionId);
       await openPicker();
-      const request = Promise.withResolvers<void>();
-      vi.mocked(HomeserverService.request).mockReturnValueOnce(request.promise);
+      const request = Promise.withResolvers<undefined>();
+      vi.mocked(HomeserverService.putBlob).mockReturnValueOnce(request.promise);
 
       fireEvent.click(screen.getByText('Reading list'));
       await waitFor(() => expect(screen.getByTestId('item-count')).toHaveTextContent('0'));
@@ -209,7 +210,7 @@ describe('collection feed with local membership', () => {
       closePicker();
       expect(screen.getByTestId(postId)).toBeInTheDocument();
 
-      await act(async () => request.resolve());
+      await act(async () => request.resolve(undefined));
       await waitFor(() => expect(screen.queryByTestId(postId)).not.toBeInTheDocument());
       expect(await screen.findByText('No saved posts')).toBeInTheDocument();
     },
@@ -220,8 +221,8 @@ describe('collection feed with local membership', () => {
     showFeed(collectionId);
     await openPicker();
     const originalCard = screen.getByTestId(postId);
-    const request = Promise.withResolvers<void>();
-    vi.mocked(HomeserverService.request).mockReturnValueOnce(request.promise);
+    const request = Promise.withResolvers<undefined>();
+    vi.mocked(HomeserverService.putBlob).mockReturnValueOnce(request.promise);
     fireEvent.click(screen.getByText('Reading list'));
     await waitFor(() => expect(screen.getByTestId('item-count')).toHaveTextContent('0'));
     closePicker();
@@ -277,8 +278,8 @@ describe('collection feed with local membership', () => {
     const { collectionId, postId } = await seed(false);
     showFeed(collectionId);
     await screen.findByText('No saved posts');
-    const request = Promise.withResolvers<void>();
-    vi.mocked(HomeserverService.request).mockReturnValueOnce(request.promise);
+    const request = Promise.withResolvers<undefined>();
+    vi.mocked(HomeserverService.putBlob).mockReturnValueOnce(request.promise);
     const update = PostController.commitUpdateCollectionItem({ collectionId, postId, shouldAdd: true });
     const rejected = expect(update).rejects.toThrow('Save failed');
     expect(await screen.findByTestId(postId)).toBeInTheDocument();
@@ -298,7 +299,7 @@ describe('collection feed with local membership', () => {
     const collectionId = await PostController.commitCreateCollection({
       authorId: AUTHOR,
       name: 'Reading list',
-      items: [postUriBuilder(AUTHOR, '0000000000001')],
+      items: [buildUri(AUTHOR, 'post', '0000000000010')],
     });
     route.userId = AUTHOR;
     route.postId = parseCompositeId(collectionId).id;
@@ -314,11 +315,11 @@ describe('collection feed with local membership', () => {
     expect(await screen.findByText(/^Error:/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add content' })).toBeInTheDocument();
     expect(screen.queryByText('No saved posts')).not.toBeInTheDocument();
-    expect(screen.queryByTestId(`${AUTHOR}:0000000000001`)).not.toBeInTheDocument();
+    expect(screen.queryByTestId(`${AUTHOR}:0000000000010`)).not.toBeInTheDocument();
   });
 
   it('shows the stream error instead of releasing members whose batch hydration failed', async () => {
-    const missing = `${AUTHOR}:0000000000001`;
+    const missing = `${AUTHOR}:0000000000010`;
     const collectionId = await PostController.commitCreateCollection({
       authorId: AUTHOR,
       name: 'Reading list',
@@ -338,7 +339,7 @@ describe('collection feed with local membership', () => {
 
   it('retries instead of erroring when a restored session cuts the batch hydration short', async () => {
     useAuthStore.setState({ session: null, restoreStatus: 'restoring' });
-    const cold = `${AUTHOR}:0000000000001`;
+    const cold = `${AUTHOR}:0000000000010`;
     const collectionId = await PostController.commitCreateCollection({
       authorId: AUTHOR,
       name: 'Reading list',
@@ -371,7 +372,7 @@ describe('collection feed with local membership', () => {
   it('shows an item added on another device when refreshing an envelope just read from Nexus', async () => {
     const refresh = observeRefresh();
     const postId = await PostController.commitCreate({ authorId: AUTHOR, content: 'Saved from home' });
-    const collectionId = buildCompositeId({ pubky: AUTHOR, id: '0000000000003' });
+    const collectionId = buildCompositeId({ pubky: AUTHOR, id: '0000000000030' });
     const local: PostDetailsModelSchema = {
       id: collectionId,
       content: JSON.stringify({ name: 'Reading list', items: [toUri(postId)], layout: 'list' }),
@@ -439,7 +440,7 @@ describe('collection feed with local membership', () => {
     await nextTimestamp();
     const nextSave = await PostController.commitCreate({ authorId: AUTHOR, content: 'Saved next' });
     await PostController.commitUpdateCollectionItem({ collectionId, postId: nextSave, shouldAdd: true });
-    const saved = JSON.stringify(vi.mocked(HomeserverService.request).mock.lastCall![0].bodyJson);
+    const saved = new TextDecoder().decode(vi.mocked(HomeserverService.putBlob).mock.lastCall![0].blob);
     expect(saved).toContain(toUri(justSaved));
     expect(saved).toContain(toUri(nextSave));
   });

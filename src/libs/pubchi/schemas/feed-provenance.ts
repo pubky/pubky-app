@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { ParseResult } from './codes';
+import { pubchiFeedIdSchema } from './feed';
 import { scanForbiddenPublicState } from './forbidden';
 import { fromZod, zPubky, zSha256, zUnix, zVersion1 } from './zod';
 
@@ -7,7 +8,7 @@ export const PubchiFeedProvenanceV1Schema = z
   .object({
     schema: z.literal('pubchi-feed-provenance'),
     version: zVersion1,
-    feed_id: z.string().min(1),
+    feed_id: pubchiFeedIdSchema,
     created_at: zUnix,
     updated_at: zUnix.optional(),
     proposal_hash: zSha256,

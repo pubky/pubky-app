@@ -8,6 +8,7 @@
  */
 
 import { z } from 'zod';
+import { parsePublicSocialUri } from '@/libs/pubchi/uri';
 import { isCanonicalPublicEvidenceUri, type PubchiAnswerV1 } from './answer';
 import { err, ok, type ParseResult } from './codes';
 import { scanForbiddenPublicState } from './forbidden';
@@ -23,15 +24,13 @@ const SUGGESTION_ID = /^[A-Za-z0-9_-]{1,64}$/;
 const RUN_ID = /^[A-Za-z0-9_-]{1,64}$/;
 
 export function isPubkyAppResourceUri(uri: string): boolean {
-  if (!isCanonicalPublicEvidenceUri(uri)) return false;
-  const pathStart = uri.indexOf('/', 'pubky://'.length);
-  return pathStart >= 0 && uri.slice(pathStart).startsWith('/pub/pubky.app/');
+  return isCanonicalPublicEvidenceUri(uri) && parsePublicSocialUri(uri) !== null;
 }
 
 const SourceUriSchema = z
   .string()
   .max(512)
-  .refine(isPubkyAppResourceUri, 'source URI must be a public pubky.app resource');
+  .refine(isPubkyAppResourceUri, 'source URI must be a public social v1 resource');
 
 export const PubchiSuggestionV1Schema = z
   .object({

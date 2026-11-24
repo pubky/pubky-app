@@ -3,5 +3,7 @@ export interface LocksRegionNoticeProps {
   cause?: 'region' | 'unknown';
   /** `line`: the sentence with an info icon. `icon`: the info icon alone, for a toolbar with no room for a sentence. */
   variant?: 'line' | 'icon';
+  /** `end` opens the info popover leftward, for a notice at the right edge of its row. */
+  align?: 'start' | 'end';
   className?: string;
 }

@@ -1,4 +1,5 @@
 import type { Session } from '@synonymdev/pubky';
+import { buildUri } from 'pubky-social-specs';
 import { PubchiApplication } from '@/application/pubchi/pubchi';
 import type {
   CreatedPubchi,
@@ -9,7 +10,7 @@ import type {
   PubchiImportResult,
   PubchiQuerySuccess,
 } from '@/application/pubchi/pubchi.types';
-import { TagKind } from '@/application/tag/tag.types';
+import { PUBCHI_CAPABILITIES } from '@/config/auth';
 import { AuthController } from '@/controllers/auth/auth';
 import { PostController } from '@/controllers/post/post';
 import { TagController } from '@/controllers/tag/tag';
@@ -18,7 +19,6 @@ import { AuthErrorCode, ClientErrorCode, NetworkErrorCode, ValidationErrorCode }
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { Identity } from '@/libs/identity/identity';
-import { APP_SIGNIN_CAPABILITIES } from '@/libs/pubchi/capabilities';
 import { commitContentForDraftPost } from '@/libs/pubchi/draft-post';
 import { isPubchiEnabled, isPubchiPanelEnabled } from '@/libs/pubchi/flags';
 import { persistDismissedId } from '@/libs/pubchi/proactive';
@@ -27,8 +27,8 @@ import { type PubchiOwnerContextV1 } from '@/libs/pubchi/schemas/context';
 import { type FeedProposalV2 } from '@/libs/pubchi/schemas/feed';
 import { isPubkyId } from '@/libs/pubchi/schemas/pubky';
 import { type PubchiSuggestionV1 } from '@/libs/pubchi/schemas/suggestion';
-import { CompositeIdDomain } from '@/models/models.types';
-import { buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
+import { parsePubchiTarget } from '@/libs/pubchi/uri';
+import { buildCompositeId, parseCompositeId } from '@/models/models.utils';
 import type { TGenerateAuthUrlResult } from '@/services/homeserver/homeserver.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { type PubchiFlyoutPrefill, usePubchiStore } from '@/stores/pubchi/pubchi.store';
@@ -258,26 +258,9 @@ export class PubchiController {
       owner,
       auth.selectSession()?.info.capabilities ?? [],
     );
-    const taggedKind = prepared.binding.target.kind === 'post' ? TagKind.POST : TagKind.USER;
-    const matched = prepared.binding.target.uri.match(
-      prepared.binding.target.kind === 'post'
-        ? /^pubky:\/\/([^/]+)\/pub\/pubky\.app\/posts\/([^/]+)$/
-        : /^pubky:\/\/([^/]+)\/pub\/pubky\.app\/profile\.json$/,
-    );
-    if (!matched) {
-      throw Err.validation(ValidationErrorCode.FORMAT_ERROR, 'Invalid tag suggestion target', {
-        service: ErrorService.Pubchi,
-        operation: 'applyTagSuggestion',
-      });
-    }
     let result;
     try {
-      result = await TagController.commitCreatePreservingExisting({
-        taggedKind,
-        taggedId: taggedKind === TagKind.POST ? `${matched[1]}:${matched[2]}` : matched[1],
-        label: prepared.suggestion.label,
-        taggerId: owner,
-      });
+      result = await TagController.commitCreatePreservingExisting(prepared.tagParams);
     } catch (cause) {
       await PubchiApplication.finalizeTagSuggestionApplication(
         recordId,
@@ -345,25 +328,7 @@ export class PubchiController {
     const owner = useAuthStore.getState().selectCurrentUserPubky();
     const prepared = await PubchiApplication.prepareTagSuggestionRevert(recordId, suggestionIndex, owner);
     await PubchiApplication.recordTagSuggestionRevertOperation(recordId, suggestionIndex);
-    const matched = prepared.binding.target.uri.match(
-      prepared.binding.target.kind === 'post'
-        ? /^pubky:\/\/([^/]+)\/pub\/pubky\.app\/posts\/([^/]+)$/
-        : /^pubky:\/\/([^/]+)\/pub\/pubky\.app\/profile\.json$/,
-    );
-    if (!matched) {
-      throw Err.validation(ValidationErrorCode.FORMAT_ERROR, 'Invalid tag suggestion target', {
-        service: ErrorService.Pubchi,
-        operation: 'revertTagSuggestion',
-      });
-    }
-    const taggedKind = prepared.binding.target.kind === 'post' ? TagKind.POST : TagKind.USER;
-    const tagParams = {
-      taggedKind,
-      taggedId: taggedKind === TagKind.POST ? `${matched[1]}:${matched[2]}` : matched[1],
-      label: prepared.suggestion.label,
-      taggerId: owner,
-    };
-    await this.deleteTagSuggestion(tagParams, prepared.tagDocumentSha256);
+    await this.deleteTagSuggestion(prepared.tagParams, prepared.tagDocumentSha256);
     try {
       await PubchiApplication.finalizeTagSuggestionApplication(
         recordId,
@@ -415,18 +380,15 @@ export class PubchiController {
     );
     let parentPostId: string | undefined;
     if (prepared.draft.parent_uri) {
-      const composite = buildCompositeIdFromPubkyUri({
-        uri: prepared.draft.parent_uri,
-        domain: CompositeIdDomain.POSTS,
-      });
-      if (!composite) {
+      const parent = parsePubchiTarget({ kind: 'post', uri: prepared.draft.parent_uri });
+      if (parent?.kind !== 'post') {
         await PubchiApplication.finalizeDraftPostApplication(recordId, prepared.applicationId, 'failed');
         throw Err.validation(ValidationErrorCode.FORMAT_ERROR, 'Invalid draft post parent', {
           service: ErrorService.Pubchi,
           operation: 'applyDraftPost',
         });
       }
-      parentPostId = composite;
+      parentPostId = buildCompositeId({ pubky: parent.owner, id: parent.id });
     }
     const published = commitContentForDraftPost(prepared.draft);
     let compositePostId = prepared.existingCompositePostId;
@@ -453,7 +415,7 @@ export class PubchiController {
         operation: 'applyDraftPost',
       });
     }
-    const postUri = `pubky://${pubky}/pub/pubky.app/posts/${id}`;
+    const postUri = buildUri(pubky, 'post', id);
     try {
       await PubchiApplication.recordDraftPostApplyOutcome(recordId, compositePostId, postUri);
     } catch {
@@ -695,7 +657,9 @@ export class PubchiController {
     return result;
   }
 
-  static getCapabilityApprovalUrl(capabilities = APP_SIGNIN_CAPABILITIES): Promise<TGenerateAuthUrlResult | null> {
+  static getCapabilityApprovalUrl(
+    capabilities = PUBCHI_CAPABILITIES.join(','),
+  ): Promise<TGenerateAuthUrlResult | null> {
     return AuthController.requestCapabilities(capabilities.split(','));
   }
 

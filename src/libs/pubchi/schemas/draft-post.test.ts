@@ -15,7 +15,7 @@ const receipt = {
   kind: 'short',
   content: 'Pubky keeps public social state on your homeserver.',
   rationale: 'Matches the public profile evidence.',
-  evidence: [`pubky://${owner}/pub/pubky.app/profile.json`],
+  evidence: [`pubky://${owner}/pub/social/v1/profile.json`],
   status: 'applying',
   suggested_at: 1_788_600_000,
 };
@@ -45,7 +45,7 @@ describe('pubchi draft-post receipt schema', () => {
     expect(
       parsePubchiDraftPostReceipt({
         ...receipt,
-        post_uri: `pubky://${owner}/pub/pubky.app/posts/0032W6CBGDBP0`,
+        post_uri: `pubky://${owner}/pub/social/v1/posts/0032W6CBGDBP0`,
       }).ok,
     ).toBe(true);
     expect(parsePubchiDraftPostReceipt({ ...receipt, post_uri: 'https://example.com/posts/1' }).ok).toBe(false);

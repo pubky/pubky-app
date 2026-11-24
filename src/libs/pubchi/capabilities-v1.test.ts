@@ -33,20 +33,21 @@ describe('Pubchi capability helpers', () => {
   });
 
   it.each([
-    `pubky://${pubky}/pub/pubky.app/posts/post-1`,
-    `https://pubky.app/post/${pubky}/post-1`,
-    `https://bots.pubky.app/post/${pubky}/post-1`,
+    `pubky://${pubky}/pub/pubky.app/posts/0032W6CBGDBP0`,
+    `pubky://${pubky}/pub/social/v1/posts/0032W6CBGDBP0`,
+    `https://pubky.app/post/${pubky}/0032W6CBGDBP0`,
+    `https://bots.pubky.app/post/${pubky}/0032W6CBGDBP0`,
   ])('parses %s', (reference) => {
     expect(parsePostReference(reference)).toEqual({
       pubky,
-      postId: 'post-1',
-      uri: `pubky://${pubky}/pub/pubky.app/posts/post-1`,
+      postId: '0032W6CBGDBP0',
+      uri: `pubky://${pubky}/pub/social/v1/posts/0032W6CBGDBP0`,
     });
   });
 
   it.each([
-    `https://pubky.app/post/${pubky.slice(1)}/post-1`,
-    `https://pubky.app/post/${pubky}/post-1 trailing text`,
+    `https://pubky.app/post/${pubky.slice(1)}/0032W6CBGDBP0`,
+    `https://pubky.app/post/${pubky}/0032W6CBGDBP0 trailing text`,
     `https://pubky.app/post/${pubky}/bad/id`,
   ])('rejects invalid post references: %s', (reference) => {
     expect(parsePostReference(reference)).toBeNull();

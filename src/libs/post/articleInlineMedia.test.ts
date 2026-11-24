@@ -1,3 +1,5 @@
+import { buildFile } from 'pubky-social-specs';
+import { fakeOwner } from 'pubky-social-specs/testing';
 import { describe, expect, it, vi } from 'vitest';
 import {
   articleHasInlineSlotZero,
@@ -15,11 +17,14 @@ import {
 const AUTHOR = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo';
 const OTHER = 'z4dr71ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1abc';
 
+/** A 0.x File object URI, which articles published before the social v1 port still reference. */
 const fileUri = (id: string, owner = AUTHOR) => `pubky://${owner}/pub/pubky.app/files/${id}`;
 const blobUri = (id: string, owner = AUTHOR) => `pubky://${owner}/pub/pubky.app/blobs/${id}`;
+/** A v1 media URI: `files/{hash}.{ext}` under the public tree, as `buildFile` names it. */
+const mediaUri = (owner = AUTHOR) => buildFile(owner, { bytes: new Uint8Array([1, 2, 3]), type: 'image/png' }).url;
 
 const serialize = (body: string, overrides?: Partial<Parameters<typeof serializeArticleBody>[0]>) =>
-  serializeArticleBody({ body, coverPresent: false, authorPubky: AUTHOR, maxInlineMedia: 9, ...overrides });
+  serializeArticleBody({ body, slotOffset: 0, authorPubky: AUTHOR, maxInlineMedia: 9, ...overrides });
 
 describe('parseAttachmentRef', () => {
   it('parses strict references', () => {
@@ -60,6 +65,22 @@ describe('isAttachmentRefScheme', () => {
 });
 
 describe('parseFileUriOwner / isAuthorFileUri', () => {
+  it('reads the owner of a v1 media URI, public root only', () => {
+    expect(parseFileUriOwner(mediaUri())).toBe(AUTHOR);
+    expect(parseFileUriOwner(` ${mediaUri()} `)).toBe(AUTHOR);
+    expect(isAuthorFileUri(mediaUri(), AUTHOR)).toBe(true);
+    expect(isAuthorFileUri(mediaUri(fakeOwner(2)), AUTHOR)).toBe(false);
+    expect(parseFileUriOwner(mediaUri().replace('/pub/', '/priv/'))).toBeNull();
+    expect(parseFileUriOwner(`pubky://${AUTHOR}/pub/social/v1/posts/0035QZPT4QG00`)).toBeNull();
+  });
+
+  it('serializes a v1 media reference like a 0.x one', () => {
+    const result = serialize(`![A](${mediaUri()})`);
+
+    expect(result.inlineUris).toEqual([mediaUri()]);
+    expect(result.body).toBe('![A](attachment:0)');
+  });
+
   it('extracts the owner from strict file URIs', () => {
     expect(parseFileUriOwner(fileUri('abc123'))).toBe(AUTHOR);
     expect(parseFileUriOwner(` ${fileUri('abc123')} `)).toBe(AUTHOR);
@@ -123,9 +144,9 @@ describe('serializeArticleBody', () => {
     expect(result.body).toBe('Intro.\n\n![My alt](attachment:0)\n\nOutro.');
   });
 
-  it('offsets slots by one when a cover is present', () => {
+  it('offsets slots by one for a locked article whose cover sits in slot 0', () => {
     const body = `![A](${fileUri('a')})\n\n![B](${fileUri('b')})`;
-    const result = serialize(body, { coverPresent: true });
+    const result = serialize(body, { slotOffset: 1 });
 
     expect(result.inlineUris).toEqual([fileUri('a'), fileUri('b')]);
     expect(result.body).toBe('![A](attachment:1)\n\n![B](attachment:2)');
@@ -174,7 +195,7 @@ describe('serializeArticleBody', () => {
     expect(result.inlineUris).toEqual([uri]);
     // The destination is the rewritten part; the raw URI never survives as one
     expect(result.body).toContain('](attachment:0)');
-    const restored = deserializeArticleBody({ body: result.body, attachments: [uri], authorPubky: AUTHOR });
+    const restored = deserializeArticleBody({ body: result.body, slot: (index) => [uri][index], authorPubky: AUTHOR });
     expect(serialize(restored.body).inlineUris).toEqual([uri]);
   });
 
@@ -238,7 +259,7 @@ describe('serializeArticleBody', () => {
     const serialized = serialize(composer);
     const restored = deserializeArticleBody({
       body: serialized.body,
-      attachments: serialized.inlineUris,
+      slot: (index) => serialized.inlineUris[index],
       authorPubky: AUTHOR,
     });
 
@@ -320,7 +341,7 @@ describe('serializeArticleBody', () => {
 
 describe('deserializeArticleBody', () => {
   const deserialize = (body: string, attachments: string[]) =>
-    deserializeArticleBody({ body, attachments, authorPubky: AUTHOR });
+    deserializeArticleBody({ body, slot: (index) => attachments[index], authorPubky: AUTHOR });
 
   it('resolves references to their attachment URIs', () => {
     const attachments = [fileUri('cover'), fileUri('a'), fileUri('b')];
@@ -333,7 +354,7 @@ describe('deserializeArticleBody', () => {
 
   it('round-trips with serializeArticleBody', () => {
     const composer = `Text.\n\n![One](${fileUri('one')})\n\nMore **text**.\n\n![Two](${fileUri('two')})`;
-    const serialized = serialize(composer, { coverPresent: true });
+    const serialized = serialize(composer, { slotOffset: 1 });
     const attachments = [fileUri('cover'), ...serialized.inlineUris];
     const restored = deserialize(serialized.body, attachments);
 
@@ -446,6 +467,11 @@ describe('getArticlePreviewSlots', () => {
 
   it('keeps no slot when the body uses slot 0 inline, as the article then has no cover', () => {
     expect(getArticlePreviewSlots({ kind: 'long', content: article('![a](attachment:0)') })).toEqual([]);
+  });
+
+  it('keeps no slot when the envelope carries its cover, which no locked article does', () => {
+    const content = JSON.stringify({ title: 'Title', body: 'text', cover_image: mediaUri() });
+    expect(getArticlePreviewSlots({ kind: 'long', content })).toEqual([]);
   });
 
   it('keeps every slot of a post that is not an article', () => {

@@ -1,10 +1,10 @@
+import { SOCIAL_V1_TAGS_DIRECTORY } from '@/config/auth';
 import { PUBCHI_PRIVATE_DIRECTORY, sessionCovers } from '@/libs/pubchi/capabilities';
 import type { PubchiAnswerV1 } from '@/libs/pubchi/schemas/answer';
 import type { PubchiTarget } from '@/libs/pubchi/schemas/ask-body';
 import type { Pubky } from '@/models/models.types';
 import type { PubchiTagApplicationRecord } from '@/models/pubchi/tag-application.schema';
 
-export const PUBKY_TAG_DIRECTORY = '/pub/pubky.app/';
 const MAX_APPLICATION_AGE_SECONDS = 600;
 
 export type TagApplicationBinding = {
@@ -56,5 +56,5 @@ export function canApplyTagSuggestion(
   if (Math.abs(Date.now() - binding.submitted_at) > MAX_APPLICATION_AGE_SECONDS * 1000) return false;
   if (suggestion.already_applied) return false;
   const capabilities = currentSession?.info?.capabilities ?? [];
-  return sessionCovers(capabilities, PUBKY_TAG_DIRECTORY) && sessionCovers(capabilities, PUBCHI_PRIVATE_DIRECTORY);
+  return sessionCovers(capabilities, SOCIAL_V1_TAGS_DIRECTORY) && sessionCovers(capabilities, PUBCHI_PRIVATE_DIRECTORY);
 }

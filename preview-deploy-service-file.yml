@@ -9,6 +9,8 @@ metadata:
   annotations:
     run.googleapis.com/invoker-iam-disabled: 'true'
     run.googleapis.com/iap-enabled: 'true'
+    # Reachable only through the *.preview.pubky.app load balancer, not run.app.
+    run.googleapis.com/ingress: internal-and-cloud-load-balancing
 
 spec:
   template:

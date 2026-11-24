@@ -1,12 +1,15 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import { buildUri } from 'pubky-social-specs';
 import { describe, expect, it, vi } from 'vitest';
 import type { DiscoveredTagSuggestion } from '@/application/pubchi/pubchi.types';
 import { PubchiAppliedTagSuggestions } from './PubchiAppliedTagSuggestions';
 
+const TEST_OWNER = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo';
+
 const base: DiscoveredTagSuggestion = {
   applicationId: 'a'.repeat(64),
   owner: 'owner',
-  target: { kind: 'post', uri: 'pubky://author/pub/pubky.app/posts/post-1' },
+  target: { kind: 'post', uri: buildUri(TEST_OWNER, 'post', '0035Q0HAH8V20') },
   label: 'builder',
   status: 'applied',
   alreadyExisted: false,

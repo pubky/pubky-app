@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted — 2025-10-26
+Accepted — 2025-10-26  
+Updated — 2026-11-10 (social v1: the data model is `pubky-social-specs`; `pubky-app-specs` and `PubkyAppPost` below are the 0.x names. A v1 post id is still the Crockford Base32 timestamp, now the directory of its versions, `posts/{id}/{editId}.json`, and the composite id is built from either spelling of a post reference and from a version path alike, so a 0.x and a v1 reference to one post share a key; ADR-0027)
 
 ## Context
 

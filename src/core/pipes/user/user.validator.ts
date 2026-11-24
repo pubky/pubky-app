@@ -1,15 +1,68 @@
 import { z } from 'zod';
-import { USER_BIO_MAX_LENGTH, USER_NAME_MAX_LENGTH, USER_NAME_MIN_LENGTH } from '@/config/user';
-import { safeExternalUrlSchema } from '@/libs/utils/safeExternalUrl';
-import { isReservedUserName } from '@/libs/utils/utils';
+import {
+  USER_BIO_MAX_LENGTH,
+  USER_LINK_URL_MAX_LENGTH,
+  USER_NAME_MAX_LENGTH,
+  USER_NAME_MIN_LENGTH,
+} from '@/config/user';
+import { getCharacterCount, isReservedUserName } from '@/libs/utils/utils';
+import { TAG_FROZEN_WHITESPACE } from '@/libs/utils/utils.constants';
+
+/** U+0000 to U+001F and U+007F: the data model refuses a web URI that carries one, as it does whitespace. */
+const ASCII_CONTROL = /[\u0000-\u001f\u007f]/;
+
+/**
+ * The host the data model reads from a web URI: the authority after the scheme's `//`, past any userinfo
+ * and before any port, which must not be empty. The WHATWG parser behind `z.url()` forgives
+ * `https:///host/path`; the data model does not.
+ */
+function hasWebHost(url: string): boolean {
+  const rest = url.slice(url.indexOf('//') + 2);
+  const end = rest.search(/[/?#]/);
+  const authority = end < 0 ? rest : rest.slice(0, end);
+  const hostPort = authority.slice(authority.lastIndexOf('@') + 1);
+  const host = hostPort.startsWith('[') ? hostPort : hostPort.split(':')[0];
+  return host !== '';
+}
+
+/**
+ * A profile link as the v1 data model stores it (`buildUser`, through `checkReference(..., 'web')`): the
+ * trimmed text starts with `http://` or `https://` spelled in lower case, names a host, parses as a URL,
+ * carries no ASCII control or frozen whitespace character anywhere (the package's one whitespace table,
+ * pinned as `TAG_FROZEN_WHITESPACE`) and has at most `USER_LINK_URL_MAX_LENGTH` code points. The form
+ * refuses here, with copy for the field, what the builder would refuse at the write; each refinement
+ * aborts, so a link gets one message. `safeExternalUrlSchema` also admits `mailto:`, `tel:` and any
+ * spelling of the scheme (#2224): it stays the rule for rendering and opening the links a legacy
+ * profile still carries.
+ */
+export const profileLinkUrlSchema = z
+  .string()
+  .trim()
+  .refine((url) => url.startsWith('http://') || url.startsWith('https://'), {
+    message: 'Links must start with http:// or https://',
+    abort: true,
+  })
+  .refine((url) => hasWebHost(url) && !ASCII_CONTROL.test(url) && !TAG_FROZEN_WHITESPACE.test(url), {
+    message: 'Invalid URL',
+    abort: true,
+  })
+  .refine((url) => getCharacterCount(url) <= USER_LINK_URL_MAX_LENGTH, {
+    message: `Links must be no more than ${USER_LINK_URL_MAX_LENGTH} characters`,
+    abort: true,
+  })
+  .pipe(z.url({ protocol: /^https?$/, error: 'Invalid URL' }));
 
 export class UserValidator {
   static check(name: string, bio: string, links: { label: string; url: string }[], avatarFile: File | null) {
-    const nonEmptyLinks = this.checkLinks(links);
+    // The rows with a URL, each with the row the caller shows it in: the schema parses the filtered
+    // list, while a reported `link_${index}` must name the form row
+    const linkRows = links
+      .map((link, row) => ({ link: { ...link, url: link.url.trim() }, row }))
+      .filter(({ link }) => link.url.length > 0);
     const result = UiUserSchema.safeParse({
       name,
       bio,
-      links: nonEmptyLinks.length > 0 ? nonEmptyLinks : undefined,
+      links: linkRows.length > 0 ? linkRows.map(({ link }) => link) : undefined,
       avatar: avatarFile,
     });
 
@@ -24,7 +77,7 @@ export class UserValidator {
           const index = typeof issue.path[1] === 'number' ? (issue.path[1] as number) : undefined;
           const field = issue.path[2];
           if (typeof index === 'number' && field === 'url') {
-            errorList.push({ type: `link_${index}`, message: issue.message });
+            errorList.push({ type: `link_${linkRows[index]?.row ?? index}`, message: issue.message });
           }
         }
         if (path0 === 'avatar') errorList.push({ type: 'avatar', message: issue.message });
@@ -35,10 +88,6 @@ export class UserValidator {
       error: errorList,
     };
   }
-
-  private static checkLinks = (links: { label: string; url: string }[]) => {
-    return links.map((l) => ({ ...l, url: l.url.trim() })).filter((l) => l.url.length > 0);
-  };
 }
 
 export const UiUserSchema = z.object({
@@ -57,7 +106,7 @@ export const UiUserSchema = z.object({
     .array(
       z.object({
         label: z.string().min(1, 'Label is required'),
-        url: safeExternalUrlSchema,
+        url: profileLinkUrlSchema,
       }),
     )
     .optional(),

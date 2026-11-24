@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/atoms/Card/Card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/atoms/Collapsible/Collapsible';
 import { RadioGroup, RadioGroupItem } from '@/atoms/RadioGroup/RadioGroup';
 import { Typography } from '@/atoms/Typography/Typography';
+import { PUBCHI_BOT_WRITE_CAPABILITIES, PUBCHI_CAPABILITIES } from '@/config/auth';
 
 export const PUBCHI_TIER_PANEL_SURFACE = 'pubchi-tier-panel';
 
@@ -140,16 +141,16 @@ export function PubchiTierPanel({
           <CollapsibleContent className="mt-3 flex flex-col gap-2 text-sm text-muted-foreground">
             <div>
               <span className="font-medium text-foreground">Read-only: </span>
-              <code>/pub/app.pubchi/v1/:rw</code> on your session.
+              <code>{PUBCHI_CAPABILITIES[0]}</code> on your session.
             </div>
             <div>
               <span className="font-medium text-foreground">Assisted: </span>
-              <code>/pub/app.pubchi/v1/:rw</code> on your session.
+              <code>{PUBCHI_CAPABILITIES[0]}</code> on your session.
             </div>
             <div>
               <span className="font-medium text-foreground">Autonomous: </span>
-              <code>/pub/app.pubchi/v1/:rw</code>, <code>/pub/pubky.app/posts/:w</code>, and{' '}
-              <code>/pub/pubky.app/tags/:w</code> on bot sessions.
+              <code>{PUBCHI_CAPABILITIES[0]}</code>, <code>{PUBCHI_BOT_WRITE_CAPABILITIES[0]}</code>, and{' '}
+              <code>{PUBCHI_BOT_WRITE_CAPABILITIES[1]}</code> on bot sessions.
             </div>
           </CollapsibleContent>
         </Collapsible>

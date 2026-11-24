@@ -12,7 +12,7 @@
     {
       "kind": "user",
       "label": "Owner profile",
-      "uri": "pubky://4bfmrcuwfq4ksqoupn6wcfxrh5enr1izdeyszmhfrntuf1mzoh5o/pub/pubky.app/profile.json",
+      "uri": "pubky://4bfmrcuwfq4ksqoupn6wcfxrh5enr1izdeyszmhfrntuf1mzoh5o/pub/social/v1/profile.json",
       "claimants": [],
       "claimant_count": 0,
       "in_your_graph": true
@@ -30,6 +30,6 @@
     "content": "A draft whose evidence is not in the answer.",
     "kind": "short",
     "rationale": "Evidence must be a subset.",
-    "evidence": ["pubky://4bfmrcuwfq4ksqoupn6wcfxrh5enr1izdeyszmhfrntuf1mzoh5o/pub/pubky.app/posts/0032W6CBGDBP0"]
+    "evidence": ["pubky://4bfmrcuwfq4ksqoupn6wcfxrh5enr1izdeyszmhfrntuf1mzoh5o/pub/social/v1/posts/0032W6CBGDBP0"]
   }
 }

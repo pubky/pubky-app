@@ -12,7 +12,7 @@
     {
       "kind": "user",
       "label": "Alice",
-      "uri": "pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/pubky.app/profile.json",
+      "uri": "pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/social/v1/profile.json",
       "claimants": ["o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo"],
       "claimant_count": 12,
       "in_your_graph": true
@@ -20,7 +20,7 @@
     {
       "kind": "user",
       "label": "Bran",
-      "uri": "pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/pubky.app/profile.json",
+      "uri": "pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/social/v1/profile.json",
       "claimants": [],
       "claimant_count": 9,
       "in_your_graph": null
@@ -28,13 +28,13 @@
     {
       "kind": "user",
       "label": "Cleo",
-      "uri": "pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/pubky.app/profile.json",
+      "uri": "pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/social/v1/profile.json",
       "claimants": [],
       "claimant_count": 7,
       "in_your_graph": false
     }
   ],
-  "sources": ["pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/pubky.app/profile.json"],
+  "sources": ["pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/social/v1/profile.json"],
   "tool_trace_summary": {
     "tools": ["graph_search"],
     "call_count": 1,

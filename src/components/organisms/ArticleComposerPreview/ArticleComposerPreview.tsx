@@ -60,19 +60,19 @@ export function ArticleComposerPreview({
   // files) previews as written: the publish is where the user is told why.
   const serialized = serializeArticleBody({
     body,
-    coverPresent: cover !== null,
+    // The published cover is no slot (it goes in the envelope), so the inline slots count from 0
+    slotOffset: 0,
     authorPubky,
-    maxInlineMedia: ARTICLE_ATTACHMENT_MAX_FILES - (cover ? 1 : 0),
+    maxInlineMedia: ARTICLE_ATTACHMENT_MAX_FILES,
   });
   const isSerialized = serialized.errors.length === 0;
   const previewBody = isSerialized ? serialized.body : body;
 
-  // `[cover?, ...inline]`, index-aligned with the slots the body now references. A file uploaded
+  // The inline media, index-aligned with the slots the body now references. A file uploaded
   // this session renders from its object URL (the CDN may not have it yet); one kept from the
   // published article reads from the CDN, typed by its file row. A URI the session does not know
   // has no type, which the reader shows as unavailable, as the publish would refuse it.
   const localAttachments: AttachmentConstructed[] = [
-    ...(cover ? [{ type: cover.type, name: cover.alt, urls: { main: cover.src } }] : []),
     ...(isSerialized ? serialized.inlineUris : []).map((uri) => ({
       type: inlineMedia.getMediaType(uri) ?? '',
       name: inlineMedia.getMediaName(uri) ?? '',

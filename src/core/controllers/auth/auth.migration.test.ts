@@ -1,15 +1,17 @@
 import type { Session as LocksSession } from '@synonymdev/locks-sdk';
-import type { Keypair, Session } from '@synonymdev/pubky';
+import type { Session } from '@synonymdev/pubky';
+import { validateCapabilities } from '@synonymdev/pubky';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthApplication } from '@/application/auth/auth';
 import { BootstrapApplication } from '@/application/bootstrap/bootstrap';
 import { LocksApplication } from '@/application/locks/locks';
 import { SettingsApplication } from '@/application/settings/settings';
 import { UserApplication } from '@/application/user/user';
-import { APP_CAPABILITIES, getAuthClientId, LOCKS_CAPABILITIES } from '@/config/auth';
+import { APP_CAPABILITIES, getAuthClientId, LOCKS_CAPABILITIES, SOCIAL_V1_APP_CAPABILITIES } from '@/config/auth';
 import { getHomeserverCapabilities, HOMESERVER_CAPABILITIES } from '@/config/network';
 import { THEME_STORAGE_KEY } from '@/config/theme';
 import { LocksController } from '@/controllers/locks/locks';
+import { SocialMigrationController } from '@/controllers/social-migration/social-migration';
 import { clearDatabase } from '@/database/franky/franky.helpers';
 import { pendingRetirements, type SessionReference } from '@/libs/auth/session.types';
 import { resetSavedSessionLossReports } from '@/libs/auth/session-loss';
@@ -136,6 +138,9 @@ function startFlow() {
 }
 
 beforeEach(() => {
+  // These suites cover the auth lifecycle of a migrated account; the gate has its own suite.
+  vi.spyOn(SocialMigrationController, 'ensureMigrated').mockResolvedValue('passed');
+  vi.spyOn(SocialMigrationController, 'hasPassedLocally').mockReturnValue(true);
   Object.defineProperty(navigator, 'locks', {
     configurable: true,
     value: { request: async (_name: string, callback: () => void) => callback() },
@@ -343,6 +348,16 @@ describe('grant-only session lifecycle', () => {
       expect.objectContaining({ purpose: 'signin', capabilities: getHomeserverCapabilities() }),
     );
   });
+  it('refuses a Ring sign-in whose grant left out a requested scope as a missing permission', async () => {
+    const flow = startFlow();
+    const result = await AuthController.getAuthUrl();
+    const trimmed = getHomeserverCapabilities()
+      .split(',')
+      .filter((capability) => !(SOCIAL_V1_APP_CAPABILITIES as readonly string[]).includes(capability));
+    flow.approval.resolve(grantSession(trimmed));
+    await expect(result!.awaitApproval).rejects.toMatchObject({ name: 'AuthApprovalMismatch', reason: 'capabilities' });
+    expect(AuthApplication.saveSession).not.toHaveBeenCalled();
+  });
   it('requests the current App, Locks and Shop scopes during Ring signup too', async () => {
     startFlow();
     await AuthController.getSignupAuthUrl('invite');
@@ -376,7 +391,8 @@ describe('grant-only session lifecycle', () => {
           purpose: 'upgrade',
           fresh: true,
           expectedPubky: PUBKY,
-          capabilities: HOMESERVER_CAPABILITIES,
+          // The SDK canonicalizes the merged list: `/priv/social/:rw` already covers `/priv/social/v1/:rw`.
+          capabilities: validateCapabilities(HOMESERVER_CAPABILITIES),
         }),
       );
     } finally {
@@ -453,7 +469,7 @@ describe('grant-only session lifecycle', () => {
   });
   it('saves a same-account grant before retiring the previous grant, preserving profile and cache', async () => {
     const flow = startFlow();
-    const next = grantSession([APP_CAPABILITIES, ...LOCKS_CAPABILITIES]);
+    const next = grantSession([APP_CAPABILITIES, ...SOCIAL_V1_APP_CAPABILITIES, ...LOCKS_CAPABILITIES]);
     const result = await AuthController.requestCapabilities();
     vi.mocked(AuthApplication.logout).mockImplementation(async ({ session }) => {
       expect(session).toBe(narrowGrant);
@@ -474,8 +490,10 @@ describe('grant-only session lifecycle', () => {
   it('rejects a different account during permission upgrade without touching the old session', async () => {
     const flow = startFlow();
     const result = await AuthController.requestCapabilities();
-    flow.approval.resolve(grantSession([APP_CAPABILITIES, ...LOCKS_CAPABILITIES], 'another-user'));
-    await expect(result!.awaitApproval).rejects.toMatchObject({ name: 'AuthApprovalMismatch' });
+    flow.approval.resolve(
+      grantSession([APP_CAPABILITIES, ...SOCIAL_V1_APP_CAPABILITIES, ...LOCKS_CAPABILITIES], 'another-user'),
+    );
+    await expect(result!.awaitApproval).rejects.toMatchObject({ name: 'AuthApprovalMismatch', reason: 'identity' });
     expect(useAuthStore.getState().session).toBe(narrowGrant);
     expect(AuthApplication.saveSession).not.toHaveBeenCalled();
     expect(AuthApplication.logout).not.toHaveBeenCalled();
@@ -484,14 +502,14 @@ describe('grant-only session lifecycle', () => {
     const flow = startFlow();
     const result = await AuthController.requestCapabilities();
     flow.approval.resolve(grantSession([APP_CAPABILITIES]));
-    await expect(result!.awaitApproval).rejects.toMatchObject({ name: 'AuthApprovalMismatch' });
+    await expect(result!.awaitApproval).rejects.toMatchObject({ name: 'AuthApprovalMismatch', reason: 'capabilities' });
     expect(useAuthStore.getState().session).toBe(narrowGrant);
   });
   it('keeps the old session on cancel even if its approval arrives later', async () => {
     const flow = startFlow();
     const result = await AuthController.requestCapabilities();
     result!.cancelAuthFlow();
-    flow.approval.resolve(grantSession([APP_CAPABILITIES, ...LOCKS_CAPABILITIES]));
+    flow.approval.resolve(grantSession([APP_CAPABILITIES, ...SOCIAL_V1_APP_CAPABILITIES, ...LOCKS_CAPABILITIES]));
     await expect(result!.awaitApproval).rejects.toMatchObject({ name: 'AuthFlowCanceled' });
     expect(useAuthStore.getState().session).toBe(narrowGrant);
     expect(AuthApplication.saveSession).not.toHaveBeenCalled();
@@ -502,7 +520,7 @@ describe('grant-only session lifecycle', () => {
     const result = await AuthController.requestCapabilities();
     if (stage === 'sdk') vi.mocked(AuthApplication.saveSession).mockRejectedValue(offline());
     else vi.spyOn(AuthApplication, 'commitPersistedAuth').mockRejectedValue(offline());
-    flow.approval.resolve(grantSession([APP_CAPABILITIES, ...LOCKS_CAPABILITIES]));
+    flow.approval.resolve(grantSession([APP_CAPABILITIES, ...SOCIAL_V1_APP_CAPABILITIES, ...LOCKS_CAPABILITIES]));
     await expect(result!.awaitApproval).rejects.toThrow();
     expect(useAuthStore.getState().session).toBe(narrowGrant);
     expect(AuthApplication.logout).not.toHaveBeenCalled();
@@ -512,7 +530,7 @@ describe('grant-only session lifecycle', () => {
     const flow = startFlow();
     const result = await AuthController.requestCapabilities();
     vi.mocked(AuthApplication.logout).mockRejectedValueOnce(offline());
-    const next = grantSession([APP_CAPABILITIES, ...LOCKS_CAPABILITIES]);
+    const next = grantSession([APP_CAPABILITIES, ...SOCIAL_V1_APP_CAPABILITIES, ...LOCKS_CAPABILITIES]);
     flow.approval.resolve(next);
     await expect(result!.awaitApproval).resolves.toBe(next);
     expect(useAuthStore.getState()).toMatchObject({
@@ -530,7 +548,7 @@ describe('grant-only session lifecycle', () => {
     const flow = startFlow();
     const result = await AuthController.requestCapabilities();
     vi.mocked(AuthApplication.logout).mockRejectedValue(expired());
-    flow.approval.resolve(grantSession([APP_CAPABILITIES, ...LOCKS_CAPABILITIES]));
+    flow.approval.resolve(grantSession([APP_CAPABILITIES, ...SOCIAL_V1_APP_CAPABILITIES, ...LOCKS_CAPABILITIES]));
     await expect(result!.awaitApproval).resolves.toBeDefined();
     expect(useAuthStore.getState().retiringSession).toBeNull();
     expect(warn).not.toHaveBeenCalled();
@@ -744,7 +762,7 @@ describe('grant-only session lifecycle', () => {
     const result = await AuthController.requestCapabilities();
     const save = deferred<SessionReference>();
     vi.mocked(AuthApplication.saveSession).mockReturnValue(save.promise);
-    flow.approval.resolve(grantSession([APP_CAPABILITIES, ...LOCKS_CAPABILITIES]));
+    flow.approval.resolve(grantSession([APP_CAPABILITIES, ...SOCIAL_V1_APP_CAPABILITIES, ...LOCKS_CAPABILITIES]));
     await vi.waitFor(() => expect(AuthApplication.saveSession).toHaveBeenCalled());
     await AuthApplication.commitPersistedAuth(
       {
@@ -775,22 +793,6 @@ describe('grant-only session lifecycle', () => {
     flow.approval.resolve(grantSession());
     await expect(result.awaitApproval).rejects.toMatchObject({ code: AuthErrorCode.WRONG_ENVIRONMENT_HOMESERVER });
     expect(AuthApplication.saveSession).not.toHaveBeenCalled();
-  });
-  it.each(['mnemonic', 'file'])('persists the root grant from %s login', async (method) => {
-    seed(null, null);
-    const keypair = asOpaque<Keypair>({ publicKey: { z32: () => PUBKY } });
-    vi.spyOn(Identity, 'keypairFromMnemonic').mockReturnValue(keypair);
-    vi.spyOn(Identity, 'decryptRecoveryFile').mockResolvedValue(keypair);
-    const next = grantSession(['/:rw']);
-    vi.spyOn(AuthApplication, 'signIn').mockResolvedValue({ session: next });
-    const result =
-      method === 'mnemonic'
-        ? await AuthController.loginWithMnemonic({ mnemonic: 'phrase' })
-        : await AuthController.loginWithEncryptedFile({ encryptedFile: new File([], 'backup'), password: 'password' });
-    expect(result).toBe(true);
-    expect(useAuthStore.getState()).toMatchObject({ session: next, hasProfile: false });
-    expect(AuthApplication.readPersistedAuth()?.sessionReference?.kind).toBe('grant');
-    expect(clearDatabase).toHaveBeenCalledOnce();
   });
   it('cleans up locally after a bounded offline logout', async () => {
     vi.useFakeTimers();
@@ -2062,11 +2064,10 @@ describe('final review session ownership regressions', () => {
 
     if (change === 'logout') await AuthController.logout();
     else if (change === 'new-sign-in') {
-      const keypair = asOpaque<Keypair>({ publicKey: { z32: () => OTHER_PUBKY } });
-      const replacement = grantSession(undefined, OTHER_PUBKY);
-      vi.spyOn(Identity, 'keypairFromMnemonic').mockReturnValue(keypair);
-      vi.spyOn(AuthApplication, 'signIn').mockResolvedValue({ session: replacement });
-      await AuthController.loginWithMnemonic({ mnemonic: 'other account phrase' });
+      const flow = startFlow();
+      const request = await AuthController.getAuthUrl();
+      flow.approval.resolve(grantSession(undefined, OTHER_PUBKY));
+      await request.awaitApproval;
     } else {
       // Another tab changed only durable metadata; the storage listener has not run yet.
       const stored = JSON.parse(localStorage.getItem(AUTH_PERSIST_KEY)!);
@@ -2134,28 +2135,6 @@ describe('final review session ownership regressions', () => {
     expect(await retry).toBe(true);
     expect(useAuthStore.getState().session).toBe(narrowGrant);
   });
-  it.each(['mnemonic', 'file'] as const)(
-    'allows signing in to another account with a %s after expiry',
-    async (method) => {
-      useAuthStore.setState({ restoreStatus: 'reauth-required' });
-      const keypair = asOpaque<Keypair>({ publicKey: { z32: () => OTHER_PUBKY } });
-      vi.spyOn(Identity, 'keypairFromMnemonic').mockReturnValue(keypair);
-      vi.spyOn(Identity, 'decryptRecoveryFile').mockResolvedValue(keypair);
-      const session = grantSession(undefined, OTHER_PUBKY);
-      const signin = vi.spyOn(AuthApplication, 'signIn').mockResolvedValue({ session });
-      const result =
-        method === 'mnemonic'
-          ? await AuthController.loginWithMnemonic({ mnemonic: 'other account phrase' })
-          : await AuthController.loginWithEncryptedFile({
-              encryptedFile: new File(['encrypted'], 'recovery.pkarr'),
-              password: 'password',
-            });
-      expect(result).toBe(true);
-      expect(signin).toHaveBeenCalledWith({ keypair, isCurrent: expect.any(Function) });
-      expect(useAuthStore.getState()).toMatchObject({ currentUserPubky: OTHER_PUBKY, session, restoreStatus: 'ready' });
-      expect(clearDatabase).toHaveBeenCalledOnce();
-    },
-  );
   it('does not write metadata or notify subscribers for an empty retirement queue', async () => {
     const onChange = vi.fn();
     const unsubscribe = useAuthStore.subscribe(onChange);
@@ -2177,37 +2156,22 @@ describe('final review session ownership regressions', () => {
 });
 
 describe('identity-bound Shop reauthorization', () => {
-  it.each(['ring', 'passport', 'mnemonic', 'file'] as const)(
+  it.each(['ring', 'passport'] as const)(
     'rejects a different identity from %s without losing the current recovery backup',
     async (method) => {
       useOnboardingStore.getState().setSecrets({ secretKey: 'pending-secret', mnemonic: 'pending phrase' });
       const previous = AuthApplication.readPersistedAuth();
       const replacement = grantSession(undefined, OTHER_PUBKY);
-      const keypair = asOpaque<Keypair>({ publicKey: { z32: () => OTHER_PUBKY } });
-      vi.spyOn(Identity, 'keypairFromMnemonic').mockReturnValue(keypair);
-      vi.spyOn(Identity, 'decryptRecoveryFile').mockResolvedValue(keypair);
-      vi.spyOn(AuthApplication, 'signIn').mockResolvedValue({ session: replacement });
-      let adoption: Promise<unknown>;
-      if (method === 'ring' || method === 'passport') {
-        const flow = startFlow();
-        const request =
-          method === 'ring'
-            ? await AuthController.getAuthUrl(false, PUBKY)
-            : await AuthController.getPassportAuthUrl({ xCallback: { xSource: 'Pubky' }, expectedPubky: PUBKY });
-        adoption = request.awaitApproval.then((session) =>
-          method === 'passport' ? AuthController.initializeAuthenticatedSession({ session }) : undefined,
-        );
-        flow.approval.resolve(replacement);
-      } else
-        adoption =
-          method === 'mnemonic'
-            ? AuthController.loginWithMnemonic({ mnemonic: 'phrase', expectedPubky: PUBKY })
-            : AuthController.loginWithEncryptedFile({
-                encryptedFile: new File(['encrypted'], 'recovery.pkarr'),
-                password: 'password',
-                expectedPubky: PUBKY,
-              });
-      await expect(adoption).rejects.toMatchObject({ name: 'AuthApprovalMismatch' });
+      const flow = startFlow();
+      const request =
+        method === 'ring'
+          ? await AuthController.getAuthUrl(false, PUBKY)
+          : await AuthController.getPassportAuthUrl({ xCallback: { xSource: 'Pubky' }, expectedPubky: PUBKY });
+      const adoption = request.awaitApproval.then((session) =>
+        method === 'passport' ? AuthController.initializeAuthenticatedSession({ session }) : undefined,
+      );
+      flow.approval.resolve(replacement);
+      await expect(adoption).rejects.toMatchObject({ name: 'AuthApprovalMismatch', reason: 'identity' });
       expect(AuthApplication.readPersistedAuth()).toEqual(previous);
       expect(useOnboardingStore.getState()).toMatchObject({ secretKey: 'pending-secret', mnemonic: 'pending phrase' });
       expect(AuthApplication.saveSession).not.toHaveBeenCalled();

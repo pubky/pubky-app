@@ -1,4 +1,5 @@
 import { Keypair } from '@synonymdev/pubky';
+import { buildUri } from 'pubky-social-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ClientErrorCode, ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -49,7 +50,7 @@ const BOT = OWNER;
 const noon = Date.UTC(2026, 8, 21, 12, 0, 0);
 const quietHour = Date.UTC(2026, 8, 21, 23, 0, 0);
 const suggestionId = proactiveSuggestionId(noon);
-const sourceUri = `pubky://${OWNER}/pub/pubky.app/profile.json`;
+const sourceUri = buildUri(OWNER, 'user');
 
 const ACTIVE_BINDING = {
   schema: 'pubchi-owner-binding' as const,
@@ -202,7 +203,7 @@ describe('PubchiApplication app-open proactive', () => {
     });
     const put = vi.mocked(HomeserverService.request).mock.calls.find((call) => call[0].method === HttpMethod.PUT);
     expect(put?.[0].url).toBe(`pubky://${OWNER}${suggestionPath(suggestionId)}`);
-    expect(put?.[0].url.includes('/pub/pubky.app/')).toBe(false);
+    expect(put?.[0].url.includes('/pub/social/v1/')).toBe(false);
     expect(put?.[0].url.includes('/priv/')).toBe(false);
     expect(listed).toEqual([expectedSuggestion()]);
   });

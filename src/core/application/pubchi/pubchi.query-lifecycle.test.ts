@@ -1,5 +1,6 @@
 import { Keypair, type Session } from '@synonymdev/pubky';
 import Dexie from 'dexie';
+import { buildUri } from 'pubky-social-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthApplication } from '@/application/auth/auth';
 import { PubchiController } from '@/controllers/pubchi/pubchi';
@@ -22,7 +23,7 @@ import { PubchiApplication } from './pubchi';
 const owner = Keypair.random().publicKey.z32();
 const otherOwner = Keypair.random().publicKey.z32();
 const bot = Keypair.random().publicKey.z32();
-const target = { kind: 'user' as const, uri: `pubky://${owner}/pub/pubky.app/profile.json` };
+const target = { kind: 'user' as const, uri: buildUri(owner, 'user') };
 const kinds = ['draft', 'tag'] as const;
 type QueryKind = (typeof kinds)[number];
 

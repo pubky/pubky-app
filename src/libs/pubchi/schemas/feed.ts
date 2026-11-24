@@ -1,11 +1,13 @@
 /**
  * Vendored from @pubky/pubchi-schemas (pubky-ai-bot-pubchi).
  * Source commit: bbf8a73
- * Do not redefine these contracts.
+ * App adaptation for social v1. The deployed service must use the same contract.
  */
 
-import { PubkyAppFeed } from 'pubky-app-specs';
+import { validateFeed } from 'pubky-social-specs';
 import { z } from 'zod';
+import { DEFAULT_CUSTOM_FEED_ICON } from '@/config/feed';
+import { toStoredPostKind } from '@/pipes/post/post.kind';
 import { err, ok, type ParseResult } from './codes';
 import { fromZod, zPubky, zUnix, zVersion1 } from './zod';
 
@@ -16,6 +18,8 @@ export const APP_SUPPORTED_SORT = ['recent', 'popularity'] as const;
 export const APP_SUPPORTED_LAYOUT = ['columns', 'wide', 'visual', 'list'] as const;
 export const APP_FEED_CONTENT = ['short', 'long', 'image', 'video', 'link', 'file', 'collection', 'unknown'] as const;
 export const APP_SUPPORTED_CONTENT = ['short', 'long', 'image', 'video', 'link', 'file', 'collection'] as const;
+
+export const pubchiFeedIdSchema = z.string().regex(/^[A-Za-z0-9_-]{1,64}$/);
 
 const FeedConfigSchema = z
   .object({
@@ -28,7 +32,7 @@ const FeedConfigSchema = z
   })
   .strict();
 
-const PubkyAppFeedJsonSchema = z
+const ProposalFeedSchema = z
   .object({
     feed: FeedConfigSchema,
     name: z.string().min(1).max(100),
@@ -44,18 +48,29 @@ export const FeedProposalV1Schema = z
     bot: zPubky,
     owner: zPubky,
     generated_at: zUnix,
-    feed: PubkyAppFeedJsonSchema,
+    feed: ProposalFeedSchema,
     warnings: z.array(z.enum(['truncated-tags', 'name-trimmed'])).max(8),
-    installed_user_feed_id: z
-      .string()
-      .regex(/^[A-Za-z0-9_-]{1,64}$/)
-      .nullable(),
+    installed_user_feed_id: pubchiFeedIdSchema.nullable(),
   })
   .strict();
 
 export type FeedProposalV1 = z.infer<typeof FeedProposalV1Schema>;
 
-function mentionsLikes(feed: z.infer<typeof PubkyAppFeedJsonSchema>): boolean {
+function isValidSocialFeed(proposal: z.infer<typeof ProposalFeedSchema> | FeedDraftV2): boolean {
+  const { feed, name, icon } = proposal;
+  return validateFeed({
+    name,
+    icon: icon ?? DEFAULT_CUSTOM_FEED_ICON,
+    reach: feed.reach,
+    sort: feed.sort,
+    layout: feed.layout,
+    content: feed.content ? toStoredPostKind(feed.content) : null,
+    tags: feed.tags?.length ? feed.tags : null,
+    domain_tags: feed.domain_tags?.length ? feed.domain_tags : null,
+  }).success;
+}
+
+function mentionsLikes(feed: z.infer<typeof ProposalFeedSchema>): boolean {
   const values = [feed.feed.reach, feed.feed.sort, feed.feed.content, feed.feed.layout];
   return values.some((v) => typeof v === 'string' && v.toLowerCase() === 'likes');
 }
@@ -72,16 +87,12 @@ export function parseFeedProposalV1(input: unknown): ParseResult<FeedProposalV1>
     return err('FEED_SPECS_INVALID');
   }
   if (
-    proposal.feed.feed.content &&
+    proposal.feed.feed.content !== undefined &&
     !(APP_SUPPORTED_CONTENT as readonly string[]).includes(proposal.feed.feed.content)
   ) {
     return err('FEED_SPECS_INVALID');
   }
-  try {
-    PubkyAppFeed.fromJson(proposal.feed);
-  } catch {
-    return err('FEED_SPECS_INVALID');
-  }
+  if (!isValidSocialFeed(proposal.feed)) return err('FEED_SPECS_INVALID');
   return ok(proposal);
 }
 
@@ -129,17 +140,11 @@ export const FeedProposalV2Schema = z
     owner: zPubky,
     generated_at: zUnix,
     mode: z.enum(['create', 'update']),
-    target_feed_id: z
-      .string()
-      .regex(/^[A-Za-z0-9_-]{1,64}$/)
-      .nullable(),
+    target_feed_id: pubchiFeedIdSchema.nullable(),
     feed: FeedDraftV2Schema,
     mapping: FeedMappingSchema,
     warnings: z.array(z.string().max(240)).max(8),
-    installed_user_feed_id: z
-      .string()
-      .regex(/^[A-Za-z0-9_-]{1,64}$/)
-      .nullable(),
+    installed_user_feed_id: pubchiFeedIdSchema.nullable(),
   })
   .strict();
 
@@ -157,18 +162,7 @@ export function parseFeedProposalV2(input: unknown): ParseResult<FeedProposalV2>
   if (proposal.feed.feed.content === 'unknown' && proposal.mapping.status === 'exact') {
     return err('FEED_SPECS_INVALID');
   }
-  try {
-    PubkyAppFeed.fromJson({
-      ...proposal.feed,
-      created_at: proposal.generated_at,
-      feed: {
-        ...proposal.feed.feed,
-        domain_tags: proposal.feed.feed.domain_tags,
-      },
-    });
-  } catch {
-    return err('FEED_SPECS_INVALID');
-  }
+  if (!isValidSocialFeed(proposal.feed)) return err('FEED_SPECS_INVALID');
   return ok(proposal);
 }
 

@@ -1,8 +1,13 @@
 import { Session } from '@synonymdev/pubky';
+import type { SessionRestoreStatus } from '@/libs/auth/session.types';
 import type { Pubky } from '@/models/models.types';
 import { usePubchiStore } from '@/stores/pubchi/pubchi.store';
 import { ZustandSet } from '../stores.types';
 import { AuthActions, AuthActionTypes, authInitialState, AuthInitParams, AuthStore } from './auth.types';
+
+/** A ready session has no use for the sign-in dialog; the migration gate takes the screen over from it. */
+const closesSignInDialog = (restoreStatus: SessionRestoreStatus) =>
+  restoreStatus === 'ready' || restoreStatus === 'social-migration';
 
 // Actions/Mutators - State modification functions
 export const createAuthActions = (set: ZustandSet<AuthStore>): AuthActions => ({
@@ -29,7 +34,7 @@ export const createAuthActions = (set: ZustandSet<AuthStore>): AuthActions => ({
         pendingRetirements,
         restoreStatus,
         isRestoringSession: restoreStatus === 'restoring',
-        showSignInDialog: restoreStatus === 'ready' ? false : state.showSignInDialog,
+        showSignInDialog: closesSignInDialog(restoreStatus) ? false : state.showSignInDialog,
         currentUserPubky,
         hasProfile,
       }),
@@ -70,7 +75,7 @@ export const createAuthActions = (set: ZustandSet<AuthStore>): AuthActions => ({
     set((state) => ({
       restoreStatus,
       isRestoringSession: restoreStatus === 'restoring',
-      showSignInDialog: restoreStatus === 'ready' ? false : state.showSignInDialog,
+      showSignInDialog: closesSignInDialog(restoreStatus) ? false : state.showSignInDialog,
     })),
   setRetiringSession: (retiringSession) => set({ retiringSession }),
 

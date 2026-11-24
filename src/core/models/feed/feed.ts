@@ -1,5 +1,5 @@
 import { Table } from 'dexie';
-import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
+import type { KnownFeedLayout, KnownFeedReach, KnownFeedSort, KnownPostKind } from 'pubky-social-specs';
 import { db } from '@/database/franky/franky';
 import { DatabaseErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
@@ -14,10 +14,10 @@ export class FeedModel extends RecordModelBase<string, FeedModelSchema> implemen
   icon?: string;
   tags: string[];
   domain_tags: string[];
-  reach: PubkyAppFeedReach;
-  sort: PubkyAppFeedSort;
-  content: PubkyAppPostKind | null;
-  layout: PubkyAppFeedLayout;
+  reach: KnownFeedReach;
+  sort: KnownFeedSort;
+  content: KnownPostKind | null;
+  layout: KnownFeedLayout;
   created_at: number;
   updated_at: number;
 

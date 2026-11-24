@@ -163,7 +163,7 @@ describe('PubchiApplication create protocol', () => {
       PubchiApplication.createPubchi({
         owner: OWNER,
         displayName: 'Pubchi',
-        capabilities: ['/pub/pubky.app/:rw'],
+        capabilities: ['/pub/social/v1/:rw'],
       }),
     ).rejects.toThrow('PATH_FORBIDDEN');
     expect(operations).toEqual([]);

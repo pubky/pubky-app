@@ -179,14 +179,12 @@ vi.mock('@/atoms/Typography/Typography', () => {
 vi.mock('@/molecules/WordSlot/WordSlot', () => {
   return {
     WordSlot: ({
-      mode,
       index,
       word,
       isCorrect,
       isError,
       onClear,
     }: {
-      mode: string;
       index: number;
       word: string;
       isCorrect: boolean;
@@ -195,7 +193,6 @@ vi.mock('@/molecules/WordSlot/WordSlot', () => {
     }) => (
       <div
         data-testid={`word-slot-${index}`}
-        data-mode={mode}
         data-word={word}
         data-is-correct={isCorrect}
         data-is-error={isError}
@@ -639,7 +636,6 @@ describe('DialogBackupPhrase - Identical Words Test', () => {
                 <div
                   key={i}
                   data-testid={`word-slot-${i}`}
-                  data-mode="readonly"
                   data-word={word}
                   data-is-correct={isCorrect}
                   data-is-error={isError}

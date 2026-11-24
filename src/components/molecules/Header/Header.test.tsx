@@ -17,14 +17,8 @@ import { usePubchiStore } from '@/stores/pubchi/pubchi.store';
 import { HeaderButtonSignIn } from '../HeaderButtonSignIn/HeaderButtonSignIn';
 import { HeaderHome } from '../HeaderHome/HeaderHome';
 import { HeaderSignIn } from '../HeaderSignIn/HeaderSignIn';
-import {
-  HeaderContainer,
-  HeaderExploreNavigationButtons,
-  HeaderNavigationButtons,
-  HeaderOnboarding,
-  HeaderSocialLinks,
-  HeaderTitle,
-} from './Header';
+import { HeaderExploreNavigationButtons, HeaderNavigationButtons, HeaderOnboarding, HeaderTitle } from './Header';
+import { HeaderContainer, HeaderSocialLinks } from './HeaderPublicContent';
 
 vi.mock('@/libs/pubchi/flags', () => ({
   isPubchiPanelEnabled: vi.fn(() => false),

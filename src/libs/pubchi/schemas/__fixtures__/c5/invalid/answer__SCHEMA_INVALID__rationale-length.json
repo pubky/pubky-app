@@ -19,14 +19,14 @@
   "section": "tag_suggestions",
   "target": {
     "kind": "user",
-    "uri": "pubky://4bfmrcuwfq4ksqoupn6wcfxrh5enr1izdeyszmhfrntuf1mzoh5o/pub/pubky.app/profile.json",
+    "uri": "pubky://4bfmrcuwfq4ksqoupn6wcfxrh5enr1izdeyszmhfrntuf1mzoh5o/pub/social/v1/profile.json",
     "snapshot_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   },
   "tag_suggestions": [
     {
       "label": "bitcoin",
       "rationale": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-      "evidence": ["pubky://4bfmrcuwfq4ksqoupn6wcfxrh5enr1izdeyszmhfrntuf1mzoh5o/pub/pubky.app/profile.json"],
+      "evidence": ["pubky://4bfmrcuwfq4ksqoupn6wcfxrh5enr1izdeyszmhfrntuf1mzoh5o/pub/social/v1/profile.json"],
       "already_applied": false,
       "source": "vocab"
     }

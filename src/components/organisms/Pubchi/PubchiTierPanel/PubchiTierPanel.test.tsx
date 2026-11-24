@@ -48,8 +48,8 @@ describe('PubchiTierPanel', () => {
 
     fireEvent.click(screen.getByText('Technical details'));
     expect(screen.getAllByText('/pub/app.pubchi/v1/:rw', { exact: true })).toHaveLength(3);
-    expect(screen.getByText('/pub/pubky.app/posts/:w', { exact: false })).toBeInTheDocument();
-    expect(screen.getByText('/pub/pubky.app/tags/:w', { exact: false })).toBeInTheDocument();
+    expect(screen.getByText('/pub/social/v1/posts/:w', { exact: false })).toBeInTheDocument();
+    expect(screen.getByText('/pub/social/v1/tags/:w', { exact: false })).toBeInTheDocument();
 
     fireEvent.click(screen.getByLabelText('Read-only'));
     expect(onChangeDesired).toHaveBeenCalledWith('read-only');

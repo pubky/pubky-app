@@ -10,6 +10,7 @@ import {
   PASSPORT_POPUP_CLOSED_POLL_MS,
   PASSPORT_RETURN_MESSAGE_TYPE,
 } from '@/config/passport';
+import { createAuthApprovalMismatchError } from '@/libs/error/auth-flow-canceled';
 import { AppError } from '@/libs/error/error';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
@@ -52,6 +53,7 @@ vi.mock('@/libs/logger/logger', async () => {
 
 type FakePopup = {
   closed: boolean;
+  document: Document;
   location: { replace: ReturnType<typeof vi.fn> };
   postMessage: ReturnType<typeof vi.fn>;
   close: ReturnType<typeof vi.fn>;
@@ -60,6 +62,7 @@ type FakePopup = {
 function createFakePopup(): FakePopup {
   const popup: FakePopup = {
     closed: false,
+    document: document.implementation.createHTMLDocument(),
     location: { replace: vi.fn() },
     postMessage: vi.fn(),
     close: vi.fn(() => {
@@ -591,6 +594,26 @@ describe('usePassportAuth', () => {
     expect(hook.result.current.isPending).toBe(false);
   });
 
+  it.each([
+    ['capabilities', 'Authorization failed. Approve every requested permission and try again.'],
+    ['identity', 'Approve with the account you are signed in with.'],
+  ] as const)('names the cause of a %s refusal', async (reason, description) => {
+    const flow = createFlow();
+    mockGetPassportAuthUrl.mockResolvedValue(flow);
+    mockInitializeAuthenticatedSession.mockRejectedValue(createAuthApprovalMismatchError(reason));
+    const onAttemptSettled = vi.fn();
+    const hook = renderHook(() => usePassportAuth({ onAttemptSettled }));
+    await startAttempt(hook);
+
+    await act(async () => {
+      flow.approval.resolve(mockSession());
+    });
+
+    expect(vi.mocked(toast)).toHaveBeenCalledWith({ variant: 'error', description });
+    expect(mockLoggerError).not.toHaveBeenCalled();
+    expect(onAttemptSettled).toHaveBeenCalledWith({ attemptId: attemptIds[0], result: 'failed' });
+  });
+
   it('ignores a double click while an attempt is pending and allows a retry after it fails', async () => {
     const first = createFlow();
     const second = createFlow('pubkyauth:///?second');
@@ -644,7 +667,7 @@ describe('usePassportAuth', () => {
     expect(onAttemptSettled).toHaveBeenCalledTimes(1);
   });
 
-  it('settles superseded (not failed) when a newer auth flow cancels it, e.g. a recovery-phrase sign-in', async () => {
+  it('settles superseded (not failed) when a newer auth flow cancels it, e.g. a Pubky Ring sign-in', async () => {
     const flow = createFlow();
     mockGetPassportAuthUrl.mockResolvedValue(flow);
     const onAttemptSettled = vi.fn<(event: PassportAttemptSettledEvent) => void>();
@@ -691,6 +714,90 @@ describe('usePassportAuth', () => {
       description: 'Sign in with Google is not available right now.',
     });
   });
+  it('opens the popup on click, then waits for the public landing database before requesting a grant', async () => {
+    const ready = deferred<void>();
+    mockGetPassportAuthUrl.mockResolvedValue(createFlow());
+    const hook = renderHook(() => usePassportAuth({ prepare: () => ready.promise }));
+
+    act(() => hook.result.current.startPassportAuth());
+    expect(openSpy).toHaveBeenCalledOnce();
+    expect(popup.document.title).toBe('Opening Passport…');
+    expect(popup.document.querySelector('[role="status"]')?.textContent).toBe('Opening Passport…');
+    expect(popup.location.replace).not.toHaveBeenCalled();
+    await flushMicrotasks();
+    expect(mockGetPassportAuthUrl).not.toHaveBeenCalled();
+    await act(async () => ready.resolve());
+    expect(mockGetPassportAuthUrl).toHaveBeenCalledOnce();
+  });
+
+  it('continues to Passport when the browser restricts the popup document', async () => {
+    Object.defineProperty(popup, 'document', {
+      get() {
+        throw new DOMException('Access denied', 'SecurityError');
+      },
+    });
+    const flow = createFlow();
+    mockGetPassportAuthUrl.mockResolvedValue(flow);
+    const hook = renderHook(() => usePassportAuth());
+
+    await startAttempt(hook);
+
+    expect(popup.location.replace).toHaveBeenCalledWith(
+      `${PASSPORT_ORIGIN}/authorize#d=${encodeURIComponent(flow.authorizationUrl)}`,
+    );
+    await act(async () => flow.approval.resolve(mockSession()));
+  });
+
+  it('releases an unresolved preflight on timeout, permits a retry, and ignores its late completion', async () => {
+    const ready = deferred<void>();
+    const onAttemptSettled = vi.fn();
+    const prepare = vi.fn().mockReturnValueOnce(ready.promise).mockResolvedValueOnce(undefined);
+    mockGetPassportAuthUrl.mockResolvedValue(createFlow());
+    const hook = renderHook(() => usePassportAuth({ prepare, onAttemptSettled }));
+    await startAttempt(hook);
+
+    await act(async () => vi.advanceTimersByTime(PASSPORT_ATTEMPT_TIMEOUT_MS));
+    expect(hook.result.current.isPending).toBe(false);
+    expect(popup.close).toHaveBeenCalledOnce();
+    expect(onAttemptSettled).toHaveBeenCalledExactlyOnceWith({ attemptId: attemptIds[0], result: 'failed' });
+
+    popup = createFakePopup();
+    await startAttempt(hook);
+    expect(mockGetPassportAuthUrl).toHaveBeenCalledOnce();
+    await act(async () => ready.resolve());
+    expect(mockGetPassportAuthUrl).toHaveBeenCalledOnce();
+    expect(popup.close).not.toHaveBeenCalled();
+    expect(hook.result.current.isPending).toBe(true);
+  });
+
+  it('abandons a delayed preflight when its page unmounts before the next page starts Ring', async () => {
+    const ready = deferred<void>();
+    const onAttemptSettled = vi.fn();
+    const hook = renderHook(() => usePassportAuth({ prepare: () => ready.promise, onAttemptSettled }));
+    await startAttempt(hook);
+    hook.unmount();
+
+    expect(popup.close).toHaveBeenCalledOnce();
+    expect(onAttemptSettled).toHaveBeenCalledExactlyOnceWith({ attemptId: attemptIds[0], result: 'superseded' });
+    await act(async () => ready.resolve());
+    expect(mockGetPassportAuthUrl).not.toHaveBeenCalled();
+  });
+
+  it('does not start a stale grant if an account switch wins while the landing database is opening', async () => {
+    const ready = deferred<void>();
+    const onAttemptSettled = vi.fn();
+    const hook = renderHook(() => usePassportAuth({ prepare: () => ready.promise, onAttemptSettled }));
+
+    await startAttempt(hook);
+    await act(async () => {
+      useAuthStore.setState({ generation: 'new-owner' });
+      ready.resolve();
+    });
+    expect(mockGetPassportAuthUrl).not.toHaveBeenCalled();
+    expect(onAttemptSettled).toHaveBeenCalledWith({ attemptId: attemptIds[0], result: 'superseded' });
+    expect(hook.result.current.isPending).toBe(false);
+  });
+
   it('binds Passport to the Shop reauthorization account without deferring popup creation', async () => {
     vi.spyOn(shopSignIn, 'getShopReauthorizationIdentity').mockReturnValue({ expectedPubky: 'alice' });
     mockGetPassportAuthUrl.mockResolvedValue(createFlow());

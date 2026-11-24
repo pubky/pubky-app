@@ -1,4 +1,3 @@
-import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
 import { describe, expect, it, vi } from 'vitest';
 import type { FeedProposalV2 } from '@/libs/pubchi/schemas/feed';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
@@ -67,10 +66,10 @@ const existingFeed: FeedModelSchema = {
   icon: 'rss',
   tags: ['bitcoin'],
   domain_tags: ['builders'],
-  reach: PubkyAppFeedReach.Following,
-  sort: PubkyAppFeedSort.Recent,
-  layout: PubkyAppFeedLayout.Columns,
-  content: PubkyAppPostKind.Short,
+  reach: 'following',
+  sort: 'recent',
+  layout: 'columns',
+  content: 'note',
   created_at: 1,
   updated_at: 1,
 };

@@ -1,10 +1,10 @@
+import { SOCIAL_V1_POSTS_DIRECTORY, SOCIAL_V1_TAGS_DIRECTORY } from '@/config/auth';
 import { ARTICLE_TITLE_MAX_CHARACTER_LENGTH } from '@/config/posts';
 import { PUBCHI_PRIVATE_DIRECTORY, sessionCovers } from '@/libs/pubchi/capabilities';
 import type { PubchiAnswerV1, PubchiDraftPost } from '@/libs/pubchi/schemas/answer';
 import type { Pubky } from '@/models/models.types';
 import type { PubchiDraftPostRecord } from '@/models/pubchi/draft-post.schema';
 
-export const PUBKY_POST_DIRECTORY = '/pub/pubky.app/';
 export const DRAFT_POST_RECEIPT_MAX_BYTES = 64 * 1024;
 const MAX_APPLICATION_AGE_SECONDS = 600;
 const UNTITLED_ARTICLE_TITLE = 'Untitled';
@@ -61,7 +61,11 @@ export function canPublishDraftPost(
 ): boolean {
   if (!matchesStoredAnswer(binding) || !withinAge(binding, nowSeconds)) return false;
   const capabilities = currentSession?.info?.capabilities ?? [];
-  return sessionCovers(capabilities, PUBKY_POST_DIRECTORY) && sessionCovers(capabilities, PUBCHI_PRIVATE_DIRECTORY);
+  return (
+    sessionCovers(capabilities, SOCIAL_V1_POSTS_DIRECTORY) &&
+    sessionCovers(capabilities, PUBCHI_PRIVATE_DIRECTORY) &&
+    (!binding.response.draft_post?.tags?.length || sessionCovers(capabilities, SOCIAL_V1_TAGS_DIRECTORY))
+  );
 }
 
 export function canRejectDraftPost(

@@ -1,9 +1,12 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
+import { buildUri } from 'pubky-social-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DiscoveredTagSuggestion } from '@/application/pubchi/pubchi.types';
 import { PubchiController } from '@/controllers/pubchi/pubchi';
 import { toast } from '@/molecules/Toaster/toast';
 import { useDiscoveredTagSuggestions } from './useDiscoveredTagSuggestions';
+
+const TEST_OWNER = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo';
 
 vi.mock('@/libs/pubchi/flags', () => ({ isPubchiEnabled: () => true }));
 vi.mock('@/molecules/Toaster/toast', () => ({ toast: vi.fn() }));
@@ -19,7 +22,7 @@ vi.mock('@/controllers/pubchi/pubchi', () => ({
 const first: DiscoveredTagSuggestion = {
   applicationId: 'a'.repeat(64),
   owner: 'owner-1',
-  target: { kind: 'post', uri: 'pubky://author/pub/pubky.app/posts/one' },
+  target: { kind: 'post', uri: buildUri(TEST_OWNER, 'post', '0035Q0HAH8V90') },
   label: 'builder',
   status: 'applying',
   alreadyExisted: null,
@@ -36,18 +39,18 @@ describe('useDiscoveredTagSuggestions', () => {
     vi.mocked(PubchiController.discoverTagSuggestions)
       .mockImplementationOnce(() => new Promise((resolve) => (resolveOld = resolve)))
       .mockResolvedValueOnce([
-        { ...first, target: { ...first.target, uri: 'pubky://author/pub/pubky.app/posts/two' } },
+        { ...first, target: { ...first.target, uri: buildUri(TEST_OWNER, 'post', '0035Q0HAH8V7G') } },
       ]);
     const { result, rerender } = renderHook(
       ({ targetUri }) => useDiscoveredTagSuggestions('owner-1', targetUri, true),
       { initialProps: { targetUri: first.target.uri } },
     );
 
-    rerender({ targetUri: 'pubky://author/pub/pubky.app/posts/two' });
-    await waitFor(() => expect(result.current.suggestions[0]?.target.uri).toContain('/two'));
+    rerender({ targetUri: buildUri(TEST_OWNER, 'post', '0035Q0HAH8V7G') });
+    await waitFor(() => expect(result.current.suggestions[0]?.target.uri).toContain('/0035Q0HAH8V7G'));
     await act(async () => resolveOld([first]));
 
-    expect(result.current.suggestions[0]?.target.uri).toContain('/two');
+    expect(result.current.suggestions[0]?.target.uri).toContain('/0035Q0HAH8V7G');
   });
 
   it('discards late discovery after close and exposes no rows', async () => {
@@ -88,7 +91,7 @@ describe('useDiscoveredTagSuggestions', () => {
       { initialProps: { targetUri: first.target.uri } },
     );
     await waitFor(() => expect(result.current.suggestions).toHaveLength(1));
-    rerender({ targetUri: 'pubky://author/pub/pubky.app/posts/two' });
+    rerender({ targetUri: buildUri(TEST_OWNER, 'post', '0035Q0HAH8V7G') });
     await waitFor(() => expect(PubchiController.discoverTagSuggestions).toHaveBeenCalledTimes(2));
     rerender({ targetUri: first.target.uri });
     await waitFor(() => expect(result.current.suggestions).toHaveLength(1));

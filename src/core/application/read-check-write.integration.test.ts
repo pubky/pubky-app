@@ -1,5 +1,4 @@
 import type { Session } from '@synonymdev/pubky';
-import type { LastReadResult } from 'pubky-app-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthApplication } from '@/application/auth/auth';
 import { LocksApplication } from '@/application/locks/locks';
@@ -10,11 +9,12 @@ import { TagKind } from '@/application/tag/tag.types';
 import { NotificationController } from '@/controllers/notification/notification';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
-import { canonicalJson, sha256Hex } from '@/libs/pubchi/schemas/canonical';
+import { sha256Hex } from '@/libs/pubchi/schemas/canonical';
 import type { Pubky } from '@/models/models.types';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
 import { UserTtlModel } from '@/models/user/ttl/userTtl';
-import { LastReadNormalizer } from '@/pipes/lastRead/lastRead.normalizer';
+import { LastReadNormalizer, type TLastRead } from '@/pipes/lastRead/lastRead.normalizer';
+import { TagNormalizer } from '@/pipes/tag/tag.normalizer';
 import {
   HOMESERVER_PUBLISH_CONFLICT_MESSAGE,
   installHomeserverWriteRetryDependenciesForTests,
@@ -63,8 +63,8 @@ vi.mock('@synonymdev/pubky', () => {
 });
 
 const USER = '5a1diz4pghi47ywdfyfzpit5f3bdomzt4pugpbmq4rngdd4iub4y' as Pubky;
-const PROFILE_PATH = '/pub/pubky.app/profile.json';
-const LAST_READ_PATH = '/pub/pubky.app/last_read';
+const PROFILE_PATH = '/pub/social/v1/profile.json';
+const LAST_READ_PATH = '/priv/app.pubky/v1/last_read.json';
 
 function logWrite(op: string, path: string) {
   homeserver.writes.push({ op, path, isLoggingOut: useAuthStore.getState().isLoggingOut });
@@ -147,6 +147,10 @@ afterEach(() => {
 
 const putsTo = (path: string) =>
   homeserver.putJson.mock.calls.filter(([putPath]) => putPath === path).map(([, body]) => body);
+const bytesPutTo = (path: string) =>
+  homeserver.putBytes.mock.calls
+    .filter(([putPath]) => putPath === path)
+    .map(([, bytes]) => JSON.parse(new TextDecoder().decode(bytes)));
 
 describe('a new account with no files yet', () => {
   // Every Err.* factory captures to Sentry at construction, so no factory call means no report.
@@ -188,25 +192,28 @@ describe('a profile edit that the homeserver refuses re-reads before retrying', 
   const published = {
     name: 'Alice',
     bio: 'old bio',
-    image: `pubky://${USER}/pub/pubky.app/files/0035S78QPP4S0`,
+    image: `pubky://${USER}/pub/social/v1/files/AKSZ57W2RFKHV1EHK007FQQ8TW.png`,
     links: [{ title: 'WEBSITE', url: 'https://example.com/' }],
     status: 'working',
+    // A member a newer client added, carried through every write
+    pronouns: 'she/her',
   };
 
   it.each([429, 500, 503, 409])('keeps a bio another device saved during the backoff after a %i', async (status) => {
     homeserver.files.set(PROFILE_PATH, JSON.stringify(published));
-    homeserver.putJson.mockRejectedValueOnce(sdkError(status));
+    homeserver.putBytes.mockRejectedValueOnce(sdkError(status));
     onBackoff = () => {
       homeserver.files.set(PROFILE_PATH, JSON.stringify({ ...published, bio: 'new bio from device B' }));
     };
 
     await ProfileApplication.commitUpdateStatus({ pubky: USER, status: 'back' });
 
-    expect(putsTo(PROFILE_PATH)).toEqual([
-      expect.objectContaining({ bio: 'old bio', status: 'back' }),
-      expect.objectContaining({ bio: 'new bio from device B', status: 'back' }),
+    expect(bytesPutTo(PROFILE_PATH)).toEqual([
+      { ...published, status: 'back' },
+      { ...published, bio: 'new bio from device B', status: 'back' },
     ]);
-    expect(JSON.parse(homeserver.files.get(PROFILE_PATH)!)).toMatchObject({
+    expect(JSON.parse(homeserver.files.get(PROFILE_PATH)!)).toEqual({
+      ...published,
       bio: 'new bio from device B',
       status: 'back',
     });
@@ -215,7 +222,7 @@ describe('a profile edit that the homeserver refuses re-reads before retrying', 
 
   it('does not write again once logout begins during the backoff', async () => {
     homeserver.files.set(PROFILE_PATH, JSON.stringify(published));
-    homeserver.putJson.mockRejectedValueOnce(sdkError(503));
+    homeserver.putBytes.mockRejectedValueOnce(sdkError(503));
     onBackoff = () => {
       useAuthStore.setState({ isLoggingOut: true });
     };
@@ -223,7 +230,7 @@ describe('a profile edit that the homeserver refuses re-reads before retrying', 
     await expect(ProfileApplication.commitUpdateStatus({ pubky: USER, status: 'back' })).rejects.toMatchObject({
       code: AuthErrorCode.SESSION_EXPIRED,
     });
-    expect(homeserver.putJson).toHaveBeenCalledOnce();
+    expect(homeserver.putBytes).toHaveBeenCalledOnce();
   });
 });
 
@@ -275,12 +282,10 @@ describe('a settings write that the homeserver refuses with the publish conflict
 describe('marking notifications read never moves last_read backward', () => {
   const T1 = 1_000;
   const T2 = 2_000;
-  const lastRead = (timestamp: number) =>
-    asOpaque<LastReadResult>({
-      last_read: { timestamp: BigInt(timestamp), toJson: () => ({ timestamp }) },
-      meta: { url: `pubky://${USER}${LAST_READ_PATH}` },
-      free: vi.fn(),
-    });
+  const lastRead = (timestamp: number): TLastRead => ({
+    url: `pubky://${USER}${LAST_READ_PATH}`,
+    lastRead: { timestamp },
+  });
 
   beforeEach(() => {
     useNotificationStore.getState().setLastRead(0);
@@ -367,28 +372,24 @@ describe('marking notifications read never moves last_read backward', () => {
 
 describe('writes to one tag run in the order the user made them', () => {
   const POST_ID = `${USER}:0033SSE3B1FQ0` as Pubky;
-  const TAG_PATH = '/pub/pubky.app/tags/TAG0001';
   const tag = {
-    taggerId: USER,
-    taggedId: POST_ID,
-    label: 'bitcoin',
-    taggedKind: TagKind.POST,
-    tagUrl: `pubky://${USER}${TAG_PATH}`,
+    ...TagNormalizer.from({ taggerId: USER, taggedId: POST_ID, label: 'bitcoin', taggedKind: TagKind.POST }),
     canWrite: () => true,
   };
-  const tagJson = { uri: `pubky://${USER}/pub/pubky.app/posts/0033SSE3B1FQ0`, label: 'bitcoin', created_at: 1 };
+  const { tagBody } = tag;
+  const TAG_PATH = tag.tagUrl.slice(`pubky://${USER}`.length);
   const tagOps = () => homeserver.writes.filter(({ path }) => path === TAG_PATH).map(({ op }) => op);
 
   it('keeps a tag removed while its add was retrying removed', async () => {
     let failAdd!: () => void;
-    homeserver.putJson.mockImplementationOnce(
+    homeserver.putBytes.mockImplementationOnce(
       () =>
         new Promise<void>((_, reject) => {
           failAdd = () => reject(sdkError(503));
         }),
     );
 
-    const add = TagApplication.commitCreate({ tagList: [{ ...tag, tagJson }] });
+    const add = TagApplication.commitCreate({ tagList: [tag] });
     await vi.waitFor(() => expect(failAdd).toBeTypeOf('function'));
     const remove = TagApplication.commitDelete(tag);
     // The optimistic removal is visible while its remote write waits behind the add.
@@ -404,8 +405,7 @@ describe('writes to one tag run in the order the user made them', () => {
   });
 
   it('keeps a tag added back while its removal was retrying present', async () => {
-    homeserver.files.set(TAG_PATH, JSON.stringify(tagJson));
-    await TagApplication.commitCreate({ tagList: [{ ...tag, tagJson }] });
+    await TagApplication.commitCreate({ tagList: [tag] });
     homeserver.writes = [];
     let releaseRemove!: () => void;
     homeserver.delete.mockRejectedValueOnce(sdkError(429));
@@ -416,7 +416,7 @@ describe('writes to one tag run in the order the user made them', () => {
 
     const remove = TagApplication.commitDelete(tag);
     await vi.waitFor(() => expect(releaseRemove).toBeTypeOf('function'));
-    const add = TagApplication.commitCreate({ tagList: [{ ...tag, tagJson }] });
+    const add = TagApplication.commitCreate({ tagList: [tag] });
     await vi.waitFor(async () => {
       const mutations = await TagApplication.getViewerMutations(tag);
       expect(mutations.get(tag.label)?.relationship).toBe(true);
@@ -431,13 +431,13 @@ describe('writes to one tag run in the order the user made them', () => {
 
   it('keeps an ordinary remove after a retrying assisted add, without resurrecting the tag', async () => {
     let failAdd!: () => void;
-    homeserver.putJson.mockImplementationOnce(
+    homeserver.putBytes.mockImplementationOnce(
       () =>
         new Promise<void>((_, reject) => {
           failAdd = () => reject(sdkError(503));
         }),
     );
-    const add = TagApplication.commitCreate({ tagList: [{ ...tag, tagJson }], preserveExisting: true });
+    const add = TagApplication.commitCreate({ tagList: [tag], preserveExisting: true });
     await vi.waitFor(() => expect(failAdd).toBeTypeOf('function'));
     const remove = TagApplication.commitDelete(tag);
     await vi.waitFor(async () => {
@@ -451,7 +451,7 @@ describe('writes to one tag run in the order the user made them', () => {
   });
 
   it('keeps a manual add after a retrying assisted undo', async () => {
-    await TagApplication.commitCreate({ tagList: [{ ...tag, tagJson }] });
+    await TagApplication.commitCreate({ tagList: [tag] });
     homeserver.writes = [];
     let releaseRemove!: () => void;
     homeserver.delete.mockRejectedValueOnce(sdkError(429));
@@ -459,9 +459,9 @@ describe('writes to one tag run in the order the user made them', () => {
       new Promise<void>((resolve) => {
         releaseRemove = resolve;
       });
-    const remove = TagApplication.commitDeleteIfUnchanged(tag, await sha256Hex(canonicalJson(tagJson)));
+    const remove = TagApplication.commitDeleteIfUnchanged(tag, await sha256Hex(tagBody));
     await vi.waitFor(() => expect(releaseRemove).toBeTypeOf('function'));
-    const add = TagApplication.commitCreate({ tagList: [{ ...tag, tagJson }] });
+    const add = TagApplication.commitCreate({ tagList: [tag] });
     await vi.waitFor(async () => {
       expect((await TagApplication.getViewerMutations(tag)).get(tag.label)?.relationship).toBe(true);
     });

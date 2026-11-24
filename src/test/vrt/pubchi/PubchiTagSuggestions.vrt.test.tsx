@@ -12,7 +12,7 @@ import answerFixture from '@/libs/pubchi/schemas/__fixtures__/c5/valid/answer__c
 vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (state: unknown) => unknown) =>
     selector({
-      selectSession: () => ({ info: { capabilities: ['/pub/pubky.app/:rw', '/priv/app.pubchi/v1/:rw'] } }),
+      selectSession: () => ({ info: { capabilities: ['/pub/social/v1/:rw', '/priv/app.pubchi/v1/:rw'] } }),
     }),
 }));
 

@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted — 2026-01-14
+Accepted — 2026-01-14  
+Updated — 2026-10-30 (social v1: `ErrorService.PubkyAppSpecs` became `SocialSpecs = 'pubky-social-specs'`, the service tag of every refusal by the data model package; ADR-0027, `docs/sentry.md`)
 
 ## Context
 
@@ -175,7 +176,7 @@ enum ErrorService {
   Exchangerate = 'exchangerate',
   Chatwoot = 'chatwoot',
   Local = 'local',
-  PubkyAppSpecs = 'pubky-app-specs',
+  SocialSpecs = 'pubky-social-specs', // was PubkyAppSpecs = 'pubky-app-specs' until the social v1 port
 }
 ```
 

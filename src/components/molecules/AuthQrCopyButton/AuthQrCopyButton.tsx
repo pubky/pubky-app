@@ -5,7 +5,7 @@ import { QrCodeSlot } from '@/molecules/QrCodeSlot/QrCodeSlot';
 import { toast } from '@/molecules/Toaster/toast';
 import type { AuthQrCopyButtonProps } from './AuthQrCopyButton.types';
 
-/** The Pubky Ring auth QR: a click copies its `pubkyauth://` link, or reloads it once expired. */
+/** The auth QR for Pubky Ring or Bitkit: a click copies its `pubkyauth://` link, or reloads it once expired. */
 export function AuthQrCopyButton({
   url,
   isLoading,
@@ -14,6 +14,7 @@ export function AuthQrCopyButton({
   onReload,
   reloadAriaLabel,
   disabled = false,
+  logo,
 }: AuthQrCopyButtonProps) {
   const handleCopy = async () => {
     if (!url) return;
@@ -47,6 +48,7 @@ export function AuthQrCopyButton({
         generatingLabel={'Generating QR Code...'}
         clickToReloadLabel={'Click to reload'}
         activeQrHasHoverEffect
+        logo={logo}
       />
     </button>
   );

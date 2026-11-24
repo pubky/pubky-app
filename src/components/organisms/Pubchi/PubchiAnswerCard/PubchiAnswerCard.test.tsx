@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { buildUri } from 'pubky-social-specs';
 import { describe, expect, it, vi } from 'vitest';
 import { PubchiController } from '@/controllers/pubchi/pubchi';
 import type { PubchiAnswerV1 } from '@/libs/pubchi/schemas/answer';
@@ -20,7 +21,7 @@ const answer: PubchiAnswerV1 = {
     {
       kind: 'user',
       label: 'Alice',
-      uri: `pubky://${owner}/pub/pubky.app/profile.json`,
+      uri: buildUri(owner, 'user'),
       claimants: [owner],
       claimant_count: 1,
       in_your_graph: true,
@@ -244,14 +245,14 @@ describe('PubchiAnswerCard', () => {
       section: 'tag_suggestions' as const,
       target: {
         kind: 'user' as const,
-        uri: `pubky://${owner}/pub/pubky.app/profile.json`,
+        uri: buildUri(owner, 'user'),
         snapshot_sha256: 'a'.repeat(64),
       },
       tag_suggestions: [
         {
           label: 'pubky-app',
           rationale: 'Matches the public profile.',
-          evidence: [`pubky://${owner}/pub/pubky.app/profile.json`],
+          evidence: [buildUri(owner, 'user')],
           already_applied: true,
           source: 'vocab' as const,
         },
@@ -270,14 +271,14 @@ describe('PubchiAnswerCard', () => {
       section: 'tag_suggestions' as const,
       target: {
         kind: 'user' as const,
-        uri: `pubky://${owner}/pub/pubky.app/profile.json`,
+        uri: buildUri(owner, 'user'),
         snapshot_sha256: 'a'.repeat(64),
       },
       tag_suggestions: [
         {
           label: 'pubky-app',
           rationale: 'Matches the public profile.',
-          evidence: [`pubky://${owner}/pub/pubky.app/profile.json`],
+          evidence: [buildUri(owner, 'user')],
           already_applied: false,
           source: 'vocab' as const,
         },
@@ -316,14 +317,14 @@ describe('PubchiAnswerCard', () => {
       section: 'tag_suggestions' as const,
       target: {
         kind: 'user' as const,
-        uri: `pubky://${owner}/pub/pubky.app/profile.json`,
+        uri: buildUri(owner, 'user'),
         snapshot_sha256: 'a'.repeat(64),
       },
       tag_suggestions: [
         {
           label: 'pubky-app',
           rationale: 'Matches the public profile.',
-          evidence: [`pubky://${owner}/pub/pubky.app/profile.json`],
+          evidence: [buildUri(owner, 'user')],
           already_applied: false,
           source: 'vocab' as const,
         },
@@ -538,7 +539,7 @@ describe('PubchiAnswerCard', () => {
 });
 
 function draftAnswer(): PubchiAnswerV1 {
-  const evidenceUri = `pubky://${owner}/pub/pubky.app/profile.json`;
+  const evidenceUri = buildUri(owner, 'user');
   return {
     ...answer,
     section: 'draft_post',

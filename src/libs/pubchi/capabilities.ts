@@ -14,9 +14,6 @@
 export const PUBCHI_HOMESERVER_DIRECTORY = '/pub/app.pubchi/v1/';
 export const PUBCHI_PRIVATE_DIRECTORY = '/priv/app.pubchi/v1/';
 
-/** Default Ring sign-in request for the App's social and Pubchi-owned state. */
-export const APP_SIGNIN_CAPABILITIES = '/pub/pubky.app/:rw,/pub/app.pubchi/v1/:rw,/priv/app.pubchi/v1/:rw';
-
 export const PUBCHI_DEGRADED_SESSION_MESSAGE =
   "Your sign-in predates Pubchi and can't reach its folders yet. Tap Re-approve and confirm in Pubky Ring.";
 

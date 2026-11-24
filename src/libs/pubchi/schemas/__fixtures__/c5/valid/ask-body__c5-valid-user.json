@@ -2,6 +2,6 @@
   "question": "Suggest tags for this user",
   "target": {
     "kind": "user",
-    "uri": "pubky://4bfmrcuwfq4ksqoupn6wcfxrh5enr1izdeyszmhfrntuf1mzoh5o/pub/pubky.app/profile.json"
+    "uri": "pubky://4bfmrcuwfq4ksqoupn6wcfxrh5enr1izdeyszmhfrntuf1mzoh5o/pub/social/v1/profile.json"
   }
 }

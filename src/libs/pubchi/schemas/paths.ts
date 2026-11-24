@@ -2,17 +2,13 @@
  * Vendored from @pubky/pubchi-schemas (pubky-ai-bot-pubchi).
  * Source commit: bbf8a73
  * The Pubchi namespace is app.pubchi/v1; the service is changing in lockstep.
- * Do not redefine these contracts.
+ * App adaptation for social v1. The deployed service must use the same contract.
  */
 
-/**
- * Graph paths from pubchi-design.md §3 and §5.
- * All durable Stage 4 state lives under bot identity B unless noted.
- */
+import { buildUri } from 'pubky-social-specs';
 
 export const PUBCHI_APP = 'app.pubchi' as const;
 export const PUBCHI_EPOCH = 'v1' as const;
-export const PUBKY_APP = 'pubky.app' as const;
 
 export const PATHS = {
   bot: '/pub/app.pubchi/v1/bot.json',
@@ -21,7 +17,6 @@ export const PATHS = {
   interests: '/pub/app.pubchi/v1/interests.json',
   formats: '/pub/app.pubchi/v1/formats.json',
   whatIMissedCursor: '/pub/app.pubchi/v1/cursors/what-i-missed.json',
-  botProfile: '/pub/pubky.app/profile.json',
 } as const;
 
 export function feedDefinitionPath(feedId: string): string {
@@ -66,7 +61,7 @@ export function botUri(owner: string): string {
  * Written with B's local session; not a second app.pubchi/v1 object.
  */
 export function botProfileUri(bot: string): string {
-  return `pubky://${bot}${PATHS.botProfile}`;
+  return buildUri(bot, 'user');
 }
 
 export function botObjectUri(bot: string, path: string): string {

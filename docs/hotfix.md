@@ -17,6 +17,11 @@ v1.7.0 (master) ── release-1.7.1 (cherry-picks) ── merge commit ──�
 
 Do not rebase the hotfix onto `dev`. That would pull in `dev` HEAD, which is the situation a hotfix is avoiding.
 
+Once the social v1 release has migrated its first user, this is the only path for a defect in it: there is no rollback
+(v1 writes are invisible to a 0.x client and Nexus has flipped epochs), and a hotfix that skips, disables or weakens
+the migration gate is never acceptable, since an un-migrated account must not run the 1.x app
+(`docs/migrations/social-v1.md`, ADR-0026).
+
 Substitute `1.7.1` / `v1.7.1` with the patch being released.
 
 ## 1. Branch from the previous release

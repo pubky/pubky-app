@@ -12,6 +12,7 @@ import {
   COPYRIGHT_ROUTES,
   getCollectionRoute,
   getContentSearchUrl,
+  getOnboardingScanRoute,
   getProfileRoute,
   getUserProfileUrl,
   isCollectionsOverviewRoute,
@@ -30,10 +31,13 @@ import {
   matchPostRoute,
   matchProfileRoute,
   matchSingleCollectionRoute,
+  NEEDS_SOCIAL_MIGRATION_ROUTES,
   ONBOARDING_ROUTES,
+  parseOnboardingKeychain,
   PROFILE_ROUTES,
   PUBLIC_ROUTES,
   SETTINGS_ROUTES,
+  SOCIAL_MIGRATION_SIGNED_OUT_ROUTES,
   UNAUTHENTICATED_ROUTES,
 } from './routes';
 
@@ -48,6 +52,26 @@ describe('Pubchi route', () => {
     expect(APP_ROUTES.PUBCHI).toBe('/pubchi');
     expect(AUTHENTICATED_ROUTES.allowedRoutes).toContain(APP_ROUTES.PUBCHI);
     expect(UNAUTHENTICATED_ROUTES.allowedRoutes).not.toContain(APP_ROUTES.PUBCHI);
+  });
+});
+
+describe('getOnboardingScanRoute', () => {
+  it('keeps the bare scan route for Pubky Ring', () => {
+    expect(getOnboardingScanRoute('ring')).toBe(ONBOARDING_ROUTES.SCAN);
+  });
+
+  it('adds the keychain param for Bitkit', () => {
+    expect(getOnboardingScanRoute('bitkit')).toBe('/onboarding/scan?keychain=bitkit');
+  });
+});
+
+describe('parseOnboardingKeychain', () => {
+  it('reads bitkit', () => {
+    expect(parseOnboardingKeychain('bitkit')).toBe('bitkit');
+  });
+
+  it.each([null, '', 'ring', 'BITKIT', 'other'])('falls back to Pubky Ring for %s', (value) => {
+    expect(parseOnboardingKeychain(value)).toBe('ring');
   });
 });
 
@@ -254,6 +278,40 @@ describe('route access matrix', () => {
 
     expect(isDynamicPublicRoute(pathname)).toBe(true);
     expect(isRouteAccessible(pathname, UNAUTHENTICATED_ROUTES.allowedRoutes, true)).toBe(false);
+  });
+});
+
+describe('social v1 migration gate routes (ADR-0026)', () => {
+  it('names the gate page under the auth routes, so the logo links to the landing page there', () => {
+    expect(AUTH_ROUTES.MIGRATION).toBe('/migration');
+    expect(isLogoLandingRoute(AUTH_ROUTES.MIGRATION)).toBe(true);
+  });
+
+  it('lets a held account reach only the gate, logout and the legal pages, and sends it to the gate', () => {
+    expect(NEEDS_SOCIAL_MIGRATION_ROUTES).toEqual({
+      allowedRoutes: ['/migration', '/logout', '/terms-of-use', '/privacy-policy'],
+      redirectTo: '/migration',
+    });
+    for (const route of NEEDS_SOCIAL_MIGRATION_ROUTES.allowedRoutes)
+      expect(matchesAllowedRoute(route, NEEDS_SOCIAL_MIGRATION_ROUTES.redirectTo)).toBe(route === '/migration');
+  });
+
+  it('lets a signed-out visitor read the gate explanation', () => {
+    expect(UNAUTHENTICATED_ROUTES.allowedRoutes).toContain(AUTH_ROUTES.MIGRATION);
+    expect(AUTHENTICATED_ROUTES.allowedRoutes).not.toContain(AUTH_ROUTES.MIGRATION);
+  });
+
+  // FIX-FINAL-7: while the sign-out explanation is owed, a signed-out tab stays only on the gate's routes and sign-in
+  it('keeps a tab that owes the sign-out explanation on the gate routes and sign-in only', () => {
+    expect(SOCIAL_MIGRATION_SIGNED_OUT_ROUTES).toEqual([
+      '/migration',
+      '/logout',
+      '/terms-of-use',
+      '/privacy-policy',
+      '/sign-in',
+    ]);
+    for (const route of SOCIAL_MIGRATION_SIGNED_OUT_ROUTES)
+      expect(UNAUTHENTICATED_ROUTES.allowedRoutes.includes(route) || PUBLIC_ROUTES.includes(route)).toBe(true);
   });
 });
 

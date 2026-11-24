@@ -1,3 +1,4 @@
+import { buildUri } from 'pubky-social-specs';
 import { describe, expect, it } from 'vitest';
 import type { PubchiSuggestionV1 } from '@/libs/pubchi/schemas/suggestion';
 import { PubchiProactiveSuggestions } from '@/organisms/Pubchi/PubchiProactiveSuggestions/PubchiProactiveSuggestions';
@@ -16,7 +17,7 @@ const suggestion: PubchiSuggestionV1 = {
   kind: 'what-i-missed',
   title: 'Three threads worth revisiting',
   summary: 'A short summary derived only from the cited public objects.',
-  source_uris: [`pubky://${owner}/pub/pubky.app/profile.json`],
+  source_uris: [buildUri(owner, 'user')],
   run_id: 'run-01',
   expires_at: 1_780_604_800,
 };

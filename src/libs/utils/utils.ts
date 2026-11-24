@@ -1,10 +1,16 @@
+import { parsePostId } from 'pubky-social-specs';
 import { STARTER_PACK_RESERVED_TAGS } from '@/config/nexus';
 import { DEFAULT_DISPLAY_PUBLIC_KEY_LENGTH, TAG_MAX_LENGTH } from '@/config/posts';
 import { parseCompositeId } from '@/models/models.utils';
 import { DELETED } from '@/models/post/details/postDetails.constants';
 import type { PostInputVariant } from '@/organisms/PostInput/PostInput.types';
 import { getSafeExternalUrl } from './safeExternalUrl';
-import { DELETED_USER_NAME, TAG_BANNED_CHARS } from './utils.constants';
+import {
+  DELETED_USER_NAME,
+  TAG_BANNED_CHARS,
+  TAG_FROZEN_WHITESPACE,
+  TAG_FROZEN_WHITESPACE_EDGES,
+} from './utils.constants';
 import type {
   CopyToClipboardProps,
   ExtractInitialsProps,
@@ -102,16 +108,29 @@ function parseValidPostCompositeId(compositeId: string): { pubky: string; id: st
   }
 }
 
-/**
- * True when `compositeId` parses as `author:postId` and `author` is a valid pubky identifier.
- * Used to reject malformed `/post/:userId/:postId` URLs without treating them as a cache miss.
- */
-export function isValidPostCompositeId(compositeId: string): boolean {
-  return parseValidPostCompositeId(compositeId) !== null;
+function isPostId(id: string): boolean {
+  try {
+    parsePostId(id);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /**
- * Author pubky from `author:postId` when {@link isValidPostCompositeId} is true; otherwise `null`.
+ * True when `compositeId` parses as `author:postId`, `author` is a valid pubky identifier and
+ * `postId` is a canonical TimestampId (13 Crockford characters).
+ * Used to reject malformed `/post/:userId/:postId` URLs without treating them as a cache miss.
+ */
+export function isValidPostCompositeId(compositeId: string): boolean {
+  const parsed = parseValidPostCompositeId(compositeId);
+  return parsed !== null && isPostId(parsed.id);
+}
+
+/**
+ * Author pubky from `author:postId` when `author` is a valid pubky identifier and `postId` is not
+ * empty; otherwise `null`. Looser than {@link isValidPostCompositeId} on the post id, so a
+ * not-found page for a malformed post id still links the author's profile.
  */
 export function getValidAuthorPubkyFromPostCompositeId(compositeId: string): string | null {
   return parseValidPostCompositeId(compositeId)?.pubky ?? null;
@@ -307,33 +326,6 @@ export const sleep = (ms: number): Promise<void> => new Promise((resolve) => set
 export const minutesAgo = (mins: number): number => Date.now() - mins * 60 * 1000;
 export const hoursAgo = (hours: number): number => Date.now() - hours * 60 * 60 * 1000;
 export const daysAgo = (days: number): number => Date.now() - days * 24 * 60 * 60 * 1000;
-
-/**
- * Formats a filename by truncating it if it exceeds the max length,
- * preserving the file extension
- * @param filename - The filename to format
- * @param maxLength - Maximum length for the filename (default: 18)
- * @returns Formatted filename with ellipsis if truncated
- */
-export function formatFileName(filename: string, maxLength = 18): string {
-  if (filename.length <= maxLength) {
-    return filename;
-  }
-
-  const extensionIndex = filename.lastIndexOf('.');
-  if (extensionIndex <= 0) {
-    return `${filename.slice(0, maxLength - 1)}…`;
-  }
-
-  const extension = filename.slice(extensionIndex);
-  const baseLength = maxLength - extension.length - 1;
-
-  if (baseLength <= 0) {
-    return `${filename.slice(0, maxLength - 1)}…`;
-  }
-
-  return `${filename.slice(0, baseLength)}…${extension}`;
-}
 
 /**
  * Truncates a string to a maximum length and appends an ellipsis if truncated.
@@ -650,13 +642,17 @@ export function sanitizeTagInput(value: string): string {
 }
 
 /**
- * Convert a tag label to the canonical form used by local storage and Nexus.
+ * Convert a tag label to the canonical form used by local storage and Nexus: the fold
+ * `pubky-social-specs` applies when it stores a tag, so a label matches the one the tag id
+ * hashes. Trimmed over the data model's frozen whitespace set (`TAG_FROZEN_WHITESPACE_CODE_POINTS`,
+ * not `String.prototype.trim`), with ASCII letters lowercased and every other character kept
+ * (`RUST` becomes `rust`, `Äpfel` stays `Äpfel`).
  *
  * @param value - The raw tag label
- * @returns The trimmed, lowercase tag label
+ * @returns The trimmed, ASCII-lowercased tag label
  */
 export function canonicalizeTagLabel(value: string): string {
-  return value.trim().toLowerCase();
+  return value.replace(TAG_FROZEN_WHITESPACE_EDGES, '').replace(/[A-Z]+/g, (upper) => upper.toLowerCase());
 }
 
 /** Whether Nexus reserves this label from starter-pack interest streams. */
@@ -666,14 +662,20 @@ export function isStarterPackReservedTag(value: string): boolean {
 }
 
 /**
- * Checks whether a string is a valid tag label (correct length, no banned characters).
+ * Checks whether a string is a valid tag label (correct length, no banned characters, no whitespace of
+ * the data model's frozen set inside), so a label the app accepts is one `buildTag` and Nexus accept.
  *
  * @param value - The candidate tag label (should already be trimmed/lowercased)
  * @returns true when the label satisfies all tag constraints
  */
 export function isValidTagLabel(value: string): boolean {
   const charCount = getCharacterCount(value);
-  return charCount > 0 && charCount <= TAG_MAX_LENGTH && sanitizeTagInput(value) === value;
+  return (
+    charCount > 0 &&
+    charCount <= TAG_MAX_LENGTH &&
+    sanitizeTagInput(value) === value &&
+    !TAG_FROZEN_WHITESPACE.test(value)
+  );
 }
 
 /**

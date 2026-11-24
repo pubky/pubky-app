@@ -1,4 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
+import { buildTag, buildUri } from 'pubky-social-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { PubchiApplication } from '@/application/pubchi/pubchi';
 import { TagController } from '@/controllers/tag/tag';
@@ -11,14 +12,11 @@ import { PubchiController } from './pubchi';
 
 const owner = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo';
 const tagDocumentSha256 = 'e'.repeat(64);
+const tagUrl = buildTag(owner, buildUri(owner, 'user'), 'builder').url;
 const prepared = {
   tagDocumentSha256,
   applicationId: 'a'.repeat(64),
-  binding: {
-    owner,
-    target: { kind: 'user' as const, uri: `pubky://${owner}/pub/pubky.app/profile.json` },
-  },
-  suggestion: { label: 'builder' },
+  tagParams: { taggedKind: 'user', taggedId: owner, label: 'builder', taggerId: owner },
 };
 
 describe('PubchiController tag suggestion application', () => {
@@ -26,7 +24,7 @@ describe('PubchiController tag suggestion application', () => {
     vi.spyOn(useAuthStore, 'getState').mockReturnValue(
       asOpaque<ReturnType<typeof useAuthStore.getState>>({
         selectCurrentUserPubky: () => owner,
-        selectSession: () => ({ info: { capabilities: ['/pub/pubky.app/:rw', '/priv/app.pubchi/v1/:rw'] } }),
+        selectSession: () => ({ info: { capabilities: ['/pub/social/v1/:rw', '/priv/app.pubchi/v1/:rw'] } }),
       }),
     );
     vi.spyOn(PubchiApplication, 'prepareTagSuggestionApplication').mockResolvedValue(
@@ -47,7 +45,7 @@ describe('PubchiController tag suggestion application', () => {
     const create = vi.spyOn(TagController, 'commitCreatePreservingExisting').mockResolvedValue({
       alreadyExisted,
       tagDocumentSha256,
-      tagUrl: `pubky://${owner}/pub/pubky.app/tags/builder`,
+      tagUrl,
     });
     const remove = vi.spyOn(TagController, 'commitDeleteIfUnchanged');
 
@@ -94,7 +92,7 @@ describe('PubchiController tag suggestion application', () => {
       vi.spyOn(TagController, 'commitCreatePreservingExisting').mockResolvedValue({
         alreadyExisted,
         tagDocumentSha256,
-        tagUrl: `pubky://${owner}/pub/pubky.app/tags/builder`,
+        tagUrl,
       });
       const finalize = vi
         .spyOn(PubchiApplication, 'finalizeTagSuggestionApplication')
@@ -126,7 +124,7 @@ describe('PubchiController tag suggestion application', () => {
     vi.spyOn(TagController, 'commitCreatePreservingExisting').mockResolvedValue({
       alreadyExisted: false,
       tagDocumentSha256,
-      tagUrl: `pubky://${owner}/pub/pubky.app/tags/builder`,
+      tagUrl,
     });
     vi.spyOn(PubchiApplication, 'recordTagSuggestionApplyOutcome').mockRejectedValue(new Error('outcome unavailable'));
     const pending = vi.spyOn(PubchiApplication, 'markTagSuggestionReconciliationPending').mockResolvedValue();

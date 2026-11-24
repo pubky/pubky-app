@@ -11,11 +11,8 @@ import { Heading } from '@/atoms/Heading/Heading';
 import { Link } from '@/atoms/Link/Link';
 import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '@/atoms/Tooltip/Tooltip';
 import { Typography } from '@/atoms/Typography/Typography';
-import { getGithubLink, getTelegramLink, getTwitterGetpubkyLink } from '@/config/externalLinks';
-import { CONTENT_GUTTER_CLASS } from '@/config/layoutClasses';
 import { PubchiController } from '@/controllers/pubchi/pubchi';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
-import { Github2, Telegram, XTwitter } from '@/icons';
 import { isPubchiPanelEnabled } from '@/libs/pubchi/flags';
 import { handleFeedNavClick } from '@/libs/utils/feedScrollTop';
 import { cn } from '@/libs/utils/utils';
@@ -26,33 +23,6 @@ import { useAuthStore } from '@/stores/auth/auth.store';
 import { usePubchiStore } from '@/stores/pubchi/pubchi.store';
 import { ProgressSteps } from '../ProgressSteps/ProgressSteps';
 
-export interface HeaderContainerProps {
-  children: React.ReactNode;
-  className?: string;
-}
-export const HeaderContainer = ({ children, className }: HeaderContainerProps) => {
-  return (
-    <Container
-      overrideDefaults
-      as="header"
-      className={cn(
-        'pointer-events-none sticky top-0 z-(--z-sticky-header) w-full bg-linear-to-b from-(--background) from-50% to-transparent p-0 sm:py-6',
-        className,
-      )}
-    >
-      <Container
-        as="nav"
-        size="container"
-        className={cn(
-          'pointer-events-auto mx-auto flex h-24 w-full flex-row flex-wrap items-center justify-between gap-4 py-6 sm:flex-nowrap sm:gap-6',
-          CONTENT_GUTTER_CLASS,
-        )}
-      >
-        {children}
-      </Container>
-    </Container>
-  );
-};
 export const HeaderTitle = ({ currentTitle }: { currentTitle: string }) => {
   return (
     <Container className="hidden flex-1 md:flex">
@@ -65,24 +35,6 @@ export const HeaderTitle = ({ currentTitle }: { currentTitle: string }) => {
 export const HeaderOnboarding = ({ currentStep }: { currentStep: number }) => {
   return <ProgressSteps currentStep={currentStep} totalSteps={4} />;
 };
-export function HeaderSocialLinks({ ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <Container
-      data-testid="header-social-links"
-      className={cn('mr-6 hidden flex-row justify-end gap-6 md:flex', props.className)}
-    >
-      <Link href={getGithubLink()} target="_blank" variant="muted" size="default" aria-label="GitHub">
-        <Github2 className="h-6 w-6" aria-hidden="true" />
-      </Link>
-      <Link href={getTwitterGetpubkyLink()} target="_blank" variant="muted" size="default" aria-label="X">
-        <XTwitter className="h-6 w-6" aria-hidden="true" />
-      </Link>
-      <Link href={getTelegramLink()} target="_blank" variant="muted" size="default" aria-label="Telegram">
-        <Telegram className="h-6 w-6" aria-hidden="true" />
-      </Link>
-    </Container>
-  );
-}
 type NavigationItemConfig = {
   href: string;
   icon: React.ComponentType<{

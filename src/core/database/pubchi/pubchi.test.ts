@@ -1,5 +1,7 @@
 import Dexie, { type Table } from 'dexie';
 import { indexedDB } from 'fake-indexeddb';
+import { buildUri } from 'pubky-social-specs';
+import { fakeOwner } from 'pubky-social-specs/testing';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Logger } from '@/libs/logger/logger';
 import { resetRuntimeConfigForTests } from '@/libs/runtime-config/runtime-config';
@@ -125,8 +127,8 @@ describe('deletePubchiDatabase', () => {
     resetRuntimeConfigForTests();
     const db = getPubchiDatabase();
     await db.open();
-    const owner = 'owner-a';
-    const otherOwner = 'owner-b';
+    const owner = fakeOwner(1);
+    const otherOwner = fakeOwner(2);
     const tablePolicies: Record<string, 'owner-scoped'> = {
       bindings: 'owner-scoped',
       deviceKeys: 'owner-scoped',
@@ -177,7 +179,7 @@ describe('deletePubchiDatabase', () => {
         bot: 'bot',
         served_purpose: 'ask',
         question: 'question',
-        target: { kind: 'user', uri: 'pubky://owner/pub/pubky.app/profile.json' },
+        target: { kind: 'user', uri: buildUri(owner, 'user') },
         submitted_at: Date.now(),
         response_run_id: 'run-a',
         response: {},
@@ -192,7 +194,7 @@ describe('deletePubchiDatabase', () => {
         bot: 'bot',
         served_purpose: 'ask',
         question: 'question',
-        target: { kind: 'user', uri: 'pubky://other/pub/pubky.app/profile.json' },
+        target: { kind: 'user', uri: buildUri(otherOwner, 'user') },
         submitted_at: Date.now(),
         response_run_id: 'run-b',
         response: {},

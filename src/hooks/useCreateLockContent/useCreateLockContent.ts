@@ -1,7 +1,6 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { PubkyAppPost } from 'pubky-app-specs';
 import { LocksController } from '@/controllers/locks/locks';
 import { PostController } from '@/controllers/post/post';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
@@ -13,19 +12,13 @@ import { isAppError, toAppError } from '@/libs/error/error.utils';
 import { getImageUploadSizeLimitToastMessage } from '@/libs/image/imageUploadSizeLimit';
 import { buildLockTeaserContent, isLockTeaserWithinLimit } from '@/libs/post/lockTeaser';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
-import { lockPriceSchema, type TGuardedResource } from '@/services/locks/locks.types';
+import { lockPriceSchema } from '@/services/locks/locks.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type {
   TPublishResult,
   TUseCreateLockContentParams,
   TUseCreateLockContentReturn,
 } from './useCreateLockContent.types';
-
-// The homeserver detects each file's type from its bytes: real media (image/webp, video/mp4, …) is
-// recognized, but JSON is not, so it falls back to `octet-stream`. createContentLock() fails unless our
-// declared type matches what the homeserver detected, so the JSON primary must be declared
-// `octet-stream`. pubky-app still knows the primary is a `PubkyAppPost` — by convention, it always is.
-const POST_CONTENT_TYPE = 'application/octet-stream';
 
 /**
  * Publishes a locked post: the attachments become guarded resources, the post referencing them becomes
@@ -90,29 +83,12 @@ export function useCreateLockContent({
         });
       }
 
-      // Runs once the attachments are uploaded, so the post can point at their guarded paths. The
-      // original filenames are dropped with the paths — they live on in the post's own metadata.
-      // Attachments live on the Lock-Server-authenticated account (`ownerPubky`, `pubky` prefix
-      // stripped to the raw host), which can differ from the pubky.app account.
-      const buildPost = (attachmentResources: TGuardedResource[], ownerPubky?: string) => {
-        // `ownerPubky` comes from the upload responses, so it is only absent when nothing was
-        // uploaded. Never substitute the pubky.app account: the two can differ, and a wrong host
-        // here writes unreachable attachment URIs into the locked post.
-        if (attachmentResources.length > 0 && !ownerPubky)
-          throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Guarded attachments without an owner pubky', {
-            service: ErrorService.Locks,
-            operation: 'useCreateLockContent.buildPost',
-          });
-        const host = ownerPubky ? stripPubkyPrefix(ownerPubky) : '';
-        const uris = attachmentResources.map((resource) => `pubky://${host}${resource.path}`);
-        const post = new PubkyAppPost(lockedPost.content, lockedPost.kind, null, null, uris.length > 0 ? uris : null);
-        return { contentType: POST_CONTENT_TYPE, bytes: new TextEncoder().encode(JSON.stringify(post.toJson())) };
-      };
-
-      // The application cleans each locked file like a normal upload before any of them goes up (#2685).
+      // The application cleans each locked file like a normal upload before any of them goes up (#2685),
+      // then builds the guarded post over their paths (`GuardedPostBuilder`). The original filenames
+      // are dropped with the paths — they live on in the post's own metadata.
       const lock = await LocksController.createLockContent({
         attachments: lockedPost.attachments,
-        buildPost,
+        post: { content: lockedPost.content, kind: lockedPost.kind },
         lockConfig,
       });
       // The lock lives on the Lock-Server-authenticated pubky's homeserver, which may differ from the

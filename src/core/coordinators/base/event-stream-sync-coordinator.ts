@@ -42,7 +42,9 @@ type PendingRefresh = {
  * `sessionStorage` cursor.
  *
  * Subclasses provide the refresh ({@link refresh}) through their controller, and own their singleton.
- * No polling fallback.
+ * No polling fallback of its own. On the social v1 tree no subclass registers: the synced files moved under
+ * `/priv/`, which the anonymous shared stream cannot follow, so `MuteListSyncCoordinator` and
+ * `NotificationLastReadPollCoordinator` poll them instead (ADR-0014, ADR-0029).
  */
 export abstract class EventStreamSyncCoordinator implements THomeserverEventStreamChannel {
   public readonly path: string;

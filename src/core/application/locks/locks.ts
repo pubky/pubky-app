@@ -8,12 +8,14 @@ import {
   getImageUploadSizeLimitKind,
   IMAGE_UPLOAD_SIZE_LIMIT_KIND_CONTEXT_KEY,
 } from '@/libs/image/imageUploadSizeLimit';
+import { isSvgType } from '@/libs/image/rasterizeSvg';
 import { stripImageMetadata } from '@/libs/image/stripImageMetadata';
 import { getArticlePreviewSlots } from '@/libs/post/articleInlineMedia';
 import { stripPubkyPrefix } from '@/libs/utils/utils';
 import type { LockModelSchema } from '@/models/locks/locks.schema';
 import { CompositeIdDomain } from '@/models/models.types';
 import { buildCompositeIdFromPubkyUri } from '@/models/models.utils';
+import { GuardedPostBuilder } from '@/pipes/locks/guardedPost.builder';
 import { GuardedContentParser, LockContentParser, LockProofBundler } from '@/pipes/locks/locks.parser';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { retryHomeserverWriteAfterReread, type THomeserverWriteFence } from '@/services/homeserver/write-retry';
@@ -727,7 +729,7 @@ export class LocksApplication {
    */
   static async createLockContent({
     attachments = [],
-    buildPost,
+    post: lockedPost,
     lockConfig,
     isCurrent,
   }: TCreateLockContentParams & TViewerScope): Promise<TCreateContentLockResult> {
@@ -745,12 +747,25 @@ export class LocksApplication {
     let result: TCreateContentLockResult;
     try {
       // The guarded bytes land on the Lock-Server-authenticated account, which may differ from the
-      // pubky.app user. Capture that owner from the upload response so `buildPost` can reference the
-      // attachments by their real host. With no attachments the owner stays undefined and no URIs are built.
+      // pubky.app user. Capture that owner from the upload response so the guarded post references
+      // the attachments by their real host (`pubky` prefix stripped to the raw z32 host the `pubky://`
+      // scheme expects). With no attachments there is no owner and no URI to build.
       const uploads = await this.uploadAttachments(files, uploadedPaths);
       const owner = uploads.at(-1)?.creator;
       attachmentResources = uploads.map((uploaded) => uploaded.resource);
-      postFile = buildPost(attachmentResources, owner);
+      // Never substitute the pubky.app account: the two can differ, and a wrong host here writes
+      // unreachable attachment URIs into the locked post.
+      if (attachmentResources.length > 0 && !owner) {
+        throw Err.validation(ValidationErrorCode.INVALID_INPUT, 'Guarded attachments without an owner pubky', {
+          service: ErrorService.Locks,
+          operation: 'createLockContent',
+        });
+      }
+      const host = owner ? stripPubkyPrefix(owner) : '';
+      postFile = GuardedPostBuilder.toPrimary({
+        ...lockedPost,
+        attachmentUris: attachmentResources.map((resource) => `pubky://${host}${resource.path}`),
+      });
       const post = await this.upload(postFile, uploadedPaths);
 
       // The payout recipient has to equal the lock's creator, and the upload response names that
@@ -890,10 +905,10 @@ export class LocksApplication {
   /**
    * Uploads one file under a freshly minted path and returns its descriptor.
    *
-   * The path is a random id, never the original filename: two attachments named `cover.png` would
+   * The path is a random id (plus `.svg` for an SVG), never the original filename: two attachments named `cover.png` would
    * resolve to the same path and the second upload would silently overwrite the first. This mirrors
-   * normal posts, where the blob path comes from a spec-generated id and the filename survives only
-   * as display metadata on `PubkyAppFile`.
+   * normal posts, where the file path is the content hash (`files/{hash}.{ext}`) and the filename
+   * survives only as display metadata, the attachment's `name`.
    *
    * The path goes into `uploadedPaths` only once the upload succeeds, so a failed publish never asks
    * the Lock Server to delete a path it may not hold.
@@ -902,7 +917,9 @@ export class LocksApplication {
     { contentType, bytes }: TLockContentFile,
     uploadedPaths: string[],
   ): Promise<TRegisterGuardedResourceResult> {
-    const path = crypto.randomUUID();
+    // The homeserver ignores the declared type and checks the first bytes before the path. The SVG clean-up
+    // leaves `<svg` first, which no check matches, so the extension makes the stored type `image/svg+xml` (#2683).
+    const path = isSvgType(contentType) ? `${crypto.randomUUID()}.svg` : crypto.randomUUID();
     const result = await LocksService.registerGuardedResource({ path, contentType, bytes });
     uploadedPaths.push(path);
     return result;

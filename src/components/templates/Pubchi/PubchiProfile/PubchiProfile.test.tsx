@@ -1,5 +1,4 @@
 import { render, screen, waitFor } from '@testing-library/react';
-import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PubchiProfile } from './PubchiProfile';
 
@@ -62,10 +61,10 @@ describe('PubchiProfile', () => {
         name: 'Builders',
         tags: ['builders'],
         domain_tags: [],
-        reach: PubkyAppFeedReach.Following,
-        sort: PubkyAppFeedSort.Recent,
+        reach: 'following',
+        sort: 'recent',
         content: null,
-        layout: PubkyAppFeedLayout.Columns,
+        layout: 'columns',
         created_at: 1_768_454_400_000,
         updated_at: 1_768_454_400_000,
       },
@@ -74,10 +73,10 @@ describe('PubchiProfile', () => {
         name: 'Builders',
         tags: ['user'],
         domain_tags: [],
-        reach: PubkyAppFeedReach.All,
-        sort: PubkyAppFeedSort.Recent,
+        reach: 'all',
+        sort: 'recent',
         content: null,
-        layout: PubkyAppFeedLayout.Columns,
+        layout: 'columns',
         created_at: 1_768_454_400_000,
         updated_at: 1_768_454_400_000,
       },

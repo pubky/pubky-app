@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { clearDatabase } from '@/database/franky/franky.helpers';
+import { AUTH_CLEANUP_CHANGED_EVENT } from '@/libs/auth/persistence';
 import type { PersistedAuth } from '@/libs/auth/session.types';
-import { AUTH_PERSIST_KEY } from '@/stores/persistedKeys';
+import { AUTH_MIGRATION_KEY, AUTH_PERSIST_KEY, LEGACY_AUTH_PERSIST_KEY } from '@/stores/persistedKeys';
 import { mockGrantReference } from '@/test-utils/pubky';
 import { LocalAuthService } from './auth';
 
@@ -211,6 +212,37 @@ it('preserves the underlying storage failure for diagnostics', () => {
   expect(() => LocalAuthService.read()).toThrow(expect.objectContaining({ code: 'QUERY_FAILED', cause }));
 });
 
+it('notifies the landing when a delayed legacy record is removed under its lock', async () => {
+  const raw = JSON.stringify({ state: { sessionExport: 'old' } });
+  localStorage.setItem(AUTH_MIGRATION_KEY, '1');
+  localStorage.setItem(LEGACY_AUTH_PERSIST_KEY, raw);
+  const lock = Promise.withResolvers<void>();
+  Object.defineProperty(navigator, 'locks', {
+    configurable: true,
+    value: {
+      request: async (_name: string, callback: () => void) => {
+        await lock.promise;
+        callback();
+      },
+    },
+  });
+  const observed = vi.fn(() => localStorage.getItem(LEGACY_AUTH_PERSIST_KEY));
+  window.addEventListener(AUTH_CLEANUP_CHANGED_EVENT, observed);
+  try {
+    const deletion = LocalAuthService.clearLegacyCookieRecord({ key: LEGACY_AUTH_PERSIST_KEY, raw });
+    await Promise.resolve();
+    expect(observed).not.toHaveBeenCalled();
+    lock.resolve();
+    await deletion;
+    expect(observed).toHaveBeenCalledOnce();
+    expect(observed).toHaveReturnedWith(null);
+    await LocalAuthService.clearLegacyCookieRecord({ key: LEGACY_AUTH_PERSIST_KEY, raw });
+    expect(observed).toHaveBeenCalledOnce();
+  } finally {
+    window.removeEventListener(AUTH_CLEANUP_CHANGED_EVENT, observed);
+  }
+});
+
 it('does not resurrect a retirement completed after the caller read its snapshot', async () => {
   const predecessor = mockGrantReference('predecessor');
   localStorage.setItem(
@@ -218,7 +250,10 @@ it('does not resurrect a retirement completed after the caller read its snapshot
     JSON.stringify({ version: 3, state: { ...record, pendingRetirements: [predecessor] } }),
   );
   const stale = LocalAuthService.read()!;
+  const observed = vi.fn(() => LocalAuthService.read()?.pendingRetirements);
+  window.addEventListener(AUTH_CLEANUP_CHANGED_EVENT, observed, { once: true });
   await LocalAuthService.finishRetirement(predecessor.sessionStoreId);
+  expect(observed).toHaveReturnedWith([]);
   await LocalAuthService.commit({ ...stale, generation: 'later' }, record.generation);
   expect(LocalAuthService.read()?.pendingRetirements).toEqual([]);
 });

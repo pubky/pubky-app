@@ -1,7 +1,6 @@
 import { Keypair } from '@synonymdev/pubky';
 import * as bip39 from 'bip39';
 import { describe, expect, it, vi } from 'vitest';
-import { Identity } from '@/libs/identity/identity';
 import { mintBotKey, phraseToBot } from './bot-key-custody';
 
 const TEST_PHRASE = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
@@ -10,12 +9,6 @@ const EXPECTED_BOT = 'aihfhgdfshrj8nz9ofo7khayc1mgcqa4wrrdjahs5tmgo4pna3iy';
 describe('bot key custody', () => {
   it('matches the Ring-compatible BIP39 first-32-byte derivation vector', () => {
     expect(phraseToBot(TEST_PHRASE)).toBe(EXPECTED_BOT);
-    const keypair = Identity.keypairFromMnemonic(TEST_PHRASE);
-    try {
-      expect(keypair.publicKey.z32()).toBe(EXPECTED_BOT);
-    } finally {
-      keypair.free();
-    }
   });
 
   it('zeros every byte buffer allocated by the custody module', () => {

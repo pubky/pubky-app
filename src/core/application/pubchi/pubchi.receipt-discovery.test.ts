@@ -1,4 +1,5 @@
 import { Keypair } from '@synonymdev/pubky';
+import { buildTag, buildUri } from 'pubky-social-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TagKind } from '@/application/tag/tag.types';
 import { PubchiController } from '@/controllers/pubchi/pubchi';
@@ -19,7 +20,7 @@ const owner = Keypair.random().publicKey.z32();
 const otherOwner = Keypair.random().publicKey.z32();
 const targetAuthor = Keypair.random().publicKey.z32();
 const bot = Keypair.random().publicKey.z32();
-const targetUri = `pubky://${targetAuthor}/pub/pubky.app/posts/0035Q0HAH8V6G`;
+const targetUri = buildUri(targetAuthor, 'post', '0035Q0HAH8V6G');
 const identity = { current: owner };
 const tagDocumentSha256 = 'e'.repeat(64);
 
@@ -75,6 +76,7 @@ function receiptUrl(applicationId: string, receiptOwner = owner) {
 describe('Pubchi durable tag receipt discovery', () => {
   beforeEach(() => {
     identity.current = owner;
+    vi.spyOn(HomeserverService, 'getFreshBytes').mockResolvedValue(buildTag(owner, targetUri, 'label-a').body);
     vi.mocked(getPubchiDatabase).mockReturnValue(
       asOpaque<ReturnType<typeof getPubchiDatabase>>({
         tagApplications: {
@@ -113,12 +115,13 @@ describe('Pubchi durable tag receipt discovery', () => {
             target: { kind: 'post', uri: `${targetUri}-other`, snapshot_sha256: 'c'.repeat(64) },
           }),
         );
-      return JSON.stringify({
-        uri: targetUri,
-        label: url.includes(`label-${superseded[0]}`) ? `label-${superseded[0]}` : `label-${applied[0]}`,
-        created_at: 1,
-      });
+      throw notFound();
     });
+    const tagA = buildTag(owner, targetUri, 'label-a');
+    const tagB = buildTag(owner, targetUri, 'label-b');
+    vi.mocked(HomeserverService.getFreshBytes).mockImplementation(async (url) =>
+      url === tagB.url ? tagB.body : tagA.body,
+    );
 
     await expect(PubchiApplication.discoverTagSuggestions(owner, targetUri)).resolves.toMatchObject([
       { applicationId: applied, status: 'applied', alreadyExisted: false },
@@ -136,12 +139,12 @@ describe('Pubchi durable tag receipt discovery', () => {
   ] as const)('maps %s', async (_name, status, alreadyExisted, tagState, expected) => {
     const id = 'a'.repeat(64);
     vi.spyOn(HomeserverService, 'list').mockResolvedValue([receiptUrl(id)]);
-    vi.spyOn(HomeserverService, 'requestRawText').mockImplementation(async (url) => {
-      if (url === receiptUrl(id)) return JSON.stringify(receipt(id, { status, already_existed: alreadyExisted }));
-      if (tagState === 'absent') throw notFound();
-      if (tagState === 'indeterminate') return JSON.stringify({ uri: targetUri, label: 'wrong', created_at: 1 });
-      return JSON.stringify({ uri: targetUri, label: 'label-a', created_at: 1 });
-    });
+    vi.spyOn(HomeserverService, 'requestRawText').mockResolvedValue(
+      JSON.stringify(receipt(id, { status, already_existed: alreadyExisted })),
+    );
+    if (tagState === 'absent') vi.mocked(HomeserverService.getFreshBytes).mockResolvedValue(null);
+    if (tagState === 'indeterminate')
+      vi.mocked(HomeserverService.getFreshBytes).mockResolvedValue(buildTag(owner, targetUri, 'wrong').body);
 
     const [result] = await PubchiApplication.discoverTagSuggestions(owner, targetUri);
     expect(result?.status).toBe(expected);
@@ -236,7 +239,7 @@ describe('Pubchi durable tag receipt discovery', () => {
     });
     vi.spyOn(HomeserverService, 'requestRawText').mockImplementation(async (url) => {
       if (url === receiptUrl(id)) return JSON.stringify(stored);
-      return JSON.stringify({ uri: targetUri, label: 'label-a', created_at: 1 });
+      throw notFound();
     });
     vi.spyOn(HomeserverService, 'request').mockImplementation(async (input) => {
       if (input.method === HttpMethod.PUT) stored = input.bodyJson as typeof stored;
@@ -270,12 +273,11 @@ describe('Pubchi durable tag receipt discovery', () => {
     ['mismatched receipt tag URI', { tag_uri: targetUri }, 'present'],
   ] as const)('never deletes for %s', async (_name, overrides, publicState) => {
     const id = 'a'.repeat(64);
-    vi.spyOn(HomeserverService, 'requestRawText').mockImplementation(async (url) => {
-      if (url === receiptUrl(id)) return JSON.stringify(receipt(id, overrides));
-      if (publicState === 'indeterminate') throw new Error('offline');
-      if (publicState === 'mismatch') return JSON.stringify({ uri: targetUri, label: 'different', created_at: 1 });
-      return JSON.stringify({ uri: targetUri, label: 'label-a', created_at: 1 });
-    });
+    vi.spyOn(HomeserverService, 'requestRawText').mockResolvedValue(JSON.stringify(receipt(id, overrides)));
+    if (publicState === 'indeterminate')
+      vi.mocked(HomeserverService.getFreshBytes).mockRejectedValue(new Error('offline'));
+    if (publicState === 'mismatch')
+      vi.mocked(HomeserverService.getFreshBytes).mockResolvedValue(buildTag(owner, targetUri, 'different').body);
     const remove = vi.spyOn(TagController, 'commitDeleteIfUnchanged');
 
     await expect(PubchiController.revertDiscoveredTagSuggestion(targetUri, id)).rejects.toBeDefined();
@@ -289,7 +291,7 @@ describe('Pubchi durable tag receipt discovery', () => {
         identity.current = otherOwner;
         return JSON.stringify(receipt(id));
       }
-      return JSON.stringify({ uri: targetUri, label: 'label-a', created_at: 1 });
+      throw notFound();
     });
     const write = vi.spyOn(HomeserverService, 'request');
     const remove = vi.spyOn(TagController, 'commitDeleteIfUnchanged');
@@ -309,7 +311,7 @@ describe('Pubchi durable tag receipt discovery', () => {
         if (receiptReads === 1) return JSON.stringify(receipt(id));
         throw new Error('receipt unavailable');
       }
-      return JSON.stringify({ uri: targetUri, label: 'label-a', created_at: 1 });
+      throw notFound();
     });
     vi.spyOn(TagController, 'materializeForDelete').mockResolvedValue();
     vi.spyOn(TagController, 'commitDeleteIfUnchanged').mockResolvedValue();
@@ -327,7 +329,7 @@ describe('Pubchi durable tag receipt discovery', () => {
         receiptReads++;
         return JSON.stringify(receipt(id, receiptReads > 1 ? { tag_document_sha256: 'f'.repeat(64) } : {}));
       }
-      return JSON.stringify({ uri: targetUri, label: 'label-a', created_at: 1 });
+      throw notFound();
     });
     vi.spyOn(TagController, 'materializeForDelete').mockResolvedValue();
     const remove = vi.spyOn(TagController, 'commitDeleteIfUnchanged').mockResolvedValue();

@@ -63,8 +63,10 @@ Modules are imported directly through the path aliases in `tsconfig.json`. Keep 
 - Call controllers (like UI does)
 - **NEVER** call application directly
 - **NEVER** call services directly
-- **Mute list (homeserver events stream)**: `MuteListSyncCoordinator` (`src/core/coordinators/mute-list-sync/`) refreshes the local mute list when another session changes `/pub/pubky.app/mutes/`; see `docs/adr/0014-muting-system.md`. The tab holds one homeserver event stream for every synced path: `HomeserverEventStreamCoordinator` (`src/core/coordinators/homeserver-event-stream/`) owns the connection (gating, one connection at a time, abort on teardown, backoff, outage report), and each path is a channel extending the abstract `EventStreamSyncCoordinator` (`src/core/coordinators/base/event-stream-sync-coordinator.ts`: debounced refresh, cursor). A new homeserver-synced path adds a channel, never a second stream: the homeserver is HTTP/1.1, and the browser's six connections per host are shared by every tab (#3066, ADR-0029).
-- **Notification read boundary (homeserver events stream)**: `NotificationLastReadSyncCoordinator` (`src/core/coordinators/notification-last-read-sync/`) adopts a newer `last_read` written by another session and recounts the unread badge; see `docs/adr/0029-cross-device-last-read-sync.md`.
+- **Mute list (homeserver poll)**: `MuteListSyncCoordinator` (`src/core/coordinators/mute-list-sync/`) refreshes the local mute list when another session changes `/priv/social/v1/mutes/`, by polling every 30 s and on visibility and `online`; no session-bound request may stay open, because a session-bound stream's lease is unbounded while its response headers are outstanding (pubky/pubky-homeserver#798). See `docs/adr/0014-muting-system.md`.
+- **Gate**: `CoordinatorsManager` starts no coordinator while `useAuthStatus()` reports `NEEDS_SOCIAL_MIGRATION` (the social v1 migration gate, ADR-0026); a new coordinator inherits that rule by being started there.
+- **Homeserver event stream (shared)**: The tab holds one homeserver event stream for every synced path: `HomeserverEventStreamCoordinator` (`src/core/coordinators/homeserver-event-stream/`) owns the connection (gating, one connection at a time, abort on teardown, backoff, outage report), and each path is a channel extending the abstract `EventStreamSyncCoordinator` (`src/core/coordinators/base/event-stream-sync-coordinator.ts`: debounced refresh, cursor). On the social v1 tree no channel registers, so the hub opens no request: the synced files are private, and a private stream needs a session (ADR-0014). A new homeserver-synced public path adds a channel, never a second stream: the homeserver is HTTP/1.1, and the browser's six connections per host are shared by every tab (#3066, ADR-0029).
+- **Notification read boundary (homeserver poll)**: `NotificationLastReadPollCoordinator` (`src/core/coordinators/notification-last-read-poll/`) adopts a newer `last_read` written by another session and recounts the unread badge, by polling the private v1 file on the mute cadence; see `docs/adr/0029-cross-device-last-read-sync.md`. `NotificationLastReadSyncCoordinator` (`src/core/coordinators/notification-last-read-sync/`), the event-stream channel that followed the public 0.x file on `dev` (its path constant now names the private v1 file), stays in the tree and is not started on the social v1 tree: the v1 file is private.
 
 ### Application (`src/core/application/`)
 
@@ -96,7 +98,7 @@ Modules are imported directly through the path aliases in `tsconfig.json`. Keep 
 ### Pipes (`src/core/pipes/`)
 
 - Normalize and validate data
-- Transform external shapes to domain shapes via `pubky-app-specs`
+- Transform external shapes to domain shapes via `pubky-social-specs`
 - Pure functions only
 - **NEVER** perform IO
 - **NEVER** access database or network
@@ -115,9 +117,10 @@ Modules are imported directly through the path aliases in `tsconfig.json`. Keep 
 
 ### Database (`src/core/database/`)
 
-- The main App cache has a single Dexie schema version (`DB_VERSION`), safe initialization and recovery.
-- A main-cache version mismatch deletes and recreates that database; it has no migration chain (ADR-0019, `docs/data-patterns.md` — _Schema changes_).
-- Proposed with the Pubchi draft integration: the isolated `pubchi` database holds durable device keys and pending write records, preserves its version history, and survives main-cache recreation. Owner-scoped logout cleanup is separate; see [ADR 0026](adr/0026-pubchi-assisted-integration.md). This does not change the main `DB_VERSION` policy.
+- The main App cache has one Dexie schema version (`DB_VERSION`), with safe initialization and recovery
+- Bounded runtime reconnect and one replay for eligible local reads or fully aborted local transactions, preserving each caller's Dexie scope and lifecycle fences ([ADR-0030](adr/0030-bounded-indexeddb-connection-recovery.md))
+- A version mismatch deletes and recreates the main cache; there is no migration chain (ADR-0019, `docs/data-patterns.md` — _Schema changes_)
+- Proposed with the Pubchi draft integration: the isolated `pubchi` database holds durable device keys and pending write records, preserves its version history, and survives main-cache recreation. Owner-scoped logout cleanup is separate; see [ADR 0031](adr/0031-pubchi-assisted-integration.md). This does not change the main `DB_VERSION` policy.
 
 ## Allowed Dependencies
 
@@ -127,6 +130,7 @@ Coordinators → Controllers (system-initiated actions)
 Controllers → Pipes, Application, Stores
 Application → Pipes, Services (local, homeserver, nexus, homegate, chatwoot, exchangerate, nextjs)
 Application → Application (cross-domain, acyclic, max depth 1 by default; see ADR-0009 for the depth-2 attachment-persistence exception)
+Services → Pipes (pure transforms; the Nexus services apply the `*.fromNexus` read-boundary mappers)
 Services:
   local → Models
   homeserver → network only
@@ -176,6 +180,8 @@ PostApplication | NotificationApplication | TtlApplication
 // FORBIDDEN: Every other depth-2 path and all paths of depth 3 or greater
 PostApplication → FileApplication → ImageProcessorApplication  // VIOLATION
 ```
+
+The two root-node orchestrators, `BootstrapApplication` and `MigrationApplication` (the DB-reset resync), also call the leaf `BookmarkApplication.fetchBookmarks` beside the mute and feed fetches, still at depth 1 (ADR-0028's note on ADR-0009). `SocialMigrationApplication` (the migration gate's leaf, ADR-0026) calls no other Application and is called by its controller only.
 
 Since the architecture uses static classes without dependency injection, these constraints **cannot be enforced at compile time**. They are enforced through code reviews and documentation. See ADR-0009.
 
@@ -231,12 +237,11 @@ class PostNormalizer {
   }
 }
 
-// GOOD — pipe is pure transformation
+// GOOD — pipe is pure transformation: the data model package names, validates and encodes the object
 // Real: src/core/pipes/user/user.normalizer.ts
 class UserNormalizer {
   static to({ name, bio, image, links, status }, pubky) {
-    const builder = PubkySpecsSingleton.get(pubky);
-    return builder.createProfile(name, bio, image, links, status);
+    return buildUser(pubky, { name, bio, image, links, status }); // { url, body, object }, PUT as-is by the application
   }
 }
 ```
@@ -294,7 +299,7 @@ src/core/
 ├── pipes/[domain]/        # Data transformation
 ├── models/[domain]/       # Dexie tables
 ├── stores/[domain]/       # UI state (Zustand)
-├── database/              # Main-cache schema; isolated durable Pubchi state (proposed ADR-0026)
+├── database/              # Main-cache schema; isolated durable Pubchi state (proposed ADR-0031)
 └── utils/                 # Utility functions
 ```
 
@@ -303,11 +308,13 @@ src/core/
 Trace call sites and mirror the existing pattern before changing any of these. No opportunistic refactors.
 
 - `src/core/database/franky/franky.ts` + `src/config/database.ts` — one `this.version(DB_VERSION).stores({...})` definition. A `DB_VERSION` mismatch deletes and recreates the local database (`recreateDatabase`), i.e. user-visible local data loss until the next sync. Bumping the version or editing a table's index map is a deliberate, reviewed change with its own callout in the PR, never a side effect of a feature (ADR-0019).
-- `src/core/services/homeserver/**` and `src/core/pipes/**` — wire-format boundaries (`pubky-app-specs`, composite ids, signup tokens, auth URLs). Preserve payload shapes; do not change a format incidentally while adding a feature.
+- `src/core/services/homeserver/**` and `src/core/pipes/**` — wire-format boundaries (`pubky-social-specs`, composite ids, signup tokens, auth URLs). Preserve payload shapes; do not change a format incidentally while adding a feature. Every homeserver object is built, decoded and encoded by the package (`buildPost`, `editPost`, `buildUri`, `decodeObject`, `encodeObject`, …) and written with `HomeserverService.putBlob(built.body)` / `deleteIdempotent`; `pubky-social-specs/client` is never imported outside `src/test-utils`, and the two gate tests beside the service (`write-call-sites.gate.test.ts`, `social-v1-compliance.gate.test.ts`) fail on a bypass, a 0.x spelling outside `PERMANENT`, a Nexus `/v0` path outside the one documented call or a session-bound event stream (`docs/migrations/social-v1.md`).
+- `HomeserverService.migrateToSocialV1` (the `pubky-social-migrator` port adapter), `src/core/controllers/social-migration/**` and `src/core/application/social-migration/**` (the migration gate, ADR-0026) — run before the session enters the auth store, take the session explicitly, own the one documented second retry policy, and decide whether an account may use the app at all. A change here is a sign-in change: keep the state machine's tests over the real migrator and the explicit-session reads intact.
+- The Nexus read boundary, `src/core/services/nexus/**` with the `*.fromNexus` mappers in `src/core/pipes/**` — every URL is built under `NEXUS_API_VERSION` (`/v1`) and every response is folded once (`note`/`article` → `short`/`long`, `relationship` from `tag_uri`) before anything is stored or compared; the one `/v0` call is `filesApi.getFiles` (ADR-0027, _Nexus API version_).
 - `src/core/services/local/**` — writer of Dexie + TTL invariants; getting the order wrong corrupts caches silently. Persist dependencies before dependents, refresh `*_ttl` rows on every write, and use the dirty registry rather than deleting stream rows eagerly (`docs/local-first.md`).
 - `src/core/application/**` cross-domain calls — verify the ADR-0009 allow-list above before wiring two Applications together.
 - `src/libs/env/env.ts` + `src/libs/runtime-config/**` — the only places allowed to read `process.env.NEXT_PUBLIC_*` / `process.env.PUBKY_RUNTIME_*` (ESLint-enforced). Runtime config is injected into the browser as `window.__PUBKY_CONFIG__`, so never put a secret there (`docs/environment.md`).
-- `src/libs/{password,identity,phone}`, `src/components/organisms/{DialogBackup*,DialogRestore*,Human*}` — cryptographic, identity and onboarding-verification flows.
+- `src/libs/{password,identity,phone}`, `src/components/organisms/{DialogBackup*,Human*}` — cryptographic, identity and onboarding-verification flows.
 - `src/core/services/nextjs/og-metadata/**` + `src/libs/network/network.ts` — server-side fetching of user-supplied URLs for link previews, deliberately SSRF-guarded (`checkDnsSafety`, `isIpSafe`, DNS-rebinding checks). Any change here is a security change: keep the guards and their tests intact.
 - `src/sw.ts`, `next.config.ts`, `src/instrumentation*.ts`, `src/sentry.*.config.ts`, `.github/workflows/**` — build and runtime plumbing with cross-cutting effects. Change them only when the task is about them; `public/sw.js` is generated from `src/sw.ts`, never edit it by hand.
 
@@ -342,7 +349,12 @@ ADRs capture the _why_ behind key architectural decisions. Stored in `docs/adr/`
 | 0023 | Article inline media as attachment slots                                  |
 | 0024 | Grant-only authentication                                                 |
 | 0025 | App-owned grant for same-origin Shop                                      |
-| 0026 | Pubchi assisted integration and durable local state (proposed)            |
+| 0026 | Social v1 migration gate                                                  |
+| 0027 | Social v1 versioned edits and data model                                  |
+| 0028 | Private, locally owned bookmarks                                          |
+| 0029 | Cross-device notification `last_read` sync                                |
+| 0030 | Bounded IndexedDB connection recovery                                     |
+| 0031 | Pubchi assisted integration and durable local state (proposed)            |
 
 ## Quick Checklist
 

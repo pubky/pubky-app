@@ -1,4 +1,3 @@
-import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort } from 'pubky-app-specs';
 import { describe, expect, it, vi } from 'vitest';
 import { PubchiProfile } from '@/templates/Pubchi/PubchiProfile/PubchiProfile';
 import { matchVrtElementScreenshot, renderForVRT } from '@/test-utils/vrt';
@@ -41,10 +40,10 @@ vi.mock('@/controllers/feed/feed', () => ({
         icon: 'sparkles',
         tags: ['builders', 'rust'],
         domain_tags: [],
-        reach: PubkyAppFeedReach.Following,
-        sort: PubkyAppFeedSort.Recent,
+        reach: 'following',
+        sort: 'recent',
         content: null,
-        layout: PubkyAppFeedLayout.Columns,
+        layout: 'columns',
         created_at: 1_768_454_400_000,
         updated_at: 1_768_454_400_000,
       },
@@ -54,10 +53,10 @@ vi.mock('@/controllers/feed/feed', () => ({
         icon: 'sparkles',
         tags: ['bitcoin'],
         domain_tags: [],
-        reach: PubkyAppFeedReach.Following,
-        sort: PubkyAppFeedSort.Recent,
+        reach: 'following',
+        sort: 'recent',
         content: null,
-        layout: PubkyAppFeedLayout.Columns,
+        layout: 'columns',
         created_at: 1_768_454_400_000,
         updated_at: 1_768_454_400_000,
       },
