@@ -49,13 +49,15 @@ audience. This frontend port does not attest which service revision is running a
 public URL. Record the backend revision with deployment evidence before enabling it.
 
 The service must accept Social v1 profile and versionless post references in signed
-requests and return Social v1 URIs in answers and receipts. For a post target,
-both sides hash the snapshot from the latest decoded version, using the stored
-`note` or `article` kind. Tag IDs bind the target and label. Bookmarks, mutes and saved feeds live under the owner's private Social v1
-tree and cannot serve as public graph evidence. The service deployment branch at
-[`7751be4`](https://github.com/BitcoinErrorLog/pubky-ai-bot/blob/7751be49e86684817b85f7e8f55a2d71308d6e37/packages/pubchi-schemas/src/ask-body.ts)
-still validates 0.x targets. Verify a compatible service revision with a contextual
-post query, profile query, and assisted apply/undo before enabling this App build.
+requests and return Social v1 URIs in answers. The App records those URIs in receipts
+for approved writes. For a post target, both sides hash the snapshot from the latest
+decoded version using its stored kind, such as `note` or `article`. Tag IDs bind the
+target and label. Bookmarks, mutes and saved feeds live under the owner's private
+Social v1 tree and cannot serve as public graph evidence.
+
+The service changes proposed in [backend PR #49](https://github.com/BitcoinErrorLog/pubky-ai-bot/pull/49)
+are pending deployment. Before enabling this App build, verify the deployed revision
+with a contextual post query, a profile query, and an assisted action followed by undo.
 
 The current feed builder requires `PUBCHI_FEED_PROPOSAL_V2=1` on the **service** as
 well as the App's request-level `proposal_version: 2`. Without that service flag,
