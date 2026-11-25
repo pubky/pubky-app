@@ -1,3 +1,4 @@
+import { liveQuery } from 'dexie';
 import { INDEXER_DATABASE_PREFIX, INDEXER_VISITOR_DATABASE } from '@/config/indexer';
 import { browserApis, type BrowserCoordination, createBrowserCoordination } from '@/libs/indexer/browserCoordination';
 import { createIdbStore, type IdbIndexStore } from '@/libs/indexer/idbStore';
@@ -5,8 +6,10 @@ import type { SocialData } from '@/libs/indexer/social/social.types';
 import { createSocialIndexer, type SocialChange, type SocialIndexer } from '@/libs/indexer/social/socialIndexer';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
+import { UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { postStreamDirtyRegistry } from '@/services/local/stream/posts/postStreamDirtyRegistry';
+import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import { clearLocalMedia, serveLocalMedia } from './indexer.media';
 import { createIndexerTransport } from './indexer.transport';
 
@@ -36,6 +39,18 @@ function invalidatePostStreams({ kinds }: SocialChange): void {
     postStreamDirtyRegistry.markDirty('follow_graph');
     postStreamDirtyRegistry.markDirty('friends');
   }
+}
+
+/**
+ * Keeps the account's muted users, and whoever the index reaches only through them, out of its answers. The local
+ * muted stream is where a mute, its rollback and the homeserver poll all land, so watching it follows each of them.
+ */
+function excludeMutedUsers(indexer: SocialIndexer): () => void {
+  const subscription = liveQuery(() => LocalStreamUsersService.findById(UserStreamTypes.MUTED)).subscribe({
+    next: (muted) => indexer.setExcluded(muted?.stream ?? []),
+    error: (error: unknown) => Logger.debug('Muted users not read for the local index', { error }),
+  });
+  return () => subscription.unsubscribe();
 }
 
 /**
@@ -83,6 +98,7 @@ export class IndexerService {
               .catch((error: unknown) => Logger.debug('Local index refresh ended', { error }));
           });
     const stopInvalidating = indexer.onChange(invalidatePostStreams);
+    const stopExcluding = owner === null ? () => {} : excludeMutedUsers(indexer);
     // Without Nexus, avatars and attachments are same-origin paths the service worker asks this page to fill.
     const stopServingMedia = serveLocalMedia({
       profile: (user) => indexer.view().profile(user),
@@ -98,6 +114,7 @@ export class IndexerService {
       unsubscribe: () => {
         stopRefreshing();
         stopInvalidating();
+        stopExcluding();
         stopServingMedia();
       },
     };

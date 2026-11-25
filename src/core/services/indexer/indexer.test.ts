@@ -1,10 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { db } from '@/database/franky/franky';
 import { type BrowserCoordination, createBrowserCoordination } from '@/libs/indexer/browserCoordination';
 import { createIdbStore } from '@/libs/indexer/idbStore';
 import { createSocialIndexer, type SocialChange } from '@/libs/indexer/social/socialIndexer';
 import type { Pubky } from '@/models/models.types';
+import { UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { postStreamDirtyRegistry } from '@/services/local/stream/posts/postStreamDirtyRegistry';
+import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { IndexerService } from './indexer';
 
@@ -13,6 +16,7 @@ const fakes = vi.hoisted(() => ({
     start: ReturnType<typeof vi.fn>;
     stop: ReturnType<typeof vi.fn>;
     refresh: ReturnType<typeof vi.fn>;
+    setExcluded: ReturnType<typeof vi.fn>;
     change: (change: SocialChange) => void;
   }>,
   writeListeners: new Set<(path: string) => void>(),
@@ -35,6 +39,7 @@ vi.mock('@/libs/indexer/social/socialIndexer', () => ({
       pause: vi.fn(),
       resume: vi.fn(),
       refresh: vi.fn().mockResolvedValue(undefined),
+      setExcluded: vi.fn(),
       onChange: (listener: (change: SocialChange) => void) => {
         listeners.add(listener);
         return () => listeners.delete(listener);
@@ -190,6 +195,25 @@ describe('IndexerService', () => {
     expect(fakes.stores[0].close).toHaveBeenCalledOnce();
     expect(fakes.indexers[1].start).toHaveBeenCalledExactlyOnceWith(BOB);
     expect(IndexerService.current()).toBe(fakes.indexers[1]);
+  });
+
+  it('keeps the account’s muted users out of the index, following each change of them', async () => {
+    await db.initialize();
+    await LocalStreamUsersService.upsert({ streamId: UserStreamTypes.MUTED, stream: [BOB] });
+    IndexerService.start(ALICE);
+
+    await vi.waitFor(() => expect(fakes.indexers[0].setExcluded).toHaveBeenLastCalledWith([BOB]));
+    await LocalStreamUsersService.upsert({ streamId: UserStreamTypes.MUTED, stream: [] });
+    await vi.waitFor(() => expect(fakes.indexers[0].setExcluded).toHaveBeenLastCalledWith([]));
+  });
+
+  it('excludes no one from a visitor’s index', async () => {
+    await db.initialize();
+    await LocalStreamUsersService.upsert({ streamId: UserStreamTypes.MUTED, stream: [BOB] });
+    IndexerService.start(null);
+    await LocalStreamUsersService.findById(UserStreamTypes.MUTED);
+
+    expect(fakes.indexers[0].setExcluded).not.toHaveBeenCalled();
   });
 
   it('closes the tab coordination after the index stops', () => {
