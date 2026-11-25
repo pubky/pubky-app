@@ -50,8 +50,8 @@ function ResourcePageRead({ uri, onRetry }: ResourcePageProps & { onRetry: () =>
   useResourceTitle(card?.name);
   // One read of the replies for the thread under the card and the Participants panel.
   const threadUri = getThreadUri(uri, read, isPinakesConfigured());
-  // The thread is on the card's link to act on; the replies to its other spellings are its own too.
-  const spellings = card && uri ? getResourceTarget(card, uri).spellings : undefined;
+  // The thread is on the link to act on; the replies to its other spellings are its own too.
+  const spellings = uri ? getResourceTarget(card, uri).spellings : undefined;
   const replies = useResourceReplies(threadUri, { spellings });
   // The right column's copy has the Feedback card and the page's one `#other-dates` anchor
   const sidebar = (isRightColumn: boolean) => (

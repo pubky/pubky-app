@@ -64,8 +64,8 @@ interface GenericResourcePreviewProps {
  * is only in the post's text keeps `GenericPreview`, see `Generic.renderEmbed`): its Pinakes card when Pinakes
  * has one, else the link's own preview in the same frame (`ResourceLinkCard`), both closed by the
  * post's own footer (`ResourceActions`: tags, actions and a ⋯ menu that copies the link and the
- * title), which reads the link's tags once the card is first on screen, on the card's link to act on
- * with the card's link and its other spellings read along (`getResourceTarget`): every
+ * title), which reads the link's tags once the card is first on screen, on the link to act on (the
+ * link as written, folded) with the card's link and its other spellings read along (`getResourceTarget`): every
  * spelling's tags, replies and saves show as one. A card on other services too (`also_on`) lists
  * them in the ⋯ menu under "Also on". A card that is pending or failed and has no name says less
  * than the link's own preview, and a failed read, or one slower than `PINAKES_SLOW_READ_MS` until it
@@ -159,7 +159,8 @@ function ResourcePreview({
   // A card on other services too lists them in its ⋯ menu ("Also on"): one row per service, never
   // the card's own (`pickAlsoOn`).
   const alsoOn = shownCard ? getMenuAlsoOn(shownCard, url) : null;
-  // The footer acts on the link `getResourceTarget` picks for the card, its other spellings read along.
+  // The footer acts on the link `getResourceTarget` picks (the link as written, folded), card or not;
+  // the card's link and its other spellings read along.
   const target = getResourceTarget(shownCard, url);
   const actions = (
     <ResourceActions

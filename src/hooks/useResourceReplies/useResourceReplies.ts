@@ -45,7 +45,7 @@ type TLoaded = { key: string; ids: string[]; reachedEnd: boolean; isCapped?: boo
  * the replies to each spelling Nexus knows are read and shown as one thread, newest first by when
  * they were written.
  *
- * @param uri - The link the replies' `parent` spells (as written, or the link `getResourceTarget` picks for the card);
+ * @param uri - The link the replies' `parent` spells (the link `getResourceTarget` picks: as written, folded);
  *   `null` reads nothing
  */
 export function useResourceReplies(

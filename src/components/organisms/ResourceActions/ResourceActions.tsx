@@ -41,9 +41,9 @@ const ALL_DATES = 'All dates';
 
 interface ResourceActionsProps {
   /**
-   * The external resource's link: what is bookmarked, collected, tagged and replied to. Once Pinakes
-   * knows the card, the link `getResourceTarget` picks (a web link of it where it has one), else the
-   * link exactly as written.
+   * The external resource's link: what is bookmarked, collected, tagged and replied to, the link
+   * `getResourceTarget` picks: the link as written, folded the way every writer stores it, card or
+   * not; for an identifier, a web link of its card.
    */
   uri: string;
   /**

@@ -109,9 +109,9 @@ function ResourceBody({ uri, read, onRetry, replies }: ResourceDetailsProps) {
   const { data: card, isLoading, isError } = read;
   const pubkyApp = getPubkyAppTarget(uri);
 
-  // The thread is on the acted-on link: the one `getResourceTarget` picks, else the page's; none on the
-  // card's first read.
-  let threadUri: string | null = uri;
+  // The thread is on the acted-on link: the one `getResourceTarget` picks (the page's own link folded
+  // without a card); none on the card's first read.
+  let threadUri: string | null = getResourceTarget(null, uri).uri;
   let body: React.ReactNode;
   if (pubkyApp?.kind === 'file') {
     // The app's own file: never read from Pinakes.
@@ -149,7 +149,8 @@ function ResourceBody({ uri, read, onRetry, replies }: ResourceDetailsProps) {
       <ResourceUnknown uri={uri} replies={replies} dialogs={dialogs} />
     );
   } else {
-    // The link to act on (a web link of the card where it has one); its other links are its spellings.
+    // The link to act on (`getResourceTarget`: the page's own link folded, a web link of the card for an
+    // identifier); its other links are its spellings.
     const target = getResourceTarget(card, uri);
     threadUri = target.uri;
     body = (
@@ -412,14 +413,19 @@ interface LinkActionsProps {
   dialogs: PageDialogs;
 }
 
-/** The footer on the link as written, with no card; none for a URI the app does not write. */
+/**
+ * The footer on the link as written, with no card (folded as with one, `getResourceTarget`, its own
+ * spelling read along); none for a URI the app does not write.
+ */
 function getLinkActions({ uri, replies, dialogs }: LinkActionsProps) {
-  if (!isWritableResourceUri(uri)) return undefined;
+  const target = getResourceTarget(null, uri);
+  if (!isWritableResourceUri(target.uri)) return undefined;
   // A link that is not web (`isbn:`, `geo:`) has no web address to post about or copy.
   const linkUrl = getHttpUrl(uri);
   return (
     <ResourceActions
-      uri={uri}
+      uri={target.uri}
+      spellings={target.spellings}
       postUri={linkUrl}
       tagsLabel={getResourceTagsLabel(null)}
       linkUrl={linkUrl}

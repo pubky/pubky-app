@@ -713,7 +713,7 @@ describe('GenericResourcePreview', () => {
       expect(screen.getByRole('region', { name: /Spotify player/ })).toHaveAttribute('data-load', 'loading');
     });
 
-    it('acts on the card’s canonical link, the link as written read along, and posts about the link as written', () => {
+    it('acts on the link as written, the card’s canonical link read along, and posts about the link as written', () => {
       const tidal = {
         ...musicFixture,
         uri: 'https://tidal.com/track/3524506',
@@ -725,8 +725,8 @@ describe('GenericResourcePreview', () => {
       render(<GenericResourcePreview url="https://tidal.com/track/3524506/u" />);
 
       const actions = screen.getByTestId('resource-actions');
-      expect(actions).toHaveAttribute('data-uri', 'https://tidal.com/track/3524506');
-      expect(actions).toHaveAttribute('data-spellings', 'https://tidal.com/track/3524506/u');
+      expect(actions).toHaveAttribute('data-uri', 'https://tidal.com/track/3524506/u');
+      expect(actions).toHaveAttribute('data-spellings', 'https://tidal.com/track/3524506');
       expect(actions).toHaveAttribute('data-post-uri', 'https://tidal.com/track/3524506/u');
     });
 

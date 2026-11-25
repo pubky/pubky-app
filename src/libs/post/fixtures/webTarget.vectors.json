@@ -1,0 +1,307 @@
+{
+  "about": "fold_web_target / foldWebTarget: the writer fold of a web reference. `in` folds to `out`; `out` is a fixed point of the fold and passes the web gate unchanged. `refused` inputs are not web references the gate takes.",
+  "fold": [
+    {
+      "in": "HTTPS://Example.COM/a",
+      "out": "https://example.com/a",
+      "rule": "scheme and host fold to lowercase"
+    },
+    {
+      "in": "https://Example.com/A/B",
+      "out": "https://example.com/A/B",
+      "rule": "path case is kept"
+    },
+    {
+      "in": "http://example.com:80/a",
+      "out": "http://example.com/a",
+      "rule": "default port of http"
+    },
+    {
+      "in": "https://example.com:443/a",
+      "out": "https://example.com/a",
+      "rule": "default port of https"
+    },
+    {
+      "in": "https://example.com:0443/a",
+      "out": "https://example.com/a",
+      "rule": "a default port with leading zeros"
+    },
+    {
+      "in": "https://example.com:/a",
+      "out": "https://example.com/a",
+      "rule": "an empty port"
+    },
+    {
+      "in": "http://example.com:443/a",
+      "out": "http://example.com:443/a",
+      "rule": "443 is not the default port of http"
+    },
+    {
+      "in": "https://example.com:8080/a",
+      "out": "https://example.com:8080/a",
+      "rule": "another port is kept"
+    },
+    {
+      "in": "https://example.com:8x/a",
+      "out": "https://example.com:8x/a",
+      "rule": "a port that is not digits is kept as written"
+    },
+    {
+      "in": "https://example.com:08080/a",
+      "out": "https://example.com:8080/a",
+      "rule": "a port of digits loses its leading zeros"
+    },
+    {
+      "in": "http://example.com:00/a",
+      "out": "http://example.com:0/a",
+      "rule": "and an all-zero port is 0"
+    },
+    {
+      "in": "https://example.com:65536/a",
+      "out": "https://example.com:65536/a",
+      "rule": "a port is not range-checked"
+    },
+    {
+      "in": "https://example.com:0/a",
+      "out": "https://example.com:0/a",
+      "rule": "port 0 is kept"
+    },
+    {
+      "in": "https://example.com:8X/a",
+      "out": "https://example.com:8X/a",
+      "rule": "a port that is not digits keeps its case"
+    },
+    {
+      "in": "https://example.com/a#top",
+      "out": "https://example.com/a",
+      "rule": "the fragment is dropped"
+    },
+    {
+      "in": "https://example.com/a?x=1#top",
+      "out": "https://example.com/a?x=1",
+      "rule": "the fragment after a query"
+    },
+    {
+      "in": "https://example.com/a?q=#",
+      "out": "https://example.com/a?q=",
+      "rule": "an empty fragment"
+    },
+    {
+      "in": "https://example.com#top",
+      "out": "https://example.com/",
+      "rule": "a fragment on the bare host"
+    },
+    {
+      "in": "https://user:pass@example.com/a",
+      "out": "https://example.com/a",
+      "rule": "userinfo is dropped"
+    },
+    {
+      "in": "https://u@v@example.com/a",
+      "out": "https://example.com/a",
+      "rule": "userinfo runs to the last @"
+    },
+    {
+      "in": "https://Example.com/a@b",
+      "out": "https://example.com/a@b",
+      "rule": "an @ in the path is no userinfo"
+    },
+    {
+      "in": "https://example.com/?x=u@v",
+      "out": "https://example.com/?x=u@v",
+      "rule": "nor one in the query"
+    },
+    {
+      "in": "https://user@Example.com:443",
+      "out": "https://example.com/",
+      "rule": "userinfo, host case, default port and empty path at once"
+    },
+    {
+      "in": "https://example.com",
+      "out": "https://example.com/",
+      "rule": "an empty path is /"
+    },
+    {
+      "in": "https://example.com?q=1",
+      "out": "https://example.com/?q=1",
+      "rule": "an empty path before a query"
+    },
+    {
+      "in": "https://example.com/?",
+      "out": "https://example.com/?",
+      "rule": "an empty query is kept"
+    },
+    {
+      "in": "  https://example.com/a  ",
+      "out": "https://example.com/a",
+      "rule": "trimmed, as the web gate trims"
+    },
+    {
+      "in": "https://example.com/a?B=2&a=1",
+      "out": "https://example.com/a?B=2&a=1",
+      "rule": "the query is kept: order and case"
+    },
+    {
+      "in": "https://example.com/a?utm_source=x",
+      "out": "https://example.com/a?utm_source=x",
+      "rule": "no parameter is dropped"
+    },
+    {
+      "in": "https://example.com/a/",
+      "out": "https://example.com/a/",
+      "rule": "a trailing slash on a path is kept"
+    },
+    {
+      "in": "https://example.com/a",
+      "out": "https://example.com/a",
+      "rule": "and its absence"
+    },
+    {
+      "in": "https://www.example.com/a",
+      "out": "https://www.example.com/a",
+      "rule": "www. is part of the host"
+    },
+    {
+      "in": "http://example.com/a",
+      "out": "http://example.com/a",
+      "rule": "http and https stay two links"
+    },
+    {
+      "in": "https://example.com/a%2Fb%7e",
+      "out": "https://example.com/a%2Fb%7e",
+      "rule": "percent-encoding is kept as written"
+    },
+    {
+      "in": "https://example.com/%7E",
+      "out": "https://example.com/%7E",
+      "rule": "and its hex case"
+    },
+    {
+      "in": "https://example.com/a/./b/../c",
+      "out": "https://example.com/a/./b/../c",
+      "rule": "dot segments are kept"
+    },
+    {
+      "in": "https://example.com/é",
+      "out": "https://example.com/é",
+      "rule": "a non-ASCII path is kept"
+    },
+    {
+      "in": "http://[::1]:80/a",
+      "out": "http://[::1]/a",
+      "rule": "an IPv6 host with the default port"
+    },
+    {
+      "in": "https://[2001:DB8::1]:8443/a",
+      "out": "https://[2001:db8::1]:8443/a",
+      "rule": "an IPv6 host folds to lowercase, its port is kept"
+    },
+    {
+      "in": "https://[2001:db8::1]",
+      "out": "https://[2001:db8::1]/",
+      "rule": "an IPv6 host with an empty path"
+    },
+    {
+      "in": "https://[2001:db8:0:0:0:0:0:1]/",
+      "out": "https://[2001:db8:0:0:0:0:0:1]/",
+      "rule": "an IPv6 host is not compressed"
+    },
+    {
+      "in": "http://[::1]:/a",
+      "out": "http://[::1]/a",
+      "rule": "an IPv6 host with an empty port"
+    },
+    {
+      "in": "http://[::1]:0080/a",
+      "out": "http://[::1]/a",
+      "rule": "an IPv6 host with a default port with leading zeros"
+    },
+    {
+      "in": "https://[::1",
+      "out": "https://[::1/",
+      "rule": "a [ with no ]: the whole authority is the host"
+    },
+    {
+      "in": "https://[::1]x:443/a",
+      "out": "https://[::1]x:443/a",
+      "rule": "a ] followed by more than a port: the whole authority is the host"
+    },
+    {
+      "in": "https://Bücher.example/a",
+      "out": "https://bücher.example/a",
+      "rule": "an IDN host: ASCII letters fold, the rest is kept"
+    },
+    {
+      "in": "https://ÄBC.example/",
+      "out": "https://Äbc.example/",
+      "rule": "no Unicode case folding"
+    },
+    {
+      "in": "https://xn--bcher-kva.example/a",
+      "out": "https://xn--bcher-kva.example/a",
+      "rule": "a punycode host is kept"
+    },
+    {
+      "in": "https://EXAMPLE.com.:443/",
+      "out": "https://example.com./",
+      "rule": "a trailing dot on the host is kept"
+    },
+    {
+      "in": "https://%45xample.com/",
+      "out": "https://%45xample.com/",
+      "rule": "percent-encoding in the host is kept"
+    },
+    {
+      "in": "https://192.168.0.1:443/",
+      "out": "https://192.168.0.1/",
+      "rule": "an IPv4 host"
+    },
+    {
+      "in": "http://example.com\\a",
+      "out": "http://example.com\\a/",
+      "rule": "a backslash is part of the authority, as the web gate reads it"
+    }
+  ],
+  "refused": [
+    {
+      "in": "ftp://example.com/",
+      "rule": "not a web scheme"
+    },
+    {
+      "in": "nostr:nevent1abc",
+      "rule": "not a web scheme"
+    },
+    {
+      "in": "pubky://operrr8wsbpr3ue9d4qj41ge1kcc6r7fdiy6o3ugjrrhi4y77rdo/pub/social/v1/profile.json",
+      "rule": "not a web scheme"
+    },
+    {
+      "in": "https:/example.com",
+      "rule": "no authority"
+    },
+    {
+      "in": "https://",
+      "rule": "an empty host"
+    },
+    {
+      "in": "https://user@/a",
+      "rule": "an empty host past the userinfo"
+    },
+    {
+      "in": "https://:443/a",
+      "rule": "an empty host before the port"
+    },
+    {
+      "in": "https://exam ple.com/",
+      "rule": "whitespace inside"
+    },
+    {
+      "in": "https://example.com/a\tb",
+      "rule": "an ASCII control inside"
+    },
+    {
+      "in": "",
+      "rule": "empty"
+    }
+  ]
+}

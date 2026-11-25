@@ -17,7 +17,7 @@ type UseResourceSaveTargetsOptions = {
  * in it.
  * The resource counterpart of `usePostSaveTargets`, without a bookmark (the card has its own).
  *
- * @param uri - The link exactly as written, or the link `getResourceTarget` picks for the card: the collection item's `uri`
+ * @param uri - The link `getResourceTarget` picks (the link as written, folded), or a link exactly as written: the collection item's `uri`
  */
 export function useResourceSaveTargets(
   uri: string,

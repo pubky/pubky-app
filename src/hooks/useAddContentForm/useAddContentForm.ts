@@ -183,11 +183,11 @@ export function useAddContentForm({ target, onSuccess }: UseAddContentFormOption
 
   /**
    * Adds a link the way a card's save picker does (`useResourceSaveTargets`, `useResourceBookmark`):
-   * on the link `getResourceTarget` picks when Pinakes knows the card, else as written; a
-   * collection or bookmark already holding any spelling of it holds the link.
+   * on the link `getResourceTarget` picks (the link as written, folded, card or not); a collection
+   * or bookmark already holding any spelling of it holds the link.
    */
   const addLink = async (written: string, userId: Pubky): Promise<boolean> => {
-    // Pinakes failing or not configured is no card: the link as written.
+    // Pinakes failing or not configured is no card: the same link, its card's spellings not read along.
     const card = await PinakesController.fetchCardByUri({ uri: written }).catch(() => null);
     const { uri, spellings } = getResourceTarget(card, written);
 

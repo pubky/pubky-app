@@ -36,7 +36,8 @@ export function ResourceInstanceCard({ card, 'data-testid': testId }: ResourceIn
   const { ref, isVisible } = useViewportObserver({ rootMargin: '0px' });
   // The first web link people wrote for it, as a search row's link is
   const written = getResourceSearchRowUri(card);
-  const target = getResourceTarget(card, written);
+  // A search row is no link the viewer had: the card's own, a web link of it for an identifier.
+  const target = getResourceTarget(card, card.uri);
   return (
     <Container overrideDefaults ref={ref} className="@container/grid min-w-0" data-testid={testId}>
       <ResourceSurfaceProvider surface="card">

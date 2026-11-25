@@ -36,7 +36,7 @@ type TSettled = { key: string; tags: NexusTag[]; isTruncated: boolean; isError: 
  * along and merged into the link's: one chip per label, each tagger once. A new tag goes on `uri`; a
  * removed one goes on every spelling the viewer's tag is on.
  *
- * @param uri - The link exactly as written, or the link `getResourceTarget` picks for the card; `null` reads nothing
+ * @param uri - The link `getResourceTarget` picks (the link as written, folded), or a link exactly as written; `null` reads nothing
  * @param options.enabled - `false` defers the read (still loading); writes work either way
  * @param options.spellings - Other spellings of `uri` read along (`getResourceTarget`)
  * @param options.spellingsByUri - Read them on a Nexus without `by_ids` too (the resource page)

@@ -595,7 +595,7 @@ describe('useAddContentForm', () => {
       expect(result.current.form.getValues(ADD_CONTENT_FORM_FIELDS.POST_URL)).toBe('');
     });
 
-    it("writes the card's canonical link, with the link as written among its spellings", async () => {
+    it("writes the link as written, never the card's canonical link, which is read along", async () => {
       const canonical = 'https://www.youtube.com/watch?v=P65ZQL_m9zs&canonical';
       const shareLink = 'https://youtu.be/P65ZQL_m9zs';
       mocks.fetchCardByUri.mockResolvedValue({ uri: canonical, refs: [shareLink], aliases: [] });
@@ -605,8 +605,8 @@ describe('useAddContentForm', () => {
       expect(saved).toBe(true);
       expect(mocks.commitUpdateCollectionResource).toHaveBeenCalledWith({
         collectionId: COLLECTION_ID,
-        uri: canonical,
-        spellings: [YOUTUBE_URL, shareLink],
+        uri: YOUTUBE_URL,
+        spellings: [canonical, shareLink],
         shouldAdd: true,
       });
     });

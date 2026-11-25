@@ -239,7 +239,8 @@ function NativeEmbedChoice({
     setOpenedWithoutCard(false);
   };
 
-  // The card's link to act on, its other spellings read along (`getResourceTarget`).
+  // The link to act on (`getResourceTarget`: the link as written, folded), card or not; the card's link
+  // and its other spellings read along.
   const target = getResourceTarget(card, url);
   const actions = (
     <ResourceActions

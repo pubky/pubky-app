@@ -27,8 +27,18 @@ const OTHER_SONG: TPinakesResourceDetail = {
   uri: 'https://open.spotify.com/track/69kOkLUCkxIZYexIgSG8rq',
 };
 
-function Song({ card = SONG, testId, preview }: { card?: TPinakesResourceDetail; testId: string; preview?: boolean }) {
-  const { embed } = useCardPlayer(card, card.uri, undefined, { preview });
+function Song({
+  card = SONG,
+  href = card.uri,
+  testId,
+  preview,
+}: {
+  card?: TPinakesResourceDetail;
+  href?: string;
+  testId: string;
+  preview?: boolean;
+}) {
+  const { embed } = useCardPlayer(card, href, undefined, { preview });
   return <section data-testid={testId}>{embed}</section>;
 }
 
@@ -164,6 +174,25 @@ describe('PlayerHost', () => {
     expect(frames()).toEqual([frame]);
     expect(slotOf('feed-card')).toHaveAttribute('aria-owns', box.id);
     expect(frame.closest('[data-keep-playing]')).not.toBeNull();
+  });
+
+  it('gives the playing frame to a card of the same link written in another spelling', () => {
+    const { rerender } = render(
+      <PlayerHost>
+        <Song key="feed" testId="feed" />
+      </PlayerHost>,
+    );
+    const [frame] = frames();
+    press(frame);
+
+    // Another post's link to the same song, spelled as shared: the card's own link is the player's.
+    rerender(
+      <PlayerHost>
+        <Song key="post" href={`${SONG.uri}?si=0123456789abcdef`} testId="post" />
+      </PlayerHost>,
+    );
+    expect(frames()).toEqual([frame]);
+    expect(slotOf('post')).toHaveAttribute('aria-owns', frame.closest('[data-testid="hosted-player"]')!.id);
   });
 
   it('never gives the playing frame to a card of another link, which loads its own', () => {
