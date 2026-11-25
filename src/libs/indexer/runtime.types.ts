@@ -117,8 +117,11 @@ export interface RuntimeParams<D> {
  * only the tab holding the lock crawls; the others send it their requests and report the changes it announces.
  */
 export interface IndexerRuntime {
-  /** Syncs the scope now and then every interval. Starting with another seed stops the current one first. */
-  start(seed: string): void;
+  /**
+   * Syncs the scope now and then every interval. Starting with another seed stops the current one first. With `null`
+   * it runs in visitor mode: no scope sync and no saved index, only the on-demand crawls, in every tab on its own.
+   */
+  start(seed: string | null): void;
   /** Aborts the running crawl, rejects queued requests and clears timers. Safe to call twice. */
   stop(): void;
   /**

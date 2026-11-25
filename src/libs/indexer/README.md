@@ -100,6 +100,10 @@ homeserver fails resolves it too, `status().stats.seed` saying which. `whenSynce
 sync. Until then answers say `syncing: true` and the bootstrap `indexed: false`, which makes the app ask again later.
 `request` before `start` or after `stop` rejects with `IndexerNotStartedError`.
 
+`start(null)` is visitor mode, for someone signed out: no scope sync, no saved index and no tab coordination, but
+`ensureUser`, `ensurePost` and `request` work. A profile, a user's stream, a post and its loaded thread answer from
+what was loaded; feeds, rankings, searches and hot tags over the scope are unavailable, there being no scope.
+
 `createIndexerRuntime` (`indexer.ts`) is that loop for any domain: one queue for every crawl, and with
 coordination only the tab holding the lock crawls. Requests never overlap and go ahead of the scope sync: one
 arriving during a scope sync aborts it at its next safe point, and the sync resumes after it from what it

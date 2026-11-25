@@ -136,6 +136,21 @@ describe('createIndexerRuntime loop', () => {
     expect(scopeSyncs(state.reads)).toBe(3);
   });
 
+  it('runs no scope sync as a visitor and still crawls on demand', async () => {
+    const w = world();
+    const { runtime, state } = runtimeOf(w);
+
+    runtime.start(null);
+    await settle();
+    expect(state.reads).toEqual([]);
+    expect(runtime.status()).toMatchObject({ state: 'idle', seed: null, firstSyncPending: false });
+
+    await runtime.ensureUser('carol');
+    await runtime.refresh();
+    await w.time.advance(3 * INTERVAL);
+    expect(crawlOrder(state.reads)).toEqual(['carol']);
+  });
+
   it('records a failed sync and syncs again at the next interval', async () => {
     const w = world();
     const { runtime, state } = runtimeOf(w);

@@ -24,8 +24,8 @@ export interface Answer<T> {
 }
 
 export interface QueryContext {
-  /** The signed-in user the scope was crawled from. */
-  seed: string;
+  /** The signed-in user the scope was crawled from, `null` for a visitor: then there is no scope. */
+  seed: string | null;
   now: () => number;
   /** The first scope sync of this run is still running. */
   syncing?: boolean;

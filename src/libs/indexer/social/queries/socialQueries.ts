@@ -14,6 +14,7 @@ import {
   type PostViewParams,
 } from './posts';
 import { postStreamKeys, type PostStreamParams } from './postStream';
+import { UnavailableQueryError } from './queries.errors';
 import type {
   Answer,
   BootstrapJson,
@@ -82,9 +83,35 @@ export interface SocialQueries {
   ingest(params: UserRef): Answer<IngestJson>;
 }
 
+/** Stream sources that range over the scope's members. */
+const SCOPE_POST_SOURCES: ReadonlySet<string> = new Set(['all', 'followers', 'friends', 'wot', 'wot_domain']);
+const SCOPE_USER_SOURCES: ReadonlySet<string> = new Set([
+  'followers',
+  'friends',
+  'most_followed',
+  'influencers',
+  'recommended',
+]);
+
+/**
+ * The queries over one view. Without a seed nothing was crawled as a scope, so an answer ranging over its members
+ * would claim an empty network: those are unavailable, and answers about what was loaded on demand stay.
+ */
 export function createSocialQueries(view: SocialView, context: QueryContext): SocialQueries {
+  const scopeWide =
+    <P, T>(query: string, answer: (params: P) => Answer<T>, applies: (params: P) => boolean = () => true) =>
+    (params: P): Answer<T> => {
+      if (context.seed === null && applies(params)) {
+        throw new UnavailableQueryError(query, 'no scope is crawled without a signed-in user');
+      }
+      return answer(params);
+    };
   return {
-    postStreamKeys: (params) => postStreamKeys(view, params),
+    postStreamKeys: scopeWide(
+      'stream/posts/keys',
+      (params: PostStreamParams) => postStreamKeys(view, params),
+      ({ source }) => SCOPE_POST_SOURCES.has(source ?? 'all'),
+    ),
     postsByIds: (params) => postsByIds(view, params),
     postView: (params) => postView(view, params),
     postDetails: (params) => postDetails(view, params),
@@ -95,13 +122,17 @@ export function createSocialQueries(view: SocialView, context: QueryContext): So
     userTags: (params) => userTags(view, params),
     userTaggers: (params) => userTaggers(view, params),
     usersByIds: (params) => usersByIds(view, params),
-    userStreamIds: (params) => userStreamIds(view, context, params),
-    usersByName: (params) => usersByName(view, params),
-    usersById: (params) => usersById(view, params),
-    usersByTags: (params) => usersByTags(view, params),
-    tagsByPrefix: (params) => tagsByPrefix(view, params),
+    userStreamIds: scopeWide(
+      'stream/users/ids',
+      (params: UserStreamParams) => userStreamIds(view, context, params),
+      ({ source }) => source !== undefined && SCOPE_USER_SOURCES.has(source),
+    ),
+    usersByName: scopeWide('search/users/by_name', (params: PrefixSearchParams) => usersByName(view, params)),
+    usersById: scopeWide('search/users/by_id', (params: PrefixSearchParams) => usersById(view, params)),
+    usersByTags: scopeWide('search/users/by_tags', (params: UsersByTagsParams) => usersByTags(view, params)),
+    tagsByPrefix: scopeWide('search/tags/by_prefix', (params: PrefixSearchParams) => tagsByPrefix(view, params)),
     postsByContent,
-    hotTags: (params) => hotTags(view, context, params),
+    hotTags: scopeWide('tags/hot', (params: HotTagsParams) => hotTags(view, context, params)),
     notifications: (params) => notifications(view, context, params),
     bootstrap: (params) => bootstrap(view, context, params),
     ingest: (params) => ingest(view, params),

@@ -114,7 +114,7 @@ export function notifications(
   params: NotificationsParams,
 ): Answer<NotificationJson[]> {
   const query = 'user/notifications';
-  if (params.user_id !== context.seed) {
+  if (context.seed === null || params.user_id !== context.seed) {
     throw new UnavailableQueryError(query, "only the seed's notifications are local");
   }
   const skip = skipOf(query, params.skip);

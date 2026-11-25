@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { buildPost, type BuiltPost } from 'pubky-social-specs';
+import { buildPost, buildUri, type BuiltPost } from 'pubky-social-specs';
 import { describe, expect, it } from 'vitest';
 import type { CrawlerOptions } from '../crawler.types';
 import { FakeNetwork } from '../fakeNetwork';
@@ -10,6 +10,7 @@ import { fakeTime, settle } from '../runtime.fixtures';
 import type { RuntimeOptions } from '../runtime.types';
 import type { IndexStore } from '../store.types';
 import type { IndexerTransport } from '../transport.types';
+import { UnavailableQueryError } from './queries/queries.errors';
 import { SOCIAL_ACTIVITY, SOCIAL_GRAPH } from './social.domain';
 import { ALICE, at, BRAN, CLEO, DION, MINUTE_MS, socialNetwork, T0 } from './social.fixtures';
 import type { SocialData } from './social.types';
@@ -315,5 +316,86 @@ describe('createSocialIndexer', () => {
     await indexer.ready();
     indexer.stop();
     await expect(indexer.request({ url: FOLLOWING, method: 'GET' })).rejects.toBeInstanceOf(IndexerNotStartedError);
+  });
+
+  describe('as a visitor', () => {
+    /** A visitor over the fixture network, with a saved index on that it must never touch. */
+    function visitor() {
+      const world = socialWorld({}, { savedIndex: true });
+      const touched = { files: 0 };
+      const { network } = world;
+      const transport: IndexerTransport = {
+        resolveHomeserver: (user) => network.resolveHomeserver(user),
+        readEvents: (request) => network.readEvents(request),
+        getPublic: (request) => network.getPublic(request),
+        listIndexFiles: () => {
+          touched.files += 1;
+          return network.listIndexFiles();
+        },
+        readIndexFile: (name) => {
+          touched.files += 1;
+          return network.readIndexFile(name);
+        },
+        writeIndexFile: (name, bytes) => {
+          touched.files += 1;
+          return network.writeIndexFile(name, bytes);
+        },
+        deleteIndexFile: (name) => {
+          touched.files += 1;
+          return network.deleteIndexFile(name);
+        },
+      };
+      const indexer = world.indexerOf(transport);
+      indexer.start(null);
+      return { ...world, indexer, touched };
+    }
+
+    it('opens a post and the post it replies to, loaded on demand', async () => {
+      const { fixture, network, indexer, touched } = visitor();
+      const { a1, b1 } = fixture.posts;
+      await indexer.ready();
+      await indexer.whenSynced();
+      expect(network.reads).toEqual([]);
+
+      await indexer.ensurePost(BRAN, b1.id);
+      const reply = await indexer.request({ url: `/v1/post/${BRAN}/${b1.id}`, method: 'GET' });
+      await indexer.ensurePost(ALICE, a1.id);
+      const parent = await indexer.request({ url: `/v1/post/${ALICE}/${a1.id}`, method: 'GET' });
+
+      expect(reply).toMatchObject({ status: 200, syncing: false, json: { details: { content: 'Welcome' } } });
+      expect(reply.json).toMatchObject({ relationships: { replied: buildUri(ALICE, 'post', a1.id) } });
+      expect(parent).toMatchObject({ status: 200, json: { details: { id: a1.id, author: ALICE } } });
+      expect(indexer.view().authors).toEqual([]);
+      expect(touched.files).toBe(0);
+    });
+
+    it('opens a profile with its own stream', async () => {
+      const { fixture, indexer, touched } = visitor();
+
+      await indexer.ensureUser(CLEO);
+      const details = await indexer.request({ url: `/v1/user/${CLEO}/details`, method: 'GET' });
+      const stream = await indexer.request({ url: authorStream(CLEO), method: 'GET' });
+
+      expect(details).toMatchObject({ status: 200, json: { name: 'Cleo' } });
+      expect(stream.json).toMatchObject({ post_keys: expect.arrayContaining([key(CLEO, fixture.posts.quote)]) });
+      expect(indexer.view().membershipOf(CLEO)).toBe('visited');
+      expect(touched.files).toBe(0);
+    });
+
+    it('answers no scope-wide stream, ranking or search', async () => {
+      const { indexer } = visitor();
+      await indexer.ensureUser(CLEO);
+
+      for (const url of [
+        '/v1/stream/posts/keys?source=all',
+        '/v1/stream/users/ids?source=most_followed',
+        '/v1/search/users/by_name/cl',
+        '/v1/tags/hot',
+        `/v1/user/${CLEO}/notifications`,
+      ]) {
+        await expect(indexer.request({ url, method: 'GET' }), url).rejects.toBeInstanceOf(UnavailableQueryError);
+      }
+      await indexer.refresh();
+    });
   });
 });

@@ -32,7 +32,11 @@ export interface SocialChange {
 
 /** The social runtime with its view kept current, answering the central indexer's requests locally. */
 export interface SocialIndexer {
-  start(seed: string): void;
+  /**
+   * Starts for the signed-in user, or with `null` as a visitor: then nothing is synced as a scope and no saved index is
+   * read or written, but users and posts load on demand, and answers about them come from what was loaded.
+   */
+  start(seed: string | null): void;
   stop(): void;
   pause(): void;
   resume(): void;
@@ -237,11 +241,11 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
   }
 
   async function buildOnce(
-    forSeed: string,
+    forSeed: string | null,
   ): Promise<{ view: SocialView; memberships: Map<string, Membership>; hasScope: boolean }> {
-    const members = await store.readScopeMembers(forSeed);
+    const members = forSeed === null ? new Map<string, number>() : await store.readScopeMembers(forSeed);
     const hops = new Map<string, number>(members);
-    if (!hops.has(forSeed)) hops.set(forSeed, 0);
+    if (forSeed !== null && !hops.has(forSeed)) hops.set(forSeed, 0);
     const loaded = new Map<string, Loaded>();
     for (const [author, hop] of hops) await load(loaded, author, 'member', hop);
     for (const user of ensuredUsers) if (!hops.has(user)) await load(loaded, user, 'visited', null);
@@ -255,7 +259,7 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
       again = false;
       const run = generation;
       const forSeed = seed;
-      if (forSeed === null || !started) break;
+      if (!started) break;
       const settled = firstSyncSettled;
       const changed = pendingAuthors;
       pendingAuthors = new Set();
@@ -317,7 +321,7 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
   return {
     start(next) {
       if (started && seed === next) return;
-      if (seed !== null && seed !== next) {
+      if (generation > 0 && seed !== next) {
         current = empty;
         currentMemberships = new Map();
         routed = null;
@@ -328,7 +332,8 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
           markReady = resolve;
         });
       }
-      firstSyncSettled = false;
+      // A visitor has no scope to sync.
+      firstSyncSettled = next === null;
       syncedPromise = new Promise<void>((resolve) => {
         markSynced = resolve;
       });
@@ -369,11 +374,10 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
     async request(request) {
       if (!started) throw new IndexerNotStartedError();
       await readyPromise;
-      const forSeed = seed;
-      if (forSeed === null || !started) throw new IndexerNotStartedError();
+      if (!started) throw new IndexerNotStartedError();
       const syncing = !firstSyncSettled;
       if (routed === null || routed.view !== current || routed.syncing !== syncing) {
-        const queries = createSocialQueries(current, { seed: forSeed, now, syncing });
+        const queries = createSocialQueries(current, { seed, now, syncing });
         routed = { view: current, syncing, router: createNexusRouter(queries) };
       }
       return { ...(await routed.router.route(request)), syncing };

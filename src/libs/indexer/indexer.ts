@@ -2,6 +2,7 @@ import { createCrawler } from './crawler';
 import { DEFAULT_CRAWLER_OPTIONS, type StoreChange } from './crawler.types';
 import { IndexerAbortedError, IndexerError, IndexerNotStartedError } from './indexer.errors';
 import {
+  type Coordination,
   type CoordinationMessage,
   type CrawlRequest,
   DEFAULT_RUNTIME_OPTIONS,
@@ -61,6 +62,8 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
 
   let seed: string | null = null;
   let started = false;
+  /** The coordination this run uses: none in visitor mode, which crawls on demand in every tab. */
+  let shared: Coordination | null = null;
   let paused = false;
   /** Whether this runtime may crawl: always while running alone, only while holding the lock otherwise. */
   let leading = false;
@@ -131,7 +134,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
 
   function announce(change: StoreChange) {
     noteChange(change);
-    coordination?.post({ type: 'changed', change });
+    shared?.post({ type: 'changed', change });
   }
 
   crawler.onCommit((change) => {
@@ -213,7 +216,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
   function scheduleSync(delay: number) {
     cancelTimer?.();
     cancelTimer = null;
-    if (!canCrawl()) return;
+    if (!canCrawl() || seed === null) return;
     cancelTimer = schedule(() => {
       cancelTimer = null;
       periodicDue = true;
@@ -221,10 +224,10 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     }, delay);
   }
 
-  async function crawl(request: CrawlRequest, current: string, signal: AbortSignal): Promise<void> {
+  async function crawl(request: CrawlRequest, current: string | null, signal: AbortSignal): Promise<void> {
     switch (request.kind) {
       case 'scope':
-        await crawler.syncScope(current, signal);
+        if (current !== null) await crawler.syncScope(current, signal);
         return;
       case 'users':
         await crawler.syncUsers(request.users, signal);
@@ -239,7 +242,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
   }
 
   /** Never rejects: the outcome goes to the task, and a failure to the status. */
-  async function execute(task: Task, current: string, signal: AbortSignal): Promise<void> {
+  async function execute(task: Task, current: string | null, signal: AbortSignal): Promise<void> {
     try {
       await crawl(task.request, current, signal);
       task.resolve();
@@ -256,7 +259,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
 
   /** Puts the waiters of a pre-empted sync back first; a tab that stopped crawling hands its own on instead. */
   function requeue(waiters: Task[]) {
-    if (coordination === null || leading) {
+    if (shared === null || leading) {
       scopeDue = [...waiters, ...scopeDue];
       return;
     }
@@ -293,7 +296,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     lastSyncAt = now();
     lastError = null;
     firstSyncPending = false;
-    coordination?.post({ type: 'synced', seed: current, at: lastSyncAt });
+    shared?.post({ type: 'synced', seed: current, at: lastSyncAt });
     preempted = 0;
     for (const task of waiters) task.resolve();
     scheduleSync(options.syncIntervalMs);
@@ -316,22 +319,22 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
    */
   function pump() {
     const current = seed;
-    if (current === null || !canCrawl()) return;
+    if (!canCrawl()) return;
     if (running !== null) {
       if (queue.length > 0) preempt?.abort();
       return;
     }
-    const scopeWanted = periodicDue || scopeDue.length > 0;
+    const scopeWanted = current !== null && (periodicDue || scopeDue.length > 0);
     const forced = scopeWanted && preempted >= MAX_PREEMPTIONS && aheadOfForced === 0;
     let work: Promise<void>;
-    if (loadDue) {
+    if (loadDue && current !== null) {
       loadDue = false;
       work = loadIndex(current);
     } else {
       const task = forced ? undefined : queue.shift();
       if (task !== undefined && aheadOfForced > 0) aheadOfForced -= 1;
       if (task !== undefined) work = execute(task, current, controller.signal);
-      else if (scopeWanted) work = startScopeSync(current);
+      else if (scopeWanted && current !== null) work = startScopeSync(current);
       else return;
     }
     running = work.then(() => {
@@ -344,21 +347,21 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
   }
 
   function forward(task: Task) {
-    if (coordination === null || seed === null) return;
+    if (shared === null || seed === null) return;
     const id = `${tab}:${nextId}`;
     nextId += 1;
     forwarded.set(id, task);
-    coordination.post({ type: 'request', seed, id, request: task.request });
+    shared.post({ type: 'request', seed, id, request: task.request });
   }
 
   function remoteTask(id: string, request: CrawlRequest): Task {
     return {
       request,
-      resolve: () => coordination?.post({ type: 'settled', id, error: null }),
+      resolve: () => shared?.post({ type: 'settled', id, error: null }),
       // An abort means this tab stopped; the asking tab asks the next crawling tab instead.
       reject: (error) => {
         if (!(error instanceof IndexerAbortedError)) {
-          coordination?.post({ type: 'settled', id, error: asError(error).message });
+          shared?.post({ type: 'settled', id, error: asError(error).message });
         }
       },
       remote: true,
@@ -367,13 +370,14 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
 
   function lead() {
     leading = true;
-    if (coordination !== null && seed !== null) {
-      coordination.post({ type: 'leader', seed });
+    if (shared !== null && seed !== null) {
+      shared.post({ type: 'leader', seed });
       for (const task of forwarded.values()) enqueue(task);
       forwarded.clear();
     }
     const since = lastSyncAt === null ? Infinity : now() - lastSyncAt;
-    if (since >= options.syncIntervalMs) periodicDue = true;
+    if (seed === null) periodicDue = false;
+    else if (since >= options.syncIntervalMs) periodicDue = true;
     else scheduleSync(options.syncIntervalMs - since);
     pump();
     emitStatus();
@@ -381,15 +385,15 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
 
   function seekLead() {
     const current = seed;
-    if (!started || paused || leading || current === null) return;
-    if (coordination === null) {
+    if (!started || paused || leading) return;
+    if (shared === null || current === null) {
       lead();
       return;
     }
     const name = `${LOCK_PREFIX}${current}`;
     if (waitingFor.has(name)) return;
     waitingFor.add(name);
-    coordination
+    shared
       .runExclusive(name, () => {
         waitingFor.delete(name);
         if (!started || paused || leading || seed !== current) {
@@ -418,7 +422,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     periodicDue = false;
     queue = queue.filter((task) => !task.remote);
     scopeDue = scopeDue.filter((task) => !task.remote);
-    if (coordination !== null && started) {
+    if (shared !== null && started) {
       for (const task of [...queue, ...scopeDue]) forward(task);
       queue = [];
       scopeDue = [];
@@ -439,7 +443,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
         return;
       case 'leader':
         if (message.seed !== seed) return;
-        for (const [id, task] of forwarded) coordination?.post({ type: 'request', seed, id, request: task.request });
+        for (const [id, task] of forwarded) shared?.post({ type: 'request', seed, id, request: task.request });
         return;
       case 'request':
         if (!leading || message.seed !== seed) return;
@@ -466,7 +470,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     if (!started) return Promise.reject(new IndexerNotStartedError());
     return new Promise<void>((resolve, reject) => {
       const task: Task = { request, resolve, reject, remote: false };
-      if (coordination === null || leading) {
+      if (shared === null || leading) {
         enqueue(task);
         pump();
       } else {
@@ -501,6 +505,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     stepDown();
     unsubscribe?.();
     unsubscribe = null;
+    shared = null;
     const aborted = new IndexerAbortedError();
     for (const task of [...queue, ...scopeDue]) task.reject(aborted);
     for (const task of forwarded.values()) task.reject(aborted);
@@ -522,15 +527,16 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
       controller = new AbortController();
       lastSyncAt = null;
       lastError = null;
-      firstSyncPending = true;
+      firstSyncPending = next !== null;
       preempted = 0;
       aheadOfForced = 0;
-      loadDue = options.savedIndex;
+      loadDue = options.savedIndex && next !== null;
       hydrateDue = false;
       dirty = false;
       lastSaveAt = null;
       saved = { loadedFiles: 0, ignoredFiles: 0, lastSavedAt: null, error: null };
-      if (coordination !== null) unsubscribe = coordination.subscribe(onMessage);
+      shared = next === null ? null : coordination;
+      if (shared !== null) unsubscribe = shared.subscribe(onMessage);
       seekLead();
       emitStatus();
     },
@@ -548,7 +554,11 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
       seekLead();
       emitStatus();
     },
-    refresh: (users) => submit(users === undefined ? { kind: 'scope' } : { kind: 'users', users: [...users] }),
+    refresh(users) {
+      if (users !== undefined) return submit({ kind: 'users', users: [...users] });
+      // Visitor mode has no scope to sync.
+      return started && seed === null ? Promise.resolve() : submit({ kind: 'scope' });
+    },
     ensureUser: (user) => ensure(JSON.stringify(['user', user]), { kind: 'users', users: [user] }, options.ensureTtlMs),
     ensureLeaf: (leaf) =>
       ensure(
