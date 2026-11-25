@@ -1,6 +1,6 @@
 import { memoryHomeserver } from 'pubky-social-specs/testing';
 import { vi } from 'vitest';
-import { AuthErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
+import { ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { hasHttpStatus } from '@/libs/error/error.utils';
@@ -8,8 +8,6 @@ import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { parsePubkyUri } from '@/models/models.utils';
 import { extractStatusCode, handleError } from '@/services/homeserver/error.utils';
 import { HomeserverService } from '@/services/homeserver/homeserver';
-import type { StoragePath } from '@/services/homeserver/homeserver.types';
-import { resolveOwnedSessionPath } from '@/services/homeserver/homeserver.utils';
 
 /** A page of a directory listing; the real service paginates `listAll` in pages of this size. */
 const LIST_PAGE = 500;
@@ -136,21 +134,9 @@ export function stubMemoryHomeserver(owner: string) {
       async ({ baseDirectory, cursor, reverse = false, limit = LIST_PAGE, session: explicitSession }) => {
         try {
           if (explicitSession) {
-            // Ownership and the store both come from the session passed in, matching HomeserverService.list.
-            const owned = resolveOwnedSessionPath({
-              url: baseDirectory,
-              session: explicitSession,
-              allowedPrefixes: ['/pub/', '/priv/'],
-            });
-            if (!owned) {
-              throw Err.auth(
-                AuthErrorCode.UNAUTHORIZED,
-                'Listing owned storage requires a session for the resource owner.',
-                { service: ErrorService.Homeserver, operation: 'list', context: { url: baseDirectory } },
-              );
-            }
-            const dirPath = owned.path.endsWith('/') ? owned.path : (`${owned.path}/` as StoragePath<string>);
-            return await owned.session.storage.list(dirPath, cursor ?? null, reverse, limit, false);
+            const path = ownedPath(baseDirectory, 'list');
+            const dirPath = path.endsWith('/') ? path : `${path}/`;
+            return await session.storage.list(dirPath, cursor ?? null, reverse, limit, false);
           }
           return await listUrls(baseDirectory, cursor ?? null, reverse, limit);
         } catch (error) {
