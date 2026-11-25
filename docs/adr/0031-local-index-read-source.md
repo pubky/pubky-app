@@ -68,7 +68,8 @@ default, today's behavior), `local`, or `local,nexus`. Without `nexus` the Nexus
   sign-in or bootstrap waits for that sync. During it the bootstrap says `indexed: false`, which with the `local`
   source means the index is still syncing: the bootstrap neither tells Nexus to ingest nor schedules its retry, and
   the feeds fill in through the invalidation above. An empty Home says the network is loading
-  (`LocalIndexFeedEmpty`) and loads again when the first sync ends; a Home already showing posts keeps its place.
+  (`LocalIndexFeedEmpty`) and loads again when the first sync ends; a Home already showing posts keeps its place and
+  the stream coordinator polls its head as soon as that sync ends, rather than an interval later.
 - **Visitors.** Without a session the coordinator runs a visitor index (`start(null)`) in its own database: no scope,
   no saved index, no tab coordination. Shared post and profile links render from what it loads on demand, through
   the same `more` hints. Starting an account's index deletes the visitor's. With `local` as the only source a
