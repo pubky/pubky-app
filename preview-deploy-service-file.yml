@@ -58,10 +58,10 @@ spec:
               value: "ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy"
             - name: PUBKY_RUNTIME_HOMESERVER_URL
               value: "https://homeserver.staging.pubky.app"
-            - name: PUBKY_RUNTIME_NEXUS_URL
-              value: "https://nexus.staging.pubky.app"
-            - name: PUBKY_RUNTIME_CDN_URL
-              value: "https://nexus.staging.pubky.app/static"
+            # This branch's preview runs with no Nexus: the app builds its own index. Restore the two Nexus
+            # values and drop this one before merging.
+            - name: PUBKY_RUNTIME_INDEXER_SOURCES
+              value: "local"
             - name: PUBKY_RUNTIME_HOMEGATE_URL
               value: "https://homegate.staging.pubky.app"
             - name: PUBKY_RUNTIME_PKARR_RELAYS
