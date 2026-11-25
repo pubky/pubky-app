@@ -12,6 +12,7 @@ import {
   recordsOf,
   socialNetwork,
   T0,
+  withPartialActivity,
   withProfile,
 } from '../social.fixtures';
 import { buildSocialView } from '../social.view';
@@ -73,7 +74,19 @@ describe('userDetails and userCounts', () => {
     });
     expect(answer.coverage.kind).toBe('scope');
     expect(userCounts(view, { user_id: DION }).data.collections).toBe(1);
+    expect(answer.more).toBeUndefined();
     expect(() => userCounts(view, { user_id: 'stranger' })).toThrow(UnavailableQueryError);
+  });
+
+  it('notes the counts a partly loaded history limits and hints at its backfill', () => {
+    const partial = buildSocialView(withPartialActivity(records, ALICE, BigInt(11)));
+    const answer = userCounts(partial, { user_id: ALICE });
+
+    expect(answer.data).toMatchObject({ posts: 1, tagged: 2 });
+    expect(answer.coverage.note).toBe(
+      `posts, replies and tags given count activity since ${new Date(T0 + 3 * MINUTE_MS).toISOString()}, estimated`,
+    );
+    expect(answer.more).toEqual([{ kind: 'backfill', author: ALICE }]);
   });
 });
 

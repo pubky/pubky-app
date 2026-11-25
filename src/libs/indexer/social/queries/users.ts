@@ -17,6 +17,8 @@ import {
   type Answer,
   exact,
   type IngestJson,
+  isoOf,
+  type MoreHint,
   noteOf,
   type QueryContext,
   scoped,
@@ -25,6 +27,7 @@ import {
   type UserCountsJson,
   type UserDetailsJson,
   type UserViewJson,
+  withMore,
 } from './queries.types';
 import {
   tagDetailsJson,
@@ -82,10 +85,22 @@ export function userDetails(view: SocialView, { user_id }: UserRef): Answer<User
   return exact(userDetailsJson(user_id, profile, view.profileAtMs(user_id) ?? 0), INDEXED_AT_NOTE);
 }
 
-/** Follows, posts and tags given are the user's own; followers, friends and tags received are what the scope saw. */
+/**
+ * Follows, posts and tags given are the user's own, as far as their history is loaded; followers, friends and
+ * tags received are what the scope saw.
+ */
 export function userCounts(view: SocialView, { user_id }: UserRef): Answer<UserCountsJson> {
   if (!inScope(view, user_id)) throw new UnavailableQueryError('user/counts', `${user_id} is not in the scope`);
-  return scoped(userCountsJson(view, user_id));
+  const activity = view.historyOf(user_id);
+  const graph = view.historyOf(user_id, 'graph');
+  const note = noteOf(
+    activity.complete
+      ? null
+      : `posts, replies and tags given count activity since ${isoOf(activity.sinceMs)}, estimated`,
+    graph.complete ? null : `following counts follows since ${isoOf(graph.sinceMs)}, estimated`,
+  );
+  const more: MoreHint[] = activity.complete ? [] : [{ kind: 'backfill', author: user_id }];
+  return withMore(scoped(userCountsJson(view, user_id), note), more);
 }
 
 export function userTags(view: SocialView, params: UserTagsParams): Answer<TagDetailsJson[]> {

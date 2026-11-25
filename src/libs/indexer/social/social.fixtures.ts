@@ -9,7 +9,7 @@ import {
   encodeContent,
 } from 'pubky-social-specs';
 import { vi } from 'vitest';
-import type { RecordEntry } from '../indexer.types';
+import type { Cursor, RecordEntry } from '../indexer.types';
 import { createSocialDomain, PROFILE_PATH, SOCIAL_ACTIVITY, SOCIAL_GRAPH } from './social.domain';
 import type { AuthorRecords, SocialData, UserData } from './social.types';
 
@@ -137,6 +137,12 @@ export function socialNetwork() {
 
 export type SocialNetwork = ReturnType<typeof socialNetwork>;
 
+/** Both groups loaded from the author's first event. */
+export const fullHistory = (): AuthorRecords['history'] => ({
+  graph: { complete: true, tail: BigInt(0) },
+  activity: { complete: true, tail: BigInt(0) },
+});
+
 /** What a full index serves for each user of the network: the files left after the deletes, reduced. */
 export function recordsOf({ writes, deletes }: SocialNetwork): AuthorRecords[] {
   return recordsFrom(writes, HOPS, new Set(deletes.map(({ author, path }) => `${author}${path}`)));
@@ -144,7 +150,7 @@ export function recordsOf({ writes, deletes }: SocialNetwork): AuthorRecords[] {
 
 /**
  * What a full index of one homeserver serves for `files` committed in order: each file's cursor is its position
- * from 1, deleted files (`{author}{path}`) left out.
+ * from 1, deleted files (`{author}{path}`) left out, every user of `hops` with their whole history.
  */
 export function recordsFrom(
   files: readonly SocialFile[],
@@ -173,7 +179,17 @@ export function recordsFrom(
     hop,
     graph: scope(author, SOCIAL_GRAPH),
     activity: scope(author, SOCIAL_ACTIVITY),
+    history: fullHistory(),
   }));
+}
+
+/** The records with the author's activity loaded only above `tail`, as a crawl window leaves it. */
+export function withPartialActivity(records: readonly AuthorRecords[], author: string, tail: Cursor): AuthorRecords[] {
+  return records.map((entry) => {
+    if (entry.author !== author) return entry;
+    const activity = new Map([...entry.activity].filter(([, record]) => record.cursor > tail));
+    return { ...entry, activity, history: { ...entry.history, activity: { complete: false, tail } } };
+  });
 }
 
 /** The records with a bare profile served for `author`, for a test that needs one more user with a profile. */

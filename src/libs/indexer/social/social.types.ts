@@ -1,5 +1,5 @@
 import type { KnownPostKind } from 'pubky-social-specs';
-import type { RecordEntry } from '../indexer.types';
+import type { Cursor, RecordEntry } from '../indexer.types';
 
 /** What a reference points at: a post, a user, or anything outside the social tree, kept as written. */
 export type SocialTarget =
@@ -67,6 +67,14 @@ export interface TagData {
 /** The payload of a social record. Follows carry none: the path says everything. */
 export type SocialData = UserData | PostData | TagData;
 
+/** How much of one group's history is loaded: the trusted range of its merged runs. */
+export interface GroupHistory {
+  /** Whether the trusted range reaches back to the start of the author's event stream. */
+  complete: boolean;
+  /** The trusted range's tail cursor, `null` without coverage. */
+  tail: Cursor | null;
+}
+
 /** One author's served records: the `live` maps of the merged runs of its two scopes. */
 export interface AuthorRecords {
   author: string;
@@ -76,4 +84,5 @@ export interface AuthorRecords {
   hop: number | null;
   graph: ReadonlyMap<string, RecordEntry<SocialData>>;
   activity: ReadonlyMap<string, RecordEntry<SocialData>>;
+  history: { graph: GroupHistory; activity: GroupHistory };
 }

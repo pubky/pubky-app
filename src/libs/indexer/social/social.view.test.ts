@@ -9,6 +9,7 @@ import {
   BRAN,
   CLEO,
   DION,
+  fullHistory,
   HOMESERVER,
   MINUTE_MS,
   recordsFrom,
@@ -16,6 +17,7 @@ import {
   type SocialFile,
   socialNetwork,
   T0,
+  withPartialActivity,
 } from './social.fixtures';
 import type { AuthorRecords, SocialData } from './social.types';
 import { buildSocialView, type SocialPost } from './social.view';
@@ -37,9 +39,9 @@ function recordOf(author: string, post: BuiltPost, withData = true): [string, Re
   return [post.path, record];
 }
 
-/** An author with no graph records and the activity given. */
+/** An author with no graph records, the activity given and a whole history. */
 function authorRecords(author: string, hop: number, activity: Map<string, RecordEntry<SocialData>>): AuthorRecords {
-  return { author, homeserver: HOMESERVER, hop, graph: new Map(), activity };
+  return { author, homeserver: HOMESERVER, hop, graph: new Map(), activity, history: fullHistory() };
 }
 
 describe('buildSocialView users', () => {
@@ -308,5 +310,17 @@ describe('buildSocialView time estimates', () => {
 
     expect(timed.profileAtMs(ALICE)).toBe(minute(20));
     expect(timed.followedAtMs(ALICE, BRAN)).toBe(minute(30));
+  });
+});
+
+describe('buildSocialView history', () => {
+  it('reports a whole history as complete and a windowed one from the estimated time of its tail', () => {
+    const partial = buildSocialView(withPartialActivity(recordsOf(network), CLEO, BigInt(14)));
+
+    expect(view.historyOf(ALICE)).toEqual({ complete: true, sinceMs: null });
+    expect(partial.historyOf(CLEO)).toEqual({ complete: false, sinceMs: minute(6) });
+    expect(partial.historyOf(CLEO, 'graph')).toEqual({ complete: true, sinceMs: null });
+    expect(ids(partial.postsBy(CLEO))).toEqual([id(CLEO, quote)]);
+    expect(partial.historyOf('stranger')).toEqual({ complete: false, sinceMs: null });
   });
 });

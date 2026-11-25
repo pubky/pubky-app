@@ -7,9 +7,20 @@ export interface Coverage {
   note?: string;
 }
 
+/**
+ * What the caller can load to extend an answer and ask again: an author's older activity, one post, or one
+ * user's records.
+ */
+export type MoreHint =
+  | { kind: 'backfill'; author: string }
+  | { kind: 'post'; author: string; postId: string }
+  | { kind: 'user'; user: string };
+
 export interface Answer<T> {
   data: T;
   coverage: Coverage;
+  /** Present only when something not loaded would extend the answer. */
+  more?: MoreHint[];
 }
 
 export interface QueryContext {
@@ -28,10 +39,21 @@ export const scoped = <T>(data: T, note?: string): Answer<T> => ({
   coverage: note === undefined ? { kind: 'scope' } : { kind: 'scope', note },
 });
 
+/** The answer with the hints attached, unchanged when there are none. */
+export const withMore = <T>(answer: Answer<T>, more: readonly MoreHint[]): Answer<T> =>
+  more.length === 0 ? answer : { ...answer, more: [...more] };
+
 /** Notes joined into one, `undefined` when there are none. */
 export function noteOf(...notes: (string | null)[]): string | undefined {
   const kept = notes.filter((note): note is string => note !== null);
   return kept.length === 0 ? undefined : kept.join('; ');
+}
+
+/** A time for a coverage note. */
+export function isoOf(ms: number | null): string {
+  if (ms === null) return 'an unknown time';
+  // A `Date` holds 8.64e15 ms either side of the epoch.
+  return Math.abs(ms) <= 8.64e15 ? new Date(ms).toISOString() : `${ms} ms`;
 }
 
 // The JSON the central indexer's `/v1` API serves, field for field, so the app parses an answer unchanged.

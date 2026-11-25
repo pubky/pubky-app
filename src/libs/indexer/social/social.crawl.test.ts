@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { createCrawler } from '../crawler';
 import { FakeNetwork } from '../fakeNetwork';
+import type { MergedRuns } from '../indexer.types';
 import { createMemoryStore } from '../memoryStore';
 import { createSocialDomain, SOCIAL_ACTIVITY, SOCIAL_GRAPH } from './social.domain';
 import { ALICE, BRAN, CLEO, DION, MINUTE_MS, recordsOf, socialNetwork, T0 } from './social.fixtures';
@@ -30,12 +31,17 @@ describe('the social domain behind the crawler', () => {
       if (homeserver === null) continue;
       const graph = await store.readScope({ author, homeserver, group: SOCIAL_GRAPH });
       const activity = await store.readScope({ author, homeserver, group: SOCIAL_ACTIVITY });
+      const historyOf = ({ trusted }: MergedRuns<SocialData>) => ({
+        complete: trusted !== null && trusted.tail === BigInt(0),
+        tail: trusted === null ? null : trusted.tail,
+      });
       records.push({
         author,
         homeserver,
         hop,
         graph: graph.live,
         activity: activity.live,
+        history: { graph: historyOf(graph), activity: historyOf(activity) },
       });
     }
     const view = buildSocialView(records);

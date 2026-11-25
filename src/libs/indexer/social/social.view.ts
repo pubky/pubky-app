@@ -20,6 +20,14 @@ export interface SocialTag extends TagData {
   atMs: number | null;
 }
 
+/** How much of an author's history is loaded. */
+export interface History {
+  /** Whether it reaches back to the author's first event. */
+  complete: boolean;
+  /** The estimated time from which it is loaded, `null` when complete or unknown. */
+  sinceMs: number | null;
+}
+
 /** One label on a target and the users who put it there, sorted. */
 export interface TagGroup {
   label: string;
@@ -87,6 +95,8 @@ export interface SocialView {
    * homeserver has no post. The same records give the same estimate on any device.
    */
   timeOf(author: string, cursor: Cursor): number | null;
+  /** Unknown for an author not in scope. */
+  historyOf(author: string, group?: 'graph' | 'activity'): History;
   /** The estimated time of the profile's last write. */
   profileAtMs(user: string): number | null;
   /** The estimated time `follower` followed `followee`, `null` when unknown or not following. */
@@ -170,6 +180,7 @@ export function buildSocialView(records: Iterable<AuthorRecords>): SocialView {
     const table = homeserver === undefined ? undefined : tables.get(homeserver);
     return table === undefined ? null : estimateMs(table, cursor);
   };
+  const histories = new Map<string, AuthorRecords['history']>();
   const profileCursors = new Map<string, Cursor>();
   const followCursors = new Map<string, Cursor>();
   const hops = new Map<string, number | null>();
@@ -188,6 +199,7 @@ export function buildSocialView(records: Iterable<AuthorRecords>): SocialView {
   for (const entry of entries) {
     const { author } = entry;
     hops.set(author, entry.hop);
+    histories.set(author, entry.history);
     const following: string[] = [];
     for (const [path, record] of entry.graph) {
       if (path === PROFILE_PATH && record.data?.type === 'user') {
@@ -292,6 +304,12 @@ export function buildSocialView(records: Iterable<AuthorRecords>): SocialView {
         .sort(compareNewest);
     },
     timeOf,
+    historyOf: (author, group = 'activity') => {
+      const history = histories.get(author)?.[group];
+      if (history === undefined) return { complete: false, sinceMs: null };
+      const { complete, tail } = history;
+      return { complete, sinceMs: complete || tail === null ? null : timeOf(author, tail) };
+    },
     profileAtMs: (user) => {
       const cursor = profileCursors.get(user);
       return cursor === undefined ? null : timeOf(user, cursor);

@@ -3,7 +3,7 @@ import type { SocialPost, SocialView } from '../social.view';
 import { inScope, webOfTrust } from './graph';
 import { compareText, labelsOf, limitOf, oneOf, page, skipOf } from './params';
 import { InvalidQueryError, UnavailableQueryError } from './queries.errors';
-import { type Answer, exact, type PostKeyStreamJson, scoped } from './queries.types';
+import { type Answer, exact, isoOf, type MoreHint, type PostKeyStreamJson, scoped, withMore } from './queries.types';
 import { postKeyOf } from './wire';
 
 const QUERY = 'stream/posts/keys';
@@ -94,6 +94,8 @@ const isRoot = (post: SocialPost) => post.data.parent === null;
 interface Candidates {
   posts: SocialPost[];
   exact: boolean;
+  /** The authors whose own history the stream is complete with, when it can be. */
+  streamed: readonly string[];
 }
 
 /** Everyone's root posts by these authors, the observer left out. */
@@ -109,7 +111,7 @@ function candidatesOf(
 ): Candidates {
   switch (source) {
     case 'all':
-      return { posts: rootPostsBy(view, view.authors), exact: false };
+      return { posts: rootPostsBy(view, view.authors), exact: false, streamed: [] };
     case 'following': {
       const observer = required(params.observer_id, 'observer_id', source);
       requireInScope(view, observer, source);
@@ -117,36 +119,37 @@ function candidatesOf(
       return {
         posts: rootPostsBy(view, followees, observer),
         exact: followees.every((followee) => inScope(view, followee)),
+        streamed: followees.filter((followee) => followee !== observer && inScope(view, followee)),
       };
     }
     case 'followers': {
       const observer = required(params.observer_id, 'observer_id', source);
-      return { posts: rootPostsBy(view, view.followers(observer), observer), exact: false };
+      return { posts: rootPostsBy(view, view.followers(observer), observer), exact: false, streamed: [] };
     }
     case 'friends': {
       const observer = required(params.observer_id, 'observer_id', source);
       requireInScope(view, observer, source);
-      return { posts: rootPostsBy(view, view.friends(observer), observer), exact: false };
+      return { posts: rootPostsBy(view, view.friends(observer), observer), exact: false, streamed: [] };
     }
     case 'author': {
       const author = required(params.author_id, 'author_id', source);
       requireInScope(view, author, source);
-      return { posts: [...view.rootPostsBy(author)], exact: true };
+      return { posts: [...view.rootPostsBy(author)], exact: true, streamed: [author] };
     }
     case 'author_replies': {
       const author = required(params.author_id, 'author_id', source);
       requireInScope(view, author, source);
-      return { posts: [...view.repliesBy(author)], exact: true };
+      return { posts: [...view.repliesBy(author)], exact: true, streamed: [author] };
     }
     case 'post_replies': {
       const postId = required(params.post_id, 'post_id', source);
       const author = required(params.author_id, 'author_id', source);
-      return { posts: [...view.repliesTo(author, postId)], exact: false };
+      return { posts: [...view.repliesTo(author, postId)], exact: false, streamed: [] };
     }
     case 'post_collections': {
       const author = required(params.author_id, 'author_id', source);
       const postId = required(params.post_id, 'post_id', source);
-      return { posts: view.collectionsContaining(author, postId).filter(isRoot), exact: false };
+      return { posts: view.collectionsContaining(author, postId).filter(isRoot), exact: false, streamed: [] };
     }
     case 'wot': {
       const observer = required(params.observer_id, 'observer_id', source);
@@ -156,7 +159,7 @@ function candidatesOf(
       }
       if (depth === 3) throw new UnavailableQueryError(QUERY, 'source=wot at depth 3 reaches past the crawled hops');
       requireInScope(view, observer, source);
-      return { posts: rootPostsBy(view, webOfTrust(view, observer, depth), observer), exact: false };
+      return { posts: rootPostsBy(view, webOfTrust(view, observer, depth), observer), exact: false, streamed: [] };
     }
     case 'wot_domain':
       throw new UnavailableQueryError(QUERY, 'source=wot_domain needs tags given across the whole network');
@@ -189,6 +192,8 @@ function collectionKeys(
  * The page of post keys a source streams. Scores are a post's creation time in milliseconds for `timeline`, its
  * replies, reposts and tags summed for `total_engagement`. `start` and `end` bound the score inclusively, `start`
  * from above and `end` from below whatever the order; equal scores order by key, as one sorted set does.
+ * A stream of authors is exact only over their whole histories; when a page reaches past an author's loaded
+ * window, `more` asks for that author's backfill.
  */
 export function postStreamKeys(view: SocialView, params: PostStreamParams): Answer<PostKeyStreamJson> {
   const source = oneOf(QUERY, 'source', POST_STREAM_SOURCES, params.source, 'all');
@@ -235,5 +240,21 @@ export function postStreamKeys(view: SocialView, params: PostStreamParams): Answ
     post_keys: selected.map(({ key }) => key),
     last_post_score: last === undefined ? null : Math.round(last.score),
   };
-  return candidates.exact && sorting === 'timeline' && tags === null ? exact(data) : scoped(data);
+
+  const partial = candidates.streamed
+    .map((author) => ({ author, ...view.historyOf(author) }))
+    .filter(({ complete }) => !complete);
+  if (partial.length === 0) {
+    return candidates.exact && sorting === 'timeline' && tags === null ? exact(data) : scoped(data);
+  }
+  // Older posts can only land past a full newest-first page when they are older than its last one.
+  const pageEndMs =
+    sorting === 'timeline' && order === 'descending' && selected.length === limit && last !== undefined
+      ? last.score
+      : null;
+  const reached = ({ sinceMs }: { sinceMs: number | null }) =>
+    pageEndMs === null || sinceMs === null || pageEndMs < sinceMs;
+  const more = partial.filter(reached).map(({ author }): MoreHint => ({ kind: 'backfill', author }));
+  const loaded = partial.map(({ author, sinceMs }) => `${author} since ${isoOf(sinceMs)}`).join(', ');
+  return withMore(scoped(data, `activity loaded only partly, estimated: ${loaded}`), more);
 }

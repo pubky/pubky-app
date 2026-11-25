@@ -1,7 +1,17 @@
 // @vitest-environment node
 import type { BuiltPost } from 'pubky-social-specs';
 import { describe, expect, it } from 'vitest';
-import { ALICE, BRAN, CLEO, DION, MINUTE_MS, recordsOf, socialNetwork, T0 } from '../social.fixtures';
+import {
+  ALICE,
+  BRAN,
+  CLEO,
+  DION,
+  MINUTE_MS,
+  recordsOf,
+  socialNetwork,
+  T0,
+  withPartialActivity,
+} from '../social.fixtures';
 import { buildSocialView } from '../social.view';
 import { postStreamKeys, type PostStreamParams } from './postStream';
 import { InvalidQueryError, UnavailableQueryError } from './queries.errors';
@@ -181,6 +191,45 @@ describe('postStreamKeys parameters', () => {
     expect(unavailable({ source: 'following', observer_id: 'stranger' })).toThrow(UnavailableQueryError);
     expect(unavailable({ source: 'author', author_id: 'stranger' })).toThrow(UnavailableQueryError);
     expect(unavailable({ source: 'collection', author_id: DION, post_id: a1.id })).toThrow(UnavailableQueryError);
+  });
+});
+
+describe('postStreamKeys over a partly loaded history', () => {
+  const iso = (n: number) => new Date(minute(n)).toISOString();
+
+  it('streams an author whose activity is loaded from minute 3 as scope, hinting at a backfill past the window', () => {
+    const partial = buildSocialView(withPartialActivity(recordsOf(network), ALICE, BigInt(11)));
+    const answer = postStreamKeys(partial, { source: 'author', author_id: ALICE });
+
+    expect(answer.data.post_keys).toEqual([key(ALICE, article)]);
+    expect(answer.coverage).toEqual({
+      kind: 'scope',
+      note: `activity loaded only partly, estimated: ${ALICE} since ${iso(3)}`,
+    });
+    expect(answer.more).toEqual([{ kind: 'backfill', author: ALICE }]);
+    expect(postStreamKeys(partial, { source: 'author_replies', author_id: ALICE }).more).toEqual([
+      { kind: 'backfill', author: ALICE },
+    ]);
+
+    const firstPage = postStreamKeys(partial, { source: 'author', author_id: ALICE, limit: 1 });
+    expect(firstPage.coverage.kind).toBe('scope');
+    expect(firstPage.more).toBeUndefined();
+  });
+
+  it('hints at a followee’s backfill only once the page reaches past their loaded window', () => {
+    const partial = buildSocialView(withPartialActivity(recordsOf(network), CLEO, BigInt(14)));
+    const following = (limit: number) => postStreamKeys(partial, { source: 'following', observer_id: ALICE, limit });
+
+    expect(following(2).data.post_keys).toEqual([key(BRAN, image), key(CLEO, quote)]);
+    expect(following(2).coverage.kind).toBe('scope');
+    expect(following(2).more).toBeUndefined();
+    expect(following(10).data.post_keys).toEqual([key(BRAN, image), key(CLEO, quote), key(BRAN, repost)]);
+    expect(following(10).more).toEqual([{ kind: 'backfill', author: CLEO }]);
+  });
+
+  it('stays exact and hint-free over whole histories', () => {
+    expect(postStreamKeys(view, { source: 'author', author_id: ALICE }).more).toBeUndefined();
+    expect(postStreamKeys(view, { source: 'following', observer_id: ALICE }).more).toBeUndefined();
   });
 });
 

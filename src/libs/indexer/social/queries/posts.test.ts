@@ -1,14 +1,26 @@
 // @vitest-environment node
 import { buildTag, buildUri } from 'pubky-social-specs';
 import { describe, expect, it } from 'vitest';
-import { ALICE, BRAN, CLEO, DION, MINUTE_MS, recordsOf, socialNetwork, T0 } from '../social.fixtures';
+import {
+  ALICE,
+  BRAN,
+  CLEO,
+  DION,
+  MINUTE_MS,
+  recordsOf,
+  socialNetwork,
+  T0,
+  withPartialActivity,
+} from '../social.fixtures';
 import { buildSocialView } from '../social.view';
 import { postDetails, postsByIds, postTaggers, postTags, postView } from './posts';
 import { InvalidQueryError, UnavailableQueryError } from './queries.errors';
 
 const network = socialNetwork();
-const { a1, b1, gone, repost, article, image, collection } = network.posts;
+const { a1, b1, gone, orphan, repost, article, image, collection } = network.posts;
 const view = buildSocialView(recordsOf(network));
+/** Alice's activity loaded from cursor 11 on, three minutes in: a1 is older, the deleted post is not. */
+const partial = buildSocialView(withPartialActivity(recordsOf(network), ALICE, BigInt(11)));
 const a1Uri = buildUri(ALICE, 'post', a1.id);
 
 describe('postView', () => {
@@ -48,6 +60,15 @@ describe('postView', () => {
   it('refuses a post the scope does not hold', () => {
     expect(() => postView(view, { author_id: ALICE, post_id: gone.id })).toThrow(UnavailableQueryError);
     expect(() => postView(view, { author_id: ALICE, post_id: a1.id, limit_tags: 0 })).toThrow(InvalidQueryError);
+  });
+
+  it('hints at the parent or embed of a post when it may only be unloaded', () => {
+    const hint = [{ kind: 'post', author: ALICE, postId: a1.id }];
+
+    expect(postView(partial, { author_id: BRAN, post_id: b1.id }).more).toEqual(hint);
+    expect(postView(partial, { author_id: BRAN, post_id: repost.id }).more).toEqual(hint);
+    expect(postView(view, { author_id: BRAN, post_id: b1.id }).more).toBeUndefined();
+    expect(postView(view, { author_id: DION, post_id: orphan.id }).more).toBeUndefined();
   });
 });
 
