@@ -14,7 +14,7 @@ import {
 } from '../social.fixtures';
 import { buildSocialView } from '../social.view';
 import { postDetails, postsByIds, postTaggers, postTags, postView } from './posts';
-import { InvalidQueryError, UnavailableQueryError } from './queries.errors';
+import { InvalidQueryError, NotFoundQueryError } from './queries.errors';
 
 const network = socialNetwork();
 const { a1, b1, gone, orphan, repost, article, image, collection } = network.posts;
@@ -22,6 +22,16 @@ const view = buildSocialView(recordsOf(network));
 /** Alice's activity loaded from cursor 11 on, three minutes in: a1 is older, the deleted post is not. */
 const partial = buildSocialView(withPartialActivity(recordsOf(network), ALICE, BigInt(11)));
 const a1Uri = buildUri(ALICE, 'post', a1.id);
+
+function notFound(query: () => unknown): NotFoundQueryError {
+  try {
+    query();
+  } catch (error) {
+    if (error instanceof NotFoundQueryError) return error;
+    throw error;
+  }
+  throw new Error('expected a NotFoundQueryError');
+}
 
 describe('postView', () => {
   it('serves a post with its scope counts, tags, relationships and the viewer’s tag files', () => {
@@ -57,9 +67,28 @@ describe('postView', () => {
     ]);
   });
 
-  it('refuses a post the scope does not hold', () => {
-    expect(() => postView(view, { author_id: ALICE, post_id: gone.id })).toThrow(UnavailableQueryError);
+  it('finds no post its author’s whole history lacks, and rejects a bad page', () => {
+    const error = notFound(() => postView(view, { author_id: ALICE, post_id: gone.id }));
+
+    expect(error).toMatchObject({
+      code: 'indexer.query.not_found',
+      entity: 'post',
+      key: `${ALICE}:${gone.id}`,
+      known: true,
+      retryable: false,
+      more: [],
+    });
+    expect(notFound(() => postView(view, { author_id: ALICE, post_id: 'not-an-id' })).known).toBe(true);
     expect(() => postView(view, { author_id: ALICE, post_id: a1.id, limit_tags: 0 })).toThrow(InvalidQueryError);
+  });
+
+  it('calls a post older than its author’s loaded history unknown, and one inside it not found', () => {
+    const unknown = notFound(() => postView(partial, { author_id: ALICE, post_id: a1.id }));
+
+    expect(unknown).toMatchObject({ known: false, retryable: true });
+    expect(unknown.more).toEqual([{ kind: 'post', author: ALICE, postId: a1.id }]);
+    expect(notFound(() => postView(partial, { author_id: ALICE, post_id: gone.id })).known).toBe(true);
+    expect(notFound(() => postView(view, { author_id: 'stranger', post_id: a1.id })).known).toBe(false);
   });
 
   it('hints at the parent or embed of a post when it may only be unloaded', () => {
@@ -105,8 +134,9 @@ describe('postDetails', () => {
     });
   });
 
-  it('refuses a deleted post', () => {
-    expect(() => postDetails(view, { author_id: ALICE, post_id: gone.id })).toThrow(UnavailableQueryError);
+  it('finds no deleted post', () => {
+    expect(notFound(() => postDetails(view, { author_id: ALICE, post_id: gone.id })).known).toBe(true);
+    expect(notFound(() => postDetails(partial, { author_id: ALICE, post_id: a1.id })).retryable).toBe(true);
   });
 });
 
@@ -120,6 +150,16 @@ describe('postsByIds', () => {
     expect(answer.data.map(({ details }) => details.id)).toEqual([b1.id, a1.id]);
     expect(answer.data[1].tags[0].tag_uri).toBe(buildTag(BRAN, a1Uri, 'rust').url);
     expect(answer.coverage.kind).toBe('scope');
+    expect(answer.more).toBeUndefined();
+  });
+
+  it('lists the skipped posts that may only be unloaded', () => {
+    const answer = postsByIds(partial, {
+      post_ids: [`${BRAN}:${b1.id}`, `${ALICE}:${a1.id}`, `${ALICE}:${gone.id}`, 'malformed'],
+    });
+
+    expect(answer.data.map(({ details }) => details.id)).toEqual([b1.id]);
+    expect(answer.more).toEqual([{ kind: 'post', author: ALICE, postId: a1.id }]);
   });
 });
 

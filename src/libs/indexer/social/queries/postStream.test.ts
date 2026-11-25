@@ -14,7 +14,7 @@ import {
 } from '../social.fixtures';
 import { buildSocialView } from '../social.view';
 import { postStreamKeys, type PostStreamParams } from './postStream';
-import { InvalidQueryError, UnavailableQueryError } from './queries.errors';
+import { InvalidQueryError, NotFoundQueryError, UnavailableQueryError } from './queries.errors';
 
 const network = socialNetwork();
 const { a1, b1, repost, quote, article, image, collection } = network.posts;
@@ -190,7 +190,7 @@ describe('postStreamKeys parameters', () => {
     );
     expect(unavailable({ source: 'following', observer_id: 'stranger' })).toThrow(UnavailableQueryError);
     expect(unavailable({ source: 'author', author_id: 'stranger' })).toThrow(UnavailableQueryError);
-    expect(unavailable({ source: 'collection', author_id: DION, post_id: a1.id })).toThrow(UnavailableQueryError);
+    expect(unavailable({ source: 'collection', author_id: DION, post_id: a1.id })).toThrow(NotFoundQueryError);
   });
 });
 

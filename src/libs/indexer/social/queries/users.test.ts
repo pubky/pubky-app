@@ -16,7 +16,7 @@ import {
   withProfile,
 } from '../social.fixtures';
 import { buildSocialView } from '../social.view';
-import { InvalidQueryError, UnavailableQueryError } from './queries.errors';
+import { InvalidQueryError, NotFoundQueryError, UnavailableQueryError } from './queries.errors';
 import {
   ingest,
   userCounts,
@@ -35,6 +35,16 @@ const profiled = buildSocialView(withProfile(records, DION, 'Dion'));
 const branUri = buildUri(BRAN, 'user');
 /** An hour after the network was written, so every post and tag is inside the trailing timeframes. */
 const context = { seed: ALICE, now: () => T0 + HOUR_MS };
+
+function notFound(query: () => unknown): NotFoundQueryError {
+  try {
+    query();
+  } catch (error) {
+    if (error instanceof NotFoundQueryError) return error;
+    throw error;
+  }
+  throw new Error('expected a NotFoundQueryError');
+}
 
 describe('userDetails and userCounts', () => {
   it('serves a profile exactly, indexed at the estimated time of its write', () => {
@@ -55,7 +65,20 @@ describe('userDetails and userCounts', () => {
     expect(userDetails(view, { user_id: BRAN }).data.links).toEqual([
       { title: 'Site', url: 'https://example.com/bran' },
     ]);
-    expect(() => userDetails(view, { user_id: DION })).toThrow(UnavailableQueryError);
+  });
+
+  it('finds no profile a whole graph history lacks, and calls a user outside the scope unknown', () => {
+    expect(notFound(() => userDetails(view, { user_id: DION }))).toMatchObject({
+      entity: 'user',
+      key: DION,
+      known: true,
+      more: [],
+    });
+    expect(notFound(() => userDetails(view, { user_id: 'stranger' }))).toMatchObject({
+      known: false,
+      retryable: true,
+      more: [{ kind: 'user', user: 'stranger' }],
+    });
   });
 
   it('counts what the user wrote and what the scope saw of them', () => {
@@ -124,6 +147,8 @@ describe('usersByIds', () => {
       followed_by: false,
     });
     expect(answer.coverage.kind).toBe('scope');
+    expect(answer.more).toBeUndefined();
+    expect(usersByIds(view, { user_ids: ['stranger', ALICE] }).more).toEqual([{ kind: 'user', user: 'stranger' }]);
     expect(() => usersByIds(view, { user_ids: Array.from({ length: 101 }, () => ALICE) })).toThrow(InvalidQueryError);
   });
 });

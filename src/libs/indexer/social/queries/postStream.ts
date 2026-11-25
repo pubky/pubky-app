@@ -2,6 +2,7 @@ import { postKinds } from 'pubky-social-specs';
 import type { SocialPost, SocialView } from '../social.view';
 import { inScope, webOfTrust } from './graph';
 import { compareText, labelsOf, limitOf, oneOf, page, skipOf } from './params';
+import { postOrNotFound } from './presence';
 import { InvalidQueryError, UnavailableQueryError } from './queries.errors';
 import { type Answer, exact, isoOf, type MoreHint, type PostKeyStreamJson, scoped, withMore } from './queries.types';
 import { postKeyOf } from './wire';
@@ -175,10 +176,7 @@ function collectionKeys(
 ): Answer<PostKeyStreamJson> {
   const author = required(params.author_id, 'author_id', 'collection');
   const postId = required(params.post_id, 'post_id', 'collection');
-  const collection = view.post(author, postId);
-  if (collection === null) {
-    throw new UnavailableQueryError(QUERY, 'source=collection for a collection the scope never saw');
-  }
+  const collection = postOrNotFound(view, QUERY, author, postId);
   const keys: string[] =
     collection.data.kind !== 'collection'
       ? []

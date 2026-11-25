@@ -358,6 +358,39 @@ describe('nexus router: search, tags, bootstrap and ingest', () => {
   });
 });
 
+describe('nexus router: not found', () => {
+  it('answers 404 for a post or user the whole history lacks', async () => {
+    const missing = await get(`post/${ALICE}/0000000000000`);
+
+    expect(missing).toEqual({
+      status: 404,
+      json: { error: `post: post ${ALICE}:0000000000000 not found` },
+      coverage: { kind: 'exact' },
+    });
+    expect(await get(`post/${ALICE}/0000000000000/details`)).toMatchObject({ status: 404 });
+    expect(await get(`user/${DION}/details`)).toMatchObject({ status: 404, coverage: { kind: 'exact' } });
+  });
+
+  it('answers 404 with what to load for a post or user that may only be unloaded', async () => {
+    expect(await get('post/stranger/0000000000000')).toMatchObject({
+      status: 404,
+      coverage: { kind: 'scope' },
+      more: [{ kind: 'post', author: 'stranger', postId: '0000000000000' }],
+    });
+    expect(await get('user/stranger/details')).toMatchObject({
+      status: 404,
+      more: [{ kind: 'user', user: 'stranger' }],
+    });
+  });
+
+  it('passes the hints of an answer through', async () => {
+    const users = await post('stream/users/by_ids', { user_ids: [ALICE, 'stranger'] });
+
+    expect(users.status).toBe(200);
+    expect(users.more).toEqual([{ kind: 'user', user: 'stranger' }]);
+  });
+});
+
 describe('nexus router: refusals', () => {
   const unavailable: [string, NexusRequest][] = [
     ['full-text search', { url: `${NEXUS}/search/posts/by_content?q=hello&skip=0&limit=10`, method: 'GET' }],
@@ -374,7 +407,6 @@ describe('nexus router: refusals', () => {
       { url: `${NEXUS}/stream/users/ids?source=starter_pack&skip=0&limit=10&tags=bitcoin`, method: 'GET' },
     ],
     ['someone else’s notifications', { url: `${NEXUS}/user/${BRAN}/notifications?skip=0&limit=30`, method: 'GET' }],
-    ['a post outside the scope', { url: `${NEXUS}/post/${ALICE}/0000000000000`, method: 'GET' }],
     ['an unknown route', { url: `${NEXUS}/user/${ALICE}/relationship/${BRAN}`, method: 'GET' }],
     ['a known route with another method', { url: `${NEXUS}/user/${ALICE}/details`, method: 'POST' }],
     ['another API version', { url: 'https://nexus.staging.pubky.app/v0/files/by_ids', method: 'POST', body: '{}' }],

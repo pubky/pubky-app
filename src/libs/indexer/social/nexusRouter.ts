@@ -1,5 +1,5 @@
-import { InvalidQueryError, UnavailableQueryError } from './queries/queries.errors';
-import type { Answer, Coverage } from './queries/queries.types';
+import { InvalidQueryError, NotFoundQueryError, UnavailableQueryError } from './queries/queries.errors';
+import type { Answer, Coverage, MoreHint } from './queries/queries.types';
 import type { SocialQueries } from './queries/socialQueries';
 
 /** A request the app would send to the central indexer: its full URL or path, its method and its JSON body. */
@@ -10,15 +10,31 @@ export interface NexusRequest {
   body?: unknown;
 }
 
-export interface NexusResponse {
-  status: 200;
-  json: unknown;
-  coverage: Coverage;
-}
+/**
+ * An answer, or the central indexer's 404 for a post or user the view does not hold. A 404 is `exact` when the
+ * view proves the absence; otherwise `more` names what to load before asking again.
+ */
+export type NexusResponse =
+  | { status: 200; json: unknown; coverage: Coverage; more?: MoreHint[] }
+  | { status: 404; json: { error: string }; coverage: Coverage; more?: MoreHint[] };
 
 export interface NexusRouter {
   /** Rejects with `UnavailableQueryError` for what the local index cannot answer, `InvalidQueryError` for a bad parameter. */
   route(request: NexusRequest): Promise<NexusResponse>;
+}
+
+function responseOf(answer: () => Answer<unknown>): NexusResponse {
+  try {
+    const { data, coverage, more } = answer();
+    return more === undefined ? { status: 200, json: data, coverage } : { status: 200, json: data, coverage, more };
+  } catch (error) {
+    if (!(error instanceof NotFoundQueryError)) throw error;
+    const coverage: Coverage = error.known ? { kind: 'exact' } : { kind: 'scope', note: 'not loaded yet' };
+    const json = { error: error.message };
+    return error.more.length === 0
+      ? { status: 404, json, coverage }
+      : { status: 404, json, coverage, more: error.more };
+  }
 }
 
 const API_VERSION = 'v1';
@@ -350,12 +366,9 @@ export function createNexusRouter(queries: SocialQueries): NexusRouter {
         if (route.method !== method) continue;
         const path = matchPath(route.path, segments);
         if (path === null) continue;
-        const answer = route.answer({
-          path,
-          query: queryReader(route.path, search),
-          body: () => bodyReader(route.path, body),
-        });
-        return { status: 200 as const, json: answer.data, coverage: answer.coverage };
+        return responseOf(() =>
+          route.answer({ path, query: queryReader(route.path, search), body: () => bodyReader(route.path, body) }),
+        );
       }
       throw new UnavailableQueryError(`${method} ${segments.join('/')}`, 'no such route is served locally');
     },

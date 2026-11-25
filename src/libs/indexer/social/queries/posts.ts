@@ -1,8 +1,8 @@
 import type { SocialTarget } from '../social.types';
-import type { SocialPost, SocialView } from '../social.view';
+import type { SocialView } from '../social.view';
 import { foldLabel, limitOf, skipOf } from './params';
-import { hintsOf, postHint } from './presence';
-import { InvalidQueryError, UnavailableQueryError } from './queries.errors';
+import { hintsOf, postHint, postOrNotFound } from './presence';
+import { InvalidQueryError } from './queries.errors';
 import {
   type Answer,
   exact,
@@ -53,21 +53,21 @@ export interface PostsByIdsParams {
   viewer_id?: string;
 }
 
-function postOrUnavailable(view: SocialView, query: string, { author_id, post_id }: PostRef): SocialPost {
-  const post = view.post(author_id, post_id);
-  // A post outside the scope or older than the crawl window is not known to be missing.
-  if (post === null) throw new UnavailableQueryError(query, `post ${author_id}:${post_id} is not in the scope`);
-  return post;
-}
-
-/** The listed posts the scope knows, in the order asked; the rest are left out, as the central indexer drops missing ones. */
+/**
+ * The listed posts the view holds, in the order asked; the rest are left out, as the central indexer drops
+ * missing ones, and those that may only be unloaded are listed in `more`.
+ */
 export function postsByIds(view: SocialView, { post_ids, viewer_id }: PostsByIdsParams): Answer<PostViewJson[]> {
+  const more: MoreHint[] = [];
   const posts = post_ids.flatMap((key) => {
     const ref = parsePostKey(key);
-    const post = ref === null ? null : view.post(ref.author, ref.postId);
-    return post === null ? [] : [postViewJson(view, post, viewer_id)];
+    if (ref === null) return [];
+    const post = view.post(ref.author, ref.postId);
+    if (post !== null) return [postViewJson(view, post, viewer_id)];
+    more.push(...hintsOf([postHint(view, ref.author, ref.postId)]));
+    return [];
   });
-  return scoped(posts, 'posts outside the scope are left out');
+  return withMore(scoped(posts, 'posts outside the scope are left out'), more);
 }
 
 /** The hint that loads what a reply or repost points at, when the view lacks it. */
@@ -78,15 +78,15 @@ function threadHint(view: SocialView, target: SocialTarget | null): MoreHint | n
 
 export function postView(view: SocialView, params: PostViewParams): Answer<PostViewJson> {
   const query = 'post';
-  const post = postOrUnavailable(view, query, params);
+  const post = postOrNotFound(view, query, params.author_id, params.post_id);
   const tagPage = tagPageOf(query, params);
   const more = hintsOf([threadHint(view, post.data.parent), threadHint(view, post.data.embed)]);
   return withMore(scoped(postViewJson(view, post, params.viewer_id, tagPage)), more);
 }
 
 /** The post's own fields, as its author wrote them. */
-export function postDetails(view: SocialView, params: PostRef): Answer<PostDetailsJson> {
-  return exact(postDetailsJson(postOrUnavailable(view, 'post/details', params)));
+export function postDetails(view: SocialView, { author_id, post_id }: PostRef): Answer<PostDetailsJson> {
+  return exact(postDetailsJson(postOrNotFound(view, 'post/details', author_id, post_id)));
 }
 
 export function postTags(view: SocialView, params: PostTagsParams): Answer<TagDetailsJson[]> {

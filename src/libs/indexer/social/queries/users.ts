@@ -12,6 +12,7 @@ import {
   type TimeWindow,
   windowOf,
 } from './params';
+import { hintsOf, profileOrNotFound, userHint } from './presence';
 import { InvalidQueryError, UnavailableQueryError } from './queries.errors';
 import {
   type Answer,
@@ -80,8 +81,7 @@ const INDEXED_AT_NOTE = 'indexed_at estimated from homeserver event order';
 
 /** The profile, as its author wrote it. */
 export function userDetails(view: SocialView, { user_id }: UserRef): Answer<UserDetailsJson> {
-  const profile = view.profile(user_id);
-  if (profile === null) throw new UnavailableQueryError('user/details', `no profile of ${user_id} in the scope`);
+  const profile = profileOrNotFound(view, 'user/details', user_id);
   return exact(userDetailsJson(user_id, profile, view.profileAtMs(user_id) ?? 0), INDEXED_AT_NOTE);
 }
 
@@ -122,11 +122,12 @@ export function userTaggers(view: SocialView, params: UserTaggersParams): Answer
   });
 }
 
-/** The listed users with a profile in the scope, in the order asked. */
+/** The listed users with a profile in the view, in the order asked; those that may only be unloaded are in `more`. */
 export function usersByIds(view: SocialView, { user_ids, viewer_id }: UsersByIdsParams): Answer<UserViewJson[]> {
   if (user_ids.length > 100) throw new InvalidQueryError('stream/users/by_ids', 'user_ids', 'takes at most 100 ids');
   const users = user_ids.flatMap((user) => userViewJson(view, user, viewer_id) ?? []);
-  return scoped(users, `users without a profile in the scope are left out; ${INDEXED_AT_NOTE}`);
+  const more = hintsOf(user_ids.filter((user) => view.profile(user) === null).map((user) => userHint(view, user)));
+  return withMore(scoped(users, `users without a profile in the scope are left out; ${INDEXED_AT_NOTE}`), more);
 }
 
 const USER_STREAM_SOURCES = [

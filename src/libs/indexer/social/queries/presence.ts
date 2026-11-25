@@ -1,7 +1,10 @@
 import { idMicros } from 'pubky-social-specs';
-import type { SocialView } from '../social.view';
+import type { UserData } from '../social.types';
+import type { SocialPost, SocialView } from '../social.view';
 import { inScope } from './graph';
+import { NotFoundQueryError } from './queries.errors';
 import type { MoreHint } from './queries.types';
+import { postKeyOf } from './wire';
 
 // Whether something the view lacks is absent or only not loaded yet.
 
@@ -41,3 +44,17 @@ export function userHint(view: SocialView, user: string): MoreHint | null {
 
 export const hintsOf = (hints: readonly (MoreHint | null)[]): MoreHint[] =>
   hints.filter((hint): hint is MoreHint => hint !== null);
+
+export function postOrNotFound(view: SocialView, query: string, author: string, postId: string): SocialPost {
+  const post = view.post(author, postId);
+  if (post !== null) return post;
+  const hint = postHint(view, author, postId);
+  throw new NotFoundQueryError(query, 'post', postKeyOf(author, postId), hint === null, hintsOf([hint]));
+}
+
+export function profileOrNotFound(view: SocialView, query: string, user: string): UserData {
+  const profile = view.profile(user);
+  if (profile !== null) return profile;
+  const hint = userHint(view, user);
+  throw new NotFoundQueryError(query, 'user', user, hint === null, hintsOf([hint]));
+}
