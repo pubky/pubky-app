@@ -191,6 +191,33 @@ export const logPhase = (label: string, detail = '') => {
   });
 };
 
+const APP_MARK_PREFIX = 'pubky:';
+
+/**
+ * Prints the app's own phase marks (`markPhase`, User Timing entries named `pubky:*`) left since `sinceMs`, each at its
+ * own wall-clock time and its offset from then: the sign-in steps the page shows no sign of, such as the index being
+ * ready or the bootstrap done.
+ */
+export const logAppMarks = (sinceLabel: string, sinceMs: number) => {
+  cy.window({ log: false }).then((win) => {
+    const marks = win.performance
+      .getEntriesByType('mark')
+      .filter(({ name }) => name.startsWith(APP_MARK_PREFIX))
+      .map(({ name, startTime }) => ({
+        name: name.slice(APP_MARK_PREFIX.length),
+        at: win.performance.timeOrigin + startTime,
+      }))
+      .filter(({ at }) => at >= sinceMs)
+      .sort((a, b) => a.at - b.at);
+    const test = `${Cypress.spec.name} "${Cypress.currentTest?.title ?? ''}"`;
+    marks.forEach(({ name, at }) => {
+      const offset = ((at - sinceMs) / 1000).toFixed(1);
+      const line = `${PHASE_LOG_NAME} ${new Date(at).toISOString()} (${offset}s after ${sinceLabel}) ${test}: app ${name}`;
+      cy.task('log', line, { log: false });
+    });
+  });
+};
+
 /** The status card as `label=value` pairs, for a phase mark. */
 const localIndexStats = () =>
   cy
@@ -226,12 +253,19 @@ export const openLocalIndexStatus = () => {
  * Home after the sync loads every feed from the finished index, so a test asserts on the whole network at once.
  */
 export const signInToLocalIndex = (user: SeededUser) => {
+  let signingInAt = 0;
+  cy.then(() => {
+    signingInAt = Date.now();
+  });
   logPhase('signing in');
-  cy.signInWithPubkyRing(user.name);
+  // A first sign-in of a key stops on the migration gate; a later one passes it unasked
+  cy.signInWithPubkyRing(user.name, '/home', { beforeContinue: () => logPhase('gate shown') });
   logPhase('signed in, on Home');
   openLocalIndexStatus();
   localIndexStat('First sync', FIRST_SYNC_TIMEOUT).should('have.text', 'Done');
   localIndexStats().then((stats) => logPhase('first sync done', `{${stats}}`));
+  // Read once the sync is done, so its own mark is among them; client navigation keeps the page's marks
+  cy.then(() => logAppMarks('signing in', signingInAt));
   goToHomePage();
   logPhase('Home loaded');
 };

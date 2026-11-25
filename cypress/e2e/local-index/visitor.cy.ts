@@ -7,6 +7,7 @@ import {
   expectAppWithoutNexus,
   forbidNexusRequests,
   type LocalNetwork,
+  logAppMarks,
   logPhase,
   NETWORK_NAMES,
   NETWORK_TEXTS,
@@ -33,6 +34,10 @@ describe('local index: signed-out visitor without Nexus', () => {
   });
 
   it('opens a shared post', () => {
+    let openedAt = 0;
+    cy.then(() => {
+      openedAt = Date.now();
+    });
     logPhase('opening a shared post');
     cy.visit(`/post/${network.olga.id}/${network.posts.olgaNote.id}`);
 
@@ -44,6 +49,7 @@ describe('local index: signed-out visitor without Nexus', () => {
       .should('contain.text', NETWORK_TEXTS.olgaNote);
     cy.get('[data-cy="post-page-title"]').should('contain.text', NETWORK_NAMES.olga);
     logPhase('shared post shown');
+    cy.then(() => logAppMarks('opening a shared post', openedAt));
   });
 
   it('opens a shared profile', () => {
