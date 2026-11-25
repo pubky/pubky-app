@@ -491,8 +491,8 @@ describe('createSocialIndexer', () => {
     expect(await scopesOf(BRAN)).toEqual([]);
     expect(view.post(DION, collection.id)).toBeNull();
     expect(view.post(DION, orphan.id)).not.toBeNull();
-    // The author's profile loads with the first post and stays under its own limit.
-    expect((await scopesOf(DION)).sort()).toEqual([`post:${orphan.id}`, 'profile'].sort());
+    // Dion's profile is asked for with the first post, but Dion wrote none: an empty read stores no scope.
+    expect(await scopesOf(DION)).toEqual([`post:${orphan.id}`]);
 
     await indexer.ensureUser(BRAN);
     expect(indexer.view().profile(BRAN)).toMatchObject({ name: 'Bran' });
