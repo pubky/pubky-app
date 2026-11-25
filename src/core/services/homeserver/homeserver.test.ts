@@ -1911,6 +1911,28 @@ describe('HomeserverService', () => {
         });
       });
 
+      it('tells the owned-write listeners the path of each write that landed, and of none that failed', async () => {
+        mockState.currentSession = createMockSession();
+        const written = vi.fn();
+        const unsubscribe = HomeserverService.subscribeOwnedWrites(written);
+
+        await HomeserverService.putBlob({ url: 'pubky://user/pub/a.json', blob: new Uint8Array([1]) });
+        await HomeserverService.request({ method: HttpMethod.PUT, url: 'pubky://user/pub/b.json', bodyJson: {} });
+        await HomeserverService.request({ method: HttpMethod.DELETE, url: 'pubky://user/pub/c.json' });
+        mockState.sessionStoragePutBytes.mockRejectedValueOnce({
+          name: 'RequestError',
+          message: 'Payload Too Large',
+          data: { statusCode: 413 },
+        });
+        await HomeserverService.putBlob({ url: 'pubky://user/pub/d.json', blob: new Uint8Array([1]) }).catch(
+          () => undefined,
+        );
+        unsubscribe();
+        await HomeserverService.putBlob({ url: 'pubky://user/pub/e.json', blob: new Uint8Array([1]) });
+
+        expect(written.mock.calls).toEqual([['/pub/a.json'], ['/pub/b.json'], ['/pub/c.json']]);
+      });
+
       it('should throw INVALID_INPUT when uploading blob without a session to a pubky:// address', async () => {
         mockState.currentSession = null;
         const blobData = new Uint8Array([1, 2, 3]);

@@ -2,10 +2,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createIdbStore } from '@/libs/indexer/idbStore';
 import { createSocialIndexer } from '@/libs/indexer/social/socialIndexer';
 import type { Pubky } from '@/models/models.types';
+import { HomeserverService } from '@/services/homeserver/homeserver';
 import { IndexerService } from './indexer';
 
 const fakes = vi.hoisted(() => ({
-  indexers: [] as Array<{ start: ReturnType<typeof vi.fn>; stop: ReturnType<typeof vi.fn> }>,
+  indexers: [] as Array<{
+    start: ReturnType<typeof vi.fn>;
+    stop: ReturnType<typeof vi.fn>;
+    refresh: ReturnType<typeof vi.fn>;
+  }>,
+  writeListeners: new Set<(path: string) => void>(),
   stores: [] as Array<{ name: string; close: ReturnType<typeof vi.fn>; destroy: ReturnType<typeof vi.fn> }>,
 }));
 
@@ -18,13 +24,31 @@ vi.mock('@/libs/indexer/idbStore', () => ({
 }));
 vi.mock('@/libs/indexer/social/socialIndexer', () => ({
   createSocialIndexer: vi.fn(() => {
-    const indexer = { start: vi.fn(), stop: vi.fn(), pause: vi.fn(), resume: vi.fn() };
+    const indexer = {
+      start: vi.fn(),
+      stop: vi.fn(),
+      pause: vi.fn(),
+      resume: vi.fn(),
+      refresh: vi.fn().mockResolvedValue(undefined),
+    };
     fakes.indexers.push(indexer);
     return indexer;
   }),
 }));
 vi.mock('@/libs/indexer/browserCoordination', () => ({ createBrowserCoordination: () => null }));
 vi.mock('./indexer.transport', () => ({ createIndexerTransport: vi.fn(() => ({})) }));
+vi.mock('@/services/homeserver/homeserver', () => ({
+  HomeserverService: {
+    subscribeOwnedWrites: vi.fn((listener: (path: string) => void) => {
+      fakes.writeListeners.add(listener);
+      return () => fakes.writeListeners.delete(listener);
+    }),
+  },
+}));
+
+const write = (path: string) => {
+  for (const listener of fakes.writeListeners) listener(path);
+};
 
 const ALICE = 'alice-pubky' as Pubky;
 const BOB = 'bob-pubky' as Pubky;
@@ -34,6 +58,7 @@ describe('IndexerService', () => {
     vi.clearAllMocks();
     fakes.indexers.length = 0;
     fakes.stores.length = 0;
+    fakes.writeListeners.clear();
   });
 
   afterEach(() => {
@@ -48,6 +73,18 @@ describe('IndexerService', () => {
     expect(createIdbStore).toHaveBeenCalledWith(`pubky-index-${ALICE}`);
     expect(fakes.indexers[0].start).toHaveBeenCalledExactlyOnceWith(ALICE);
     expect(IndexerService.current()).toBe(fakes.indexers[0]);
+  });
+
+  it('refreshes the account after each of its public writes, until it stops', () => {
+    IndexerService.start(ALICE);
+
+    write('/pub/social/v1/posts/0033');
+    write('/priv/app.pubky/v1/settings.json');
+    IndexerService.stop();
+    write('/pub/social/v1/posts/0034');
+
+    expect(HomeserverService.subscribeOwnedWrites).toHaveBeenCalledOnce();
+    expect(fakes.indexers[0].refresh).toHaveBeenCalledExactlyOnceWith([ALICE]);
   });
 
   it('stops the previous account’s index before starting another', () => {

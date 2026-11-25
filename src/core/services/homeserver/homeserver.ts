@@ -93,6 +93,23 @@ export class HomeserverService {
 
   private static sessionFailureListeners = new Set<(failure: ActiveSessionFailure) => void>();
 
+  private static ownedWriteListeners = new Set<(path: string) => void>();
+
+  /**
+   * Hears every owned storage write that landed: the path written or deleted, once its PUT or DELETE succeeded.
+   * The local index refreshes the account from it, so the app's own writes show up in its answers.
+   */
+  static subscribeOwnedWrites(listener: (path: string) => void): () => void {
+    this.ownedWriteListeners.add(listener);
+    return () => {
+      this.ownedWriteListeners.delete(listener);
+    };
+  }
+
+  private static notifyOwnedWrite(path: string): void {
+    for (const listener of this.ownedWriteListeners) listener(path);
+  }
+
   static subscribeSessionFailures(listener: (failure: ActiveSessionFailure) => void): () => void {
     this.sessionFailureListeners.add(listener);
     return () => {
@@ -629,6 +646,7 @@ export class HomeserverService {
               { beforeAttempt, ...retryOptions },
             ),
           ).catch((error) => handleError({ error, additionalContext: { url, method } }));
+          this.notifyOwnedWrite(path);
           return undefined as T;
         }
         case HttpMethod.DELETE: {
@@ -640,6 +658,7 @@ export class HomeserverService {
               { beforeAttempt, ...retryOptions },
             ),
           ).catch((error) => handleError({ error, additionalContext: { url, method } }));
+          this.notifyOwnedWrite(path);
           return undefined as T;
         }
       }
@@ -710,10 +729,11 @@ export class HomeserverService {
             { beforeAttempt, ...retryOptions },
           ),
         );
-        return;
       } catch (error) {
         return handleError({ error, additionalContext: { url, method: HttpMethod.PUT } });
       }
+      this.notifyOwnedWrite(path);
+      return;
     }
 
     if (!isHttpUrl(url) || extractPubkyZ32(url) !== null) {

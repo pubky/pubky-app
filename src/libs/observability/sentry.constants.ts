@@ -23,6 +23,8 @@ export const PHONE_PATTERN = /\+?\d[\d\s().-]{7,}\d/g;
 export const NEXUS_POST_TAGS_PATH_PATTERN = /^\/v1\/post\/[^/]+\/[^/]+\/tags$/;
 /** `operation` tag set by `HomeserverService.subscribeUserEventStream`; matched by a Sentry drop rule. */
 export const HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION = 'subscribeUserEventStream';
+/** `operation` tag of a Nexus read answered by the local index (`queryNexus`); matched by a Sentry drop rule. */
+export const NEXUS_LOCAL_INDEX_OPERATION = 'queryLocalIndex';
 /** `operation` tags of the anonymous `HomeserverService` reads the local index crawls with; matched by a Sentry drop rule. */
 export const HOMESERVER_INDEX_READ_OPERATIONS = {
   resolveHomeserver: 'resolveIndexedUserHomeserver',

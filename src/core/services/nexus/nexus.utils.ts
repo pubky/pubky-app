@@ -1,8 +1,27 @@
-import { getCdnUrl, getNexusUrl, getV1CdnUrl, NEXUS_API_VERSION } from '@/config/nexus';
-import { httpResponseToError, safeFetch } from '@/libs/error/error.http';
+import { INDEXER_HINT_BACKFILL_PAGES } from '@/config/indexer';
+import {
+  getCdnUrl,
+  getNexusUrl,
+  getV1CdnUrl,
+  hasLocalIndexSource,
+  hasNexusSource,
+  NEXUS_API_VERSION,
+} from '@/config/nexus';
+import type { AppError } from '@/libs/error/error';
+import { ClientErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { httpResponseToError, httpStatusCodeToError, safeFetch } from '@/libs/error/error.http';
 import { ErrorService } from '@/libs/error/error.types';
-import { HttpMethod, JSON_HEADERS } from '@/libs/http/http.types';
+import { toAppError } from '@/libs/error/error.utils';
+import { HttpMethod, HttpStatusCode, JSON_HEADERS } from '@/libs/http/http.types';
 import { parseResponseOrThrow } from '@/libs/http/response.utils';
+import type { NexusRequest } from '@/libs/indexer/social/nexusRouter';
+import { InvalidQueryError, UnavailableQueryError } from '@/libs/indexer/social/queries/queries.errors';
+import type { MoreHint } from '@/libs/indexer/social/queries/queries.types';
+import { SOCIAL_ACTIVITY } from '@/libs/indexer/social/social.domain';
+import type { SocialIndexer } from '@/libs/indexer/social/socialIndexer';
+import { NEXUS_LOCAL_INDEX_OPERATION } from '@/libs/observability/sentry.constants';
+import { IndexerService } from '@/services/indexer/indexer';
 import { nexusQueryClient, nexusRetryPolicy } from './nexus.query-client';
 import type {
   TBuildNexusUrlOptions,
@@ -111,8 +130,12 @@ export async function fetchNexus<T>({ url, method = HttpMethod.GET, body = null 
   return parseResponseOrThrow<T>(response, ErrorService.Nexus, FETCH_NEXUS_OPERATION, url);
 }
 
-/** Like fetchNexus but for endpoints that return no body (e.g. PUT ingest/{id}); throws on non-ok. */
+/**
+ * Like fetchNexus but for endpoints that return no body (e.g. PUT ingest/{id}); throws on non-ok. Without Nexus
+ * among the sources there is nobody to tell: the local index crawls what it needs itself.
+ */
 export async function fetchNexusNoContent({ url, method }: Pick<TFetchNexusParams, 'url' | 'method'>): Promise<void> {
+  if (!hasNexusSource()) return;
   const response = await safeFetch(url, createFetchOptions({ method }), ErrorService.Nexus, FETCH_NEXUS_OPERATION);
   if (!response.ok) {
     throw httpResponseToError(response, ErrorService.Nexus, FETCH_NEXUS_OPERATION, url);
@@ -181,6 +204,115 @@ export function buildNexusQueryKey({
   return ['nexus', url, method, body, ...(notFoundRetries === undefined ? [] : [{ notFoundRetries }])];
 }
 
+type LocalIndexAnswer =
+  | { kind: 'answer'; json: unknown }
+  /** `known` when the index proves the absence: the history that would hold the post or user is loaded. */
+  | { kind: 'not_found'; known: boolean }
+  | { kind: 'unavailable'; reason: string };
+
+const LOCAL_INDEX_METHODS: Partial<Record<HttpMethod, NexusRequest['method']>> = {
+  [HttpMethod.GET]: 'GET',
+  [HttpMethod.POST]: 'POST',
+  [HttpMethod.PUT]: 'PUT',
+};
+
+/** A read about one post or one user, as opposed to a stream, a search or a ranking. */
+const isOneEntityRead = (url: string): boolean =>
+  new RegExp(`/${NEXUS_API_VERSION}/(?:post|user)/`).test(new URL(url, 'http://local.invalid').pathname);
+
+function loadHint(indexer: SocialIndexer, hint: MoreHint): Promise<void> {
+  switch (hint.kind) {
+    case 'user':
+      return indexer.ensureUser(hint.user);
+    case 'post':
+      return indexer.ensurePost(hint.author, hint.postId);
+    case 'backfill':
+      return indexer.backfill(hint.author, SOCIAL_ACTIVITY, INDEXER_HINT_BACKFILL_PAGES);
+  }
+}
+
+/**
+ * Answers a Nexus read from the local index. When the answer names what could be loaded to improve it, and it is a
+ * 404 the index cannot vouch for or the read is about one post or user, that is loaded once and the read asked once
+ * more. A route the index cannot serve (global search and rankings) is `unavailable`.
+ */
+async function askLocalIndex({
+  url,
+  method = HttpMethod.GET,
+  body = null,
+}: TQueryNexusParams): Promise<LocalIndexAnswer> {
+  const indexer = IndexerService.current();
+  const routedMethod = LOCAL_INDEX_METHODS[method];
+  if (!indexer) return { kind: 'unavailable', reason: 'no local index runs without a signed-in account' };
+  if (!routedMethod) return { kind: 'unavailable', reason: `${method} is not a read` };
+  const request: NexusRequest = { url, method: routedMethod, body: body ?? undefined };
+  try {
+    let response = await indexer.request(request);
+    const more = response.more ?? [];
+    const unproven = response.status === 404 && response.coverage.kind !== 'exact';
+    if (more.length > 0 && (unproven || isOneEntityRead(url))) {
+      // A hint that fails to load leaves the second answer as it was.
+      await Promise.allSettled(more.map((hint) => loadHint(indexer, hint)));
+      response = await indexer.request(request);
+    }
+    if (response.status === 200) return { kind: 'answer', json: response.json };
+    return { kind: 'not_found', known: response.coverage.kind === 'exact' };
+  } catch (error) {
+    if (error instanceof UnavailableQueryError) return { kind: 'unavailable', reason: error.message };
+    const context = { endpoint: url, statusCode: HttpStatusCode.BAD_REQUEST };
+    if (error instanceof InvalidQueryError) {
+      throw Err.client(ClientErrorCode.BAD_REQUEST, error.message, {
+        service: ErrorService.Nexus,
+        operation: NEXUS_LOCAL_INDEX_OPERATION,
+        context,
+      });
+    }
+    throw toAppError(error, ErrorService.Nexus, NEXUS_LOCAL_INDEX_OPERATION, { context: { endpoint: url } });
+  }
+}
+
+/**
+ * The error a miss of the local index raises: a 404 is the one a Nexus 404 raises, so not-found handling applies
+ * unchanged, and a read the index cannot serve is a 422, which no retry policy repeats. Both are expected outcomes
+ * and stay out of Sentry (`local-index-misses`).
+ */
+function localIndexMissError(miss: Exclude<LocalIndexAnswer, { kind: 'answer' }>, url: string): AppError {
+  if (miss.kind === 'not_found') {
+    return httpStatusCodeToError(
+      HttpStatusCode.NOT_FOUND,
+      'Not found in the local index',
+      ErrorService.Nexus,
+      NEXUS_LOCAL_INDEX_OPERATION,
+      url,
+    );
+  }
+  return Err.client(ClientErrorCode.UNPROCESSABLE, `The local index cannot answer this read: ${miss.reason}`, {
+    service: ErrorService.Nexus,
+    operation: NEXUS_LOCAL_INDEX_OPERATION,
+    context: { endpoint: url, statusCode: HttpStatusCode.UNPROCESSABLE_ENTITY },
+  });
+}
+
+/**
+ * Answers a Nexus read from the configured sources (`PUBKY_RUNTIME_INDEXER_SOURCES`), in order:
+ * - `nexus`: Nexus, through {@link queryRemoteNexus}.
+ * - `local`: the local index alone. Its answer has no transport cache, retries or start stamp: it is read from the
+ *   index's current view, which reflects homeserver state as of its last sync, not as of this call, so it carries
+ *   no proof of freshness for the tag guards (`getNexusResponseStartedAt` reads `undefined`).
+ * - `local,nexus`: the local index, then Nexus for a read the index cannot serve or a 404 it cannot vouch for.
+ *
+ * Body must be a string (typically JSON.stringify'd) to ensure proper cache key serialization.
+ */
+export async function queryNexus<T>(params: TQueryNexusParams): Promise<T> {
+  if (!hasLocalIndexSource()) return await queryRemoteNexus<T>(params);
+  const local = await askLocalIndex(params);
+  // The index answers in Nexus's response shape.
+  if (local.kind === 'answer') return local.json as T;
+  const nexusMayKnow = local.kind === 'unavailable' || !local.known;
+  if (nexusMayKnow && hasNexusSource()) return await queryRemoteNexus<T>(params);
+  throw localIndexMissError(local, params.url);
+}
+
 /**
  * Queries Nexus API with automatic retry logic via TanStack Query.
  * Body must be a string (typically JSON.stringify'd) to ensure proper cache key serialization.
@@ -194,7 +326,7 @@ export function buildNexusQueryKey({
  * @returns Parsed response data
  * @throws {NexusError} When response is not ok after all retries
  */
-export async function queryNexus<T>({
+async function queryRemoteNexus<T>({
   url,
   method = HttpMethod.GET,
   body = null,

@@ -19,3 +19,6 @@ export const INDEXER_READ_TIMEOUT_MS = 20_000;
 
 /** Each account keeps its index in its own IndexedDB database, named by this prefix and its public key. */
 export const INDEXER_DATABASE_PREFIX = 'pubky-index-';
+
+/** Pages of an author's older activity loaded when a local answer asks for more. */
+export const INDEXER_HINT_BACKFILL_PAGES = 1;

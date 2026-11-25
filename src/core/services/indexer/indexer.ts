@@ -3,15 +3,20 @@ import { createBrowserCoordination } from '@/libs/indexer/browserCoordination';
 import { createIdbStore, type IdbIndexStore } from '@/libs/indexer/idbStore';
 import type { SocialData } from '@/libs/indexer/social/social.types';
 import { createSocialIndexer, type SocialIndexer } from '@/libs/indexer/social/socialIndexer';
+import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
+import { HomeserverService } from '@/services/homeserver/homeserver';
 import { createIndexerTransport } from './indexer.transport';
 
 const databaseName = (owner: Pubky) => `${INDEXER_DATABASE_PREFIX}${owner}`;
+
+const PUBLIC_PATH_PREFIX = '/pub/';
 
 type RunningIndex = {
   owner: Pubky;
   indexer: SocialIndexer;
   store: IdbIndexStore<SocialData>;
+  unsubscribe: () => void;
 };
 
 /**
@@ -35,8 +40,13 @@ export class IndexerService {
       now: () => Date.now(),
       coordination: createBrowserCoordination(),
     });
+    // Every app write lands through HomeserverService; a refresh of the account makes it part of the answers.
+    const unsubscribe = HomeserverService.subscribeOwnedWrites((path) => {
+      if (!path.startsWith(PUBLIC_PATH_PREFIX)) return;
+      void indexer.refresh([owner]).catch((error: unknown) => Logger.debug('Local index refresh ended', { error }));
+    });
     indexer.start(owner);
-    this.running = { owner, indexer, store };
+    this.running = { owner, indexer, store, unsubscribe };
   }
 
   /** Stops the running index and closes its database; what it stored stays for the next start. */
@@ -44,6 +54,7 @@ export class IndexerService {
     const running = this.running;
     if (!running) return;
     this.running = null;
+    running.unsubscribe();
     running.indexer.stop();
     running.store.close();
   }

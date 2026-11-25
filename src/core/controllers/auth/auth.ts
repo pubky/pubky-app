@@ -11,7 +11,7 @@ import { UserApplication } from '@/application/user/user';
 import { APP_CAPABILITIES, LOCKS_CAPABILITIES, SOCIAL_V1_APP_CAPABILITIES } from '@/config/auth';
 import { getModerationId } from '@/config/moderation';
 import { getHomeserverCapabilities } from '@/config/network';
-import { hasLocalIndexSource } from '@/config/nexus';
+import { hasLocalIndexSource, hasNexusSource } from '@/config/nexus';
 import type { SessionReadiness } from '@/controllers/auth/auth.types';
 import { LocksController } from '@/controllers/locks/locks';
 import { SocialMigrationController, type SocialMigrationEntry } from '@/controllers/social-migration/social-migration';
@@ -1309,14 +1309,17 @@ export class AuthController {
 
   /**
    * Initializes the application bootstrap after profile creation.
-   * Waits for Nexus to index the user's profile.json, then bootstraps notifications and data.
+   * Waits for Nexus to index the user's profile.json, then bootstraps notifications and data. Without Nexus
+   * among the sources there is nothing to wait for: the profile write refreshes the local index itself.
    */
   static async bootstrapWithDelay() {
     const authStore = useAuthStore.getState();
     const pubky = authStore.selectCurrentUserPubky();
-    // Wait 5 seconds before bootstrap to let Nexus index the user
-    Logger.info(`Waiting 5 seconds to index ${pubky} profile.json in Nexus before bootstrap...`);
-    await sleep(5000);
+    if (hasNexusSource()) {
+      // Wait 5 seconds before bootstrap to let Nexus index the user
+      Logger.info(`Waiting 5 seconds to index ${pubky} profile.json in Nexus before bootstrap...`);
+      await sleep(5000);
+    }
     await this.hydrateMeImAlive({ pubky });
     authStore.setHasProfile(true);
   }
