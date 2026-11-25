@@ -42,6 +42,8 @@ vi.mock('@/libs/indexer/social/socialIndexer', () => ({
       resume: vi.fn(),
       refresh: vi.fn().mockResolvedValue(undefined),
       setExcluded: vi.fn(),
+      ready: () => Promise.resolve(),
+      whenSynced: () => Promise.resolve(),
       onChange: (listener: (change: SocialChange) => void) => {
         listeners.add(listener);
         return () => listeners.delete(listener);

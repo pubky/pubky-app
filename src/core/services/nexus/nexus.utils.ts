@@ -20,6 +20,7 @@ import { InvalidQueryError, UnavailableQueryError } from '@/libs/indexer/social/
 import type { MoreHint } from '@/libs/indexer/social/queries/queries.types';
 import { SOCIAL_ACTIVITY } from '@/libs/indexer/social/social.domain';
 import type { SocialIndexer } from '@/libs/indexer/social/socialIndexer';
+import { Logger } from '@/libs/logger/logger';
 import { NEXUS_LOCAL_INDEX_OPERATION } from '@/libs/observability/sentry.constants';
 import { IndexerService } from '@/services/indexer/indexer';
 import { nexusQueryClient, nexusRetryPolicy } from './nexus.query-client';
@@ -242,7 +243,7 @@ const LOCAL_INDEX_METHODS: Partial<Record<HttpMethod, NexusRequest['method']>> =
 const isOneEntityRead = (url: string): boolean =>
   new RegExp(`/${NEXUS_API_VERSION}/(?:post|user)/`).test(new URL(url, 'http://local.invalid').pathname);
 
-function loadHint(indexer: SocialIndexer, hint: MoreHint): Promise<void> {
+function startHintLoad(indexer: SocialIndexer, hint: MoreHint): Promise<void> {
   switch (hint.kind) {
     case 'user':
       return indexer.ensureUser(hint.user);
@@ -250,6 +251,16 @@ function loadHint(indexer: SocialIndexer, hint: MoreHint): Promise<void> {
       return indexer.ensurePost(hint.author, hint.postId);
     case 'backfill':
       return indexer.backfill(hint.author, SOCIAL_ACTIVITY, INDEXER_HINT_BACKFILL_PAGES);
+  }
+}
+
+/** Loads one hint, logging how long the read waited for it. */
+async function loadHint(indexer: SocialIndexer, hint: MoreHint): Promise<void> {
+  const startedAt = Date.now();
+  try {
+    await startHintLoad(indexer, hint);
+  } finally {
+    Logger.debug('Local index loaded on demand', { hint, ms: Date.now() - startedAt });
   }
 }
 

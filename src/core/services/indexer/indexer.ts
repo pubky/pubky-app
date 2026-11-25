@@ -119,7 +119,17 @@ export class IndexerService {
       readFile: (uri) => HomeserverService.getPublicFileBytes({ url: uri }),
     });
     const stopReporting = indexer.onStatus((status) => this.publishStatus(status));
+    const startedAt = Date.now();
     indexer.start(owner);
+    // Timings of a start, which say whether a slow first page waited on the index or on something else
+    void indexer.ready().then(() => Logger.debug('Local index ready', { owner, ms: Date.now() - startedAt }));
+    void indexer.whenSynced().then(() =>
+      Logger.debug('Local index first sync settled', {
+        owner,
+        ms: Date.now() - startedAt,
+        stats: indexer.status().stats,
+      }),
+    );
     this.running = {
       owner,
       indexer,
