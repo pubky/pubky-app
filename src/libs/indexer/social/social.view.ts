@@ -10,7 +10,7 @@ import {
   postKey,
   userKey,
 } from './social.author';
-import { combine, type Combined } from './social.combine';
+import { type AuthorChange, combine, type Combined, patchCombined } from './social.combine';
 import type { AuthorRecords, Membership, PostData, TagData, UserData } from './social.types';
 import { buildTimeTable, estimateMs, type TimeSample } from './timeTable';
 
@@ -121,7 +121,10 @@ export interface SocialView {
   followedAtMs(follower: string, followee: string): number | null;
 }
 
-/** The view with what it is built from. Its answers never change once built. */
+/**
+ * The view with what it is built from, to update when records change. Its answers never change once built: an update
+ * makes a new state and copies whatever it changes.
+ */
 export interface SocialState {
   readonly view: SocialView;
   /** By author, in the order the records came. */
@@ -257,19 +260,68 @@ function stateOf(
   return { view, parts, combined, tables };
 }
 
-/** Each author's part, a later entry of an author replacing an earlier one. */
-function partsOf(records: Iterable<AuthorRecords>): Map<string, AuthorPart> {
+/** Each author's part, a later entry of an author replacing an earlier one; `previous` lends its unchanged parts. */
+function partsOf(records: Iterable<AuthorRecords>, previous: SocialState | null): Map<string, AuthorPart> {
   const parts = new Map<string, AuthorPart>();
-  for (const entry of records) parts.set(entry.author, authorPartOf(entry));
+  for (const entry of records) {
+    const known = previous?.parts.get(entry.author);
+    parts.set(entry.author, known !== undefined && known.records === entry ? known : authorPartOf(entry));
+  }
   return parts;
 }
 
 /** The view of the records, built from scratch. Records name each author once; a later entry replaces an earlier one. */
 export function buildSocialState(records: Iterable<AuthorRecords>): SocialState {
-  const parts = partsOf(records);
+  const parts = partsOf(records, null);
   return stateOf(parts, combine(parts.values()), new Map());
 }
 
 export function buildSocialView(records: Iterable<AuthorRecords>): SocialView {
   return buildSocialState(records).view;
+}
+
+const sameSamples = (a: AuthorPart | undefined, b: AuthorPart | undefined): boolean =>
+  a !== undefined &&
+  b !== undefined &&
+  a.records.homeserver === b.records.homeserver &&
+  a.samples.length === b.samples.length &&
+  a.samples.every(({ cursor, ms }, i) => cursor === b.samples[i].cursor && ms === b.samples[i].ms);
+
+const sameList = (a: readonly string[], b: readonly string[]) => a.length === b.length && a.every((x, i) => x === b[i]);
+
+/**
+ * The state of the records, from `previous` and the authors whose records changed: an author whose `AuthorRecords`
+ * is the same object as in `previous` is unchanged, so callers hand over the same object for unchanged records and
+ * never mutate one. Answers exactly as `buildSocialState(records)`.
+ */
+export function updateSocialState(previous: SocialState, records: Iterable<AuthorRecords>): SocialState {
+  const parts = partsOf(records, previous);
+  const changes: AuthorChange[] = [];
+  for (const [author, after] of parts) {
+    const before = previous.parts.get(author);
+    if (before !== after) changes.push({ before, after });
+  }
+  for (const [author, before] of previous.parts) if (!parts.has(author)) changes.push({ before, after: undefined });
+  const members = [...parts.values()].filter(({ records }) => records.membership === 'member');
+  if (
+    changes.length === 0 &&
+    sameList(
+      previous.view.authors,
+      members.map(({ records }) => records.author),
+    )
+  ) {
+    return previous;
+  }
+  // A table stays valid while no author of its homeserver changed a sample.
+  const stale = new Set<string>();
+  for (const { before, after } of changes) {
+    if (sameSamples(before, after)) continue;
+    if (before !== undefined) stale.add(before.records.homeserver);
+    if (after !== undefined) stale.add(after.records.homeserver);
+  }
+  const tables = new Map([...previous.tables].filter(([homeserver]) => !stale.has(homeserver)));
+  // Past about an eighth of the authors, combining everyone again costs less than patching.
+  const combined =
+    changes.length * 8 > parts.size ? combine(parts.values()) : patchCombined(previous.combined, changes);
+  return stateOf(parts, combined, tables);
 }
