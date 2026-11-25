@@ -98,3 +98,21 @@ whose file, has a tombstone inside a trusted range is a definite not-found, what
 coordination only the tab holding the lock crawls. Requests never overlap and go ahead of the scope sync: one
 arriving during a scope sync aborts it at its next safe point, and the sync resumes after it from what it
 committed. A scope sync pre-empted three times in a row runs its next pass to the end before yielding again.
+
+## Saved index
+
+With `savedIndex: true` each device keeps its index in one file of the user's own storage, through the
+transport's index file methods, so another device, or this one after losing its database, starts warm. A file is
+named by the writer id the store keeps (`readMeta`/`writeMeta`); a store without those keeps no saved index.
+
+The file (`indexFile.ts`) is gzipped positional JSON with the format version first: the seed and scope settings,
+a key table holding each public key once, the scope members with their homeservers, each homeserver's high-water
+mark, and the members' runs of the domain's groups. Records are saved without data and with hashes cut to 16
+bytes: the file holds pointers, and a reader fetches the bodies (`hydrate`). Visited users and leaf scopes are no
+members' domain groups, so what the user opened is never written. Decoding treats the file as untrusted input.
+
+At start the crawling tab applies the files of the same seed before its first sync: the runs merge in any order,
+the homeservers spare their lookups, the high-water marks let the next sync catch a restore. A record without data
+never erases a stored body at the same cursor. Other writers' files older than `writerExpiryMs` are deleted. The
+tab saves after a scope sync that changed something, at most every `saveMinIntervalMs`, and when paused. Over
+`fileBudgetBytes` the windowed history is halved oldest first, farthest hop first; follows and profiles stay whole.
