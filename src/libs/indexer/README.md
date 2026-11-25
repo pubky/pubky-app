@@ -65,3 +65,27 @@ backwards (a restore) loses everything stored for it and is synced again.
 
 Each crawl step is one `commit` that applies the runs of the users that moved. A scope's coverage stays
 one range over normal syncs; a gap, such as stored history older than the window start, keeps two.
+
+## Using it
+
+`createSocialIndexer` (`social/socialIndexer.ts`) is what an app holds: it syncs the scope and answers the
+central indexer's routes from a view rebuilt after each change.
+
+```ts
+const indexer = createSocialIndexer({
+  transport,
+  store: createIdbStore('pubky-index'),
+  now: Date.now,
+  coordination: createBrowserCoordination(),
+});
+indexer.start(mySigningKey); // syncs now, then every minute
+const res = await indexer.request({ url, method: 'GET' }); // a nexus /v1 request, answered locally
+indexer.onChange(({ authors }) => invalidate(authors));
+await indexer.refresh([mySigningKey]); // right after the app writes
+await indexer.ensureUser(profileKey); // a profile outside the scope
+await indexer.ensurePost(author, postId); // the parent of a reply, a reposted post
+document.addEventListener('visibilitychange', () => (document.hidden ? indexer.pause() : indexer.resume()));
+```
+
+`createIndexerRuntime` (`indexer.ts`) is that loop for any domain: one queue for every crawl, requests ahead
+of the periodic sync, and with coordination only the tab holding the lock crawls.
