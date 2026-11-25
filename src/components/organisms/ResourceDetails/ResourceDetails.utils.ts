@@ -3,7 +3,7 @@ import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 
 /**
  * The link the page's thread is on (its replies, the composer's `parent`, Participants): the card's
- * canonical link once it is read (`getResourceTarget`, its other spellings' replies read along), the
+ * link to act on once it is read (`getResourceTarget`, its other spellings' replies read along), the
  * page's own link without a card or Pinakes; `null` while the card is read or without a link, so the
  * thread is not read twice for two links.
  */

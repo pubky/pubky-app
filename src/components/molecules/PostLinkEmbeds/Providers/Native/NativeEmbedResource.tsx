@@ -239,7 +239,7 @@ function NativeEmbedChoice({
     setOpenedWithoutCard(false);
   };
 
-  // The card's canonical link, its other spellings read along (`getResourceTarget`).
+  // The card's link to act on, its other spellings read along (`getResourceTarget`).
   const target = getResourceTarget(card, url);
   const actions = (
     <ResourceActions

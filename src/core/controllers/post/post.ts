@@ -465,8 +465,8 @@ export class PostController {
 
   /**
    * Adds an external resource to the viewer's collection, or removes it. The item is `uri`, or the
-   * first of its `spellings` a collection can hold when `uri` is no web link (an `isbn:` canonical
-   * link); a removal takes out every spelling.
+   * first of its `spellings` a collection can hold when `uri` is no web link (an `isbn:` card nobody
+   * wrote a web link for); a removal takes out every spelling.
    */
   static async commitUpdateCollectionResource({
     collectionId,

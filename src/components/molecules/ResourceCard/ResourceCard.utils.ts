@@ -271,22 +271,62 @@ export function isWritableResourceUri(uri: string): boolean {
   return isExternalParentUri(uri) && !/^https?:\/\/[^/?#]*@/.test(uri);
 }
 
+/** Whether `link` is a web link the app writes as it is: `http(s)`, no credentials, nothing to trim. */
+function isWebWriteUri(link: string | null | undefined): boolean {
+  return Boolean(link) && getHttpUrl(link) === link && isWritableResourceUri(link as string);
+}
+
+/** The page Pinakes gives for a card whose own link is no web link, when the app may write it. */
+function getOpenInWriteUri(card: Pick<TPinakesCard, 'uri'> & Partial<Pick<TPinakesCard, 'open_in'>>): string | null {
+  const page = card.open_in?.[0]?.url;
+  // A Pubky object's address is its own: no page stands in for it.
+  return !isWebWriteUri(card.uri) && !card.uri.startsWith('pubky://') && isWebWriteUri(page) ? page! : null;
+}
+
+/** The web link `getResourceTarget` acts on for a card, or `null` when it has none. */
+function getWebWriteUri(
+  card: Pick<TPinakesCard, 'uri' | 'refs'> & Partial<Pick<TPinakesCard, 'open_in'>>,
+  written: string,
+): string | null {
+  if (isWebWriteUri(card.uri)) return card.uri;
+  // A Pubky object's address is its own: only a web link as written stands in for it.
+  const links = card.uri.startsWith('pubky://') ? [written] : [written, ...card.refs];
+  return links.find(isWebWriteUri) ?? getOpenInWriteUri(card);
+}
+
 /**
  * The link a card's tags, replies, saves and counts are on (`uri`), and its other spellings shown
- * as the same link's (`spellings`: the link as written, the card's `refs` and `aliases`): Nexus
- * keeps each spelling apart, Pinakes folds them into one card. `uri` is the card's canonical link,
- * or the link as written when the app cannot write the canonical one (`isExternalParentUri`), or
- * when there is no card.
+ * as the same link's (`spellings`): Nexus keeps each spelling apart, Pinakes folds them into one card.
+ *
+ * `uri` is a link anyone can open, so what people write can be read without Pinakes:
+ * - the card's own `uri` when it is a web link;
+ * - else a web link of the same thing: the link as written, then the first web link people wrote for
+ *   it (`refs`, where their tags are), then the page Pinakes gives for it (`open_in`). A Pubky
+ *   object's `pubky://` address is its own, readable by any client: only the link as written replaces it;
+ * - with no such link, the card's `uri` when the app can write it (`isExternalParentUri`), else the
+ *   link as written; without a card, the link as written.
+ *
+ * `spellings` are the card's `uri` when it is not `uri` (first, so tags already on an identifier such
+ * as `isbn:` keep showing), then that page (`open_in`, the target while nobody wrote a web link for
+ * it), the link as written, the card's `refs` and `aliases`: each once, at most `MAX_LINK_SPELLINGS`.
  */
 export function getResourceTarget(
-  card: (Pick<TPinakesCard, 'uri' | 'refs'> & Partial<Pick<TPinakesResourceDetail, 'aliases'>>) | null | undefined,
+  card:
+    | (Pick<TPinakesCard, 'uri' | 'refs'> &
+        Partial<Pick<TPinakesCard, 'open_in'>> &
+        Partial<Pick<TPinakesResourceDetail, 'aliases'>>)
+    | null
+    | undefined,
   written: string,
 ): { uri: string; spellings: string[] } {
   if (!card) return { uri: written, spellings: [] };
-  const uri = isExternalParentUri(card.uri) || !isExternalParentUri(written) ? card.uri : written;
-  const spellings = [...new Set([written, ...card.refs, ...(card.aliases ?? [])])].filter(
-    (link) => link && link !== uri,
-  );
+  const uri =
+    getWebWriteUri(card, written) ??
+    (isExternalParentUri(card.uri) || !isExternalParentUri(written) ? card.uri : written);
+  const page = getOpenInWriteUri(card);
+  const spellings = [
+    ...new Set([card.uri, ...(page ? [page] : []), written, ...card.refs, ...(card.aliases ?? [])]),
+  ].filter((link) => link && link !== uri);
   return { uri, spellings: spellings.slice(0, MAX_LINK_SPELLINGS) };
 }
 

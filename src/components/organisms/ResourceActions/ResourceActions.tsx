@@ -41,12 +41,13 @@ const ALL_DATES = 'All dates';
 
 interface ResourceActionsProps {
   /**
-   * The external resource's link: what is bookmarked, collected, tagged and replied to. The card's
-   * canonical link once Pinakes knows it (`getResourceTarget`), else the link exactly as written.
+   * The external resource's link: what is bookmarked, collected, tagged and replied to. Once Pinakes
+   * knows the card, the link `getResourceTarget` picks (a web link of it where it has one), else the
+   * link exactly as written.
    */
   uri: string;
   /**
-   * Other spellings of `uri` (the link as written, Pinakes' refs and aliases of the card): Nexus
+   * Other spellings of `uri` (the card's link and page, the link as written, its refs and aliases): Nexus
    * keeps each apart, so their tags, counts, bookmarks and collections are read along and shown as
    * the link's own. Writes go to `uri`; a removal goes to the spelling it is on.
    */

@@ -21,7 +21,7 @@ type TToggled = { key: string; isBookmarked: boolean; listing: readonly string[]
  * With `spellings` (the link's other spellings), a bookmark of any of them is the link's: removing
  * it removes each; a new bookmark goes on `uri`.
  *
- * @param uri - The link exactly as written, or the card's canonical link; `null` reads nothing
+ * @param uri - The link exactly as written, or the link `getResourceTarget` picks for the card; `null` reads nothing
  * @param options.active - Reads only while `true` (the save picker is open): no homeserver request
  *   for a card in a feed. Inactive, it reads `false` and not loading.
  * @param options.spellings - Other spellings of `uri` (`getResourceTarget`)

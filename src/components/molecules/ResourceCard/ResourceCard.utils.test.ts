@@ -593,13 +593,73 @@ describe('getResourceTarget', () => {
     ).toEqual({ uri: TIDAL, spellings: ['https://www.tidal.com/track/3524506', `${TIDAL}/`, SHARE] });
   });
 
-  it('keeps the link as written when the canonical link is not one the app writes', () => {
-    expect(getResourceTarget({ uri: 'pubky://someone/pub/x', refs: [SHARE] }, SHARE)).toEqual({
-      uri: SHARE,
-      spellings: [],
+  it('keeps the card’s web link as written, never a spelling of it', () => {
+    const card = {
+      uri: 'https://Example.COM/a',
+      refs: [],
+      open_in: [{ client: 'web', url: 'https://example.com/page' }],
+    };
+    expect(getResourceTarget(card, 'https://example.com/a#top').uri).toBe('https://Example.COM/a');
+  });
+
+  describe('a card whose link is no web link', () => {
+    const BLOCK = 'btc:block/000000000000000000012345';
+    const MEMPOOL = 'https://mempool.space/block/000000000000000000012345';
+    const ISBN = 'isbn:9780140328721';
+    const BOOK = 'https://openlibrary.org/isbn/9780140328721';
+
+    it('acts on the link as written when it is a web link, the card’s link read along first', () => {
+      expect(getResourceTarget({ uri: BLOCK, refs: ['https://blockstream.info/block/1', MEMPOOL] }, MEMPOOL)).toEqual({
+        uri: MEMPOOL,
+        spellings: [BLOCK, 'https://blockstream.info/block/1'],
+      });
+      // An identifier the app could write (`isbn:`) gives way to the web link too; its old tags are read along.
+      expect(getResourceTarget({ uri: ISBN, refs: [] }, BOOK)).toEqual({ uri: BOOK, spellings: [ISBN] });
     });
-    // An identifier scheme the app writes (`isbn:`) stays the canonical link.
-    expect(getResourceTarget({ uri: 'isbn:9780140328721', refs: [] }, SHARE).uri).toBe('isbn:9780140328721');
+
+    it('acts on the first web link people wrote for it, else the page Pinakes gives for it', () => {
+      const open_in = [{ client: 'wikidata', url: 'https://www.wikidata.org/wiki/Q42' }];
+      // A search row or the resource page of the identifier itself: no web link as written. The page
+      // was the target before anyone wrote a web link: it is read along, after the card's own link.
+      expect(getResourceTarget({ uri: ISBN, refs: ['doi:10.1/x', BOOK], open_in }, ISBN)).toEqual({
+        uri: BOOK,
+        spellings: [ISBN, 'https://www.wikidata.org/wiki/Q42', 'doi:10.1/x'],
+      });
+      // A catalogue card nobody wrote a link for yet: its page.
+      expect(getResourceTarget({ uri: 'wikidata:Q42', refs: [], open_in }, 'wikidata:Q42')).toEqual({
+        uri: 'https://www.wikidata.org/wiki/Q42',
+        spellings: ['wikidata:Q42'],
+      });
+    });
+
+    it('never acts on a web link with credentials or spaces', () => {
+      const refs = ['https://user:pw@example.com/a', ' https://example.com/b', 'https://example.com/c'];
+      expect(getResourceTarget({ uri: ISBN, refs }, ISBN).uri).toBe('https://example.com/c');
+    });
+
+    it('acts on the card’s link when nothing of it is on the web, else on the link as written', () => {
+      expect(getResourceTarget({ uri: ISBN, refs: [], open_in: [] }, ISBN)).toEqual({ uri: ISBN, spellings: [] });
+      expect(getResourceTarget({ uri: ISBN, refs: ['doi:10.1/x'] }, 'doi:10.1/x')).toEqual({
+        uri: ISBN,
+        spellings: ['doi:10.1/x'],
+      });
+      // `btc:` is no link the app writes: the link as written when it is one.
+      expect(getResourceTarget({ uri: BLOCK, refs: [] }, ISBN).uri).toBe(ISBN);
+    });
+
+    it('keeps a Pubky object on its own address, unless the link as written is a web link', () => {
+      const open_in = [{ client: 'app', url: 'https://app.example/deck/1' }];
+      const deck = { uri: 'pubky://someone/pub/app.example/decks/1', refs: [SHARE], open_in };
+      expect(getResourceTarget(deck, deck.uri)).toEqual({ uri: deck.uri, spellings: [SHARE] });
+      expect(getResourceTarget(deck, SHARE)).toEqual({ uri: SHARE, spellings: [deck.uri] });
+    });
+
+    it('reads the card’s link first within MAX_LINK_SPELLINGS', () => {
+      const refs = Array.from({ length: MAX_LINK_SPELLINGS + 5 }, (_, index) => `${MEMPOOL}?s=${index}`);
+      const { spellings } = getResourceTarget({ uri: BLOCK, refs }, MEMPOOL);
+      expect(spellings).toHaveLength(MAX_LINK_SPELLINGS);
+      expect(spellings[0]).toBe(BLOCK);
+    });
   });
 
   it('acts on the link as written without a card', () => {

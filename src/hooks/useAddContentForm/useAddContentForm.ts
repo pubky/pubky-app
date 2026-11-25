@@ -183,7 +183,7 @@ export function useAddContentForm({ target, onSuccess }: UseAddContentFormOption
 
   /**
    * Adds a link the way a card's save picker does (`useResourceSaveTargets`, `useResourceBookmark`):
-   * on the card's canonical link when Pinakes knows it (`getResourceTarget`), else as written; a
+   * on the link `getResourceTarget` picks when Pinakes knows the card, else as written; a
    * collection or bookmark already holding any spelling of it holds the link.
    */
   const addLink = async (written: string, userId: Pubky): Promise<boolean> => {

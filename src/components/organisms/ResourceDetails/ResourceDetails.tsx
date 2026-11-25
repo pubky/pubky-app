@@ -109,7 +109,7 @@ function ResourceBody({ uri, read, onRetry, replies }: ResourceDetailsProps) {
   const { data: card, isLoading, isError } = read;
   const pubkyApp = getPubkyAppTarget(uri);
 
-  // The thread is on the acted-on link: the card's canonical one, else the page's; none on the
+  // The thread is on the acted-on link: the one `getResourceTarget` picks, else the page's; none on the
   // card's first read.
   let threadUri: string | null = uri;
   let body: React.ReactNode;
@@ -149,7 +149,7 @@ function ResourceBody({ uri, read, onRetry, replies }: ResourceDetailsProps) {
       <ResourceUnknown uri={uri} replies={replies} dialogs={dialogs} />
     );
   } else {
-    // The card's canonical link; the page's link, its refs and aliases are its spellings, read along.
+    // The link to act on (a web link of the card where it has one); its other links are its spellings.
     const target = getResourceTarget(card, uri);
     threadUri = target.uri;
     body = (
@@ -219,11 +219,12 @@ function ResourceKnown({
 }) {
   const actionUri = target.uri;
   // What "Post about this" and the ⋯ menu's link give, as a post's card does: a link people wrote
-  // (the page's own when it is one), else the canonical link.
+  // (the page's own when it is one), else the link acted on.
   const writtenUri = card.refs.includes(uri) ? uri : (card.refs[0] ?? actionUri);
   const { data: group, isLoading: isGroupLoading } = usePinakesGroup(card.group?.id);
-  const otherLinks =
-    card.group && isGroupLoading ? [] : getOtherLinks(card, group?.members, getOwnLinkUris(card, uri, actionUri));
+  // The link's own spellings (the card's page among them) are its tags, never another link's.
+  const ownUris = new Set([...getOwnLinkUris(card, uri, actionUri), ...target.spellings]);
+  const otherLinks = card.group && isGroupLoading ? [] : getOtherLinks(card, group?.members, ownUris);
   const otherLinkTags = useOtherLinkTags(otherLinks);
   const otherTags = mergeOtherLinkTags(otherLinkTags.reads);
   // A series date's feed (its group, read above): the footer's tags switch between this date and all dates
