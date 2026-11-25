@@ -54,9 +54,35 @@ default, today's behavior), `local`, or `local,nexus`. Without `nexus` the Nexus
   and which the local index ignores, and `fetchNexus` refuses to send anything without the source, so no stray
   request can reach the app's own origin.
 - **Freshness.** Every owned write lands through `HomeserverService`, which now tells subscribers the path written;
-  `IndexerService` refreshes the account after each public write. Each change of the index marks every cached post
-  stream dirty (`postStreamDirtyRegistry`, scope `local_index`), so a stream rebuilds on its next initial load and
-  mounted feeds keep their position.
+  `IndexerService` refreshes the account after each public write. A change of the index marks dirty the cached post
+  streams it can reach (`postStreamDirtyRegistry`), so a stream rebuilds on its next initial load and mounted feeds
+  keep their position: posts or tags mark every stream (scope `local_index`), follows alone mark the graph-shaped
+  ones (`follow_graph`, `friends`), a profile alone marks none. Cached user lists have no dirty registry and refresh
+  on their own TTL as before.
+- **First answer.** The index answers once the seed's own data is loaded, before its first full sync; nothing in
+  sign-in or bootstrap waits for that sync. During it the bootstrap says `indexed: false`, which with the `local`
+  source means the index is still syncing: the bootstrap neither tells Nexus to ingest nor schedules its retry, and
+  the feeds fill in through the invalidation above. An empty Home says the network is loading
+  (`LocalIndexFeedEmpty`) and loads again when the first sync ends; a Home already showing posts keeps its place.
+- **Visitors.** Without a session the coordinator runs a visitor index (`start(null)`) in its own database: no scope,
+  no saved index, no tab coordination. Shared post and profile links render from what it loads on demand, through
+  the same `more` hints. Starting an account's index deletes the visitor's. With `local` as the only source a
+  visitor's Home, Hot and Search show a join prompt instead of a feed nothing can answer; sidebar rankings and
+  suggestions answer empty.
+- **Mutes.** The account's muted users go to `setExcluded` from a Dexie live query on the local muted stream, where a
+  mute, its rollback and the homeserver poll all land.
+- **Saved index.** On for accounts: the index keeps a file per device under `/priv/app.pubky/v1/index/`, inside
+  `SOCIAL_V1_APP_CAPABILITIES`, so another device starts warm. The file is not encrypted yet. The SDK can deliver
+  path-scoped content keys (`EncryptionKeys.deriveCryptoKeyForPath`) for scopes granted with the `e` action in a
+  signed approval; sealing the file means requesting `e` on that path in every grant, keeping the keys for the
+  session, and passing a sealer to the indexer.
+- **Freshness stamp.** Local answers carry `asOf`, when the last scope sync ended. They still get no response start
+  stamp: the tag guards read a stamp as proof that the snapshot holds every event before it, and `asOf` is not that,
+  since a homeserver that failed or backed off during the sync, and anything loaded on demand, can be older.
+- **Visibility.** With `local` among the sources the privacy settings page shows the index's live status (state,
+  users per hop, homeservers reached and failed, request counts, last sync, first sync, saved index) and a sync
+  button. Sidebar rankings and suggestions answered by the index (hot tags, active users, who to follow) carry an
+  "In your network" hint, decided by the sources and the session rather than per response.
 
 ## Consequences
 
@@ -68,18 +94,19 @@ default, today's behavior), `local`, or `local,nexus`. Without `nexus` the Nexus
 
 ### Negative ❌
 
-- A signed-out visitor has no local index: with `local` alone every read is unavailable.
+- A signed-out visitor's index has no network: with `local` alone the explore feeds prompt to join.
 - Global search, rankings and hot tags need Nexus.
 - Without Nexus a shared link previews with the generic title, description and image.
-- The first sync of a new device crawls the whole scope before the first answer, and the sign-in bootstrap waits for
-  it.
+- Until the first sync of a new device ends, feeds show a partial network; a device with a saved index from another
+  one starts from it.
 - Without Nexus there are no resized variants: feeds and thumbnails load the original file. Media shows only in a
   page the service worker controls, so the first visit before the worker activates, a hard reload and a dev build
   without the worker show fallbacks.
 
 ### Neutral ⚠️
 
-- Counts, rankings and reverse edges are correct for the crawled scope, not globally.
+- Counts, rankings and reverse edges are correct for the crawled scope, not globally. Only the sidebar rankings say
+  so; counts on posts and profiles carry no hint yet.
 - One more IndexedDB database per account, deleted on sign-out.
 
 ## Alternatives Considered
