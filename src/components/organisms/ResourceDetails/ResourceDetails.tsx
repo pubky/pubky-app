@@ -43,6 +43,7 @@ import { useXPostCard } from '@/molecules/ResourceCard/useXPostCard';
 import { XPostPlayer } from '@/molecules/ResourceCard/XPostVideo';
 import { ResourceCardSkeleton } from '@/molecules/ResourceCardSkeleton/ResourceCardSkeleton';
 import { PlayOnPill, PlayOnPillPlaceholder } from '@/molecules/ResourcePlayer/ResourcePlayerControls';
+import { ResourcePostPress } from '@/molecules/ResourcePlayer/ResourcePostPress';
 import { useCardPlayer } from '@/molecules/ResourcePlayer/useCardPlayer';
 import { DialogNewPost } from '@/organisms/DialogNewPost/DialogNewPost';
 import { DialogReply } from '@/organisms/DialogReply/DialogReply';
@@ -247,8 +248,14 @@ function ResourceKnown({
   // the card's image and text, a generic link's card; the switch in the large card's header. An X
   // post's embed, or its Show on, is its only source; once X cannot show it, its card is generic.
   const showsPost =
-    postEmbed !== null && (postEmbed.isOpen || postEmbed.showPost !== undefined || postEmbed.isPostFromCard);
-  const { embed, switcher, showsPlayer } = useCardPlayer(showsPost ? null : card, uri, 'default', {
+    postEmbed !== null &&
+    (postEmbed.isOpen || postEmbed.showPost !== undefined || postEmbed.pressInCard || postEmbed.isPostFromCard);
+  const {
+    embed,
+    switcher,
+    showsPlayer,
+    player: postPress,
+  } = useCardPlayer(showsPost ? null : card, uri, 'default', {
     previewImage: postEmbed?.postImage,
   });
   // A service's player in the body (with platform embeds up front off, its drawing until a press): a
@@ -307,8 +314,9 @@ function ResourceKnown({
         }
         isBodyReplaced={postEmbed?.isOpen && !postEmbed.inCard}
         headerControl={switcher}
-        // With platform embeds up front off an X post's embed loads inside the card.
-        player={postEmbed?.inCard ? postEmbed.embedInCard : undefined}
+        // With platform embeds up front off an X post's embed loads inside the card, as does the post
+        // frame of a post the card cannot tell (its press).
+        player={postEmbed?.inCard ? postEmbed.embedInCard : postPress}
         asPost={!embedsUpFront}
         imageUrl={xPost.imageUrl}
       />
@@ -321,8 +329,9 @@ function ResourceKnown({
  * as in a post (`chooseNativeEmbed`): up front, its only source (no switch). A post X cannot show
  * leaves our card without the pill. `null` for any other link. A viewer who turned platform embeds
  * up front off (Settings, Links & Media) gets our card: a post it tells shows as a post from its data
- * (`showsPostFromCard`), with nothing to press; one with a video, or one it cannot tell, keeps "Play on
- * <site>" / "Show on <site>", which loads the post inside the card, under its text (`embedInCard`).
+ * (`showsPostFromCard`), with nothing to press; one it cannot tell has the press inside the card, under
+ * its text (`ResourcePostPress`), which loads the post in its place (`embedInCard`); one with a video
+ * keeps "Play on <site>", which loads the post inside the card the same way.
  */
 function usePostEmbed(card: TPinakesResourceDetail, uri: string) {
   const [isPostOpen, setIsPostOpen] = useState(false);
@@ -349,13 +358,17 @@ function usePostEmbed(card: TPinakesResourceDetail, uri: string) {
   // nothing is asked from X, and there is no Show on.
   const isPostFromCard = !embedsUpFront && choice === 'card' && showsPostFromCard(card, postImage);
   const isOpen = !failed && !isPostFromCard && ((choice === 'embed' && !onPress) || isPostOpen);
+  // With platform embeds up front off, the post loads inside our card, under its text.
+  const inCard = !embedsUpFront && choice === 'card';
+  // A post the card cannot tell, without a video: the press inside the card is its way to the post.
+  const pressInCard = inCard && !failed && !isPostFromCard && !hasPostVideo(card, postImage);
   // The card player's pill, as on a post's card, on the page's surface. While the link preview, which
   // may name a video, is read, its place is held.
   const showPost =
     // Only where the pill could come: not once X could not show the post.
     isPostFromCard && postPreview.pending && !failed ? (
       <PlayOnPillPlaceholder uri={uri} surface="default" />
-    ) : (choice === 'card' || onPress) && !failed && !isPostFromCard ? (
+    ) : (choice === 'card' || onPress) && !failed && !isPostFromCard && !pressInCard ? (
       <PlayOnPill
         uri={uri}
         isOpen={isPostOpen}
@@ -383,23 +396,32 @@ function usePostEmbed(card: TPinakesResourceDetail, uri: string) {
         </>
       )
     : undefined;
-  // With platform embeds up front off, Show on loads the post inside our card, under its text.
-  const inCard = !embedsUpFront && choice === 'card';
   // An X post's video the app's server read plays in the app's player, else the site's post shows.
   const postVideo = getXPostVideo(card);
-  const embedInCard =
-    inCard && isOpen ? (
-      <Container overrideDefaults className="min-w-0" data-testid="native-embed-body">
-        <XPostPlayer
-          link={uri}
-          src={postVideo}
-          fallback={() =>
-            provider.renderEmbed(embed, { isPostEmbed: true, onEmbedError: () => setFailed(true), fill: true })
-          }
-        />
-      </Container>
-    ) : undefined;
-  return { showPost, renderBody, isOpen, inCard, embedInCard, isPostFromCard, postImage };
+  const postInCard = (
+    <Container overrideDefaults className="min-w-0" data-testid="native-embed-body">
+      <XPostPlayer
+        link={uri}
+        src={postVideo}
+        fallback={() =>
+          provider.renderEmbed(embed, { isPostEmbed: true, onEmbedError: () => setFailed(true), fill: true })
+        }
+      />
+    </Container>
+  );
+  const embedInCard = pressInCard ? (
+    <ResourcePostPress
+      link={uri}
+      siteName={getResourceLinks(card, uri).siteName ?? 'X'}
+      isOpen={isOpen}
+      onOpenChange={setIsPostOpen}
+    >
+      {postInCard}
+    </ResourcePostPress>
+  ) : inCard && isOpen ? (
+    postInCard
+  ) : undefined;
+  return { showPost, renderBody, isOpen, inCard, embedInCard, pressInCard, isPostFromCard, postImage };
 }
 
 /**

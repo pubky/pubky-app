@@ -59,14 +59,7 @@ export function ResourcePlayerFacade({ card, target, title, preview = false, onP
   const summary = isVideo || height < SUMMARY_HEIGHT ? null : getResourceSummary(card);
   const style: CSSProperties = isVideo ? { aspectRatio: String(layout.aspect ?? 16 / 9) } : { height };
 
-  const mark = (
-    <span className="flex min-w-0 items-center gap-1.5">
-      <ResourceSourceIcon uri={target.link} />
-      <Typography as="span" overrideDefaults className="truncate text-xs font-medium">
-        {target.name}
-      </Typography>
-    </span>
-  );
+  const mark = <FacadeMark link={target.link} name={target.name} />;
 
   return (
     <div
@@ -83,13 +76,7 @@ export function ResourcePlayerFacade({ card, target, title, preview = false, onP
         data-testid="player-facade"
         data-provider={target.provider}
         style={style}
-        className={cn(
-          'group relative flex w-full min-w-0 cursor-pointer overflow-hidden rounded-lg text-start outline-none',
-          'focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-          isVideo
-            ? 'max-h-[80vh] bg-black text-white'
-            : 'items-center gap-3 bg-foreground/5 p-3 text-foreground hover:bg-foreground/10',
-        )}
+        className={cn(FACADE_BUTTON_CLASS, isVideo ? 'max-h-[80vh] bg-black text-white' : FACADE_ROW_CLASS)}
       >
         {isVideo ? (
           <>
@@ -170,20 +157,48 @@ export function ResourcePlayerFacade({ card, target, title, preview = false, onP
               )}
               {!compact && <span className="text-muted-foreground">{mark}</span>}
             </span>
-            <span
-              aria-hidden="true"
-              data-testid="player-facade-glyph"
-              className={cn(
-                'flex shrink-0 items-center justify-center rounded-full bg-foreground text-background shadow-md transition-transform group-hover:scale-105',
-                compact ? 'size-9' : 'size-12',
-              )}
-            >
-              <Play aria-hidden="true" className="size-5 fill-current" />
-            </span>
+            <FacadeGlyph compact={compact} testId="player-facade-glyph" />
           </>
         )}
       </button>
     </div>
+  );
+}
+
+/** The drawing's button: the whole drawing is one press, with the app's focus ring. */
+export const FACADE_BUTTON_CLASS = cn(
+  'group relative flex w-full min-w-0 cursor-pointer overflow-hidden rounded-lg text-start outline-none',
+  'focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+);
+
+/** An audio player's drawing: a row on a light fill, darker on hover. */
+export const FACADE_ROW_CLASS = 'items-center gap-3 bg-foreground/5 p-3 text-foreground hover:bg-foreground/10';
+
+/** The service's mark on a drawing: its icon (the app's favicon route) and its name. */
+export function FacadeMark({ link, name }: { link: string; name: string }) {
+  return (
+    <span className="flex min-w-0 items-center gap-1.5">
+      <ResourceSourceIcon uri={link} />
+      <Typography as="span" overrideDefaults className="truncate text-xs font-medium">
+        {name}
+      </Typography>
+    </span>
+  );
+}
+
+/** The Play glyph at the end of a drawn row, smaller on a compact one. */
+export function FacadeGlyph({ compact = false, testId }: { compact?: boolean; testId?: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      data-testid={testId}
+      className={cn(
+        'flex shrink-0 items-center justify-center rounded-full bg-foreground text-background shadow-md transition-transform group-hover:scale-105',
+        compact ? 'size-9' : 'size-12',
+      )}
+    >
+      <Play aria-hidden="true" className="size-5 fill-current" />
+    </span>
   );
 }
 

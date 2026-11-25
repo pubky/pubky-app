@@ -18,6 +18,7 @@ import {
   PlayerCategory,
   PlayerProvider,
   PROVIDER_NAMES,
+  readFrameHeight,
   showsEmbedImage,
 } from './resourcePlayer.utils';
 
@@ -1176,5 +1177,30 @@ describe('showsEmbedImage', () => {
         { isPost: true },
       ),
     ).toBe(true);
+  });
+});
+
+describe('readFrameHeight', () => {
+  const INSTAGRAM = { provider: 'instagram', frame: 'post' as const };
+  const measure = (height: unknown) => JSON.stringify({ type: 'MEASURE', details: { height } });
+
+  it('reads the height Instagram’s post frame asks for, from Instagram’s origin only', () => {
+    expect(readFrameHeight(INSTAGRAM, 'https://www.instagram.com', measure(612.4))).toBe(613);
+    expect(readFrameHeight(INSTAGRAM, 'https://www.instagram.com', { type: 'MEASURE', details: { height: 500 } })).toBe(
+      500,
+    );
+    expect(readFrameHeight(INSTAGRAM, 'https://evil.example', measure(612))).toBeNull();
+    expect(readFrameHeight(INSTAGRAM, 'https://www.instagram.com', measure(1e6))).toBe(2000);
+  });
+
+  it('is null for another message, a height that is no positive number, or another frame', () => {
+    const origin = 'https://www.instagram.com';
+    expect(readFrameHeight(INSTAGRAM, origin, JSON.stringify({ type: 'MOUNTED', details: { height: 1 } }))).toBeNull();
+    expect(readFrameHeight(INSTAGRAM, origin, measure(0))).toBeNull();
+    expect(readFrameHeight(INSTAGRAM, origin, measure('612'))).toBeNull();
+    expect(readFrameHeight(INSTAGRAM, origin, 'not json')).toBeNull();
+    expect(readFrameHeight(INSTAGRAM, origin, null)).toBeNull();
+    expect(readFrameHeight({ provider: 'mastodon', frame: 'post' }, origin, measure(612))).toBeNull();
+    expect(readFrameHeight({ provider: 'instagram', frame: 'map' }, origin, measure(612))).toBeNull();
   });
 });

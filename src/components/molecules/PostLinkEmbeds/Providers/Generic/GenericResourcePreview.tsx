@@ -146,7 +146,7 @@ function ResourcePreview({
   const isReading = isLoading || Boolean(isResolving);
   const isSlow = useSlowRead(lookupUrl, isReading, PINAKES_SLOW_READ_MS);
   // Embed or card, with the switch; in a post being written a player previews (`preview`).
-  const { embed, switcher } = useCardPlayer(card && !hasNothingToShow(card) ? card : null, url, actionSurface, {
+  const { embed, switcher, player } = useCardPlayer(card && !hasNothingToShow(card) ? card : null, url, actionSurface, {
     preview: isPreview,
   });
 
@@ -191,7 +191,7 @@ function ResourcePreview({
       </ResourceEmbedFrame>
     );
   }
-  // The card, the switch in its header.
+  // The card, the switch in its header; a post it cannot show from its data, its press inside it.
   return (
     <ResourceCard
       card={shownCard}
@@ -199,6 +199,7 @@ function ResourcePreview({
       actions={actions}
       isOnScreen={isOnScreen}
       headerControl={switcher}
+      player={player}
       // With platform embeds up front off a social post shows as a post, from its card's data.
       asPost={!embedsUpFront}
     />

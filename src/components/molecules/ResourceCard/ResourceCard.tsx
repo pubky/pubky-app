@@ -295,6 +295,8 @@ export function ResourceCard({
       // The large card stands where a post stands on its page, on the post card's surface.
       className={cn(isLarge && 'bg-card text-card-foreground shadow-sm')}
       data-testid="resource-card"
+      // The card's root, for a control in it that hands the focus back to the card (`ResourcePostPress`).
+      data-resource-card
       data-status={status}
       data-family={family}
       data-size={size}

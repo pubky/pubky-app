@@ -6,8 +6,8 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { cn } from '@/libs/utils/utils';
 import { PostHeaderTimestamp } from '@/molecules/PostHeaderTimestamp/PostHeaderTimestamp';
 import { PinakesStatus, type TPinakesCard, type TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
-import { getNearestTypes, getResourceStatus } from './ResourceCard.utils';
-import { formatFactDate, getFact } from './ResourceFacts.utils';
+import { getLinkHost, getNearestTypes, getResourceStatus } from './ResourceCard.utils';
+import { formatFactDate, getFact, isBlockedCard } from './ResourceFacts.utils';
 
 /** A social post as its card tells it: who wrote it, what and when. */
 export interface TResourcePost {
@@ -22,20 +22,36 @@ export interface TResourcePost {
 export const RESOURCE_POST_FACTS: readonly string[] = ['author', 'author_name', 'published'];
 
 type TPostCard = Pick<TPinakesCard, 'type' | 'type_path' | 'name' | 'description' | 'status' | 'embed'> &
-  Partial<Pick<TPinakesCard, 'image'>> &
+  Partial<Pick<TPinakesCard, 'image' | 'site' | 'uri'>> &
   Partial<Pick<TPinakesResourceDetail, 'facts' | 'stream'>>;
+
+/** The name Pinakes gives a post it could not read, the link's shape alone: `Post on instagram.com`. */
+const SHAPE_NAME = /^(?:Post|Video|Profile) on (\S+)$/;
+
+/** A site or host as a shape name spells it: lower case, without `www.`. */
+const bareHost = (value: string | null | undefined) =>
+  value
+    ?.trim()
+    .toLowerCase()
+    .replace(/^www\./, '') || null;
 
 /**
  * A settled (`ok`) card that is a social post (`SocialMediaPosting`: an X, Mastodon or Bluesky post) as
  * a post: its text (the longer of its name and description, which Pinakes fills from the same text),
  * author (`facts.author_name`, `facts.author` as the handle) and date (`facts.published`); `null` for
  * any other card, a post with no text, or one Pinakes could not read (`missing`, `unreachable`, ...),
- * which keeps its way out to the post (Show on, the link).
+ * which keeps its way out to the post (its press in the card, the link). A read the site refused
+ * (`isBlockedCard`) has no post text at all; a name that is the link's shape alone ("Post on
+ * instagram.com", the host of the card's link or its site, `www.` aside) is Pinakes' words, not the post's.
  */
 export function getResourcePost(card: TPostCard): TResourcePost | null {
   if (getResourceStatus(card.status) !== PinakesStatus.OK) return null;
   if (!getNearestTypes(card).includes('SocialMediaPosting')) return null;
-  const name = card.name?.trim() ?? '';
+  if (isBlockedCard(card)) return null;
+  const ownName = card.name?.trim() ?? '';
+  const shapeHost = bareHost(SHAPE_NAME.exec(ownName)?.[1]);
+  const isShapeName = shapeHost !== null && [getLinkHost(card.uri), card.site].map(bareHost).includes(shapeHost);
+  const name = isShapeName ? '' : ownName;
   const description = card.description?.trim() ?? '';
   const text = description.length > name.length ? description : name;
   if (!text) return null;

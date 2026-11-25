@@ -35,6 +35,7 @@ import {
 } from '@/molecules/ResourcePlayer/resourcePlayer.utils';
 import { PlayOnPill, PlayOnPillPlaceholder } from '@/molecules/ResourcePlayer/ResourcePlayerControls';
 import { AnimatedHeight } from '@/molecules/ResourcePlayer/ResourcePlayerFrame';
+import { ResourcePostPress } from '@/molecules/ResourcePlayer/ResourcePostPress';
 import { useCardPlayer } from '@/molecules/ResourcePlayer/useCardPlayer';
 import { useFramePress } from '@/molecules/ResourcePlayer/useResourcePlayer';
 import { ResourceActions } from '@/organisms/ResourceActions/ResourceActions';
@@ -235,17 +236,30 @@ function NativeEmbedChoice({
   // shows at once, as a post, with nothing asked from its site: no Show on. While its link preview,
   // which may name a video, is read, the pill's place is held.
   const isPostFromCard = !embedsUpFront && kind === 'post' && showsCard && showsPostFromCard(card, postPreview.image);
-  // An X post on our card: the card player's pill (`PlayOnPill`) shows the post's embed in the body. The
-  // same for a video on our card the card player cannot play, and for the frame of an embed opened
+  // An X post on our card: the card player's pill (`PlayOnPill`) shows the post's embed in the body
+  // when the post holds a video; without one, the press inside the card (`pressInCard`). The pill too
+  // for a video on our card the card player cannot play, and for the frame of an embed opened
   // before its card was read. A link with no card shows its own preview as a card, the press in its
   // header (`NativeEmbedLinkCard`).
   // An embed opened there stays there when a card is read later, until it is closed.
   const inLinkCard = isEmbedOnPress && !embedsUpFront && (card === null || openedWithoutCard);
+  // A post our card cannot tell, without a video: no pill; the press inside the card loads the post in
+  // its place (`ResourcePostPress`).
+  const pressInCard =
+    !embedsUpFront &&
+    kind === 'post' &&
+    showsCard &&
+    !hasCardPlayer &&
+    !isComposing &&
+    !failed &&
+    !isPostFromCard &&
+    card !== null &&
+    !hasPostVideo(card, postPreview.image);
   const showPost =
     // Only where the pill could come: never in the composer, nor once X could not show the post.
     isPostFromCard && postPreview.pending && !isComposing && !failed ? (
       <PlayOnPillPlaceholder uri={url} surface={actionSurface} />
-    ) : (showsCard && !hasCardPlayer && !isComposing && !failed && !isPostFromCard) ||
+    ) : (showsCard && !hasCardPlayer && !isComposing && !failed && !isPostFromCard && !pressInCard) ||
       (isEmbedOnPress && !inLinkCard) ? (
       <PlayOnPill
         uri={url}
@@ -337,7 +351,20 @@ function NativeEmbedChoice({
         renderBody={ownEmbed && !inCard ? (body: ReactNode) => postEmbed ?? body : undefined}
         isBodyReplaced={!inCard && postEmbed !== null}
         headerControl={player.switcher}
-        player={inCard ? postEmbed : null}
+        player={
+          pressInCard ? (
+            <ResourcePostPress
+              link={url}
+              siteName={siteName ?? 'X'}
+              isOpen={postEmbed !== null}
+              onOpenChange={setIsPostOpen}
+            >
+              {postEmbed}
+            </ResourcePostPress>
+          ) : inCard ? (
+            postEmbed
+          ) : null
+        }
         // A post shows from the card's data, text and image at once; a video in it keeps its press.
         asPost={!embedsUpFront}
         imageUrl={xPost.imageUrl}

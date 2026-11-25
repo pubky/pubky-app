@@ -43,6 +43,35 @@ describe('getResourcePost', () => {
     expect(getResourcePost({ ...X_POST, status: 'unreachable' })).toBeNull();
     expect(getResourcePost({ ...X_POST, status: 'missing' })).toBeNull();
   });
+
+  it('reads no post text in the name of the link’s shape alone, nor in a refused read’s description', () => {
+    const shapeOnly = { ...X_POST, site: 'instagram.com', name: 'Post on instagram.com', facts: {} };
+    expect(getResourcePost({ ...shapeOnly, description: null })).toBeNull();
+    expect(
+      getResourcePost({ ...shapeOnly, description: 'Blocked by the site.', facts: { blocked: 'true' } }),
+    ).toBeNull();
+    expect(showsPostFromCard({ ...shapeOnly, description: null })).toBe(false);
+    // The same words on another site's card, or a real description beside them, are the post's.
+    expect(getResourcePost({ ...shapeOnly, site: 'x.com', description: null })?.text).toBe('Post on instagram.com');
+    expect(getResourcePost({ ...shapeOnly, description: 'A sunset' })?.text).toBe('A sunset');
+  });
+
+  it('reads no post text at all from a refused read, whatever its name', () => {
+    expect(getResourcePost({ ...X_POST, name: 'Log in to X', facts: { blocked: 'true' } })).toBeNull();
+  });
+
+  it('knows the shape name by the host of the card’s link too, `www.` aside, when its site is a service name', () => {
+    const card = {
+      ...X_POST,
+      uri: 'https://www.instagram.com/p/DgB34vHhlaT/',
+      site: 'Instagram',
+      name: 'Post on www.instagram.com',
+      description: null,
+      facts: {},
+    };
+    expect(getResourcePost(card)).toBeNull();
+    expect(getResourcePost({ ...card, name: 'Post on instagram.com' })).toBeNull();
+  });
 });
 
 describe('showsPostFromCard', () => {

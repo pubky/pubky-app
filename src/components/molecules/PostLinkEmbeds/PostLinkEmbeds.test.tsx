@@ -155,9 +155,14 @@ vi.mock('@/hooks/usePinakesCard/usePinakesCard', () => ({
 // The link preview reads nothing unless a test gives it an answer.
 const og = vi.hoisted(() => ({
   metadata: null as null | { url: string; type: 'website'; title: string; image: string },
+  /** The links whose preview was asked for. */
+  asked: [] as string[],
 }));
 vi.mock('@/hooks/useOgMetadata/useOgMetadata', () => ({
-  useOgMetadata: (url: string | null) => ({ metadata: url ? og.metadata : null, isLoading: false, error: null }),
+  useOgMetadata: (url: string | null) => {
+    if (url) og.asked.push(url);
+    return { metadata: url ? og.metadata : null, isLoading: false, error: null };
+  },
 }));
 // Off screen unless a test brings the embed near (jsdom has no layout).
 const viewport = vi.hoisted(() => ({ isVisible: false }));
@@ -292,6 +297,39 @@ describe('PostLinkEmbeds', () => {
       } finally {
         og.metadata = null;
       }
+    });
+
+    it('draws a text X link whose card cannot tell the post as the press inside the card, no pill', () => {
+      // The card of the link's shape alone, and the app's server could not read the post either.
+      givenCard({ ...X_POST, name: 'Post on x.com', facts: {} });
+      render(<PostLinkEmbeds content={`See ${X_LINK}`} />);
+
+      expect(screen.queryByTestId('resource-card-post')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Show on x.com' })).not.toBeInTheDocument();
+      expect(document.querySelector('[data-testid^="twitter-tweet"]')).toBeNull();
+      expectNoThirdPartyLoads();
+      fireEvent.click(
+        within(screen.getByTestId('resource-card-player')).getByRole('button', { name: 'Show post from x.com' }),
+      );
+      expect(within(screen.getByTestId('resource-card-player')).getByTestId('twitter-tweet')).toBeInTheDocument();
+      expect(screen.getByTestId('resource-card-title')).toHaveTextContent('Post on x.com');
+      fireEvent.click(screen.getByRole('button', { name: 'Close the x.com post' }));
+      expect(document.querySelector('[data-testid^="twitter-tweet"]')).toBeNull();
+    });
+
+    it('never reads the link preview of a post whose site refused Pinakes’ read', () => {
+      og.asked = [];
+      // A refused read named by the wall's own title, not the link's shape: still no preview read.
+      givenCard({ ...X_POST, name: 'Log in to X', facts: { blocked: 'true' }, group: null });
+      render(<PostLinkEmbeds content={`See ${X_LINK}`} />);
+
+      expect(screen.getByTestId('resource-card')).toBeInTheDocument();
+      expect(og.asked).toEqual([]);
+      // A refused read has no post text: the press, not the wall's title as a post.
+      expect(screen.queryByTestId('resource-card-post')).not.toBeInTheDocument();
+      expect(
+        within(screen.getByTestId('resource-card-player')).getByRole('button', { name: 'Show post from x.com' }),
+      ).toBeInTheDocument();
     });
 
     it('keeps a Play for a video post, loading X’s embed inside the card from it', () => {

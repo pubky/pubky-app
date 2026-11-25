@@ -24,6 +24,7 @@ import { ResourceCardSkeleton } from '@/molecules/ResourceCardSkeleton/ResourceC
 import { getCategoryPlayers, isPlayable, PlayerCategory } from '@/molecules/ResourcePlayer/resourcePlayer.utils';
 import { PlayOnPill, PlayOnPillPlaceholder } from '@/molecules/ResourcePlayer/ResourcePlayerControls';
 import { AnimatedHeight } from '@/molecules/ResourcePlayer/ResourcePlayerFrame';
+import { ResourcePostPress } from '@/molecules/ResourcePlayer/ResourcePostPress';
 import { useCardPlayer } from '@/molecules/ResourcePlayer/useCardPlayer';
 import { getXPostVideo } from '@/pipes/x-post/x-post';
 import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
@@ -190,8 +191,9 @@ function EmbedOnPressChoice({ isOnScreen, ...props }: EmbedOnPressProps & { isOn
  * A text link's card (`EmbedOnPress`): a video the card player plays (`isPlayable`) shows its player as
  * the app draws it (`useCardPlayer`'s `embed`) in the resource frame, its switch in the header, the
  * service's player loading in its place on a press; an X post the card
- * tells from its own data shows as a post at once (`ResourcePost`); any other X post, or a video
- * it cannot play, has the pill (Show on <site> / Play on <site>) there, the platform's embed loading
+ * tells from its own data shows as a post at once (`ResourcePost`); one it cannot tell has the press
+ * inside the card (`ResourcePostPress`), the post loading in its place, Close beside it; an X post with
+ * a video, or a video it cannot play, has the pill (Play on <site>) there, the platform's embed loading
  * inside the card, which stays; the pill closes what it opened.
  */
 function EmbedOnPressCard({
@@ -216,8 +218,11 @@ function EmbedOnPressCard({
   // A post the card tells from its own data shows at once, as a post: nothing to press, nothing from
   // its site. While its link preview, which may name a video, is read, the pill's place is held.
   const isPostFromCard = kind === 'post' && showsPostFromCard(card, postPreview.image);
+  // A post the card cannot tell, without a video: no pill; the press inside the card loads the post in
+  // its place (`ResourcePostPress`).
+  const pressInCard = kind === 'post' && !player.switcher && !isPostFromCard && !hasPostVideo(card, postPreview.image);
   const pill =
-    player.switcher || isPostFromCard ? undefined : (
+    player.switcher || isPostFromCard || pressInCard ? undefined : (
       <PlayOnPill
         uri={link}
         isOpen={isOpen}
@@ -248,7 +253,7 @@ function EmbedOnPressCard({
     );
   }
   const embed =
-    pill && isOpen ? (
+    (pill || pressInCard) && isOpen ? (
       <Container overrideDefaults className="min-w-0" data-testid="native-embed-body">
         {/* An X post's video the app's server read plays in the app's player, else the site's post shows. */}
         <XPostPlayer link={link} src={postVideo} fallback={renderEmbed} />
@@ -259,7 +264,20 @@ function EmbedOnPressCard({
       card={card}
       href={link}
       headerControl={player.switcher ?? pill ?? placeholder}
-      player={embed}
+      player={
+        pressInCard ? (
+          <ResourcePostPress
+            link={link}
+            siteName={getResourceLinks(card, link).siteName ?? 'X'}
+            isOpen={isOpen}
+            onOpenChange={setIsOpen}
+          >
+            {embed}
+          </ResourcePostPress>
+        ) : (
+          embed
+        )
+      }
       // A post shows from the card's data, text and image at once; a video in it keeps its press.
       asPost
       imageUrl={imageUrl}

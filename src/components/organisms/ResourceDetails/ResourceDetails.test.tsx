@@ -6,6 +6,7 @@ import type { UsePinakesQueryResult } from '@/hooks/usePinakesQuery/usePinakesQu
 import { usePinakesRelated } from '@/hooks/usePinakesRelated/usePinakesRelated';
 import { getResourceImageUrl } from '@/libs/image/resourceImage';
 import bookFixture from '@/services/pinakes/fixtures/by-uri.book.json';
+import instagramBlockedFixture from '@/services/pinakes/fixtures/by-uri.instagram-blocked.json';
 import mbGroupEnrichedFixture from '@/services/pinakes/fixtures/by-uri.mb-group.enriched.json';
 import mbRecordingEnrichedFixture from '@/services/pinakes/fixtures/by-uri.mb-recording.enriched.json';
 import meetupDateFixture from '@/services/pinakes/fixtures/by-uri.meetup-date.json';
@@ -815,6 +816,24 @@ describe('ResourceDetails', () => {
         expect(screen.getByTestId('resource-card-post')).toHaveTextContent('Read by the app');
       });
 
+      it('draws an X post neither Pinakes nor the app’s server could tell as the press inside its card, no pill', () => {
+        // The card of the link's shape alone ("Post on x.com"): no text of the post, no author.
+        read = settled({ ...X_POST, name: 'Post on x.com', description: null, facts: {} });
+        renderDetails(X_URL);
+
+        expect(screen.queryByTestId('resource-card-post')).toBeNull();
+        expect(screen.queryByTestId('show-embed')).toBeNull();
+        expect(screen.queryByTestId('twitter-tweet')).toBeNull();
+        const press = within(screen.getByTestId('resource-card-player')).getByTestId('post-press');
+        expect(press).toHaveAccessibleName('Show post from x.com');
+
+        fireEvent.click(press);
+        expect(within(screen.getByTestId('resource-card-player')).getByTestId('twitter-tweet')).toBeInTheDocument();
+        fireEvent.click(screen.getByTestId('post-press-close'));
+        expect(screen.queryByTestId('twitter-tweet')).toBeNull();
+        expect(screen.getByTestId('post-press')).toBeInTheDocument();
+      });
+
       it('shows an X link Pinakes has no card for as the post, its video playing in the app’s player from Play', () => {
         read = settled(null);
         xPostRead.post = { ...SERVER_POST, hasVideo: true, video: 'https://video.twimg.com/a.mp4' };
@@ -1356,6 +1375,51 @@ describe('ResourceDetails', () => {
     renderDetails(null);
 
     expect(screen.getByText('No link to show')).toBeInTheDocument();
+  });
+
+  describe('a post whose site refused Pinakes’ read, with the embed Pinakes names for it', () => {
+    const BLOCKED_POST: TPinakesResourceDetail = {
+      ...instagramBlockedFixture,
+      embed: {
+        provider: 'instagram',
+        kind: 'post',
+        src: 'https://www.instagram.com/p/DgB34vHhlaT/embed/captioned/',
+        height: null,
+        aspect: null,
+        allow: [],
+        autoplay_param: null,
+      },
+    };
+    beforeEach(() => {
+      mockGroup.mockReturnValue(settled(null));
+      useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } });
+      onTestFinished(() => {
+        useSettingsStore.setState({ media: upFrontMedia });
+      });
+    });
+
+    it('heads the page with the card, its plain Details line and the press inside it; nothing loaded before it', () => {
+      read = settled(BLOCKED_POST);
+      renderDetails(BLOCKED_POST.uri);
+
+      const card = screen.getByTestId('resource-card');
+      expect(within(card).getByTestId('resource-card-title')).toHaveTextContent('Post on instagram.com');
+      expect(within(card).getByTestId('resource-facts-note')).toHaveTextContent(
+        "instagram.com didn't share this post's details.",
+      );
+      expect(within(card).queryAllByTestId('resource-fact')).toHaveLength(0);
+      expect(screen.queryByTestId('show-embed')).toBeNull();
+      expect(screen.queryByTestId('player-switch')).toBeNull();
+      expect(vi.mocked(useOgMetadata)).not.toHaveBeenCalledWith(expect.any(String));
+      expectNoThirdPartyLoads();
+
+      fireEvent.click(within(within(card).getByTestId('resource-card-player')).getByTestId('post-press'));
+      expect(within(card).getByTestId('resource-player-frame')).toHaveAttribute('src', BLOCKED_POST.embed?.src);
+      // The card stays, its Details line too.
+      expect(within(card).getByTestId('resource-facts-note')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Close the instagram.com post' }));
+      expect(document.querySelector('iframe')).toBeNull();
+    });
   });
 
   describe('a pubky.app file', () => {

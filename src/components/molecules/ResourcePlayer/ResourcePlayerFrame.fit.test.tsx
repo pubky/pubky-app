@@ -1,6 +1,6 @@
 import { act, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { getMinFrameWidth, getPlayerTarget } from './resourcePlayer.utils';
+import { getEmbedTarget, getMinFrameWidth, getPlayerTarget } from './resourcePlayer.utils';
 import { ResourcePlayerFrame } from './ResourcePlayerFrame';
 
 const SHOW = getPlayerTarget('https://podcasts.apple.com/us/podcast/darknet-diaries/id1296350485')!;
@@ -8,6 +8,20 @@ const EPISODE = getPlayerTarget('https://podcasts.apple.com/us/podcast/id1415720
 const ALBUM = getPlayerTarget('https://music.apple.com/us/album/random-access-memories/617154241')!;
 const SONG = getPlayerTarget('https://music.apple.com/us/song/617154366')!;
 const SPOTIFY = getPlayerTarget('https://open.spotify.com/track/69kOkLUCkxIZYexIgSG8rq')!;
+/** An Instagram post's frame as Pinakes names it. */
+const INSTAGRAM_POST = getEmbedTarget(
+  {
+    provider: 'instagram',
+    kind: 'post',
+    src: 'https://www.instagram.com/p/DgB34vHhlaT/embed/captioned/',
+    height: null,
+    aspect: null,
+    allow: [],
+    autoplay_param: null,
+  },
+  'https://www.instagram.com/p/DgB34vHhlaT/',
+  'instagram.com',
+)!;
 
 type Report = (entries: Array<{ contentRect: { width: number } }>) => void;
 
@@ -58,6 +72,40 @@ describe('ResourcePlayerFrame: an embed with a minimum width', () => {
     // One song fits any card; no other service needs it.
     expect(getMinFrameWidth(SONG)).toBeUndefined();
     expect(getMinFrameWidth(SPOTIFY)).toBeUndefined();
+  });
+
+  it('lays an Instagram post frame out at 326 px, its embed code’s minimum, scaled with the height it asks for', () => {
+    expect(getMinFrameWidth(INSTAGRAM_POST)).toBe(326);
+    regionWidth = 300;
+    render(<ResourcePlayerFrame target={INSTAGRAM_POST} title="Post" load="ready" onLoaded={() => {}} quiet />);
+
+    const scale = 300 / 326;
+    const frame = screen.getByTestId('resource-player-frame') as HTMLIFrameElement;
+    expect(frame.style.width).toBe('326px');
+    expect(frame.style.transform).toBe(`scale(${scale})`);
+    // Resting at its laid-out width (326 px) plus 220 px until it says its height, scaled.
+    expect(region().style.getPropertyValue('--player-h')).toBe(`${(326 + 220) * scale}px`);
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent('message', {
+          data: JSON.stringify({ type: 'MEASURE', details: { height: 700 } }),
+          origin: 'https://www.instagram.com',
+          source: frame.contentWindow,
+        }),
+      );
+    });
+    expect(region().style.getPropertyValue('--player-h')).toBe(`${700 * scale}px`);
+  });
+
+  it('rests an Instagram post frame at its width plus 220 px on a wider card, following the width', () => {
+    regionWidth = 600;
+    render(<ResourcePlayerFrame target={INSTAGRAM_POST} title="Post" load="ready" onLoaded={() => {}} quiet />);
+
+    expect(screen.getByTestId('resource-player-frame').style.transform).toBe('');
+    expect(region().style.getPropertyValue('--player-h')).toBe('820px');
+    expect(region().style.maxWidth).toBe('658px');
+    resizeTo(400);
+    expect(region().style.getPropertyValue('--player-h')).toBe('620px');
   });
 
   it('lays an Apple Podcasts frame out at 290 px and scales it, and its region, to a narrower card', () => {

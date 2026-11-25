@@ -3,7 +3,7 @@
 import { type ReactNode, useEffect, useId, useRef, useState } from 'react';
 import { pauseMedia, tellsWhenPlaying } from '@/libs/utils/mediaPlayback';
 import { getResourceStatus, playsInCard } from '@/molecules/ResourceCard/ResourceCard.utils';
-import { hasPostVideo, showsPostFromCard } from '@/molecules/ResourceCard/ResourcePost';
+import { getResourcePost, hasPostVideo, showsPostFromCard } from '@/molecules/ResourceCard/ResourcePost';
 import { isLocationRow } from '@/molecules/ResourceMap/ResourceLocation';
 import { useResourceLocationVariant } from '@/molecules/ResourceMap/ResourceLocationContext';
 import { getMapsDestination } from '@/molecules/ResourceMap/ResourceMap.utils';
@@ -25,6 +25,7 @@ import {
 import { type PagePlayer, PlayerDock, PlayerSwitch } from './ResourcePlayerControls';
 import { ResourcePlayerFacade } from './ResourcePlayerFacade';
 import { ResourcePlayerFrame } from './ResourcePlayerFrame';
+import { ResourcePostPress } from './ResourcePostPress';
 import { type ResourcePlayerState, useResourcePlayer } from './useResourcePlayer';
 
 export interface CardPlayer {
@@ -48,6 +49,12 @@ export interface CardPlayer {
   isCard?: boolean;
   /** A service's player (or, with platform embeds up front off, its drawing) shows in the card's place. */
   showsPlayer?: boolean;
+  /**
+   * With platform embeds up front off, a post whose card has no post text (`getResourcePost` is `null`)
+   * and whose own link has a post frame: the press inside the card, under its text (`ResourcePostPress`,
+   * for `ResourceCard`'s `player`), the post frame loading in its place.
+   */
+  player?: ReactNode;
 }
 
 export interface CardPlayerOptions {
@@ -99,8 +106,12 @@ export interface CardPlayerOptions {
  * started where the service allows, as the page's player. A pick in the switch is the press: the
  * picked service's player loads at once and starts; Card shows the card and unloads it. Let go (other
  * media started, the dock closed it), the player gives way to its drawing again. A post the card tells
- * from its own data and a map the card draws are no choice then; a post, map or document frame that is
- * the link's own shows the card first, the frame in the switch.
+ * from its own data and a map the card draws are no choice then; a map or document frame that is the
+ * link's own shows the card first, the frame in the switch, as does a post frame of a post with text and
+ * a video. A post frame that is the link's own, of a post whose card has no post text (`getResourcePost`
+ * is `null`: Pinakes could not read it, its name is the link's shape alone, or the site refused the
+ * read), shows the card with the press inside it (`player`): the post frame loads in its place, Close
+ * shows the card again; the switch then lists only the other services.
  *
  * @param card - The card shown, or `null` (nothing to play: a link's own preview, a pending card)
  * @param href - The link as written, played first when it is on such a service
@@ -151,7 +162,8 @@ export function useCardPlayer(
   // The link is itself on a service with a player, not gone upstream nor removed from Players: that
   // player goes first. Else the link is generic here: its card goes first.
   const ownTarget = card && getResourceStatus(card.status) !== PinakesStatus.MISSING ? getOwnPlayer(card, href) : null;
-  // A post, map or document frame with platform embeds up front off: its card, the frame in the switch.
+  // A post, map or document frame with platform embeds up front off: its card, the frame in the switch
+  // (a post's the card cannot tell: its press in the card, `postFrame`).
   const own = ownTarget?.frame && !embedsUpFront ? null : ownTarget;
   const linked = own !== null && targets.some((target) => target.provider === own.provider);
   // The app's player host keeps the frame of any player but a preview's: it plays on across pages.
@@ -166,6 +178,14 @@ export function useCardPlayer(
   const pagePlayer = hosted ? { owner, resource: card.uri } : undefined;
 
   const title = card.name?.trim() || href || card.uri;
+  // A post whose card has no post text (`getResourcePost` is `null`) and whose own link has a post
+  // frame: the card, its press inside it. The press is the way to that frame: the switch offers only
+  // the other services. A post with text and a video keeps its frame in the switch.
+  const postFrame =
+    !embedsUpFront && ownTarget?.frame === 'post' && getResourcePost(card) === null
+      ? targets.find((target) => target.provider === ownTarget.provider)
+      : undefined;
+  const switchTargets = postFrame ? targets.filter((target) => target !== postFrame) : targets;
   // Another resource starts over: nothing picked; a generic link's card, else the Players order
   // again (its first service, or the card when Card (no player) is above that service).
   const builtIn = playsInCard(card);
@@ -195,7 +215,7 @@ export function useCardPlayer(
   const switcher =
     targets.length > 1 || cardFirst || !selected ? (
       <PlayerSwitch
-        targets={targets}
+        targets={switchTargets}
         current={selected}
         onSelect={(target) => {
           if (target.provider !== selected?.provider) choose(target.provider);
@@ -209,6 +229,32 @@ export function useCardPlayer(
         surface={surface}
       />
     ) : undefined;
+  if (!selected && postFrame) {
+    return {
+      isCard: true,
+      // A switch only for other services to choose from.
+      switcher: switchTargets.length > 0 ? switcher : undefined,
+      player: (
+        <ResourcePostPress
+          key={card.uri}
+          link={postFrame.link}
+          siteName={postFrame.name}
+          isOpen={optedIn === card.uri}
+          onOpenChange={(isOpen) => setOptedIn(isOpen ? card.uri : null)}
+          maxWidth={postFrame.layout.kind === 'audio' ? postFrame.layout.maxWidth : undefined}
+        >
+          <EmbedPlayer
+            key={`${card.uri}|${postFrame.provider}`}
+            title={title}
+            target={postFrame}
+            player={player}
+            preview={preview}
+            holdsVideo={hasPostVideo(card, previewImage)}
+          />
+        </ResourcePostPress>
+      ),
+    };
+  }
   if (!selected) return { isCard: true, switcher };
   if (!embedsUpFront) {
     const holdsVideo = selected.frame === 'post' && hasPostVideo(card, previewImage);

@@ -543,12 +543,14 @@ service's player in its place with autoplay, as the page's player; there is no s
 is the consent. The header holds only the service switch (Card, then the services): picking a service loads its player
 at once, started (the pick is the press), and Card shows the card and unloads the player. A player let go (other
 media started, the dock closed it) gives way to its drawing again. A generic link, a podcast that plays in its card,
-and a card whose Card ranks first show the card as before. A post, map or document frame that is the link's own
-shows the card first, the frame in the switch. A settled social post shows as a post from the card's own data at once (`getResourcePost`,
+and a card whose Card ranks first show the card as before. A map or document frame that is the link's own, and the
+post frame of a social post whose card has its text (`getResourcePost`), show the card first, the frame in the switch (a post with no text: see
+below). A settled social post shows as a post from the card's own data at once (`getResourcePost`,
 `ResourcePost`: author, handle, text, date, its image through `/api/image`), with nothing loaded from its site; when
 it carries no video (`showsPostFromCard`) there is nothing to press. One with a video (a video frame or stream, a
-`VideoObject` type, or an X video thumbnail as its card or link preview image: `hasPostVideo`) keeps "Play on
-<site>": the press opens the site's post inside the card and its video plays there, inside the post (a post's frame
+`VideoObject` type, or an X video thumbnail as its card or link preview image: `hasPostVideo`) keeps a press: an X
+post "Play on <site>", another site's post its frame in the switch. The press opens the site's post inside the card
+and its video plays there, inside the post (a post's frame
 takes no autoplay parameter); a press inside that frame counts as its start, so what played stops, and the frame
 is loaded anew, stopped, when other media starts (`ResourcePlayerFrame`'s `holdsVideo`). A player the app's player
 host lays over its card is reached from the card by a skip link (`PlayerSlot`'s "Go to the player", shown while focused, acting only when pressed). An X post whose card does not tell it (no card, or one without its text: unread,
@@ -563,9 +565,24 @@ post (`XPostVideo`: a same-origin frame whose document sends no Referer, as X's 
 the page's own referrer policy is untouched; a page-wide Content-Security-Policy added later must allow
 `media-src https://video.twimg.com` and the frame's inline style), read from `/api/x-post` only then when the card told the post itself
 (`XPostPlayer`; the read starts as the viewer reaches for Play, pointer down or focus); one with no MP4 (a live
-broadcast), or a video that errs or has no data within 8 s, loads X's post there instead. A Mastodon or other post
-Pinakes could not read shows its card first, its post frame in the switch, loaded when picked; an X post the server
-could not read either keeps "Show on <site>".
+broadcast), or a video that errs or has no data within 8 s, loads X's post there instead. A post whose card has no post text (`getResourcePost` is `null`:
+Pinakes could not read it, its name is the link's shape alone such as "Post on instagram.com", the host of its link or
+its site, or the site refused the read, `facts.blocked`) but whose own link has a post frame (Pinakes' `embed` of kind `post`, any site: Instagram,
+Mastodon, an X post the server could not read either) shows its card, and in it, under its text, the press where the
+post will show (`ResourcePostPress`, drawn with the parts of the players' drawing: "Show post", the site's mark through
+`/api/favicon` and the Play glyph, one button named "Show post from <site>"). The press loads the site's post in
+its place inside the card at the card's width, which stays; Close above it gives the card back (the focus moves to
+Close, back to the press, or to the card when the post could not be shown). There is no pill; the switch lists only
+the card's other services, when it has any. An X post with no text but a video keeps "Play on <site>"; another
+site's (an Instagram reel) has the press; a post with no frame is its plain card, with nothing to press. Instagram's
+frame rests at its laid-out width plus 220 px (the shape of its captioned photo embed; 760 px until the width is
+known) until it says its height by a message (`MEASURE`), which the frame takes from that frame's window and origin only (`readFrameHeight`); it is never wider
+than 658 px (its oEmbed blockquote's `max-width`), left-aligned, and laid out at 326 px at least, scaled to a
+narrower card (as Apple's players are, `getMinFrameWidth`). Any other post frame keeps its height from Pinakes, else
+420 px. A card whose site refused Pinakes' read never reads its link's own preview (that page is a sign-in wall, its
+image the site's logo), shows no description (Pinakes' "Blocked by the site."), and the resource page's Details say
+so in one plain line ("instagram.com didn't share this post's details.", `getBlockedNote`) in place of a `blocked`
+row.
 A YouTube, Vimeo or X link Pinakes does not know (a post's embed or a link in its text) is sent to Pinakes once its
 box is near the screen (`usePinakesCard`'s `resolveOnView`: `POST /v1/resolve` from the viewer's browser, so it counts
 against the viewer's own Pinakes budget; once per link per page load, a refusal kept, never a `pubky://` or pubky.app

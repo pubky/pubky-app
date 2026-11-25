@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { getPlayerTarget } from './resourcePlayer.utils';
+import { getEmbedTarget, getPlayerTarget } from './resourcePlayer.utils';
 import { ResourcePlayerFrame } from './ResourcePlayerFrame';
 import { useResourcePlayer } from './useResourcePlayer';
 
@@ -403,5 +403,73 @@ describe('ResourcePlayerFrame', () => {
 
     expect(screen.getByTestId('resource-player-status')).toHaveClass('hidden');
     expect(screen.getByTestId('resource-player-frame')).toHaveAttribute('loading', 'lazy');
+  });
+
+  it('takes the height an Instagram post frame asks for, from that frame only, so the post shows whole', () => {
+    const target = getEmbedTarget(
+      {
+        provider: 'instagram',
+        kind: 'post',
+        src: 'https://www.instagram.com/p/DgB34vHhlaT/embed/captioned/',
+        height: null,
+        aspect: null,
+        allow: [],
+        autoplay_param: null,
+      },
+      'https://www.instagram.com/p/DgB34vHhlaT/',
+      'instagram.com',
+    )!;
+    render(<ResourcePlayerFrame target={target} title="Post on instagram.com" load="ready" onLoaded={() => {}} />);
+    const region = screen.getByRole('region', { name: 'instagram.com embed: Post on instagram.com' });
+    const frame = screen.getByTestId('resource-player-frame') as HTMLIFrameElement;
+    // Before it says, Instagram's resting height, never wider than its own embed.
+    expect(region.style.getPropertyValue('--player-h')).toBe('760px');
+    expect(region.style.maxWidth).toBe('658px');
+
+    const measure = JSON.stringify({ type: 'MEASURE', details: { height: 731 } });
+    // Another window, or another origin, changes nothing.
+    act(() => {
+      window.dispatchEvent(new MessageEvent('message', { data: measure, origin: 'https://www.instagram.com' }));
+    });
+    postFromFrame(frame, measure, 'https://evil.example');
+    // Its own other messages neither.
+    postFromFrame(frame, JSON.stringify({ type: 'MOUNTED', details: { height: 900 } }), 'https://www.instagram.com');
+    expect(region.style.getPropertyValue('--player-h')).toBe('760px');
+
+    postFromFrame(frame, measure, 'https://www.instagram.com');
+    expect(region.style.getPropertyValue('--player-h')).toBe('731px');
+  });
+
+  it('gives two Instagram post frames on one page each only its own height', () => {
+    const post = (code: string) =>
+      getEmbedTarget(
+        {
+          provider: 'instagram',
+          kind: 'post',
+          src: `https://www.instagram.com/p/${code}/embed/captioned/`,
+          height: null,
+          aspect: null,
+          allow: [],
+          autoplay_param: null,
+        },
+        `https://www.instagram.com/p/${code}/`,
+        'instagram.com',
+      )!;
+    render(
+      <>
+        <ResourcePlayerFrame target={post('AAA')} title="First" load="ready" onLoaded={() => {}} />
+        <ResourcePlayerFrame target={post('BBB')} title="Second" load="ready" onLoaded={() => {}} />
+      </>,
+    );
+    const [first, second] = screen.getAllByTestId('resource-player-frame') as HTMLIFrameElement[];
+    const region = (name: string) => screen.getByRole('region', { name: `instagram.com embed: ${name}` });
+    const measure = (height: number) => JSON.stringify({ type: 'MEASURE', details: { height } });
+
+    postFromFrame(first, measure(600), 'https://www.instagram.com');
+    expect(region('First').style.getPropertyValue('--player-h')).toBe('600px');
+    expect(region('Second').style.getPropertyValue('--player-h')).toBe('760px');
+    postFromFrame(second, measure(900), 'https://www.instagram.com');
+    expect(region('First').style.getPropertyValue('--player-h')).toBe('600px');
+    expect(region('Second').style.getPropertyValue('--player-h')).toBe('900px');
   });
 });

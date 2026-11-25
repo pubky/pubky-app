@@ -35,12 +35,13 @@ const ARTIST: TPinakesResourceDetail = {
 };
 
 function Card({ card, testId }: { card: TPinakesResourceDetail; testId: string }) {
-  const { embed, switcher, isCard } = useCardPlayer(card, card.uri);
+  const { embed, switcher, isCard, player } = useCardPlayer(card, card.uri);
   const body = <p>{card.name}</p>;
   return (
     <section data-testid={testId} data-card={String(Boolean(isCard))}>
       <header data-testid={`${testId}-header`}>{switcher}</header>
       {embed ?? body}
+      {player}
     </section>
   );
 }
@@ -55,6 +56,7 @@ const rowsOf = (menu: HTMLElement) =>
   within(menu)
     .getAllByTestId('play-on-row')
     .map((row) => row.textContent);
+
 /** Picks a service in the switch of the card in `testId`: with platform embeds up front off, that loads it. */
 const pickIn = (testId: string, row = 0) => {
   fireEvent.pointerDown(within(screen.getByTestId(testId)).getByRole('button', { name: /choose another service$/ }), {
@@ -320,12 +322,13 @@ describe('useCardPlayer, a song', () => {
     testId?: string;
     preview?: boolean;
   }) {
-    const { embed, switcher } = useCardPlayer(card, href, undefined, { preview });
+    const { embed, switcher, player } = useCardPlayer(card, href, undefined, { preview });
     const body = <p>{card.name}</p>;
     return (
       <section data-testid={testId}>
         {switcher}
         {embed ?? body}
+        {player}
       </section>
     );
   }
@@ -1054,12 +1057,12 @@ describe('useCardPlayer, a song', () => {
       expect(frameOf('toot')).toBe(toot);
     });
 
-    it('keeps what plays when a post’s frame is picked: a frame shown on a pick stops nothing', () => {
+    it('keeps what plays when a post’s frame is shown by its press: a frame shown stops nothing', () => {
       setMedia({ embedsUpFront: false });
       render(
         <>
           <Song card={DEEZER_SONG} href={DEEZER_SONG.uri} testId="deezer" />
-          {/* A post the card cannot tell (no text): its frame picked in the switch. */}
+          {/* A post the card cannot tell (no text): its frame shown by the press in the card. */}
           <Song card={{ ...TOOT, name: null, description: null }} testId="toot" />
         </>,
       );
@@ -1068,7 +1071,7 @@ describe('useCardPlayer, a song', () => {
       const playing = deezer.closest('[data-keep-playing]');
       expect(playing).not.toBeNull();
 
-      pickIn('toot');
+      fireEvent.click(within(screen.getByTestId('toot')).getByTestId('post-press'));
       expect(frameOf('toot')).toHaveAttribute('src', TOOT.embed?.src);
       expect(frameOf('deezer')).toBe(deezer);
       expect(Array.from(docked())).toEqual([playing]);
@@ -1934,7 +1937,30 @@ describe('useCardPlayer, a frame Pinakes names (`embed`)', () => {
     expect(screen.getByTestId('resource-player-frame')).toHaveAttribute('src', POST.embed?.src);
   });
 
-  it('loads no frame with platform embeds up front off for a post its card cannot tell, until it is picked', () => {
+  it('offers only the other services in the switch beside a post’s press, never the post’s own frame', () => {
+    useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
+    onTestFinished(() => {
+      useSettingsStore.setState({ media: upFrontMedia });
+    });
+    const spotify = { id: 's', uri: 'https://open.spotify.com/track/69kOkLUCkxIZYexIgSG8rq', site: 'Spotify' };
+    render(<Card card={{ ...POST, name: null, description: null, also_on: [spotify] }} testId="post" />);
+
+    expect(screen.getByTestId('post-press')).toBeInTheDocument();
+    const menu = openSwitchOf('post');
+    expect(rowsOf(menu)).toEqual(['Spotify']);
+    expect(document.querySelector('iframe')).toBeNull();
+
+    // Another service from the switch takes the card's place; Card gives the card and its press back.
+    fireEvent.click(within(menu).getAllByTestId('play-on-row')[0]);
+    expect(screen.queryByTestId('post-press')).not.toBeInTheDocument();
+    expect(screen.getByTestId('post')).toHaveAttribute('data-card', 'false');
+    fireEvent.click(within(openSwitchOf('post')).getByTestId('play-on-card'));
+    expect(screen.getByTestId('post')).toHaveAttribute('data-card', 'true');
+    expect(screen.getByTestId('post-press')).toBeInTheDocument();
+    expect(document.querySelector('iframe')).toBeNull();
+  });
+
+  it('loads no frame with platform embeds up front off for a post its card cannot tell, until the press in its card', () => {
     useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
     onTestFinished(() => {
       useSettingsStore.setState({ media: upFrontMedia });
@@ -1943,9 +1969,18 @@ describe('useCardPlayer, a frame Pinakes names (`embed`)', () => {
 
     expect(document.querySelector('iframe')).toBeNull();
     expectNoThirdPartyLoads();
-    pickIn('post');
+    expect(screen.getByTestId('post')).toHaveAttribute('data-card', 'true');
+    expect(screen.queryByTestId('player-switch')).not.toBeInTheDocument();
+    const press = screen.getByRole('button', { name: 'Show post from mastodon.social' });
+    fireEvent.click(press);
     // Shown, not played: it is not the page's player, so it neither docks nor stops what plays.
     expect(screen.getByTestId('resource-player-frame')).toHaveAttribute('src', POST.embed?.src);
     expect(screen.queryByTestId('player-dock-close')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('post-press')).not.toBeInTheDocument();
+
+    // Close gives the card back, nothing loaded.
+    fireEvent.click(screen.getByRole('button', { name: 'Close the mastodon.social post' }));
+    expect(document.querySelector('iframe')).toBeNull();
+    expect(screen.getByTestId('post-press')).toHaveFocus();
   });
 });

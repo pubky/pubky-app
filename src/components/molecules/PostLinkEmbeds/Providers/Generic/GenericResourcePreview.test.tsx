@@ -1166,5 +1166,127 @@ describe('GenericResourcePreview', () => {
       expect(mockUseOgMetadata).not.toHaveBeenCalledWith(expect.any(String));
       expectNothingThirdParty();
     });
+
+    it('draws the card as the press for its post: its title, site and one Show post, no pill, nothing loaded', () => {
+      mockUsePinakesCard.mockReturnValue({ data: BLOCKED_POST, isLoading: false, isError: false });
+      render(<GenericResourcePreview url={BLOCKED_POST.uri} />);
+
+      const card = screen.getByTestId('resource-card');
+      expect(card).toHaveAttribute('data-resource-card');
+      expect(within(card).getByTestId('resource-card-title')).toHaveTextContent('Post on instagram.com');
+      // The site's icon from the app's favicon route, in the card's header and on the press.
+      const icons = within(card).getAllByTestId('resource-source-favicon');
+      expect(icons).toHaveLength(2);
+      for (const icon of icons) {
+        const src = new globalThis.URL(icon.getAttribute('src') ?? '', window.location.href);
+        expect(`${src.origin}${src.pathname}`).toBe(`${window.location.origin}/api/favicon`);
+      }
+      // Not a post the card tells: Pinakes' "Post on …" and "Blocked by the site." are no post text.
+      expect(screen.queryByTestId('resource-card-post')).not.toBeInTheDocument();
+      // One press, inside the card, where the post will show; no pill, no switch, no Play on.
+      const press = within(within(card).getByTestId('resource-card-player')).getByTestId('post-press');
+      expect(press).toHaveAccessibleName('Show post from instagram.com');
+      expect(screen.getAllByRole('button', { name: /post/i })).toEqual([press]);
+      expect(screen.queryByTestId('show-embed')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^(Show|Play) on/ })).not.toBeInTheDocument();
+      expect(screen.queryByTestId('player-switch')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('resource-embed-frame')).not.toBeInTheDocument();
+      expectNothingThirdParty();
+    });
+
+    it('loads the site’s post in the press’s place inside the card, and Close gives the card back', () => {
+      mockUsePinakesCard.mockReturnValue({ data: BLOCKED_POST, isLoading: false, isError: false });
+      render(<GenericResourcePreview url={BLOCKED_POST.uri} />);
+
+      fireEvent.click(screen.getByTestId('post-press'));
+      const card = screen.getByTestId('resource-card');
+      const frame = within(within(card).getByTestId('resource-card-player')).getByTestId('resource-player-frame');
+      expect(frame).toHaveAttribute('src', BLOCKED_POST.embed.src);
+      expect(document.querySelectorAll('iframe')).toHaveLength(1);
+      expect(screen.queryByTestId('post-press')).not.toBeInTheDocument();
+      // The card stays: its title over the post.
+      expect(within(card).getByTestId('resource-card-title')).toHaveTextContent('Post on instagram.com');
+      expect(screen.getByTestId('post-press-close')).toHaveFocus();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Close the instagram.com post' }));
+      expect(document.querySelector('iframe')).toBeNull();
+      expect(screen.getByTestId('post-press')).toHaveFocus();
+      expectNothingThirdParty();
+    });
+
+    it.each([
+      ['the composer', (ui: React.ReactElement) => ui, true],
+      [
+        'a quoted post in a dialog',
+        (ui: React.ReactElement) => <PostPreviewNavigableProvider navigable={false}>{ui}</PostPreviewNavigableProvider>,
+        false,
+      ],
+    ])('draws the same press in %s, the post loading inside the card only on it', (_, wrap, isComposing) => {
+      mockUsePinakesCard.mockReturnValue({ data: BLOCKED_POST, isLoading: false, isError: false });
+      render(wrap(<GenericResourcePreview url={BLOCKED_POST.uri} isComposing={isComposing} />));
+
+      const card = screen.getByTestId('resource-card');
+      const press = within(within(card).getByTestId('resource-card-player')).getByTestId('post-press');
+      expectNothingThirdParty();
+      fireEvent.click(press);
+      expect(
+        within(within(card).getByTestId('resource-card-player')).getByTestId('resource-player-frame'),
+      ).toHaveAttribute('src', BLOCKED_POST.embed.src);
+      expect(document.querySelectorAll('iframe')).toHaveLength(1);
+    });
+
+    it('draws a reel (a video) of the same site the same way', () => {
+      const reel = {
+        ...BLOCKED_POST,
+        uri: 'https://www.instagram.com/reel/DgB34vHhlaT/',
+        name: 'Video on instagram.com',
+        type: 'VideoObject',
+        type_path: ['Thing', 'CreativeWork', 'MediaObject', 'VideoObject'],
+        embed: { ...BLOCKED_POST.embed, src: 'https://www.instagram.com/reel/DgB34vHhlaT/embed/captioned/' },
+      };
+      mockUsePinakesCard.mockReturnValue({ data: reel, isLoading: false, isError: false });
+      render(<GenericResourcePreview url={reel.uri} />);
+
+      expectNothingThirdParty();
+      fireEvent.click(screen.getByTestId('post-press'));
+      expect(screen.getByTestId('resource-player-frame')).toHaveAttribute('src', reel.embed.src);
+    });
+
+    it('keeps a post with no frame as its plain card: no press, no Play', () => {
+      mockUsePinakesCard.mockReturnValue({ data: instagramBlockedFixture, isLoading: false, isError: false });
+      render(<GenericResourcePreview url={instagramBlockedFixture.uri} />);
+
+      expect(screen.getByTestId('resource-card')).toBeInTheDocument();
+      expect(screen.queryByTestId('post-press')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('resource-card-player')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^(Show|Play)/ })).not.toBeInTheDocument();
+      expect(screen.queryByTestId('player-switch')).not.toBeInTheDocument();
+    });
+
+    it('shows a post its card tells at once, as a post, with nothing to press', () => {
+      const told = {
+        ...BLOCKED_POST,
+        name: 'Sunset over the lake',
+        description: 'Sunset over the lake, the long way round.',
+        facts: { author: 'someone', author_name: 'Some One' },
+      };
+      mockUsePinakesCard.mockReturnValue({ data: told, isLoading: false, isError: false });
+      render(<GenericResourcePreview url={told.uri} />);
+
+      expect(screen.getByTestId('resource-card-post')).toHaveTextContent('Sunset over the lake, the long way round.');
+      expect(screen.queryByTestId('post-press')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('player-switch')).not.toBeInTheDocument();
+      // Not refused: its image may come from its link's preview, through the app's image route only.
+      expectNoThirdPartyLoads();
+    });
+
+    it('shows the site’s post at once with platform embeds up front on, as before', () => {
+      useSettingsStore.setState({ media: upFrontMedia });
+      mockUsePinakesCard.mockReturnValue({ data: BLOCKED_POST, isLoading: false, isError: false });
+      render(<GenericResourcePreview url={BLOCKED_POST.uri} />);
+
+      expect(screen.getByTestId('resource-player-frame')).toHaveAttribute('src', BLOCKED_POST.embed.src);
+      expect(screen.queryByTestId('post-press')).not.toBeInTheDocument();
+    });
   });
 });

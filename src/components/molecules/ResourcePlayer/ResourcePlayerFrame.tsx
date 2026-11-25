@@ -11,7 +11,13 @@ import { tellsWhenPlaying } from '@/libs/utils/mediaPlayback';
 import { cn } from '@/libs/utils/utils';
 import { VIDEO_EMBED_PROPS } from '@/molecules/PostLinkEmbeds/Providers/Provider.constants';
 import { ResourceAudioControls } from './ResourceAudioControls';
-import { getMinFrameWidth, type PlayerStart, type PlayerTarget } from './resourcePlayer.utils';
+import {
+  getMinFrameWidth,
+  type PlayerStart,
+  type PlayerTarget,
+  readFrameHeight,
+  saysFrameHeight,
+} from './resourcePlayer.utils';
 import { type PlayerLoadState, useFramePress } from './useResourcePlayer';
 
 interface ResourcePlayerFrameProps {
@@ -98,25 +104,57 @@ function useStartMessage(target: PlayerTarget, onLoaded: () => void) {
 }
 
 /**
+ * The height a post frame asks for by its own message (`readFrameHeight`: Instagram's), from that frame's
+ * window only, for its current `src`; `null` until it asks, and for every other frame.
+ */
+function useMessagedHeight(frameRef: RefObject<HTMLIFrameElement | null>, target: PlayerTarget): number | null {
+  const [measured, setMeasured] = useState<{ src: string; height: number } | null>(null);
+  const { src, provider, frame } = target;
+  useEffect(() => {
+    if (!saysFrameHeight({ provider, frame })) return;
+    const onMessage = (event: MessageEvent) => {
+      if (!frameRef.current || event.source !== frameRef.current.contentWindow) return;
+      const height = readFrameHeight({ provider, frame }, event.origin, event.data);
+      if (height !== null) setMeasured({ src, height });
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [frameRef, src, provider, frame]);
+  return measured?.src === src ? measured.height : null;
+}
+
+/**
+ * The region's layout width (px, untransformed, with fractions) while `enabled`, from one
+ * `ResizeObserver`; `null` before it is known, and without `ResizeObserver`. The first report comes
+ * before the next paint. A hidden region reports 0: the last width is kept, so a frame comes back as it was.
+ */
+function useObservedWidth(regionRef: RefObject<HTMLDivElement | null>, enabled: boolean): number | null {
+  const [width, setWidth] = useState<number | null>(null);
+  useEffect(() => {
+    const region = regionRef.current;
+    if (!enabled || !region || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(([entry]) => {
+      const next = entry?.contentRect.width ?? 0;
+      if (next > 0) setWidth(next);
+    });
+    observer.observe(region);
+    return () => observer.disconnect();
+  }, [regionRef, enabled]);
+  return enabled ? width : null;
+}
+
+/** The scale that fits a frame laid out at `minWidth` into a region `width` wide (`useFitScale`). */
+function getFitScale(width: number | null, minWidth: number | undefined): number {
+  return minWidth && width !== null && width < minWidth ? width / minWidth : 1;
+}
+
+/**
  * The scale that fits a frame laid out at `minWidth` (`getMinFrameWidth`) into its region: below 1
  * only while the region is narrower; 1 when it fits, without a minimum width, or before the width is
  * known. A card's drawing of the player (`ResourcePlayerFacade`) takes the same height with it.
  */
 export function useFitScale(regionRef: RefObject<HTMLDivElement | null>, minWidth: number | undefined): number {
-  const [scale, setScale] = useState(1);
-  useEffect(() => {
-    const region = regionRef.current;
-    if (!minWidth || !region || typeof ResizeObserver === 'undefined') return;
-    // The layout width (untransformed, with fractions); the first report comes before the next paint.
-    // A hidden region reports 0: the last scale is kept, so the frame comes back scaled.
-    const observer = new ResizeObserver(([entry]) => {
-      const width = entry?.contentRect.width ?? 0;
-      if (width > 0) setScale(width < minWidth ? width / minWidth : 1);
-    });
-    observer.observe(region);
-    return () => observer.disconnect();
-  }, [regionRef, minWidth]);
-  return minWidth ? scale : 1;
+  return getFitScale(useObservedWidth(regionRef, Boolean(minWidth)), minWidth);
 }
 
 /**
@@ -144,6 +182,8 @@ export function ResourcePlayerFrame({
   holdsVideo = false,
 }: ResourcePlayerFrameProps) {
   const { frameRef, onLoad } = useStartMessage(target, onLoaded);
+  // A post frame that says its height (Instagram's) takes it: the post shows whole, with no scrollbar.
+  const messagedHeight = useMessagedHeight(frameRef, target);
   const regionRef = useRef<HTMLDivElement>(null);
   // A player that does not say when it plays (Deezer, TIDAL, Mixcloud, Spotify) starts by a press
   // inside it. A frame no card owns, once started, is stopped when other media starts: paused by the
@@ -196,7 +236,16 @@ export function ResourcePlayerFrame({
   // An embed with a minimum width (Apple's) is laid out at it and scaled to the region, the region's
   // height with it: the player keeps its proportions, with no scrollbar, cut edge or gap under it.
   const minWidth = target.element === 'iframe' ? getMinFrameWidth(target) : undefined;
-  const fit = useFitScale(regionRef, minWidth);
+  // A post frame that rests at its laid-out width plus a fixed part (Instagram's) until it says its height:
+  // laid out at the region's width, or at its minimum width when scaled down to a narrower one. One
+  // observer gives the width for both that and the fit scale (`useFitScale`).
+  const widthPlus = target.layout.kind === 'audio' ? target.layout.widthPlus : undefined;
+  const regionWidth = useObservedWidth(regionRef, Boolean(minWidth) || widthPlus !== undefined);
+  const fit = getFitScale(regionWidth, minWidth);
+  const restingHeight =
+    widthPlus !== undefined && messagedHeight === null && regionWidth !== null
+      ? Math.max(regionWidth, minWidth ?? 0) + widthPlus
+      : null;
   const fitStyle: CSSProperties | undefined =
     minWidth && fit < 1
       ? { width: minWidth, height: `${100 / fit}%`, transform: `scale(${fit})`, transformOrigin: '0 0' }
@@ -206,7 +255,9 @@ export function ResourcePlayerFrame({
     ? undefined
     : target.layout.kind === 'audio'
       ? ({
-          '--player-h': `${target.layout.height * fit}px`,
+          // A post frame with a width of its own (Instagram's) stays that narrow, left-aligned.
+          ...(target.layout.maxWidth && { maxWidth: target.layout.maxWidth }),
+          '--player-h': `${(messagedHeight ?? restingHeight ?? target.layout.height) * fit}px`,
           '--player-dock-h': `${(target.layout.dockHeight ?? target.layout.height) * fit}px`,
         } as CSSProperties)
       : target.layout.aspect

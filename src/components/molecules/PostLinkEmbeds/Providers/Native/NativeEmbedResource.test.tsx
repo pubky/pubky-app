@@ -279,7 +279,7 @@ describe('NativeEmbedResource', () => {
       expect(embed).not.toHaveBeenCalled();
     });
 
-    it('keeps Show on for an X post Pinakes could not reach: the card says so, the post is one press away', () => {
+    it('draws an X post Pinakes could not reach as the press in its card: the card says so, the post is one press away', () => {
       useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
       onTestFinished(() => {
         useSettingsStore.setState({ media: upFrontMedia });
@@ -288,8 +288,18 @@ describe('NativeEmbedResource', () => {
       render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
 
       expect(screen.queryByTestId('resource-card-post')).not.toBeInTheDocument();
-      fireEvent.click(screen.getByTestId('show-embed'));
+      // No pill: the press is inside the card, and nothing loads from X before it.
+      expect(screen.queryByTestId('show-embed')).not.toBeInTheDocument();
+      expect(embed).not.toHaveBeenCalled();
+      expectNoThirdPartyLoads();
+      fireEvent.click(within(screen.getByTestId('resource-card-player')).getByTestId('post-press'));
       expect(within(screen.getByTestId('resource-card-player')).getByTestId('platform-embed')).toBeInTheDocument();
+      expect(screen.getByTestId('resource-card')).toBeInTheDocument();
+
+      // Close: the card as it was, the press again.
+      fireEvent.click(screen.getByTestId('post-press-close'));
+      expect(screen.queryByTestId('platform-embed')).not.toBeInTheDocument();
+      expect(screen.getByTestId('post-press')).toBeInTheDocument();
     });
 
     it('shows a video post’s text at once from its card and keeps a Play for its video', () => {

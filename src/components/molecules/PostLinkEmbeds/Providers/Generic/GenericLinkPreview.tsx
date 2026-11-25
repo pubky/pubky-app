@@ -73,5 +73,5 @@ function BarePreviewRead({ url, isComposing, isOnScreen }: BarePreviewProps & { 
       </ResourceEmbedFrame>
     );
   }
-  return <ResourceCard card={card} href={url} headerControl={player.switcher} asPost />;
+  return <ResourceCard card={card} href={url} headerControl={player.switcher} player={player.player} asPost />;
 }
