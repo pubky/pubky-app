@@ -9,7 +9,7 @@ describe('ResourceSourceIcon', () => {
     const { container } = render(<ResourceSourceIcon uri="https://tidal.com/album/2178485" />);
 
     const favicon = screen.getByTestId('resource-source-favicon');
-    expect(favicon).toHaveAttribute('src', 'https://tidal.com/favicon.ico');
+    expect(favicon).toHaveAttribute('src', expect.stringMatching(/\/api\/favicon\?host=tidal\.com$/));
     fireEvent.error(favicon);
 
     expect(screen.queryByTestId('resource-source-favicon')).not.toBeInTheDocument();
@@ -20,7 +20,7 @@ describe('ResourceSourceIcon', () => {
     render(<ResourceSourceIcon uri="https://www.discogs.com/master/96559" />);
 
     const discogs = screen.getByTestId('resource-source-favicon');
-    expect(discogs).toHaveAttribute('src', 'https://st.discogs.com/favicon.ico');
+    expect(discogs).toHaveAttribute('src', expect.stringMatching(/\/api\/favicon\?host=discogs\.com$/));
     expect(discogs).toHaveClass('dark:invert');
     expect(discogs).not.toHaveClass('invert');
   });
@@ -35,12 +35,9 @@ describe('ResourceSourceIcon', () => {
   });
 
   it.each([
-    ['https://tycho.bandcamp.com/album/dive', 'https://s4.bcbits.com/img/favicon/favicon-32x32.png'],
-    ['https://audius.co/artist/track', 'https://audius.co/favicons/favicon-32x32.png'],
-    [
-      'https://music.amazon.fr/albums/B00C0A9E1E',
-      'https://m.media-amazon.com/images/G/01/music/logo/1.0/smile_256x256.png',
-    ],
+    ['https://tycho.bandcamp.com/album/dive', expect.stringMatching(/\/api\/favicon\?host=bandcamp\.com$/)],
+    ['https://audius.co/artist/track', expect.stringMatching(/\/api\/favicon\?host=audius\.co$/)],
+    ['https://music.amazon.fr/albums/B00C0A9E1E', expect.stringMatching(/\/api\/favicon\?host=music\.amazon\.fr$/)],
   ])('shows %s with the icon its pages name, not inverted', (uri, src) => {
     render(<ResourceSourceIcon uri={uri} />);
 
@@ -60,8 +57,8 @@ describe('ResourceSourceIcon', () => {
     );
 
     const [github, tidal, mixcloud, deezer] = screen.getAllByTestId('resource-source-favicon');
-    expect(github).toHaveAttribute('src', 'https://github.com/favicon.ico');
-    expect(mixcloud).toHaveAttribute('src', 'https://www.mixcloud.com/favicon.ico');
+    expect(github).toHaveAttribute('src', expect.stringMatching(/\/api\/favicon\?host=github\.com$/));
+    expect(mixcloud).toHaveAttribute('src', expect.stringMatching(/\/api\/favicon\?host=www\.mixcloud\.com$/));
     for (const dark of [github, tidal, mixcloud]) {
       expect(dark).toHaveClass('dark:invert');
       expect(dark).not.toHaveClass('invert');
@@ -96,11 +93,14 @@ describe('ResourceSourceIcon', () => {
 
       expect(screen.getByTestId('resource-source-favicon')).toHaveAttribute(
         'src',
-        'https://open.qobuz.com/favicon.ico',
+        expect.stringMatching(/\/api\/favicon\?host=open\.qobuz\.com$/),
       );
       fireEvent.error(screen.getByTestId('resource-source-favicon'));
 
-      expect(screen.getByTestId('resource-source-favicon')).toHaveAttribute('src', 'https://qobuz.com/favicon.ico');
+      expect(screen.getByTestId('resource-source-favicon')).toHaveAttribute(
+        'src',
+        expect.stringMatching(/\/api\/favicon\?host=qobuz\.com$/),
+      );
       expect(icon(container)).toBeNull();
       fireEvent.error(screen.getByTestId('resource-source-favicon'));
 
@@ -126,7 +126,7 @@ describe('ResourceSourceIcon', () => {
 
       expect(screen.getByTestId('resource-source-favicon')).toHaveAttribute(
         'src',
-        'https://play.qobuz.com/favicon.ico',
+        expect.stringMatching(/\/api\/favicon\?host=play\.qobuz\.com$/),
       );
       fireEvent.error(screen.getByTestId('resource-source-favicon'));
       expect(screen.queryByTestId('resource-source-favicon')).not.toBeInTheDocument();
@@ -150,7 +150,7 @@ describe('ResourceSourceIcon', () => {
       expect(screen.queryByTestId('resource-source-brand')).not.toBeInTheDocument();
       expect(screen.getByTestId('resource-source-favicon')).toHaveAttribute(
         'src',
-        'https://maps.apple.com/favicon.ico',
+        expect.stringMatching(/\/api\/favicon\?host=maps\.apple\.com$/),
       );
     });
   });

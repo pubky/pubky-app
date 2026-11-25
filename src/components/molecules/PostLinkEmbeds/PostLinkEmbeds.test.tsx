@@ -9,6 +9,11 @@ import { useSettingsStore } from '@/stores/settings/settings.store';
 import { defaultMediaPreferences } from '@/stores/settings/settings.types';
 import { PostLinkEmbeds } from './PostLinkEmbeds';
 
+// These cases are for platform embeds up front (Settings, Links & Media) turned on; the default
+// is off (`defaultMediaPreferences`): a card, nothing loaded from the platform before Play.
+const upFrontMedia = { ...defaultMediaPreferences, embedsUpFront: true };
+beforeEach(() => useSettingsStore.setState({ media: upFrontMedia }));
+
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock('@/atoms/Container/Container', () => {
   return {
@@ -154,6 +159,42 @@ describe('PostLinkEmbeds', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     viewport.isVisible = false;
+  });
+
+  describe('with the default settings (platform embeds up front off)', () => {
+    beforeEach(() => useSettingsStore.setState({ media: defaultMediaPreferences }));
+
+    it.each([
+      ['YouTube', 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', 'YouTube video player'],
+      ['Vimeo', 'https://vimeo.com/76979871', 'Vimeo video player'],
+    ])('loads a %s link in the text only on Play on, started by that press', (site, link, testId) => {
+      render(<PostLinkEmbeds content={`Watch ${link}`} />);
+
+      expect(document.querySelector('iframe')).toBeNull();
+      expect(screen.queryByTestId(testId)).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole('button', { name: `Play on ${site}` }));
+
+      expect(screen.getByTestId(testId).getAttribute('src')).toContain('autoplay=1');
+      expect(screen.getByRole('button', { name: `Close the ${site} video` })).toBeInTheDocument();
+    });
+
+    it('shows an X post in the text only on Show on', () => {
+      render(<PostLinkEmbeds content="See https://x.com/user/status/1234567890" />);
+
+      expect(document.querySelector('[data-testid^="twitter-tweet"]')).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: 'Show on x.com' }));
+      expect(document.querySelector('[data-testid^="twitter-tweet"]')).not.toBeNull();
+    });
+
+    it('loads a post’s own YouTube embed only on Play on where Pinakes is not configured', () => {
+      vi.mocked(isPinakesConfigured).mockReturnValue(false);
+      render(<PostLinkEmbeds url="https://www.youtube.com/watch?v=dQw4w9WgXcQ" />);
+
+      expect(document.querySelector('iframe')).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: 'Play on YouTube' }));
+      expect(screen.getByTestId('YouTube video player').getAttribute('src')).toContain('autoplay=1');
+    });
   });
 
   describe('YouTube URL parsing', () => {
@@ -1115,8 +1156,7 @@ describe('PostLinkEmbeds', () => {
 
   describe('a platform the viewer removed from Players', () => {
     const VIDEO = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
-    const hide = (hiddenPlayers: string[]) =>
-      useSettingsStore.setState({ media: { ...defaultMediaPreferences, hiddenPlayers } });
+    const hide = (hiddenPlayers: string[]) => useSettingsStore.setState({ media: { ...upFrontMedia, hiddenPlayers } });
 
     afterEach(() => {
       hide([]);

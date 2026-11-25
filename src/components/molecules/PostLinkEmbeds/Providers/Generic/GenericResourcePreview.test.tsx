@@ -24,6 +24,11 @@ import { useSettingsStore } from '@/stores/settings/settings.store';
 import { defaultMediaPreferences } from '@/stores/settings/settings.types';
 import { GenericResourcePreview } from './GenericResourcePreview';
 
+// These cases are for platform embeds up front (Settings, Links & Media) turned on; the default
+// is off (`defaultMediaPreferences`): a card, nothing loaded from the platform before Play.
+const upFrontMedia = { ...defaultMediaPreferences, embedsUpFront: true };
+beforeEach(() => useSettingsStore.setState({ media: upFrontMedia }));
+
 const mockPush = vi.fn();
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: mockPush }) }));
 vi.mock('@/config/pinakes', async (importOriginal) => ({
@@ -746,8 +751,8 @@ describe('GenericResourcePreview', () => {
     });
 
     describe('with platform embeds up front off', () => {
-      beforeEach(() => useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } }));
-      afterEach(() => useSettingsStore.setState({ media: defaultMediaPreferences }));
+      beforeEach(() => useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } }));
+      afterEach(() => useSettingsStore.setState({ media: upFrontMedia }));
 
       it('shows the player’s stand-in with Play on in the resource frame and loads nothing from the service', () => {
         const album = {
@@ -768,10 +773,8 @@ describe('GenericResourcePreview', () => {
     });
 
     describe('with the service removed from Players', () => {
-      beforeEach(() =>
-        useSettingsStore.setState({ media: { ...defaultMediaPreferences, hiddenPlayers: ['spotify'] } }),
-      );
-      afterEach(() => useSettingsStore.setState({ media: defaultMediaPreferences }));
+      beforeEach(() => useSettingsStore.setState({ media: { ...upFrontMedia, hiddenPlayers: ['spotify'] } }));
+      afterEach(() => useSettingsStore.setState({ media: upFrontMedia }));
 
       it('keeps our card, with no Play on, and loads nothing from the service', () => {
         const album = {
@@ -855,8 +858,8 @@ describe('GenericResourcePreview', () => {
 
     describe('with the viewer’s Players', () => {
       const setPlayers = (playerOrder: string[], hiddenPlayers: string[] = []) =>
-        useSettingsStore.setState({ media: { ...defaultMediaPreferences, playerOrder, hiddenPlayers } });
-      afterEach(() => useSettingsStore.setState({ media: defaultMediaPreferences }));
+        useSettingsStore.setState({ media: { ...upFrontMedia, playerOrder, hiddenPlayers } });
+      afterEach(() => useSettingsStore.setState({ media: upFrontMedia }));
 
       it('shows the first service in the viewer’s order, its switch in that order', () => {
         setPlayers(['tidal', 'youtube', 'spotify']);
@@ -939,8 +942,8 @@ describe('GenericResourcePreview', () => {
     });
 
     describe('with Card (no player) first in Players', () => {
-      beforeEach(() => useSettingsStore.setState({ media: { ...defaultMediaPreferences, playerOrder: ['card'] } }));
-      afterEach(() => useSettingsStore.setState({ media: defaultMediaPreferences }));
+      beforeEach(() => useSettingsStore.setState({ media: { ...upFrontMedia, playerOrder: ['card'] } }));
+      afterEach(() => useSettingsStore.setState({ media: upFrontMedia }));
 
       it('shows our card first, loading nothing, also for a song on one service', () => {
         mockUsePinakesCard.mockReturnValue({ data: { ...SONG, also_on: [] }, isLoading: false, isError: false });
@@ -984,8 +987,8 @@ describe('GenericResourcePreview', () => {
     });
 
     describe('with platform embeds up front off', () => {
-      beforeEach(() => useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } }));
-      afterEach(() => useSettingsStore.setState({ media: defaultMediaPreferences }));
+      beforeEach(() => useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } }));
+      afterEach(() => useSettingsStore.setState({ media: upFrontMedia }));
 
       it('loads no player, and offers Play on in its place, the footer kept', () => {
         mockUsePinakesCard.mockReturnValue({ data: SONG, isLoading: false, isError: false });

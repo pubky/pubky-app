@@ -12,6 +12,11 @@ import { defaultMediaPreferences } from '@/stores/settings/settings.types';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { NativeEmbedResource, type RenderNativeEmbed } from './NativeEmbedResource';
 
+// These cases are for platform embeds up front (Settings, Links & Media) turned on; the default
+// is off (`defaultMediaPreferences`): a card, nothing loaded from the platform before Play.
+const upFrontMedia = { ...defaultMediaPreferences, embedsUpFront: true };
+beforeEach(() => useSettingsStore.setState({ media: upFrontMedia }));
+
 const mockPush = vi.fn();
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: mockPush }) }));
 vi.mock('@/hooks/usePinakesCard/usePinakesCard', () => ({ usePinakesCard: vi.fn() }));
@@ -193,9 +198,9 @@ describe('NativeEmbedResource', () => {
     });
 
     it('with platform embeds up front off, shows an X post on our card from Show on, with X’s mark, and the same pill closes it', () => {
-      useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } });
+      useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
       onTestFinished(() => {
-        useSettingsStore.setState({ media: defaultMediaPreferences });
+        useSettingsStore.setState({ media: upFrontMedia });
       });
       mockCard(POST_WITH_ALSO_ON);
       render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
@@ -221,9 +226,9 @@ describe('NativeEmbedResource', () => {
     });
 
     it('gives Show on the post’s own pill on the post card’s surface (a quoted post, a collection’s item)', () => {
-      useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } });
+      useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
       onTestFinished(() => {
-        useSettingsStore.setState({ media: defaultMediaPreferences });
+        useSettingsStore.setState({ media: upFrontMedia });
       });
       mockCard(POST_WITH_ALSO_ON);
       const { unmount } = render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
@@ -292,8 +297,8 @@ describe('NativeEmbedResource', () => {
     });
 
     describe('with Card (no player) above YouTube in Players', () => {
-      beforeEach(() => useSettingsStore.setState({ media: { ...defaultMediaPreferences, playerOrder: ['card'] } }));
-      afterEach(() => useSettingsStore.setState({ media: defaultMediaPreferences }));
+      beforeEach(() => useSettingsStore.setState({ media: { ...upFrontMedia, playerOrder: ['card'] } }));
+      afterEach(() => useSettingsStore.setState({ media: upFrontMedia }));
 
       it('keeps the frame of a link Pinakes does not know, its embed only from Play on', () => {
         mockCard(null);
@@ -308,8 +313,8 @@ describe('NativeEmbedResource', () => {
     });
 
     describe('with platform embeds up front off', () => {
-      beforeEach(() => useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } }));
-      afterEach(() => useSettingsStore.setState({ media: defaultMediaPreferences }));
+      beforeEach(() => useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } }));
+      afterEach(() => useSettingsStore.setState({ media: upFrontMedia }));
 
       it('shows the player’s stand-in with Play on in the resource frame and loads nothing from the platform', () => {
         mockCard(VIDEO_ALONE);
@@ -459,7 +464,7 @@ describe('NativeEmbedResource', () => {
     });
 
     it('offers the platform embed from Play on, with platform embeds up front off', () => {
-      useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } });
+      useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
       try {
         gone();
         render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
@@ -470,7 +475,7 @@ describe('NativeEmbedResource', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Play on YouTube' }));
         expect(within(screen.getByTestId('resource-card')).getByTestId('platform-embed')).toBeInTheDocument();
       } finally {
-        useSettingsStore.setState({ media: defaultMediaPreferences });
+        useSettingsStore.setState({ media: upFrontMedia });
       }
     });
   });
@@ -481,7 +486,7 @@ describe('NativeEmbedResource', () => {
       // player): the card player has nothing to play.
       useSettingsStore.setState({
         media: {
-          ...defaultMediaPreferences,
+          ...upFrontMedia,
           embedsUpFront: false,
           hiddenPlayers: ['tidal', 'deezer', 'spotify', 'apple-music'],
         },
@@ -498,7 +503,7 @@ describe('NativeEmbedResource', () => {
       expect(screen.getByTestId('show-embed')).toBeInTheDocument();
       expect(embed).not.toHaveBeenCalled();
     } finally {
-      useSettingsStore.setState({ media: defaultMediaPreferences });
+      useSettingsStore.setState({ media: upFrontMedia });
     }
   });
 
@@ -599,8 +604,8 @@ describe('NativeEmbedResource', () => {
     });
 
     describe('with platform embeds up front off', () => {
-      beforeEach(() => useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } }));
-      afterEach(() => useSettingsStore.setState({ media: defaultMediaPreferences }));
+      beforeEach(() => useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } }));
+      afterEach(() => useSettingsStore.setState({ media: upFrontMedia }));
 
       it('loads nothing from any service, and offers Play on in the player’s place', () => {
         mockCard(SONG);
@@ -649,9 +654,9 @@ describe('NativeEmbedResource', () => {
     });
 
     it('shows our card, loading nothing, with Card (no player) first in Players', () => {
-      useSettingsStore.setState({ media: { ...defaultMediaPreferences, playerOrder: ['card'] } });
+      useSettingsStore.setState({ media: { ...upFrontMedia, playerOrder: ['card'] } });
       onTestFinished(() => {
-        useSettingsStore.setState({ media: defaultMediaPreferences });
+        useSettingsStore.setState({ media: upFrontMedia });
       });
       mockCard(GET_LUCKY);
       render(<NativeEmbedResource url={GET_LUCKY_URL} kind="video" renderEmbed={embed} />);
@@ -664,9 +669,9 @@ describe('NativeEmbedResource', () => {
     });
 
     it('shows an ordinary video Pinakes knows nowhere else as our card, its switch offering YouTube, with Card (no player) above YouTube', () => {
-      useSettingsStore.setState({ media: { ...defaultMediaPreferences, playerOrder: ['card'] } });
+      useSettingsStore.setState({ media: { ...upFrontMedia, playerOrder: ['card'] } });
       onTestFinished(() => {
-        useSettingsStore.setState({ media: defaultMediaPreferences });
+        useSettingsStore.setState({ media: upFrontMedia });
       });
       mockCard({ ...GET_LUCKY, also_on: [] });
       render(<NativeEmbedResource url={GET_LUCKY_URL} kind="video" renderEmbed={embed} />);
@@ -816,9 +821,9 @@ describe('NativeEmbedResource', () => {
 
     it('unloads a video opened from Play on in our card while hidden, still open once shown', () => {
       // Platform embeds up front off: a video the card player cannot play is our card, its embed from Play on.
-      useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } });
+      useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
       onTestFinished(() => {
-        useSettingsStore.setState({ media: defaultMediaPreferences });
+        useSettingsStore.setState({ media: upFrontMedia });
       });
       mockCard({ ...VIDEO_ALONE, status: 'missing' });
       render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);

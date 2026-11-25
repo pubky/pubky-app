@@ -305,10 +305,13 @@ function usePostEmbed(card: TPinakesResourceDetail, uri: string) {
     embedFailed: failed,
     upFront: embedsUpFront,
   });
-  const isOpen = !failed && (choice === 'embed' || isPostOpen);
+  // Platform embeds up front off and no card to show instead (Pinakes still reading it, or no name):
+  // X's embed waits for Show on, as in a post (`NativeEmbedResource`).
+  const onPress = !embedsUpFront && choice === 'embed';
+  const isOpen = !failed && ((choice === 'embed' && !onPress) || isPostOpen);
   // The card player's pill, as on a post's card, on the page's surface.
   const showPost =
-    choice === 'card' && !failed ? (
+    (choice === 'card' || onPress) && !failed ? (
       <PlayOnPill
         uri={uri}
         isOpen={isPostOpen}

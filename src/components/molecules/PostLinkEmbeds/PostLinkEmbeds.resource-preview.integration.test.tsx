@@ -21,6 +21,11 @@ import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { useSettingsStore } from '@/stores/settings/settings.store';
 import { defaultMediaPreferences } from '@/stores/settings/settings.types';
 
+// These cases are for platform embeds up front (Settings, Links & Media) turned on; the default
+// is off (`defaultMediaPreferences`): a card, nothing loaded from the platform before Play.
+const upFrontMedia = { ...defaultMediaPreferences, embedsUpFront: true };
+beforeEach(() => useSettingsStore.setState({ media: upFrontMedia }));
+
 /**
  * A post's external resource where the post is shown inside another surface: a quote in the feed, the
  * Repost dialog's original post, the new-post and edit composers. The real render path runs end to
@@ -392,11 +397,11 @@ describe('PostLinkEmbeds - an external resource inside a post preview (integrati
     mocks.postTagIds = [];
     mocks.tags = SHORT_TAGS.slice(0, 2);
     mocks.addTag.mockResolvedValue({ success: true });
-    useSettingsStore.setState({ media: defaultMediaPreferences });
+    useSettingsStore.setState({ media: upFrontMedia });
   });
 
   afterEach(() => {
-    useSettingsStore.setState({ media: defaultMediaPreferences });
+    useSettingsStore.setState({ media: upFrontMedia });
   });
 
   describe('outer post → quoted post → external resource', () => {
@@ -475,7 +480,7 @@ describe('PostLinkEmbeds - an external resource inside a post preview (integrati
     });
 
     it('shows the stand-in and loads nothing with platform embeds up front off', () => {
-      act(() => useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } }));
+      act(() => useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } }));
       givenQuoteOfResource(SONG_WRITTEN, SONG_CARD);
       show(<PostContent postId={OUTER} />);
 
@@ -847,7 +852,7 @@ describe('PostLinkEmbeds - an external resource inside a post preview (integrati
 
   describe('platform embeds up front turned off (Settings, Links & Media)', () => {
     beforeEach(() => {
-      act(() => useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } }));
+      act(() => useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } }));
     });
 
     it.each([

@@ -21,7 +21,10 @@ describe('ResourceListRow', () => {
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
     expect(link).toHaveAccessibleName('TIDAL Found via musicbrainz');
-    expect(screen.getByTestId('resource-source-favicon')).toHaveAttribute('src', 'https://tidal.com/favicon.ico');
+    expect(screen.getByTestId('resource-source-favicon')).toHaveAttribute(
+      'src',
+      expect.stringMatching(/\/api\/favicon\?host=tidal\.com$/),
+    );
   });
 
   it('shows its whole name and note in a tooltip, for a row cut short in the narrow column', () => {

@@ -232,7 +232,7 @@ describe('SettingsStore', () => {
       expect(useSettingsStore.getState().media).toEqual({
         playerOrder: ['tidal'],
         hiddenPlayers: ['vimeo'],
-        embedsUpFront: true,
+        embedsUpFront: false,
       });
     });
 
@@ -244,7 +244,7 @@ describe('SettingsStore', () => {
       expect(useSettingsStore.getState().media).toEqual({
         playerOrder: ['tidal'],
         hiddenPlayers: [],
-        embedsUpFront: true,
+        embedsUpFront: false,
         languages: ['de', 'fr'],
       });
 
@@ -269,7 +269,7 @@ describe('SettingsStore', () => {
       expect(useSettingsStore.getState().media).toEqual({
         playerOrder: ['tidal'],
         hiddenPlayers: ['youtube'],
-        embedsUpFront: true,
+        embedsUpFront: false,
         players: { podcasts: { order: ['spotify', 'card'], hidden: [] }, video: { order: [], hidden: ['vimeo'] } },
       });
     });

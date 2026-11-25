@@ -130,9 +130,10 @@ export function useCardPlayer(
   const showsPlayer = embedsUpFront || optedIn === card.uri;
   const choose = (next: EmbedChoice) => {
     // Switching is no Close: what played stops, the next service shows paused. The card lets go
-    // of a Play on pressed with platform embeds up front off, so nothing loads before the next.
+    // of a Play on pressed with platform embeds up front off, so the next service (or Card) loads
+    // nothing until its own Play on.
     if (player.current) player.close();
-    if (next === CARD_PLAYER) setOptedIn(null);
+    setOptedIn(null);
     setPicked({ uri: card.uri, choice: next });
   };
   // A choice to make: several services, or Card when it comes first (a generic link, or Card above
@@ -149,7 +150,7 @@ export function useCardPlayer(
         onShowCard={() => {
           if (selected) choose(CARD_PLAYER);
         }}
-        icons={showsPlayer}
+        icons
         surface={surface}
       />
     ) : undefined;

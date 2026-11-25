@@ -338,7 +338,7 @@ describe('ResourceCard', () => {
 
       expect(screen.getByTestId('resource-source-favicon')).toHaveAttribute(
         'src',
-        'https://en.wikipedia.org/favicon.ico',
+        expect.stringMatching(/\/api\/favicon\?host=en\.wikipedia\.org$/),
       );
     });
 
@@ -352,9 +352,12 @@ describe('ResourceCard', () => {
       render(<ResourceCard card={ARTICLE} href={ARTICLE.uri} />);
 
       const favicon = screen.getByTestId('resource-source-favicon');
-      expect(favicon).toHaveAttribute('src', 'https://en.wikipedia.org/favicon.ico');
+      expect(favicon).toHaveAttribute('src', expect.stringMatching(/\/api\/favicon\?host=en\.wikipedia\.org$/));
       fireEvent.error(favicon);
-      expect(screen.getByTestId('resource-source-favicon')).toHaveAttribute('src', 'https://wikipedia.org/favicon.ico');
+      expect(screen.getByTestId('resource-source-favicon')).toHaveAttribute(
+        'src',
+        expect.stringMatching(/\/api\/favicon\?host=wikipedia\.org$/),
+      );
       fireEvent.error(screen.getByTestId('resource-source-favicon'));
 
       expect(screen.queryByTestId('resource-source-favicon')).not.toBeInTheDocument();
@@ -709,7 +712,7 @@ describe('ResourceCard', () => {
       expect(source()).toHaveTextContent('openlibrary.org');
       expect(screen.getByTestId('resource-source-favicon')).toHaveAttribute(
         'src',
-        'https://openlibrary.org/favicon.ico',
+        expect.stringMatching(/\/api\/favicon\?host=openlibrary\.org$/),
       );
     });
 
@@ -730,7 +733,7 @@ describe('ResourceCard', () => {
       expect(source()).toHaveTextContent('mempool.space');
       expect(screen.getByTestId('resource-source-favicon')).toHaveAttribute(
         'src',
-        'https://mempool.space/resources/favicons/favicon-32x32.png',
+        expect.stringMatching(/\/api\/favicon\?host=mempool\.space$/),
       );
     });
 
@@ -761,7 +764,7 @@ describe('ResourceCard', () => {
         expect(source()).toHaveAccessibleName('Open in mempool.space');
         expect(screen.getByTestId('resource-source-favicon')).toHaveAttribute(
           'src',
-          'https://mempool.space/resources/favicons/favicon-32x32.png',
+          expect.stringMatching(/\/api\/favicon\?host=mempool\.space$/),
         );
       },
     );

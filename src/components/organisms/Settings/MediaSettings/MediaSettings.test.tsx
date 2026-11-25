@@ -122,7 +122,16 @@ describe('MediaSettings', () => {
     expect(screen.getByText(/^When off, links show their card/)).toBeInTheDocument();
   });
 
-  it('turns platform embeds up front off', () => {
+  it('shows platform embeds up front off by default, and turns them on', () => {
+    render(<MediaSettings />);
+    expect(screen.getByRole('switch', { name: 'Show platform embeds up front' })).not.toBeChecked();
+    fireEvent.click(screen.getByRole('switch', { name: 'Show platform embeds up front' }));
+
+    expect(mockSetEmbedsUpFront).toHaveBeenCalledWith(true);
+  });
+
+  it('turns platform embeds up front off again', () => {
+    setMedia({ embedsUpFront: true });
     render(<MediaSettings />);
     expect(screen.getByRole('switch', { name: 'Show platform embeds up front' })).toBeChecked();
     fireEvent.click(screen.getByRole('switch', { name: 'Show platform embeds up front' }));

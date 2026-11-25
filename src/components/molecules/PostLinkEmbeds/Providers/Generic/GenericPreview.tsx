@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Globe } from 'lucide-react';
 import { Audio } from '@/atoms/Audio/Audio';
 import { Container } from '@/atoms/Container/Container';
@@ -8,6 +9,9 @@ import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
 import { Video } from '@/atoms/Video/Video';
 import { useOgMetadata } from '@/hooks/useOgMetadata/useOgMetadata';
+import { getLinkHost } from '@/molecules/ResourceCard/ResourceCard.utils';
+import { PlayOnPill } from '@/molecules/ResourcePlayer/ResourcePlayerControls';
+import { useSettingsStore } from '@/stores/settings/settings.store';
 import { GenericPreviewSkeleton } from './GenericPreview.skeleton';
 
 interface GenericPreviewProps {
@@ -33,8 +37,7 @@ export function GenericPreview({ url }: GenericPreviewProps) {
         <Image src={url} alt="Image preview" className="w-full rounded-md object-contain" />
       </Link>
     );
-  if (type === 'video') return <Video src={url} className="w-full cursor-auto object-contain" />;
-  if (type === 'audio') return <Audio src={url} className="cursor-auto" />;
+  if (type === 'video' || type === 'audio') return <MediaPreview url={url} type={type} />;
   return (
     <Link data-testid="generic-website-preview" href={url}>
       <Container className="justify-between gap-6 rounded-md bg-embed p-6 lg:flex-row @max-xl/grid:flex-col!">
@@ -71,5 +74,38 @@ export function GenericPreview({ url }: GenericPreviewProps) {
         )}
       </Container>
     </Link>
+  );
+}
+
+/**
+ * A video or audio file the link is: the player right away with platform embeds up front on; else
+ * nothing is asked from its site until Play on is pressed (the card player's pill), then the player,
+ * started by that press.
+ */
+function MediaPreview({ url, type }: { url: string; type: 'video' | 'audio' }) {
+  const embedsUpFront = useSettingsStore((state) => state.media.embedsUpFront);
+  const [isOpen, setIsOpen] = useState(false);
+  const shows = embedsUpFront || isOpen;
+  const site = getLinkHost(url) ?? url;
+  const player =
+    type === 'video' ? (
+      <Video src={url} autoPlay={!embedsUpFront} className="w-full cursor-auto object-contain" />
+    ) : (
+      <Audio src={url} autoPlay={!embedsUpFront} className="cursor-auto" />
+    );
+  if (embedsUpFront) return player;
+  return (
+    <Container overrideDefaults className="flex min-w-0 flex-col gap-3" data-testid="media-on-press">
+      <PlayOnPill
+        uri={url}
+        isOpen={isOpen}
+        label={isOpen ? `Close the ${site} player` : `Play on ${site}`}
+        aria-expanded={isOpen}
+        className="self-start"
+        onClick={() => setIsOpen(!isOpen)}
+        data-testid="show-embed"
+      />
+      {shows && player}
+    </Container>
   );
 }

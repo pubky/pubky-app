@@ -19,6 +19,11 @@ import { useSettingsStore } from '@/stores/settings/settings.store';
 import { defaultMediaPreferences } from '@/stores/settings/settings.types';
 import { ResourceDetails } from './ResourceDetails';
 
+// These cases are for platform embeds up front (Settings, Links & Media) turned on; the default
+// is off (`defaultMediaPreferences`): a card, nothing loaded from the platform before Play.
+const upFrontMedia = { ...defaultMediaPreferences, embedsUpFront: true };
+beforeEach(() => useSettingsStore.setState({ media: upFrontMedia }));
+
 const mocks = vi.hoisted(() => ({
   configured: true,
   replyCount: 2 as number | undefined,
@@ -462,9 +467,9 @@ describe('ResourceDetails', () => {
     });
 
     it('shows a song as its card, with the switch in its header, with Card (no player) first in Players', () => {
-      useSettingsStore.setState({ media: { ...defaultMediaPreferences, playerOrder: ['card'] } });
+      useSettingsStore.setState({ media: { ...upFrontMedia, playerOrder: ['card'] } });
       onTestFinished(() => {
-        useSettingsStore.setState({ media: defaultMediaPreferences });
+        useSettingsStore.setState({ media: upFrontMedia });
       });
       read = settled(mbRecordingEnrichedFixture);
       renderDetails(mbRecordingEnrichedFixture.uri);
@@ -518,9 +523,9 @@ describe('ResourceDetails', () => {
       });
 
       it('keeps them beside a service’s stand-in with platform embeds up front off', () => {
-        useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } });
+        useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
         onTestFinished(() => {
-          useSettingsStore.setState({ media: defaultMediaPreferences });
+          useSettingsStore.setState({ media: upFrontMedia });
         });
         read = settled({ ...podcastFixture, episodes });
         renderDetails(podcastFixture.uri);
@@ -532,9 +537,9 @@ describe('ResourceDetails', () => {
       });
 
       it('gives way to the service’s player once its Play on is pressed with platform embeds up front off', () => {
-        useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } });
+        useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
         onTestFinished(() => {
-          useSettingsStore.setState({ media: defaultMediaPreferences });
+          useSettingsStore.setState({ media: upFrontMedia });
         });
         read = settled({ ...podcastFixture, episodes });
         renderDetails(podcastFixture.uri);
@@ -694,9 +699,9 @@ describe('ResourceDetails', () => {
     });
 
     it('shows our card with Show on <site> to a viewer who turned platform embeds up front off, X’s embed only from there', () => {
-      useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } });
+      useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
       onTestFinished(() => {
-        useSettingsStore.setState({ media: defaultMediaPreferences });
+        useSettingsStore.setState({ media: upFrontMedia });
       });
       read = settled(X_POST_WITH_ALSO_ON);
       renderDetails(X_URL);
@@ -718,7 +723,7 @@ describe('ResourceDetails', () => {
     });
 
     it('shows our card with Show on 𝕏 to a viewer who turned platform embeds up front off', () => {
-      useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } });
+      useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
       try {
         read = settled(X_POST);
         renderDetails(X_URL);
@@ -729,7 +734,7 @@ describe('ResourceDetails', () => {
         fireEvent.click(within(screen.getByTestId('resource-actions')).getByTestId('show-embed'));
         expect(within(screen.getByTestId('native-embed-body')).getByTestId('twitter-tweet')).toBeInTheDocument();
       } finally {
-        act(() => useSettingsStore.setState({ media: defaultMediaPreferences }));
+        act(() => useSettingsStore.setState({ media: upFrontMedia }));
       }
     });
 
@@ -744,6 +749,20 @@ describe('ResourceDetails', () => {
       expect(screen.queryByTestId('show-embed')).toBeNull();
     });
 
+    it('waits for Show on before loading X’s embed for a card Pinakes is still reading, by default', () => {
+      useSettingsStore.setState({ media: defaultMediaPreferences });
+      onTestFinished(() => {
+        useSettingsStore.setState({ media: upFrontMedia });
+      });
+      read = settled({ ...X_POST, status: 'pending', name: null, description: null });
+      renderDetails(X_URL);
+
+      expect(screen.queryByTestId('native-embed-body')).toBeNull();
+      expect(screen.queryByTestId('twitter-tweet')).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: 'Show on x.com' }));
+      expect(within(screen.getByTestId('native-embed-body')).getByTestId('twitter-tweet')).toBeInTheDocument();
+    });
+
     it('shows X’s embed up front for a card Pinakes is still reading, as in a post', () => {
       read = settled({ ...X_POST, status: 'pending', name: null, description: null });
       renderDetails(X_URL);
@@ -753,9 +772,9 @@ describe('ResourceDetails', () => {
     });
 
     it('goes back to our card, without Show on, when X cannot show the post it was asked to', () => {
-      useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } });
+      useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
       onTestFinished(() => {
-        useSettingsStore.setState({ media: defaultMediaPreferences });
+        useSettingsStore.setState({ media: upFrontMedia });
       });
       tweet.state = { data: null, error: new Error('gone'), isLoading: false };
       read = settled(X_POST_WITH_ALSO_ON);

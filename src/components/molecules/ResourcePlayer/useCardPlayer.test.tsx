@@ -10,6 +10,18 @@ import { defaultMediaPreferences } from '@/stores/settings/settings.types';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { useCardPlayer } from './useCardPlayer';
 
+// These cases are for platform embeds up front (Settings, Links & Media) turned on; the default
+// is off (`defaultMediaPreferences`): a card, nothing loaded from the platform before Play.
+const upFrontMedia = { ...defaultMediaPreferences, embedsUpFront: true };
+beforeEach(() => useSettingsStore.setState({ media: upFrontMedia }));
+
+/** Every image or frame address on the page is the app's own (its `/api/favicon` icons): nothing from a service. */
+const expectOnlyAppSources = (root: ParentNode = document) => {
+  for (const node of root.querySelectorAll('[src]')) {
+    expect(new URL(node.getAttribute('src') ?? '', window.location.href).origin).toBe(window.location.origin);
+  }
+};
+
 // A generic link (an artist's MusicBrainz page) Pinakes knows on a service with a player (Spotify,
 // the song's link): its card first, the services in its switch.
 const ARTIST: TPinakesResourceDetail = {
@@ -84,7 +96,7 @@ describe('useCardPlayer, a generic link', () => {
       ],
     };
     const setPlayers = (playerOrder: string[], hiddenPlayers: string[] = []) =>
-      useSettingsStore.setState({ media: { ...defaultMediaPreferences, playerOrder, hiddenPlayers } });
+      useSettingsStore.setState({ media: { ...upFrontMedia, playerOrder, hiddenPlayers } });
 
     afterEach(() => setPlayers([]));
 
@@ -118,16 +130,16 @@ describe('useCardPlayer, a generic link', () => {
     });
   });
 
-  it('loads nothing with platform embeds up front off: Card first, no favicons, a picked service as a stand-in', () => {
-    useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } });
+  it('loads nothing with platform embeds up front off: Card first, icons only from the app, a picked service as a stand-in', () => {
+    useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
     onTestFinished(() => {
-      useSettingsStore.setState({ media: defaultMediaPreferences });
+      useSettingsStore.setState({ media: upFrontMedia });
     });
     render(<Card card={ARTIST} testId="artist" />);
 
     expect(screen.getByText(musicFixture.name!)).toBeInTheDocument();
     const menu = openSwitchOf('artist');
-    expect(menu.querySelector('img')).toBeNull();
+    expectOnlyAppSources(menu);
     fireEvent.click(within(menu).getAllByTestId('play-on-row')[0]);
     expect(document.querySelector('iframe')).toBeNull();
     expect(screen.getByRole('button', { name: 'Play on Spotify' })).toBeInTheDocument();
@@ -154,8 +166,7 @@ describe('useCardPlayer, links Pinakes matched by metadata (kind maybe)', () => 
   // A song on Spotify (its own link), exactly on TIDAL, and maybe on Deezer (by artist, title and length).
   const SONG: TPinakesResourceDetail = { ...musicFixture, also_on: [DEEZER_MAYBE, TIDAL_EXACT] };
   const DEEZER_WIDGET = 'https://widget.deezer.com/widget/dark/track/67238735';
-  const setPlayers = (playerOrder: string[]) =>
-    useSettingsStore.setState({ media: { ...defaultMediaPreferences, playerOrder } });
+  const setPlayers = (playerOrder: string[]) => useSettingsStore.setState({ media: { ...upFrontMedia, playerOrder } });
 
   afterEach(() => setPlayers([]));
 
@@ -282,7 +293,7 @@ describe('useCardPlayer, a song', () => {
   }
 
   const setMedia = (media: Partial<typeof defaultMediaPreferences>) =>
-    useSettingsStore.setState({ media: { ...defaultMediaPreferences, ...media } });
+    useSettingsStore.setState({ media: { ...upFrontMedia, ...media } });
 
   function Song({
     card,
@@ -586,14 +597,14 @@ describe('useCardPlayer, a song', () => {
         expect(screen.queryByRole('button', { name: /choose another service$/ })).not.toBeInTheDocument();
       });
 
-      it('loads not even the services’ icons with platform embeds up front off', () => {
+      it('loads the services’ icons only from the app with platform embeds up front off', () => {
         setMedia({ playerOrder: ['card'], embedsUpFront: false });
         render(<Song card={SONG} />);
 
         expect(document.querySelector('iframe')).toBeNull();
-        expect(document.querySelector('img')).toBeNull();
+        expectOnlyAppSources();
         expect(within(openSwitch()).getAllByTestId('play-on-row')).toHaveLength(3);
-        expect(document.querySelector('img')).toBeNull();
+        expectOnlyAppSources();
       });
 
       it('shows the player when the song’s first service ranks above Card', () => {
@@ -714,14 +725,48 @@ describe('useCardPlayer, a song', () => {
     expect(frameOf().closest('[data-keep-playing]')).toBeNull();
   });
 
-  describe('with platform embeds up front off', () => {
-    beforeEach(() => setMedia({ embedsUpFront: false }));
+  describe('with the default settings (a new viewer, nothing saved)', () => {
+    beforeEach(() => useSettingsStore.setState({ media: defaultMediaPreferences }));
 
-    it('loads no player, nor the player’s service icons, until Play on is pressed', () => {
+    it('shows the stand-in with Play on and loads nothing from the service', () => {
       render(<Song card={SONG} />);
 
       expect(document.querySelector('iframe')).toBeNull();
-      expect(document.querySelector('img')).toBeNull();
+      expect(document.querySelector('audio, video, script')).toBeNull();
+      expectOnlyAppSources();
+      expect(screen.getByRole('button', { name: 'Play on Spotify' })).toBeInTheDocument();
+    });
+
+    it('mounts the chosen player on one press, as the page’s player', () => {
+      render(<Song card={SONG} />);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Play on Spotify' }));
+
+      expect(document.querySelectorAll('iframe')).toHaveLength(1);
+      expect(frameOf()).toHaveAttribute('src', 'https://open.spotify.com/embed/track/1YQWosTIljIvxAgHWTp7KP');
+      expect(frameOf().closest('[data-keep-playing]')).not.toBeNull();
+    });
+
+    it('lets the played service go on a switch: the next one loads only on its own Play on', () => {
+      render(<Song card={SONG} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Play on Spotify' }));
+      expect(document.querySelectorAll('iframe')).toHaveLength(1);
+
+      fireEvent.click(within(openSwitch()).getAllByTestId('play-on-row')[1]);
+
+      expect(document.querySelector('iframe')).toBeNull();
+      expect(screen.getByRole('button', { name: 'Play on TIDAL' })).toBeInTheDocument();
+    });
+  });
+
+  describe('with platform embeds up front off', () => {
+    beforeEach(() => setMedia({ embedsUpFront: false }));
+
+    it('loads no player until Play on is pressed, and the service icons only from the app', () => {
+      render(<Song card={SONG} />);
+
+      expect(document.querySelector('iframe')).toBeNull();
+      expectOnlyAppSources();
       expect(screen.getByText(musicFixture.name!)).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /choose another service$/ })).toBeInTheDocument();
 
@@ -1263,7 +1308,7 @@ describe('useCardPlayer, anything that plays', () => {
       .map((row) => row.textContent);
   };
 
-  afterEach(() => useSettingsStore.setState({ media: defaultMediaPreferences }));
+  afterEach(() => useSettingsStore.setState({ media: upFrontMedia }));
 
   it('shows an ordinary video Pinakes knows nowhere else as its player, paused, with no switch and no Play on', () => {
     render(<Item card={{ ...videoFixture, also_on: [] }} />);
@@ -1351,16 +1396,16 @@ describe('useCardPlayer, anything that plays', () => {
   });
 
   it('loads nothing up front with platform embeds up front off: a stand-in with Play on', () => {
-    useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } });
+    useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
     render(<Item card={videoFixture} />);
 
     expect(document.querySelector('iframe')).toBeNull();
-    expect(document.querySelector('img')).toBeNull();
+    expectOnlyAppSources();
     expect(screen.getByRole('button', { name: 'Play on YouTube' })).toBeInTheDocument();
   });
 
   it('loads nothing again after Card with platform embeds up front off: back on a service, the stand-in', () => {
-    useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } });
+    useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
     render(<Item card={videoFixture} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Play on YouTube' }));
@@ -1393,7 +1438,7 @@ describe('useCardPlayer, a podcast that plays in its card', () => {
   }));
   const SHOW: TPinakesResourceDetail = { ...podcastFixture, episodes };
   const setMedia = (media: Partial<typeof defaultMediaPreferences>) =>
-    useSettingsStore.setState({ media: { ...defaultMediaPreferences, ...media } });
+    useSettingsStore.setState({ media: { ...upFrontMedia, ...media } });
 
   afterEach(() => setMedia({}));
 
@@ -1579,9 +1624,9 @@ describe('useCardPlayer, a frame Pinakes names (`embed`)', () => {
   });
 
   it('keeps a rich link’s card with platform embeds up front off: its frame in the switch, then Show on', () => {
-    useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } });
+    useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
     onTestFinished(() => {
-      useSettingsStore.setState({ media: defaultMediaPreferences });
+      useSettingsStore.setState({ media: upFrontMedia });
     });
     render(
       <>
@@ -1676,9 +1721,9 @@ describe('useCardPlayer, a frame Pinakes names (`embed`)', () => {
   });
 
   it('loads no frame with platform embeds up front off: Show on, nothing from the site', () => {
-    useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } });
+    useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
     onTestFinished(() => {
-      useSettingsStore.setState({ media: defaultMediaPreferences });
+      useSettingsStore.setState({ media: upFrontMedia });
     });
     render(<Card card={POST} testId="post" />);
 
