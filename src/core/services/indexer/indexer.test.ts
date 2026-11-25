@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createBrowserCoordination } from '@/libs/indexer/browserCoordination';
 import { createIdbStore } from '@/libs/indexer/idbStore';
 import { createSocialIndexer } from '@/libs/indexer/social/socialIndexer';
 import type { Pubky } from '@/models/models.types';
@@ -45,7 +46,10 @@ vi.mock('@/libs/indexer/social/socialIndexer', () => ({
     return indexer;
   }),
 }));
-vi.mock('@/libs/indexer/browserCoordination', () => ({ createBrowserCoordination: () => null }));
+vi.mock('@/libs/indexer/browserCoordination', () => ({
+  browserApis: () => null,
+  createBrowserCoordination: vi.fn(() => null),
+}));
 vi.mock('./indexer.transport', () => ({ createIndexerTransport: vi.fn(() => ({})) }));
 vi.mock('@/services/homeserver/homeserver', () => ({
   HomeserverService: {
@@ -81,6 +85,7 @@ describe('IndexerService', () => {
 
     expect(createSocialIndexer).toHaveBeenCalledOnce();
     expect(createIdbStore).toHaveBeenCalledWith(`pubky-index-${ALICE}`);
+    expect(createBrowserCoordination).toHaveBeenCalledWith(null, `pubky-index-${ALICE}`);
     expect(fakes.indexers[0].start).toHaveBeenCalledExactlyOnceWith(ALICE);
     expect(IndexerService.current()).toBe(fakes.indexers[0]);
   });

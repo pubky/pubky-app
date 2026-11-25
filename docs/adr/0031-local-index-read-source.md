@@ -30,9 +30,11 @@ default, today's behavior), `local`, or `local,nexus`. Without `nexus` the Nexus
   lookups and public files, each bounded by `INDEXER_READ_TIMEOUT_MS`. Their failures are routine for a crawl over
   homeservers other people run, so they carry dedicated operations that a Sentry drop rule matches.
 - **Lifecycle.** `IndexerService` owns one `SocialIndexer` per tab, in a database named by the account's key, with
-  cross-tab coordination so one tab crawls. `IndexerCoordinator` (started by `CoordinatorsManager`) starts it when a
-  session enters the auth store, which is after the migration gate and before the profile bootstrap, stops it when
-  the session leaves and pauses it with the tab. Sign-out deletes its database next to the app's own.
+  cross-tab coordination scoped by that name so one tab per account crawls. `IndexerCoordinator` (started by
+  `CoordinatorsManager`) starts it when a session enters the auth store, which is after the migration gate and before
+  the profile bootstrap, stops it when the session leaves and pauses it with the tab. Sign-out deletes its database
+  next to the app's own. Without `local` among the sources, the coordinator only deletes, best effort, the database an
+  earlier `local` deploy left for an account that signs in.
 - **Routing.** `queryNexus` asks the local index first when `local` is a source. A 200 returns its JSON; a 404 raises
   the error a Nexus 404 raises, without the Nexus 404 retry budget; an unavailable read raises a non-retryable 422.
   Both misses are expected outcomes and stay out of Sentry. A 404 the index cannot vouch for, or an answer about one

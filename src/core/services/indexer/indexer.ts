@@ -1,5 +1,5 @@
 import { INDEXER_DATABASE_PREFIX } from '@/config/indexer';
-import { createBrowserCoordination } from '@/libs/indexer/browserCoordination';
+import { browserApis, createBrowserCoordination } from '@/libs/indexer/browserCoordination';
 import { createIdbStore, type IdbIndexStore } from '@/libs/indexer/idbStore';
 import type { SocialData } from '@/libs/indexer/social/social.types';
 import { createSocialIndexer, type SocialIndexer } from '@/libs/indexer/social/socialIndexer';
@@ -40,7 +40,8 @@ export class IndexerService {
       transport: createIndexerTransport(owner),
       store,
       now: () => Date.now(),
-      coordination: createBrowserCoordination(),
+      // Scoped by the database: tabs of two accounts in one browser must not hear each other.
+      coordination: createBrowserCoordination(browserApis(), databaseName(owner)),
     });
     // Every app write lands through HomeserverService; a refresh of the account makes it part of the answers.
     const stopRefreshing = HomeserverService.subscribeOwnedWrites((path) => {

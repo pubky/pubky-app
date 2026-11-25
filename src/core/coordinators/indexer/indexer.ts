@@ -12,6 +12,8 @@ import { useAuthStore } from '@/stores/auth/auth.store';
  * - Pauses it while the tab is hidden, under the same visibility setting as the stream poller, and resumes it when
  *   the tab comes back. Its own loop syncs every minute, so there is no interval here.
  * - Sign-out deletes the index database (`AuthController`); a stop keeps it for the next session.
+ * - Without `local` among the sources, it only deletes the database an earlier `local` deploy left for each account
+ *   that signs in, best effort and without waiting.
  */
 export class IndexerCoordinator {
   private static instance: IndexerCoordinator | null = null;
@@ -29,7 +31,12 @@ export class IndexerCoordinator {
   }
 
   start(): void {
-    if (this.unsubscribe || !hasLocalIndexSource()) return;
+    if (this.unsubscribe) return;
+    if (!hasLocalIndexSource()) {
+      this.unsubscribe = useAuthStore.subscribe(this.discardLeftover);
+      this.discardLeftover();
+      return;
+    }
     this.unsubscribe = useAuthStore.subscribe(this.follow);
     document.addEventListener('visibilitychange', this.applyVisibility);
     this.follow();
@@ -44,9 +51,20 @@ export class IndexerCoordinator {
     IndexerController.stopLocalIndex();
   }
 
-  private follow = () => {
+  private signedInOwner(): Pubky | null {
     const { session, currentUserPubky } = useAuthStore.getState();
-    const owner = session && currentUserPubky ? currentUserPubky : null;
+    return session && currentUserPubky ? currentUserPubky : null;
+  }
+
+  private discardLeftover = () => {
+    const owner = this.signedInOwner();
+    if (owner === this.owner) return;
+    this.owner = owner;
+    if (owner !== null) IndexerController.discardLocalIndex(owner);
+  };
+
+  private follow = () => {
+    const owner = this.signedInOwner();
     if (owner === this.owner) return;
     this.owner = owner;
     if (owner === null) {
