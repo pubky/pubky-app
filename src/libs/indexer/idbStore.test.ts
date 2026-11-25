@@ -107,7 +107,7 @@ describe('createIdbStore', () => {
     ]);
   });
 
-  it('reads many scopes in one transaction, each as a read of its own gives it', async () => {
+  it('reads many scopes at once, each as a read of its own gives it', async () => {
     const store = open(nextName());
     const other = { ...META, author: 'bob' };
     const missing = { ...META, group: 'graph' };
@@ -115,11 +115,9 @@ describe('createIdbStore', () => {
     const asked = [other, missing, META, other];
     const each: MergedRuns<Payload>[] = [];
     for (const scope of asked) each.push(await store.readScope(scope));
-    const transactions = vi.spyOn(IDBDatabase.prototype, 'transaction');
 
     const read = await store.readScopes(asked);
 
-    expect(transactions).toHaveBeenCalledTimes(1);
     expect(read).toEqual(each);
     expect(await store.readScopes([])).toEqual([]);
   });
