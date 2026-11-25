@@ -4,6 +4,9 @@ import {
   type CrawlerParams,
   type CrawlerStats,
   DEFAULT_CRAWLER_OPTIONS,
+  type LeafRequest,
+  type StoreChange,
+  type SyncOutcome,
   type SyncResult,
 } from './crawler.types';
 import { CURSOR_ZERO } from './cursor';
@@ -18,7 +21,8 @@ import {
 import type { Coverage, Cursor, RecordEntry, Run } from './indexer.types';
 import { readBackward, readForward, type ReadPage } from './paging';
 import { foldEvents } from './run';
-import type { HighWater } from './store.types';
+import { scopeOf } from './store.helpers';
+import type { HighWater, StoreBatch } from './store.types';
 import type { AuthoredStreamEvent } from './transport.types';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -37,12 +41,26 @@ interface OperationContext {
   checked: Set<string>;
   highWater: Map<string, HighWater | null>;
   windowStart: Map<string, Cursor>;
+  /** Homeservers failed or backing off, skipped for the rest of the operation. */
+  failed: Set<string>;
 }
+
+const contextOf = (signal?: AbortSignal): OperationContext => ({
+  signal,
+  checked: new Set(),
+  highWater: new Map(),
+  windowStart: new Map(),
+  failed: new Set(),
+});
 
 type Counter = 'lookups' | 'streamRequests' | 'bodyRequests' | 'events';
 
 const headOf = (coverage: Coverage): Cursor | null =>
   coverage.length === 0 ? null : coverage[coverage.length - 1].head;
+
+/** A run changes what is served when it brings entries or does not extend the stored top range. */
+const changesServed = (run: Run<unknown>, storedHead: Cursor | null): boolean =>
+  run.entries.length > 0 || (storedHead !== null && run.tail !== storedHead);
 
 const newestOf = (current: HighWater | null, event: AuthoredStreamEvent | null): HighWater | null =>
   event !== null && (current === null || event.cursor > current.cursor)
@@ -67,6 +85,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
   const seen = new Set<string>();
   const failed = new Set<string>();
   const listeners = new Set<(stats: CrawlerStats) => void>();
+  const commitListeners = new Set<(change: StoreChange) => void>();
 
   const stats = (): CrawlerStats => ({
     usersPerHop: [...counters.usersPerHop],
@@ -85,6 +104,17 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     counters[counter] += by;
     changed();
   };
+  const markFailed = (ctx: OperationContext, homeserver: string) => {
+    ctx.failed.add(homeserver);
+    failed.add(homeserver);
+    changed();
+  };
+
+  async function commit(batch: StoreBatch<D>, change: StoreChange): Promise<void> {
+    await store.commit(batch);
+    if (change.scopes.length === 0 && change.seeds.length === 0) return;
+    for (const listener of commitListeners) listener(change);
+  }
 
   /** Runs a request, retrying it after a 429 up to `RATE_LIMIT_RETRIES` times. */
   async function attempt<T>(ctx: OperationContext, request: () => Promise<T>): Promise<T> {
@@ -127,8 +157,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
       } else if (!(error instanceof RateLimitedError)) {
         throw error;
       }
-      failed.add(homeserver);
-      changed();
+      markFailed(ctx, homeserver);
       return false;
     }
   }
@@ -142,21 +171,24 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     if (highWater === null) return;
     const newest = await reader(ctx, homeserver, allPaths, 1)([{ user: highWater.author, cursor: null }], true);
     if (newest.length > 0 && newest[0].cursor >= highWater.cursor) return;
-    await store.commit({
-      deleteHomeservers: [homeserver],
-      homeserverStates: [{ homeserver, patch: { highWater: null, windowStart: null } }],
-    });
+    const scopes = (await store.listScopes()).filter((scope) => scope.homeserver === homeserver);
+    await commit(
+      {
+        deleteHomeservers: [homeserver],
+        homeserverStates: [{ homeserver, patch: { highWater: null, windowStart: null } }],
+      },
+      { scopes, seeds: [] },
+    );
     ctx.highWater.set(homeserver, null);
     ctx.windowStart.delete(homeserver);
   }
 
   /** Whether the homeserver may be crawled now: not failed, not backing off, checked for a restore. */
   async function ready(ctx: OperationContext, homeserver: string): Promise<boolean> {
-    if (failed.has(homeserver)) return false;
+    if (ctx.failed.has(homeserver)) return false;
     const state = await store.readHomeserverState(homeserver);
     if (state.failure !== null && state.failure.retryAt > now()) {
-      failed.add(homeserver);
-      changed();
+      markFailed(ctx, homeserver);
       return false;
     }
     if (ctx.checked.has(homeserver)) return true;
@@ -200,7 +232,13 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
   }
 
   /** Reads one batch forward from its tails and commits the run of each user that moved, with the new high water. */
-  async function crawlBatch(ctx: OperationContext, homeserver: string, group: PathGroup, tails: Map<string, Cursor>) {
+  async function crawlBatch(
+    ctx: OperationContext,
+    homeserver: string,
+    group: PathGroup,
+    tails: ReadonlyMap<string, Cursor>,
+    stored: ReadonlyMap<string, Cursor | null>,
+  ) {
     const read = reader(ctx, homeserver, group.paths, options.pageLimit);
     const { heads, events, newest } = await readForward(tails, options.pageLimit, read);
     const runs: Run<D>[] = [];
@@ -211,10 +249,11 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     }
     await attachBodies(ctx, runs);
     const highWater = newestOf(ctx.highWater.get(homeserver) ?? null, newest);
-    await store.commit({
-      applyRuns: runs,
-      homeserverStates: [{ homeserver, patch: { highWater, failure: null } }],
-    });
+    const scopes = runs.filter((run) => changesServed(run, stored.get(run.author) ?? null)).map(scopeOf);
+    await commit(
+      { applyRuns: runs, homeserverStates: [{ homeserver, patch: { highWater, failure: null } }] },
+      { scopes, seeds: [] },
+    );
     ctx.highWater.set(homeserver, highWater);
   }
 
@@ -247,16 +286,28 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     return cursor;
   }
 
+  /** Crawls the group for the users batch by batch, each from the tail `tailOf` gives for its stored head. */
+  async function syncGroup(
+    ctx: OperationContext,
+    homeserver: string,
+    group: PathGroup,
+    users: readonly string[],
+    tailOf: (head: Cursor | null) => Cursor,
+  ) {
+    for (const batch of chunks(users, options.batchSize)) {
+      const heads = await storedHeads(homeserver, group, batch);
+      const tails = new Map<string, Cursor>();
+      for (const [user, head] of heads) tails.set(user, tailOf(head));
+      await crawlBatch(ctx, homeserver, group, tails, heads);
+    }
+  }
+
+  const fromHead = (head: Cursor | null) => head ?? CURSOR_ZERO;
+
   async function syncFull(ctx: OperationContext, homeserver: string, users: readonly string[]) {
     if (!(await ready(ctx, homeserver))) return;
     await guard(ctx, homeserver, async () => {
-      for (const group of fullGroups) {
-        for (const batch of chunks(users, options.batchSize)) {
-          const tails = new Map<string, Cursor>();
-          for (const [user, head] of await storedHeads(homeserver, group, batch)) tails.set(user, head ?? CURSOR_ZERO);
-          await crawlBatch(ctx, homeserver, group, tails);
-        }
-      }
+      for (const group of fullGroups) await syncGroup(ctx, homeserver, group, users, fromHead);
     });
   }
 
@@ -264,15 +315,8 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     if (windowGroups.length === 0 || !(await ready(ctx, homeserver))) return;
     await guard(ctx, homeserver, async () => {
       const start = await windowStartOf(ctx, homeserver, users);
-      for (const group of windowGroups) {
-        for (const batch of chunks(users, options.batchSize)) {
-          const tails = new Map<string, Cursor>();
-          for (const [user, head] of await storedHeads(homeserver, group, batch)) {
-            tails.set(user, head === null || head < start ? start : head);
-          }
-          await crawlBatch(ctx, homeserver, group, tails);
-        }
-      }
+      const fromStart = (head: Cursor | null) => (head === null || head < start ? start : head);
+      for (const group of windowGroups) await syncGroup(ctx, homeserver, group, users, fromStart);
     });
   }
 
@@ -292,6 +336,20 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     }
     await store.writeUserHomeserver(user, { homeserver, resolvedAt: now() });
     return homeserver;
+  }
+
+  /** Resolves the users and groups the resolved ones by homeserver. */
+  async function resolveAll(ctx: OperationContext, users: readonly string[]) {
+    const resolved = await mapLimit(users, options.lookupConcurrency, (user) => resolve(ctx, user));
+    const homeserverOf = new Map(users.map((user, i): [string, string | null] => [user, resolved[i]]));
+    const byHomeserver = new Map<string, string[]>();
+    for (const [user, homeserver] of homeserverOf) {
+      if (homeserver === null) continue;
+      seen.add(homeserver);
+      byHomeserver.set(homeserver, [...(byHomeserver.get(homeserver) ?? []), user]);
+    }
+    changed();
+    return { homeserverOf, byHomeserver };
   }
 
   /** Users the frontier links to that are not in scope yet, added to `members` until the cap. */
@@ -317,7 +375,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
   }
 
   async function syncScope(seed: string, signal?: AbortSignal): Promise<SyncResult> {
-    const ctx: OperationContext = { signal, checked: new Set(), highWater: new Map(), windowStart: new Map() };
+    const ctx = contextOf(signal);
     Object.assign(counters, { usersPerHop: [], lookups: 0, streamRequests: 0, bodyRequests: 0, events: 0 });
     seen.clear();
     failed.clear();
@@ -328,30 +386,51 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     for (let hop = 0; frontier.length > 0; hop += 1) {
       counters.usersPerHop.push(frontier.length);
       changed();
-      const resolved = await mapLimit(frontier, options.lookupConcurrency, (user) => resolve(ctx, user));
-      const homeserverOf = new Map(frontier.map((user, i): [string, string | null] => [user, resolved[i]]));
-      const byHomeserver = new Map<string, string[]>();
-      for (const [user, homeserver] of homeserverOf) {
-        if (homeserver === null) continue;
-        seen.add(homeserver);
-        byHomeserver.set(homeserver, [...(byHomeserver.get(homeserver) ?? []), user]);
-      }
-      changed();
-
+      const { homeserverOf, byHomeserver } = await resolveAll(ctx, frontier);
       for (const [homeserver, users] of byHomeserver) await syncFull(ctx, homeserver, users);
       const next = hop < options.hops ? await nextHop(frontier, homeserverOf, members, hop + 1) : [];
       for (const [homeserver, users] of byHomeserver) await syncWindow(ctx, homeserver, users);
       frontier = next;
     }
     throwIfAborted(signal);
-    await store.writeScopeMembers(seed, members);
-    return { members, failedHomeservers: [...failed] };
+    const before = await store.readScopeMembers(seed);
+    const same = before.size === members.size && [...members].every(([user, hop]) => before.get(user) === hop);
+    await commit({ scopeMembers: [{ seed, members }] }, { scopes: [], seeds: same ? [] : [seed] });
+    return { members, failedHomeservers: [...ctx.failed] };
+  }
+
+  async function syncUsers(users: readonly string[], signal?: AbortSignal): Promise<SyncOutcome> {
+    const ctx = contextOf(signal);
+    const { byHomeserver } = await resolveAll(ctx, [...new Set(users)]);
+    for (const [homeserver, batch] of byHomeserver) await syncFull(ctx, homeserver, batch);
+    for (const [homeserver, batch] of byHomeserver) await syncWindow(ctx, homeserver, batch);
+    throwIfAborted(signal);
+    return { failedHomeservers: [...ctx.failed] };
+  }
+
+  async function syncLeaf({ author, group, paths }: LeafRequest, signal?: AbortSignal): Promise<SyncOutcome> {
+    if (domain.groups.some(({ id }) => id === group)) {
+      throw new InvalidIndexInputError(`leaf group ${group} is one of the domain's groups`);
+    }
+    // The restore check re-reads an author's newest event over the domain's paths, so a leaf stays inside them.
+    if (paths.length === 0 || !paths.every((path) => allPaths.some((prefix) => path.startsWith(prefix)))) {
+      throw new InvalidIndexInputError(`leaf paths of ${group} must lie inside the domain's paths`);
+    }
+    const ctx = contextOf(signal);
+    const { byHomeserver } = await resolveAll(ctx, [author]);
+    const leaf: PathGroup = { id: group, paths: [...paths], history: 'full' };
+    for (const [homeserver, users] of byHomeserver) {
+      if (!(await ready(ctx, homeserver))) continue;
+      await guard(ctx, homeserver, () => syncGroup(ctx, homeserver, leaf, users, fromHead));
+    }
+    throwIfAborted(signal);
+    return { failedHomeservers: [...ctx.failed] };
   }
 
   async function backfill(author: string, groupId: string, pages: number, signal?: AbortSignal) {
     const group = domain.groups.find(({ id }) => id === groupId);
     if (group === undefined) throw new InvalidIndexInputError(`unknown group ${groupId}`);
-    const ctx: OperationContext = { signal, checked: new Set(), highWater: new Map(), windowStart: new Map() };
+    const ctx = contextOf(signal);
     const homeserver = (await store.readUserHomeserver(author))?.homeserver ?? null;
     if (homeserver === null) return { tail: null, pages: 0 };
     const scope = { author, homeserver, group: group.id };
@@ -371,18 +450,26 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
       const tail = page.length >= options.pageLimit && lowest !== null ? lowest - ONE : CURSOR_ZERO;
       const run = foldEvents<D>(scope, tail, trusted.tail, page);
       await attachBodies(ctx, [run]);
-      await store.applyRuns([run]);
+      await commit({ applyRuns: [run] }, { scopes: [scopeOf(run)], seeds: [] });
     }
   }
 
   return {
     syncScope,
     backfill,
+    syncUsers,
+    syncLeaf,
     stats,
     subscribe(listener) {
       listeners.add(listener);
       return () => {
         listeners.delete(listener);
+      };
+    },
+    onCommit(listener) {
+      commitListeners.add(listener);
+      return () => {
+        commitListeners.delete(listener);
       };
     },
   };

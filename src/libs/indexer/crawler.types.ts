@@ -1,6 +1,6 @@
 import type { Domain } from './domain.types';
 import type { Cursor } from './indexer.types';
-import type { IndexStore } from './store.types';
+import type { IndexStore, ScopeKey } from './store.types';
 import type { IndexerTransport } from './transport.types';
 
 export interface CrawlerOptions {
@@ -45,7 +45,7 @@ export interface CrawlerParams<D> {
   options?: Partial<CrawlerOptions>;
 }
 
-/** Counters since the last `syncScope` started, backfills included. */
+/** Counters since the last `syncScope` started, the operations after it included. */
 export interface CrawlerStats {
   /** Users in scope per hop. */
   usersPerHop: number[];
@@ -58,11 +58,33 @@ export interface CrawlerStats {
   events: number;
 }
 
-export interface SyncResult {
-  /** Every user in scope, with its hop. */
-  members: Map<string, number>;
+export interface SyncOutcome {
   /** Homeservers that failed or were skipped while backing off; their users keep what was stored before. */
   failedHomeservers: string[];
+}
+
+export interface SyncResult extends SyncOutcome {
+  /** Every user in scope, with its hop. */
+  members: Map<string, number>;
+}
+
+/**
+ * Some path prefixes of one author, crawled on demand into a scope of their own with full history. The prefixes
+ * must lie inside the domain's paths, and a group id must keep the same prefixes on every call.
+ */
+export interface LeafRequest {
+  author: string;
+  /** Any id but one of the domain's groups. */
+  group: string;
+  paths: string[];
+}
+
+/** What one store commit changed. */
+export interface StoreChange {
+  /** Scopes whose served records may differ. */
+  scopes: ScopeKey[];
+  /** Seeds whose scope members changed. */
+  seeds: string[];
 }
 
 export interface BackfillResult {
@@ -79,7 +101,16 @@ export interface Crawler {
   syncScope(seed: string, signal?: AbortSignal): Promise<SyncResult>;
   /** Extends the author's top contiguous coverage of the group backwards by up to `pages` stream pages. */
   backfill(author: string, groupId: string, pages: number, signal?: AbortSignal): Promise<BackfillResult>;
+  /** Syncs the domain's groups of these users alone: the scope members stay and no link is followed. */
+  syncUsers(users: readonly string[], signal?: AbortSignal): Promise<SyncOutcome>;
+  /** Syncs a leaf scope from its stored head, or from the stream start. */
+  syncLeaf(leaf: LeafRequest, signal?: AbortSignal): Promise<SyncOutcome>;
   stats(): CrawlerStats;
   /** Calls `listener` with fresh stats after every change. Returns the unsubscribe function. */
   subscribe(listener: (stats: CrawlerStats) => void): () => void;
+  /**
+   * Calls `listener` after each store commit that may change what is served: new entries, a moved trusted
+   * range, a dropped homeserver or new scope members. Returns the unsubscribe function.
+   */
+  onCommit(listener: (change: StoreChange) => void): () => void;
 }

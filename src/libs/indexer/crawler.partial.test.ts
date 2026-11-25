@@ -1,0 +1,170 @@
+// @vitest-environment node
+import { describe, expect, it } from 'vitest';
+import { ACTIVITY, DAY_MS, FOLLOWS, GRAPH, harness, postPath, POSTS, served, servedData } from './crawler.fixtures';
+import type { StoreChange } from './crawler.types';
+import type { FakeNetwork } from './fakeNetwork';
+import { InvalidIndexInputError } from './indexer.errors';
+import { scopeId } from './store.helpers';
+import type { ScopeKey } from './store.types';
+
+const LEAF = 'post:old';
+
+/** Events the fake served to forward reads from the read numbered `from` on. */
+const forwardEvents = (network: FakeNetwork, from: number) =>
+  network.reads
+    .slice(from)
+    .filter((read) => !read.reverse)
+    .flatMap((read) => read.events).length;
+
+/** The ids of every scope the changes name, sorted. */
+const changedIds = (changes: readonly StoreChange[]) =>
+  [...new Set(changes.flatMap((change) => change.scopes.map(scopeId)))].sort();
+
+const idsOf = (scopes: readonly ScopeKey[]) => scopes.map(scopeId).sort();
+
+/** alice follows bob; carol, outside the scope, follows dave. Everyone on hs1 posted once recently. */
+function twoCircles() {
+  const setup = harness();
+  const { network } = setup;
+  network.addHomeserver('hs1');
+  for (const user of ['alice', 'bob', 'carol', 'dave']) {
+    network.addUser(user, 'hs1');
+    network.putJson(user, postPath(DAY_MS), { text: user });
+  }
+  network.put('alice', `${FOLLOWS}bob`);
+  network.put('carol', `${FOLLOWS}dave`);
+  return setup;
+}
+
+describe('syncUsers', () => {
+  it('syncs users outside the scope without changing the members or following their links', async () => {
+    const { network, store, crawler } = twoCircles();
+    await crawler.syncScope('alice');
+    const members = await store.readScopeMembers('alice');
+
+    const result = await crawler.syncUsers(['carol']);
+
+    expect(result).toEqual({ failedHomeservers: [] });
+    expect(await served(store, 'carol', 'hs1', GRAPH)).toEqual(network.liveOf('carol', [FOLLOWS]));
+    expect(await servedData(store, 'carol', 'hs1', ACTIVITY)).toEqual(new Map([[postPath(DAY_MS), { text: 'carol' }]]));
+    expect((await store.listScopes()).some((scope) => scope.author === 'dave')).toBe(false);
+    expect(await store.readScopeMembers('alice')).toEqual(members);
+  });
+
+  it('reads only the delta of the given users', async () => {
+    const { network, store, crawler } = twoCircles();
+    await crawler.syncScope('alice');
+    network.putJson('alice', postPath(DAY_MS / 2), { text: 'again' });
+    network.putJson('bob', postPath(DAY_MS / 2), { text: 'not asked' });
+    const mark = network.reads.length;
+
+    await crawler.syncUsers(['alice']);
+
+    expect(forwardEvents(network, mark)).toBe(1);
+    expect(network.reads.slice(mark).every((read) => read.users.every((user) => user === 'alice'))).toBe(true);
+    expect(await served(store, 'alice', 'hs1', ACTIVITY)).toEqual(network.liveOf('alice', [POSTS]));
+  });
+
+  it('reports a dead homeserver instead of throwing', async () => {
+    const { network, crawler } = twoCircles();
+    network.setDown('hs1', true);
+
+    expect(await crawler.syncUsers(['carol'])).toEqual({ failedHomeservers: ['hs1'] });
+  });
+});
+
+describe('syncLeaf', () => {
+  it('loads a post older than the window into its own scope, then only its delta', async () => {
+    const { network, store, crawler } = twoCircles();
+    const old = postPath(40 * DAY_MS);
+    network.putJson('alice', old, { text: 'old' });
+    network.putJson('alice', postPath(DAY_MS / 2), { text: 'recent' });
+    await crawler.syncScope('alice');
+    expect((await served(store, 'alice', 'hs1', ACTIVITY)).has(old)).toBe(false);
+    const changes: StoreChange[] = [];
+    crawler.onCommit((change) => changes.push(change));
+
+    await crawler.syncLeaf({ author: 'alice', group: LEAF, paths: [old] });
+
+    const leaf = { author: 'alice', homeserver: 'hs1', group: LEAF };
+    expect(await servedData(store, 'alice', 'hs1', LEAF)).toEqual(new Map([[old, { text: 'old' }]]));
+    expect(changes).toEqual([{ scopes: [leaf], seeds: [] }]);
+
+    network.del('alice', old);
+    const mark = network.reads.length;
+    await crawler.syncLeaf({ author: 'alice', group: LEAF, paths: [old] });
+
+    expect(forwardEvents(network, mark)).toBe(1);
+    expect(await served(store, 'alice', 'hs1', LEAF)).toEqual(new Map());
+    expect(await store.readCoverage(leaf)).toHaveLength(1);
+  });
+
+  it('refuses a domain group id and paths outside the domain', async () => {
+    const { crawler } = twoCircles();
+
+    await expect(crawler.syncLeaf({ author: 'alice', group: GRAPH, paths: [POSTS] })).rejects.toThrow(
+      InvalidIndexInputError,
+    );
+    await expect(crawler.syncLeaf({ author: 'alice', group: LEAF, paths: ['/elsewhere/'] })).rejects.toThrow(
+      InvalidIndexInputError,
+    );
+    await expect(crawler.syncLeaf({ author: 'alice', group: LEAF, paths: [] })).rejects.toThrow(InvalidIndexInputError);
+  });
+});
+
+describe('onCommit', () => {
+  it('reports the scopes and members a sync changed, and nothing on a sync that found nothing', async () => {
+    const { network, crawler } = twoCircles();
+    const changes: StoreChange[] = [];
+    const unsubscribe = crawler.onCommit((change) => changes.push(change));
+
+    await crawler.syncScope('alice');
+
+    const alice = { author: 'alice', homeserver: 'hs1' };
+    const bob = { author: 'bob', homeserver: 'hs1' };
+    expect(changedIds(changes)).toEqual(
+      idsOf([
+        { ...alice, group: GRAPH },
+        { ...alice, group: ACTIVITY },
+        { ...bob, group: ACTIVITY },
+      ]),
+    );
+    expect(changes.flatMap((change) => change.seeds)).toEqual(['alice']);
+
+    changes.length = 0;
+    await crawler.syncScope('alice');
+    expect(changes).toEqual([]);
+
+    network.putJson('bob', postPath(DAY_MS / 2), { text: 'more' });
+    network.del('alice', `${FOLLOWS}bob`);
+    await crawler.syncScope('alice');
+    expect(changedIds(changes)).toEqual(idsOf([{ ...alice, group: GRAPH }]));
+    expect(changes.flatMap((change) => change.seeds)).toEqual(['alice']);
+
+    unsubscribe();
+    changes.length = 0;
+    network.putJson('alice', postPath(DAY_MS / 2), { text: 'unheard' });
+    await crawler.syncScope('alice');
+    expect(changes).toEqual([]);
+  });
+
+  it('reports every scope of a restored homeserver and a backfilled scope', async () => {
+    const { network, store, crawler } = twoCircles();
+    network.putJson('alice', postPath(40 * DAY_MS), { text: 'old' });
+    network.putJson('alice', postPath(DAY_MS / 2), { text: 'recent' });
+    await crawler.syncScope('alice');
+    const before = idsOf(await store.listScopes());
+    const changes: StoreChange[] = [];
+    crawler.onCommit((change) => changes.push(change));
+
+    await crawler.backfill('alice', ACTIVITY, 1);
+    expect(changes).toEqual([{ scopes: [{ author: 'alice', homeserver: 'hs1', group: ACTIVITY }], seeds: [] }]);
+
+    changes.length = 0;
+    // The delete makes the rebuilt log shorter, so the newest cursor goes backwards.
+    network.del('dave', postPath(DAY_MS));
+    network.restore('hs1');
+    await crawler.syncScope('alice');
+    expect(idsOf(changes[0].scopes)).toEqual(before);
+  });
+});
