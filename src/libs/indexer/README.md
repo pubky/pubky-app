@@ -38,13 +38,20 @@ range later reproduces its tombstones, so a path deleted above the cutoff stays 
 
 ## Store
 
-`IndexStore` (`store.types.ts`) keeps runs per scope (author, homeserver, group), each user's resolved
-homeserver, per-homeserver crawl state and the members of each scope. `commit` applies a whole batch
-atomically, and values are copied in and out, so callers never share objects with the store.
-`createMemoryStore` keeps it in memory, for tests and short-lived use. `createIdbStore` keeps it in
-IndexedDB through Dexie, one table per kind of state, each `commit` in one read-write transaction.
-Payloads and cursors are stored by structured clone, so `D` must be structured-cloneable; cursors stay
-`bigint` and are never part of a key. `store.contract.ts` is the one test suite both stores pass.
+`IndexStore` (`store.types.ts`) keeps each scope (author, homeserver, group) already merged: one row per
+path holding its winning entry, record or tombstone, and the scope's coverage. Applying a run writes the
+entries it wins and adds its range to the coverage, so a write costs the size of the run, never the size
+of the scope. For any runs applied in any order, `readScope` equals `mergeRuns` of them and `exportRuns`
+equals their `compactRuns`, the form a run takes when it leaves the device. `readCoverage` reads the
+heads and tails alone. `store.contract.ts` checks this equivalence after every step of random histories.
+
+The store also keeps each user's resolved homeserver, per-homeserver crawl state and the members of
+each scope. `commit` applies a whole batch atomically, and values are copied in and out, so callers
+never share objects with the store. `createMemoryStore` keeps it in memory, for tests and short-lived
+use. `createIdbStore` keeps it in IndexedDB through Dexie, each `commit` in one read-write transaction.
+Entries are keyed by scope then path, so a scope is one range of the primary key, and a run reads and
+writes only the rows of its own paths. Payloads and cursors are stored by structured clone, so `D` must
+be structured-cloneable; cursors stay `bigint` and are never part of a key.
 
 ## Crawler
 
@@ -56,6 +63,5 @@ reduced; a file that is gone or fails its hash leaves the record without data un
 failing homeserver is skipped for the rest of the sync with exponential backoff, and one whose log went
 backwards (a restore) loses everything stored for it and is synced again.
 
-Each crawl step is one `commit`. A scope that moved is written back as `compactRuns` of its stored runs
-and the new one, so it holds one run per contiguous range, usually one, however many syncs ran. A gap,
-such as stored history older than the window start, keeps its two sides as separate runs.
+Each crawl step is one `commit` that applies the runs of the users that moved. A scope's coverage stays
+one range over normal syncs; a gap, such as stored history older than the window start, keeps two.

@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { InvalidIndexInputError } from './indexer.errors';
-import type { Run, RunMeta } from './indexer.types';
+import type { Cursor, Entry, Run, RunMeta } from './indexer.types';
+import { compactRuns, evictBelow, mergeRuns } from './merge';
+import { GENERATED_META, int, randomCase, seeded, shuffled } from './merge.generators';
 import { comparePaths } from './run';
 import { scopeId } from './store.helpers';
 import { EMPTY_HOMESERVER_STATE, type IndexStore, type ScopeKey, type StoreBatch } from './store.types';
@@ -13,15 +15,28 @@ export interface Payload {
 
 export const META: RunMeta = { author: 'alice', homeserver: 'hs1', group: 'posts' };
 export const c = (n: number) => BigInt(n);
-export const runOf = (tail: number, head: number, meta: RunMeta = META): Run<Payload> => ({
+export const rec = (path: string, cursor: number, hash?: string): Entry<Payload> =>
+  hash === undefined
+    ? { kind: 'record', path, cursor: c(cursor), data: { n: cursor } }
+    : { kind: 'record', path, cursor: c(cursor), hash, data: { n: cursor } };
+export const tomb = (path: string, cursor: number): Entry<Payload> => ({ kind: 'tombstone', path, cursor: c(cursor) });
+export const runWith = (tail: number, head: number, entries: Entry<Payload>[], meta: RunMeta = META): Run<Payload> => ({
   ...meta,
   tail: c(tail),
   head: c(head),
-  entries: [{ kind: 'record', path: 'a', cursor: c(head), data: { n: head } }],
+  entries,
 });
+/** A run whose only entry writes path `a` at its head. */
+export const runOf = (tail: number, head: number, meta: RunMeta = META): Run<Payload> =>
+  runWith(tail, head, [rec('a', head)], meta);
 
 /** Scopes in a fixed order: the interface does not promise one. */
 export const sortedScopes = (scopes: ScopeKey[]) => [...scopes].sort((a, b) => comparePaths(scopeId(a), scopeId(b)));
+
+export interface ContractOptions {
+  /** Random histories the equivalence property checks. */
+  seeds: number;
+}
 
 /**
  * Registers the contract suite for one store implementation. `open` makes a fresh, empty store for each test;
@@ -31,6 +46,7 @@ export function describeIndexStoreContract<S extends IndexStore<Payload>>(
   name: string,
   open: () => S,
   dispose?: (store: S) => Promise<void>,
+  options: ContractOptions = { seeds: 200 },
 ): void {
   describe(`${name} store contract`, () => {
     const opened: S[] = [];
@@ -44,40 +60,79 @@ export function describeIndexStoreContract<S extends IndexStore<Payload>>(
       for (const store of opened.splice(0)) await dispose?.(store);
     });
 
+    /** Asserts the stored scope is exactly what the pure functions make of `runs`. */
+    async function expectScopeOf(store: S, scope: ScopeKey, runs: Run<Payload>[], label = '') {
+      expect(await store.readScope(scope), label).toEqual(mergeRuns(runs));
+      expect(await store.readCoverage(scope), label).toEqual(mergeRuns(runs).coverage);
+      expect(await store.exportRuns(scope), label).toEqual(compactRuns(runs));
+    }
+
     it('reads nothing from an empty store', async () => {
       const store = fresh();
 
-      expect(await store.readRuns(META)).toEqual([]);
+      await expectScopeOf(store, META, []);
       expect(await store.listScopes()).toEqual([]);
       expect(await store.readUserHomeserver('alice')).toBeNull();
       expect(await store.readHomeserverState('hs1')).toEqual(EMPTY_HOMESERVER_STATE);
       expect(await store.readScopeMembers('alice')).toEqual(new Map());
     });
 
-    it('appends runs per scope, in order, and lists the scopes', async () => {
+    it('merges runs into their scopes and lists the scopes', async () => {
       const store = fresh();
       const other: RunMeta = { ...META, group: 'graph' };
 
-      await store.appendRuns([runOf(0, 2), runOf(0, 1, other)]);
-      await store.appendRuns([runOf(2, 4)]);
+      await store.applyRuns([runOf(0, 2), runOf(0, 1, other)]);
+      await store.applyRuns([runOf(2, 4)]);
 
-      expect(await store.readRuns(META)).toEqual([runOf(0, 2), runOf(2, 4)]);
-      expect(await store.readRuns(other)).toEqual([runOf(0, 1, other)]);
+      await expectScopeOf(store, META, [runOf(0, 2), runOf(2, 4)]);
+      expect(await store.exportRuns(META)).toEqual([runOf(0, 4)]);
+      await expectScopeOf(store, other, [runOf(0, 1, other)]);
       expect(sortedScopes(await store.listScopes())).toEqual(sortedScopes([META, other]));
     });
 
-    it('replaces the runs of a scope and removes it when the replacement is empty', async () => {
+    it('keeps the highest cursor per path, tombstones included, and serves only above a gap', async () => {
       const store = fresh();
-      const other: RunMeta = { ...META, author: 'bob' };
-      await store.appendRuns([runOf(0, 2), runOf(2, 4), runOf(0, 3, other)]);
+      const runs = [
+        runWith(0, 10, [rec('a', 4), rec('b', 5)]),
+        runWith(20, 30, [tomb('a', 25), rec('c', 22)]),
+        runWith(10, 20, [rec('a', 15), rec('b', 12)]),
+      ];
 
-      await store.replaceRuns(META, [runOf(0, 4)]);
-      expect(await store.readRuns(META)).toEqual([runOf(0, 4)]);
+      await store.applyRuns(runs.slice(0, 2));
+      const split = await store.readScope(META);
+      expect(split.coverage).toEqual([
+        { tail: c(0), head: c(10) },
+        { tail: c(20), head: c(30) },
+      ]);
+      expect([...split.live.keys()]).toEqual(['c']);
+      expect(await store.exportRuns(META)).toHaveLength(2);
+      await expectScopeOf(store, META, runs.slice(0, 2));
 
-      await store.replaceRuns(META, []);
-      expect(await store.readRuns(META)).toEqual([]);
-      expect(await store.listScopes()).toEqual([other]);
-      expect(await store.readRuns(other)).toEqual([runOf(0, 3, other)]);
+      await store.applyRuns(runs.slice(2));
+      const joined = await store.readScope(META);
+      expect(joined.entries.get('a')).toEqual(tomb('a', 25));
+      expect([...joined.live.keys()]).toEqual(['b', 'c']);
+      await expectScopeOf(store, META, runs);
+    });
+
+    it('rejects a run that disagrees with a stored event, changing nothing', async () => {
+      const store = fresh();
+      const first = runWith(0, 10, [rec('a', 5, 'h1')]);
+      await store.applyRuns([first]);
+
+      // The first run of the batch applies cleanly; the throw must undo it too.
+      for (const conflicting of [tomb('a', 5), rec('a', 5, 'h2')]) {
+        const batch: StoreBatch<Payload> = {
+          applyRuns: [runWith(10, 12, [rec('b', 12)]), runWith(0, 10, [conflicting])],
+          userHomeservers: [{ user: 'alice', value: { homeserver: 'hs1', resolvedAt: 5 } }],
+        };
+        await expect(store.commit(batch)).rejects.toThrow(InvalidIndexInputError);
+      }
+      await expectScopeOf(store, META, [first]);
+      expect(await store.readUserHomeserver('alice')).toBeNull();
+
+      await store.applyRuns([runWith(0, 10, [rec('a', 5)])]);
+      await expectScopeOf(store, META, [first]);
     });
 
     it('keeps scopes apart by author, homeserver and group', async () => {
@@ -88,36 +143,75 @@ export function describeIndexStoreContract<S extends IndexStore<Payload>>(
         { ...META, homeserver: 'hs2' },
         { ...META, group: 'graph' },
       ];
-      await store.appendRuns(scopes.map((scope, i) => runOf(0, i + 1, scope)));
+      await store.applyRuns(scopes.map((scope, i) => runOf(0, i + 1, scope)));
 
-      for (const [i, scope] of scopes.entries()) {
-        expect(await store.readRuns(scope)).toEqual([runOf(0, i + 1, scope)]);
-      }
+      for (const [i, scope] of scopes.entries()) await expectScopeOf(store, scope, [runOf(0, i + 1, scope)]);
       expect(sortedScopes(await store.listScopes())).toEqual(sortedScopes(scopes));
     });
 
-    it('deletes every run of a homeserver only', async () => {
+    it('deletes every scope of a homeserver only', async () => {
       const store = fresh();
       const elsewhere: RunMeta = { ...META, homeserver: 'hs2' };
-      await store.appendRuns([runOf(0, 2), runOf(0, 2, { ...META, author: 'bob' }), runOf(0, 3, elsewhere)]);
+      await store.applyRuns([runOf(0, 2), runOf(0, 2, { ...META, author: 'bob' }), runOf(0, 3, elsewhere)]);
 
-      await store.deleteHomeserverRuns('hs1');
+      await store.deleteHomeserver('hs1');
 
       expect(await store.listScopes()).toEqual([elsewhere]);
-      expect(await store.readRuns(elsewhere)).toEqual([runOf(0, 3, elsewhere)]);
+      await expectScopeOf(store, META, []);
+      await expectScopeOf(store, elsewhere, [runOf(0, 3, elsewhere)]);
+    });
+
+    it('evicts at or below a cutoff as the pure eviction does, and drops a scope evicted whole', async () => {
+      const store = fresh();
+      const other: RunMeta = { ...META, author: 'bob' };
+      const runs = [runWith(0, 10, [rec('a', 4), tomb('b', 10)]), runWith(15, 30, [rec('a', 20), rec('c', 16)])];
+      await store.applyRuns([...runs, runOf(0, 3, other)]);
+
+      await store.evictBelow(META, c(16));
+
+      const evicted = evictBelow(compactRuns(runs), c(16));
+      expect(evicted).toEqual([runWith(16, 30, [rec('a', 20)])]);
+      await expectScopeOf(store, META, evicted);
+      await expectScopeOf(store, other, [runOf(0, 3, other)]);
+
+      await store.evictBelow(META, c(30));
+      await expectScopeOf(store, META, []);
+      expect(await store.listScopes()).toEqual([other]);
+      await expect(store.evictBelow(other, c(-1))).rejects.toThrow(InvalidIndexInputError);
+      await expectScopeOf(store, other, [runOf(0, 3, other)]);
+    });
+
+    it('applies the same run twice without changing anything', async () => {
+      const store = fresh();
+      const runs = [runWith(0, 10, [rec('a', 4), tomb('b', 7)]), runWith(20, 30, [rec('b', 25)])];
+      await store.applyRuns(runs);
+      const scope = await store.readScope(META);
+      const exported = await store.exportRuns(META);
+
+      await store.applyRuns(runs);
+      await store.applyRuns(exported);
+
+      expect(await store.readScope(META)).toEqual(scope);
+      expect(await store.exportRuns(META)).toEqual(exported);
     });
 
     it('copies runs on the way in and out', async () => {
       const store = fresh();
-      const run = runOf(0, 2);
-      await store.appendRuns([run]);
+      const run = runWith(0, 2, [rec('a', 1), tomb('b', 2)]);
+      await store.applyRuns([run]);
 
       run.entries.length = 0;
-      const read = await store.readRuns(META);
-      read[0].entries.length = 0;
-      read[0].head = c(9);
+      run.head = c(9);
+      const read = await store.readScope(META);
+      read.entries.clear();
+      read.live.clear();
+      read.coverage.length = 0;
+      (await store.readCoverage(META)).length = 0;
+      const exported = await store.exportRuns(META);
+      exported[0].entries.length = 0;
+      exported[0].head = c(9);
 
-      expect(await store.readRuns(META)).toEqual([runOf(0, 2)]);
+      await expectScopeOf(store, META, [runWith(0, 2, [rec('a', 1), tomb('b', 2)])]);
     });
 
     it('copies every other value on the way in and out', async () => {
@@ -147,12 +241,11 @@ export function describeIndexStoreContract<S extends IndexStore<Payload>>(
       expect(await store.readScopeMembers('alice')).toEqual(new Map([['alice', 0]]));
     });
 
-    it('rejects an invalid run or a run of another scope, changing nothing', async () => {
+    it('rejects an invalid run, changing nothing', async () => {
       const store = fresh();
 
-      await expect(store.commit({ appendRuns: [runOf(0, 2), runOf(3, 3)] })).rejects.toThrow(InvalidIndexInputError);
-      await expect(store.appendRuns([runOf(0, 2), runOf(3, 3)])).rejects.toThrow(InvalidIndexInputError);
-      await expect(store.replaceRuns(META, [runOf(0, 2, { ...META, author: 'bob' })])).rejects.toThrow(
+      await expect(store.commit({ applyRuns: [runOf(0, 2), runOf(3, 3)] })).rejects.toThrow(InvalidIndexInputError);
+      await expect(store.applyRuns([runOf(0, 2), runWith(0, 2, [rec('a', 3)])])).rejects.toThrow(
         InvalidIndexInputError,
       );
       expect(await store.listScopes()).toEqual([]);
@@ -160,7 +253,7 @@ export function describeIndexStoreContract<S extends IndexStore<Payload>>(
 
     it('applies a commit whole or not at all', async () => {
       const store = fresh();
-      await store.appendRuns([runOf(0, 2)]);
+      await store.applyRuns([runOf(0, 2)]);
       const batch: StoreBatch<Payload> = {
         deleteHomeservers: ['hs1'],
         userHomeservers: [{ user: 'alice', value: { homeserver: 'hs1', resolvedAt: 5 } }],
@@ -168,32 +261,32 @@ export function describeIndexStoreContract<S extends IndexStore<Payload>>(
         scopeMembers: [{ seed: 'alice', members: new Map([['alice', 0]]) }],
       };
 
-      await expect(store.commit({ ...batch, appendRuns: [runOf(2, 4), runOf(5, 5)] })).rejects.toThrow(
+      await expect(store.commit({ ...batch, applyRuns: [runOf(2, 4), runOf(5, 5)] })).rejects.toThrow(
         InvalidIndexInputError,
       );
-      expect(await store.readRuns(META)).toEqual([runOf(0, 2)]);
+      await expectScopeOf(store, META, [runOf(0, 2)]);
       expect(await store.readUserHomeserver('alice')).toBeNull();
       expect(await store.readHomeserverState('hs1')).toEqual(EMPTY_HOMESERVER_STATE);
       expect(await store.readScopeMembers('alice')).toEqual(new Map());
 
-      await store.commit({ ...batch, appendRuns: [runOf(2, 4)] });
-      expect(await store.readRuns(META)).toEqual([runOf(2, 4)]);
+      await store.commit({ ...batch, applyRuns: [runOf(2, 4)] });
+      await expectScopeOf(store, META, [runOf(2, 4)]);
       expect(await store.readUserHomeserver('alice')).toEqual({ homeserver: 'hs1', resolvedAt: 5 });
       expect((await store.readHomeserverState('hs1')).failure).toEqual({ failures: 1, retryAt: 60 });
       expect(await store.readScopeMembers('alice')).toEqual(new Map([['alice', 0]]));
     });
 
-    it('applies a commit in order: deletions, replacements, then appends', async () => {
+    it('applies a commit in order: deletions, evictions, then runs', async () => {
       const store = fresh();
-      await store.appendRuns([runOf(0, 2)]);
+      await store.applyRuns([runOf(0, 2)]);
 
       await store.commit({
         deleteHomeservers: ['hs1'],
-        replaceRuns: [{ scope: META, runs: [runOf(0, 3)] }],
-        appendRuns: [runOf(3, 5)],
+        evictions: [{ scope: META, cutoff: c(3) }],
+        applyRuns: [runOf(2, 5)],
       });
 
-      expect(await store.readRuns(META)).toEqual([runOf(0, 3), runOf(3, 5)]);
+      await expectScopeOf(store, META, [runOf(2, 5)]);
     });
 
     it('keeps homeserver state fields a patch leaves out, per homeserver', async () => {
@@ -247,5 +340,31 @@ export function describeIndexStoreContract<S extends IndexStore<Payload>>(
       );
       expect(await store.readScopeMembers('bob')).toEqual(new Map());
     });
+
+    it(`equals the pure merge after every run of two scopes applied in any order (${options.seeds} seeds)`, async () => {
+      const other: RunMeta = { ...GENERATED_META, author: 'bob' };
+      for (let seed = 1; seed <= options.seeds; seed++) {
+        const rng = seeded(seed);
+        const store = fresh();
+        const cases = [randomCase<Payload>(rng), randomCase<Payload>(rng, other)];
+        const applied = new Map<ScopeKey, Run<Payload>[]>([
+          [GENERATED_META, []],
+          [other, []],
+        ]);
+        const scopeOfRun = (run: Run<Payload>) => (run.author === other.author ? other : GENERATED_META);
+
+        for (const run of shuffled(rng, [...cases[0].runs, ...cases[1].runs])) {
+          await store.applyRuns([run]);
+          applied.get(scopeOfRun(run))?.push(run);
+          for (const [scope, runs] of applied) await expectScopeOf(store, scope, runs, `seed ${seed}`);
+        }
+
+        const cutoff: Cursor = c(int(rng, 0, cases[0].history.n));
+        const evicted = evictBelow(compactRuns(applied.get(GENERATED_META) ?? []), cutoff);
+        await store.evictBelow(GENERATED_META, cutoff);
+        await expectScopeOf(store, GENERATED_META, evicted, `seed ${seed} cutoff ${cutoff}`);
+        await expectScopeOf(store, other, applied.get(other) ?? [], `seed ${seed}`);
+      }
+    }, 60_000);
   });
 }
