@@ -87,6 +87,13 @@ export interface StoreChange {
   seeds: string[];
 }
 
+export interface HydrateResult {
+  /** Records that got their data. */
+  fetched: number;
+  /** Records still missing their data and not tried yet: beyond the limit or on a failing homeserver. */
+  remaining: number;
+}
+
 export interface BackfillResult {
   /** The tail of the top contiguous coverage afterwards, `null` when the scope has none. */
   tail: Cursor | null;
@@ -105,6 +112,12 @@ export interface Crawler {
   syncUsers(users: readonly string[], signal?: AbortSignal): Promise<SyncOutcome>;
   /** Syncs a leaf scope from its stored head, or from the stream start. */
   syncLeaf(leaf: LeafRequest, signal?: AbortSignal): Promise<SyncOutcome>;
+  /**
+   * Fetches the files of served records that need one and have no data, such as records read from a saved index,
+   * in the domain's groups of the seed's scope members, newest cursor first, at most `limit`. A record is tried
+   * once per crawler: one whose file stays gone or invalid is not fetched again until a later event replaces it.
+   */
+  hydrate(seed: string, limit?: number, signal?: AbortSignal): Promise<HydrateResult>;
   stats(): CrawlerStats;
   /** Calls `listener` with fresh stats after every change. Returns the unsubscribe function. */
   subscribe(listener: (stats: CrawlerStats) => void): () => void;

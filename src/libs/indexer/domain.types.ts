@@ -22,6 +22,9 @@ export interface Domain<D> {
   reduce(author: string, path: string, bytes: Uint8Array): D | null;
   /** Creation time in microseconds when the path encodes one, else `null`. Finds the window start. */
   timeOfPath(path: string): bigint | null;
-  /** Integrity check of fetched bytes against the event's content hash. */
+  /**
+   * Integrity check of fetched bytes against the event's content hash. A record read from a saved index keeps only
+   * the hash's first 16 bytes (`shortHash`), so a check must accept that form too.
+   */
   matchesHash?(bytes: Uint8Array, hash: string): boolean;
 }

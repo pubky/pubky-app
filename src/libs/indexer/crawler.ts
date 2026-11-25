@@ -4,6 +4,7 @@ import {
   type CrawlerParams,
   type CrawlerStats,
   DEFAULT_CRAWLER_OPTIONS,
+  type HydrateResult,
   type LeafRequest,
   type StoreChange,
   type SyncOutcome,
@@ -21,8 +22,8 @@ import {
 import type { Coverage, Cursor, RecordEntry, Run } from './indexer.types';
 import { readBackward, readForward, type ReadPage } from './paging';
 import { foldEvents } from './run';
-import { scopeOf } from './store.helpers';
-import type { HighWater, StoreBatch } from './store.types';
+import { scopeId, scopeOf } from './store.helpers';
+import type { HighWater, ScopeKey, StoreBatch } from './store.types';
 import type { AuthoredStreamEvent } from './transport.types';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -84,6 +85,8 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
   const counters = { usersPerHop: [] as number[], lookups: 0, streamRequests: 0, bodyRequests: 0, events: 0 };
   const seen = new Set<string>();
   const failed = new Set<string>();
+  /** Records `hydrate` fetched once, by scope, path and cursor. */
+  const hydrated = new Set<string>();
   const listeners = new Set<(stats: CrawlerStats) => void>();
   const commitListeners = new Set<(change: StoreChange) => void>();
 
@@ -454,11 +457,69 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     }
   }
 
+  async function hydrate(seed: string, limit = Infinity, signal?: AbortSignal): Promise<HydrateResult> {
+    const ctx = contextOf(signal);
+    const members = await store.readScopeMembers(seed);
+    const users = new Set([seed, ...members.keys()]);
+    const missing: Array<{ scope: ScopeKey; record: RecordEntry<D>; key: string }> = [];
+    for (const user of users) {
+      throwIfAborted(signal);
+      const homeserver = (await store.readUserHomeserver(user))?.homeserver ?? null;
+      if (homeserver === null) continue;
+      for (const group of domain.groups) {
+        const scope = { author: user, homeserver, group: group.id };
+        const { live } = await store.readScope(scope);
+        for (const record of live.values()) {
+          const key = `${scopeId(scope)}\u0000${record.path}\u0000${record.cursor}`;
+          if (record.data !== undefined || !domain.needsBody(record.path) || hydrated.has(key)) continue;
+          missing.push({ scope, record, key });
+        }
+      }
+    }
+    missing.sort((a, b) => (a.record.cursor > b.record.cursor ? -1 : a.record.cursor < b.record.cursor ? 1 : 0));
+    const chosen = missing.slice(0, limit);
+    const byHomeserver = new Map<string, typeof chosen>();
+    for (const item of chosen) {
+      byHomeserver.set(item.scope.homeserver, [...(byHomeserver.get(item.scope.homeserver) ?? []), item]);
+    }
+    let fetched = 0;
+    let tried = 0;
+    for (const [homeserver, items] of byHomeserver) {
+      if (ctx.failed.has(homeserver)) continue;
+      const { failure } = await store.readHomeserverState(homeserver);
+      if (failure !== null && failure.retryAt > now()) {
+        markFailed(ctx, homeserver);
+        continue;
+      }
+      // A failing homeserver leaves its records untried, for a later call.
+      await guard(ctx, homeserver, async () => {
+        const runs: Run<D>[] = [];
+        await mapLimit(items, options.bodyConcurrency, async ({ scope, record }) => {
+          const data = await bodyOf(ctx, scope.author, record);
+          if (data === null) return;
+          // The one event at this cursor: a run of it alone lies inside the stored coverage and changes no range.
+          runs.push({
+            ...scopeOf(scope),
+            tail: record.cursor - ONE,
+            head: record.cursor,
+            entries: [{ ...record, data }],
+          });
+        });
+        if (runs.length > 0) await commit({ applyRuns: runs }, { scopes: runs.map(scopeOf), seeds: [] });
+        for (const { key } of items) hydrated.add(key);
+        fetched += runs.length;
+        tried += items.length;
+      });
+    }
+    return { fetched, remaining: missing.length - tried };
+  }
+
   return {
     syncScope,
     backfill,
     syncUsers,
     syncLeaf,
+    hydrate,
     stats,
     subscribe(listener) {
       listeners.add(listener);
