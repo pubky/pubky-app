@@ -10,8 +10,8 @@ import {
 } from 'pubky-social-specs';
 import { vi } from 'vitest';
 import type { RecordEntry } from '../indexer.types';
-import { createSocialDomain, SOCIAL_ACTIVITY, SOCIAL_GRAPH } from './social.domain';
-import type { AuthorRecords, SocialData } from './social.types';
+import { createSocialDomain, PROFILE_PATH, SOCIAL_ACTIVITY, SOCIAL_GRAPH } from './social.domain';
+import type { AuthorRecords, SocialData, UserData } from './social.types';
 
 // Test-only: a small network written with the package's own builders, so paths, ids and bytes are real.
 
@@ -157,4 +157,16 @@ export function recordsOf({ writes, deletes }: SocialNetwork): AuthorRecords[] {
     graph: scope(author, SOCIAL_GRAPH),
     activity: scope(author, SOCIAL_ACTIVITY),
   }));
+}
+
+/** The records with a bare profile served for `author`, for a test that needs one more user with a profile. */
+export function withProfile(records: readonly AuthorRecords[], author: string, name: string): AuthorRecords[] {
+  const data: UserData = { type: 'user', name, bio: null, image: null, links: [], status: null };
+  const profile: RecordEntry<SocialData> = { kind: 'record', path: PROFILE_PATH, cursor: BigInt(0), data };
+  return records.map((entry) => {
+    if (entry.author !== author) return entry;
+    const graph = new Map(entry.graph);
+    graph.set(PROFILE_PATH, profile);
+    return { ...entry, graph };
+  });
 }
