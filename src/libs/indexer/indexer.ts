@@ -43,6 +43,8 @@ function mergeChanges(a: StoreChange, b: StoreChange): StoreChange {
 }
 
 const userKey = (user: string) => JSON.stringify(['user', user]);
+/** The meta key of the seed's last scope sync, which the next session starts from. */
+const syncedKey = (seed: string) => `syncedAt:${seed}`;
 const leafKey = (author: string, group: string) => JSON.stringify(['leaf', author, group]);
 
 interface Task {
@@ -96,6 +98,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
   let lastSyncAt: number | null = null;
   let lastError: Error | null = null;
   let firstSyncPending = false;
+  let asOf: number | null = null;
   /** The saved index is read before the first crawl after a start. */
   let loadDue = false;
   /** Records read from saved files may still miss their data. */
@@ -120,6 +123,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     lastError,
     stats: crawler.stats(),
     firstSyncPending,
+    asOf,
     ...(options.savedIndex ? { savedIndex: { ...saved } } : {}),
   });
   const emitStatus = () => {
@@ -149,6 +153,10 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     shared?.post({ type: 'changed', change });
   }
 
+  function noteAsOf(at: number) {
+    asOf = asOf === null ? at : Math.max(asOf, at);
+  }
+
   crawler.onCommit((change) => {
     dirty = true;
     announce(change);
@@ -168,6 +176,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
         expiryMs: options.writerExpiryMs,
       });
       saved = { ...saved, loadedFiles: outcome.loaded, ignoredFiles: outcome.ignored };
+      if (outcome.writtenAt !== null) noteAsOf(outcome.writtenAt);
       if (outcome.loaded > 0) {
         dirty = true;
         hydrateDue = true;
@@ -308,7 +317,10 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     lastSyncAt = now();
     lastError = null;
     firstSyncPending = false;
+    noteAsOf(lastSyncAt);
     shared?.post({ type: 'synced', seed: current, at: lastSyncAt });
+    // Best effort: without it the next session knows no time until its own first sync.
+    void store.writeMeta?.(syncedKey(current), String(lastSyncAt)).catch(() => undefined);
     preempted = 0;
     for (const task of waiters) task.resolve();
     scheduleSync(options.syncIntervalMs);
@@ -463,8 +475,9 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
         pump();
         return;
       case 'synced':
-        if (message.seed !== seed || !firstSyncPending) return;
+        if (message.seed !== seed) return;
         firstSyncPending = false;
+        noteAsOf(message.at);
         emitStatus();
         return;
       case 'settled': {
@@ -507,6 +520,19 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
       },
     );
     return promise;
+  }
+
+  /** Never rejects: a store without meta, or a value it cannot read, leaves the time unknown. */
+  function readStoredAsOf(current: string): void {
+    const run = controller;
+    void store
+      .readMeta?.(syncedKey(current))
+      .then((value) => {
+        if (controller !== run || value === null || !/^\d+$/.test(value)) return;
+        noteAsOf(Number(value));
+        emitStatus();
+      })
+      .catch(() => undefined);
   }
 
   async function forget(target: { users?: readonly string[]; leaves?: readonly LeafRequest[] }): Promise<void> {
@@ -563,6 +589,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
       lastSyncAt = null;
       lastError = null;
       firstSyncPending = next !== null;
+      asOf = null;
       preempted = 0;
       aheadOfForced = 0;
       loadDue = options.savedIndex && next !== null;
@@ -572,6 +599,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
       saved = { loadedFiles: 0, ignoredFiles: 0, lastSavedAt: null, error: null };
       shared = next === null ? null : coordination;
       if (shared !== null) unsubscribe = shared.subscribe(onMessage);
+      if (next !== null) readStoredAsOf(next);
       seekLead();
       emitStatus();
     },
@@ -608,6 +636,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
         backfillOptions?.force === true ? 0 : options.backfillMinIntervalMs,
       ),
     forget,
+    setExcluded: (users) => crawler.setExcluded(users),
     onChange(listener) {
       changeListeners.add(listener);
       return () => {

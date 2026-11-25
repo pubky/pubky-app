@@ -109,6 +109,11 @@ what was loaded; feeds, rankings, searches and hot tags over the scope are unava
 deletes its scopes, an eviction at the largest cursor, which every tab hears. A `backfill` of one author's group runs at
 most once per `backfillMinIntervalMs` unless forced.
 
+`setExcluded(users)`, for muted users, drops them and whoever is reached only through them from the view's members at
+once, and from the scope at the next sync. Answers carry `asOf`, the newest sync time known: this run's, the previous
+session's kept in the store, or a loaded file's. `onChange` gives `{ authors, membersChanged, kinds }`. A coordination
+from `createBrowserCoordination` has `close()`; its owner calls it, the runtime never closes what it was given.
+
 `createIndexerRuntime` (`indexer.ts`) is that loop for any domain: one queue for every crawl, and with
 coordination only the tab holding the lock crawls. Requests never overlap and go ahead of the scope sync: one
 arriving during a scope sync aborts it at its next safe point, and the sync resumes after it from what it

@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { buildPost, buildUri, type BuiltPost } from 'pubky-social-specs';
+import { buildFollow, buildPost, buildUri, buildUser, type BuiltPost } from 'pubky-social-specs';
 import { describe, expect, it } from 'vitest';
 import type { CrawlerOptions } from '../crawler.types';
 import { FakeNetwork } from '../fakeNetwork';
@@ -117,7 +117,7 @@ describe('createSocialIndexer', () => {
     await indexer.refresh();
     await time.advance(DEBOUNCE);
 
-    expect(changes).toEqual([{ authors: [BRAN] }]);
+    expect(changes).toEqual([{ authors: [BRAN], membersChanged: false, kinds: ['activity'] }]);
     const next = await indexer.request({ url: FOLLOWING, method: 'GET' });
     expect(next.json).toMatchObject({
       post_keys: [key(BRAN, fresh), key(BRAN, image), key(CLEO, quote), key(BRAN, repost)],
@@ -190,6 +190,7 @@ describe('createSocialIndexer', () => {
     const previous = indexerOf();
     previous.start(ALICE);
     await previous.whenSynced();
+    const syncedAt = previous.status().lastSyncAt;
     previous.stop();
     let calls = 0;
     const silent = <T>(): Promise<T> => {
@@ -215,6 +216,7 @@ describe('createSocialIndexer', () => {
     await settle();
 
     expect(answer.json).toMatchObject({ post_keys: [key(BRAN, image), key(CLEO, quote), key(BRAN, repost)] });
+    expect(answer).toMatchObject({ syncing: true, asOf: syncedAt });
     expect(calls).toBe(0);
   });
 
@@ -440,5 +442,57 @@ describe('createSocialIndexer', () => {
     await indexer.ensureUser(BRAN);
     expect(indexer.view().profile(BRAN)).toMatchObject({ name: 'Bran' });
     expect(indexer.view().membershipOf(CLEO)).toBeNull();
+  });
+
+  it('leaves an excluded user out of the view at once and of the scope at the next sync', async () => {
+    const { indexerOf, store } = socialWorld();
+    const indexer = indexerOf();
+    indexer.start(ALICE);
+    await indexer.whenSynced();
+    expect([...indexer.view().authors].sort()).toEqual([ALICE, BRAN, CLEO, DION].sort());
+    const changes: SocialChange[] = [];
+    indexer.onChange((change) => changes.push(change));
+
+    indexer.setExcluded([CLEO]);
+    await settle();
+
+    // Dion is reached only through Cleo.
+    expect([...indexer.view().authors].sort()).toEqual([ALICE, BRAN].sort());
+    expect(changes).toEqual([
+      {
+        authors: expect.arrayContaining([CLEO, DION]),
+        membersChanged: true,
+        kinds: expect.arrayContaining(['graph', 'activity']),
+      },
+    ]);
+    await indexer.refresh();
+    expect([...(await store.readScopeMembers(ALICE)).keys()].sort()).toEqual([ALICE, BRAN].sort());
+  });
+
+  it('tells a profile change from a change of follows, and dates its answers', async () => {
+    const { network, time, indexerOf } = socialWorld();
+    const indexer = indexerOf();
+    indexer.start(ALICE);
+    await indexer.whenSynced();
+    const syncedAt = time.clock.now;
+    await time.advance(DEBOUNCE);
+    const changes: SocialChange[] = [];
+    indexer.onChange((change) => changes.push(change));
+
+    const profile = buildUser(BRAN, { name: 'Bran again' });
+    network.put(BRAN, profile.path, profile.body);
+    await indexer.refresh([BRAN]);
+    await time.advance(DEBOUNCE);
+    const follow = buildFollow(BRAN, DION);
+    network.put(BRAN, follow.path, follow.body);
+    await indexer.refresh([BRAN]);
+    await time.advance(DEBOUNCE);
+
+    expect(changes).toEqual([
+      { authors: [BRAN], membersChanged: false, kinds: ['profile'] },
+      { authors: [BRAN], membersChanged: false, kinds: ['graph'] },
+    ]);
+    const answer = await indexer.request({ url: FOLLOWING, method: 'GET' });
+    expect(answer).toMatchObject({ syncing: false, asOf: syncedAt });
   });
 });

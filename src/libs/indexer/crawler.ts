@@ -87,6 +87,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
 
   const counters = { usersPerHop: [] as number[], lookups: 0, streamRequests: 0, bodyRequests: 0, events: 0 };
   let seedReach: CrawlerStats['seed'];
+  let excluded: ReadonlySet<string> = new Set(options.excluded);
   const seen = new Set<string>();
   const failed = new Set<string>();
   /** Records `hydrate` fetched once, by scope, path and cursor. */
@@ -366,6 +367,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     homeserverOf: ReadonlyMap<string, string | null>,
     members: Map<string, number>,
     hop: number,
+    skipped: ReadonlySet<string>,
   ): Promise<string[]> {
     const next: string[] = [];
     for (const user of frontier) {
@@ -374,7 +376,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
       const { live } = await store.readScope({ author: user, homeserver, group: scopeGroupId });
       for (const link of domain.linksOf(live)) {
         if (members.size >= options.maxUsers) return next;
-        if (members.has(link) || options.excluded.has(link)) continue;
+        if (members.has(link) || skipped.has(link)) continue;
         members.set(link, hop);
         next.push(link);
       }
@@ -400,6 +402,8 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
       written = next;
     };
 
+    // A change of the excluded users applies from the next sync on, never halfway through one.
+    const skipped = excluded;
     const members = new Map([[seed, 0]]);
     let frontier = [seed];
     for (let hop = 0; frontier.length > 0; hop += 1) {
@@ -407,7 +411,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
       changed();
       const { homeserverOf, byHomeserver } = await resolveAll(ctx, frontier);
       for (const [homeserver, users] of byHomeserver) await syncFull(ctx, homeserver, users);
-      const next = hop < options.hops ? await nextHop(frontier, homeserverOf, members, hop + 1) : [];
+      const next = hop < options.hops ? await nextHop(frontier, homeserverOf, members, hop + 1, skipped) : [];
       for (const [homeserver, users] of byHomeserver) await syncWindow(ctx, homeserver, users);
       if (hop === 0) {
         const homeserver = homeserverOf.get(seed) ?? null;
@@ -543,6 +547,9 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     syncUsers,
     syncLeaf,
     hydrate,
+    setExcluded(users) {
+      excluded = new Set(users);
+    },
     stats,
     subscribe(listener) {
       listeners.add(listener);

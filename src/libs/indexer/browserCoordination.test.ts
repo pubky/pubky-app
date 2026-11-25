@@ -150,4 +150,33 @@ describe('createBrowserCoordination', () => {
       ]),
     );
   });
+
+  it('hears a sync, and closes its channel so that it hears nothing after', () => {
+    let closed = 0;
+    let deliver: (data: unknown) => void = () => undefined;
+    const apis: BrowserApis = {
+      requestLock: async (_name, task) => task(),
+      openChannel: () => ({
+        post: () => undefined,
+        listen: (listener) => {
+          deliver = listener;
+        },
+        close: () => {
+          closed += 1;
+        },
+      }),
+    };
+    const coordination = createBrowserCoordination(apis);
+    if (coordination === null) throw new Error('expected coordination');
+    const heard: CoordinationMessage[] = [];
+    coordination.subscribe((message) => heard.push(message));
+    const synced: CoordinationMessage = { type: 'synced', seed: 'alice', at: 1 };
+
+    deliver(synced);
+    coordination.close();
+    deliver(synced);
+
+    expect(closed).toBe(1);
+    expect(heard).toEqual([synced]);
+  });
 });

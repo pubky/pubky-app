@@ -176,6 +176,8 @@ export interface LoadOutcome {
   /** Other writers' files deleted for their age. */
   expired: number;
   change: StoreChange;
+  /** When the newest file applied was written (ms), `null` when none was. */
+  writtenAt: number | null;
 }
 
 /** Applies one file: its runs, the homeservers the store lacks, and each high-water mark above the stored one. */
@@ -208,6 +210,7 @@ export async function loadSavedIndex<D>(params: LoadParams<D>): Promise<LoadOutc
   const expired: string[] = [];
   let loaded = 0;
   let ignored = 0;
+  let writtenAt: number | null = null;
   for (const name of await transport.listIndexFiles()) {
     const fileWriter = writerOfFile(name);
     const own = fileWriter === writer;
@@ -239,6 +242,7 @@ export async function loadSavedIndex<D>(params: LoadParams<D>): Promise<LoadOutc
       continue;
     }
     loaded += 1;
+    writtenAt = Math.max(writtenAt ?? model.writtenAt, model.writtenAt);
     for (const run of model.runs) scopes.set(scopeId(run), scopeOf(run));
     for (const { user, hop } of model.members) members.set(user, Math.min(members.get(user) ?? hop, hop));
   }
@@ -254,5 +258,5 @@ export async function loadSavedIndex<D>(params: LoadParams<D>): Promise<LoadOutc
       // Still expired at the next start, which deletes it then.
     }
   }
-  return { loaded, ignored, expired: expired.length, change: { scopes: [...scopes.values()], seeds } };
+  return { loaded, ignored, expired: expired.length, change: { scopes: [...scopes.values()], seeds }, writtenAt };
 }

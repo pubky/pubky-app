@@ -11,7 +11,13 @@ export interface BrowserApis {
   openChannel(name: string): {
     post(message: unknown): void;
     listen(listener: (data: unknown) => void): void;
+    close?(): void;
   };
+}
+
+/** Coordination that holds a channel open until `close`, which its owner calls once no runtime uses it. */
+export interface BrowserCoordination extends Coordination {
+  close(): void;
 }
 
 /** Web Locks and BroadcastChannel, `null` when either is missing. */
@@ -29,6 +35,7 @@ export function browserApis(): BrowserApis | null {
       return {
         post: (message) => channel.postMessage(message),
         listen: (listener) => channel.addEventListener('message', (event: MessageEvent) => listener(event.data)),
+        close: () => channel.close(),
       };
     },
   };
@@ -50,7 +57,7 @@ const isMessage = (data: unknown): data is CoordinationMessage =>
 export function createBrowserCoordination(
   apis: BrowserApis | null = browserApis(),
   name = DEFAULT_NAME,
-): Coordination | null {
+): BrowserCoordination | null {
   if (apis === null) return null;
   const channel = apis.openChannel(name);
   const listeners = new Set<(message: CoordinationMessage) => void>();
@@ -66,6 +73,10 @@ export function createBrowserCoordination(
       return () => {
         listeners.delete(listener);
       };
+    },
+    close() {
+      listeners.clear();
+      channel.close?.();
     },
   };
 }

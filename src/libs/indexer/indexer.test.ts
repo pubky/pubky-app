@@ -118,6 +118,7 @@ describe('createIndexerRuntime loop', () => {
       lastSyncAt: NOW,
       lastError: null,
       firstSyncPending: false,
+      asOf: NOW,
     });
     await w.time.advance(INTERVAL - 1);
     expect(scopeSyncs(state.reads)).toBe(1);
@@ -397,7 +398,12 @@ describe('createIndexerRuntime coordination', () => {
     await settle();
     expect(scopeSyncs(first.state.reads)).toBe(1);
     expect(second.state.reads).toEqual([]);
-    expect(second.runtime.status()).toMatchObject({ state: 'idle', firstSyncPending: false, lastSyncAt: null });
+    expect(second.runtime.status()).toMatchObject({
+      state: 'idle',
+      firstSyncPending: false,
+      lastSyncAt: null,
+      asOf: NOW,
+    });
 
     await w.time.advance(DEBOUNCE);
     expect(heard).toHaveLength(1);

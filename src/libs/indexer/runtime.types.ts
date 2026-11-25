@@ -96,6 +96,11 @@ export interface RuntimeStatus {
    * tab's next sync.
    */
   firstSyncPending: boolean;
+  /**
+   * When the data behind the answers was last synced (ms): the newest of this run's scope syncs, in any tab, the
+   * previous session's last one kept in the store, and the loaded index files; `null` when none is known.
+   */
+  asOf: number | null;
   /** Present while `savedIndex` is on. */
   savedIndex?: SavedIndexStatus;
 }
@@ -108,7 +113,7 @@ export interface RuntimeParams<D> {
   now: () => number;
   /** Timers; `setTimeout` by default. */
   schedule?: Schedule;
-  /** Without it the runtime crawls as if it were the only tab. */
+  /** Without it the runtime crawls as if it were the only tab. Its owner closes it: the runtime never does. */
   coordination?: Coordination | null;
   options?: Partial<RuntimeOptions>;
 }
@@ -147,6 +152,11 @@ export interface IndexerRuntime {
    * the seed's scope members are kept. Every tab hears it as a change listing the scopes in `forgotten`.
    */
   forget(target: { users?: readonly string[]; leaves?: readonly LeafRequest[] }): Promise<void>;
+  /**
+   * Leaves these users out of the scope from the next scope sync on, and whoever is reached only through them. Each
+   * tab sets its own; the crawling tab's apply.
+   */
+  setExcluded(users: Iterable<string>): void;
   /** Called after commits, from this tab or another, merged and at most once per `changeDebounceMs`. */
   onChange(listener: (change: StoreChange) => void): () => void;
   status(): RuntimeStatus;

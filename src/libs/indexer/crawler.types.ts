@@ -125,6 +125,8 @@ export interface Crawler {
    * once per crawler: one whose file stays gone or invalid is not fetched again until a later event replaces it.
    */
   hydrate(seed: string, limit?: number, signal?: AbortSignal): Promise<HydrateResult>;
+  /** Replaces the `excluded` option from the next `syncScope` on. */
+  setExcluded(users: Iterable<string>): void;
   stats(): CrawlerStats;
   /** Calls `listener` with fresh stats after every change. Returns the unsubscribe function. */
   subscribe(listener: (stats: CrawlerStats) => void): () => void;

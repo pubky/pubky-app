@@ -46,9 +46,21 @@ export interface SocialIndexerParams {
   options?: Partial<RuntimeOptions & SocialLimits>;
 }
 
+/** What changed, for narrow invalidation: follows, posts and tags, or profiles. */
+export type SocialChangeKind = 'graph' | 'activity' | 'profile';
+
+const KIND_ORDER: readonly SocialChangeKind[] = ['graph', 'activity', 'profile'];
+
 export interface SocialChange {
   /** Authors whose records or membership changed, or who entered or left the view. */
   authors: string[];
+  /** Whether the scope's members changed: answers about the scope may all differ. */
+  membersChanged: boolean;
+  /**
+   * `graph` when an author's follows changed, `activity` when posts or tags did, `profile` when a profile did. A change
+   * of members brings `graph` and `activity`.
+   */
+  kinds: SocialChangeKind[];
 }
 
 /** The social runtime with its view kept current, answering the central indexer's requests locally. */
@@ -75,6 +87,11 @@ export interface SocialIndexer {
   ensurePost(author: string, postId: string): Promise<void>;
   /** Loads only the user's profile, for an avatar or a name; a user the view lacks joins it as `referenced`. */
   ensureProfile(user: string): Promise<void>;
+  /**
+   * Leaves these users out of the view's members now, and of the scope from the next sync on, with whoever is reached
+   * only through them.
+   */
+  setExcluded(users: Iterable<string>): void;
   /** Rate limited per author and group unless `force` (`backfillMinIntervalMs`). */
   backfill(author: string, group: string, pages: number, options?: { force?: boolean }): Promise<void>;
   /** An empty view until the first build. */
@@ -196,6 +213,25 @@ function authorRecords(author: string, loaded: Loaded): AuthorRecords {
   };
 }
 
+const sameList = (a: readonly string[], b: readonly string[]) => a.length === b.length && a.every((x, i) => x === b[i]);
+
+/** The kinds of a change from `before` to `after` for these authors; follows and profiles are compared. */
+function kindsOf(
+  before: SocialView,
+  after: SocialView,
+  authors: ReadonlySet<string>,
+  activity: boolean,
+  membersChanged: boolean,
+): SocialChangeKind[] {
+  const kinds = new Set<SocialChangeKind>(activity ? ['activity'] : []);
+  if (membersChanged) kinds.add('graph');
+  for (const author of authors) {
+    if (!sameList(before.following(author), after.following(author))) kinds.add('graph');
+    if (JSON.stringify(before.profile(author)) !== JSON.stringify(after.profile(author))) kinds.add('profile');
+  }
+  return KIND_ORDER.filter((kind) => kinds.has(kind));
+}
+
 /** Each user's membership, so that a change of it alone counts as a change of the user. */
 const membershipsOf = (loaded: ReadonlyMap<string, Loaded>) =>
   new Map([...loaded].map(([author, { membership }]): [string, Membership] => [author, membership]));
@@ -203,7 +239,8 @@ const membershipsOf = (loaded: ReadonlyMap<string, Loaded>) =>
 export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer {
   const { store, now } = params;
   const limits: SocialLimits = { ...DEFAULT_SOCIAL_LIMITS, ...params.options };
-  const runtime = createIndexerRuntime({ ...params, domain: createSocialDomain() });
+  const domain = createSocialDomain();
+  const runtime = createIndexerRuntime({ ...params, domain });
   const empty = buildSocialView([]);
 
   let seed: string | null = null;
@@ -226,6 +263,9 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
   /** Per scope id, the changes reported for it: data filled in at a stored cursor leaves the coverage as it was. */
   const changeCounts = new Map<string, number>();
   let pendingAuthors = new Set<string>();
+  /** Whether posts or tags changed since the last rebuild. */
+  let pendingActivity = false;
+  let excluded: ReadonlySet<string> = new Set(params.options?.crawler?.excluded ?? []);
   let rebuilding: Promise<void> | null = null;
   let again = false;
   const listeners = new Set<(change: SocialChange) => void>();
@@ -317,6 +357,29 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
     }
   }
 
+  /**
+   * Drops the members no longer reached from the seed without passing through an excluded user, as the next scope
+   * sync will.
+   */
+  function pruneExcluded(loaded: Map<string, Loaded>, forSeed: string): void {
+    const reached = new Set([forSeed]);
+    for (let frontier = [forSeed]; frontier.length > 0;) {
+      const next: string[] = [];
+      for (const user of frontier) {
+        const graph = loaded.get(user)?.graph;
+        for (const link of graph === undefined ? [] : domain.linksOf(graph.live)) {
+          if (reached.has(link) || excluded.has(link) || loaded.get(link)?.membership !== 'member') continue;
+          reached.add(link);
+          next.push(link);
+        }
+      }
+      frontier = next;
+    }
+    for (const [author, { membership }] of loaded) {
+      if (membership === 'member' && !reached.has(author)) loaded.delete(author);
+    }
+  }
+
   async function buildOnce(
     forSeed: string | null,
   ): Promise<{ view: SocialView; memberships: Map<string, Membership>; hasScope: boolean }> {
@@ -326,7 +389,8 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
     await dropForgotten();
     const loaded = new Map<string, Loaded>();
     for (const [author, hop] of hops) await load(loaded, author, 'member', hop);
-    for (const user of ensuredUsers.keys()) if (!hops.has(user)) await load(loaded, user, 'visited', null);
+    if (forSeed !== null && excluded.size > 0) pruneExcluded(loaded, forSeed);
+    for (const user of ensuredUsers.keys()) if (!loaded.has(user)) await load(loaded, user, 'visited', null);
     await addLeaves(loaded);
     await addProfiles(loaded);
     const records = [...loaded].map(([author, entry]) => authorRecords(author, entry));
@@ -341,25 +405,36 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
       if (!started) break;
       const settled = firstSyncSettled;
       const changed = pendingAuthors;
+      const activity = pendingActivity;
       pendingAuthors = new Set();
+      pendingActivity = false;
       try {
         const { view, memberships, hasScope } = await buildOnce(forSeed);
         // Started again meanwhile: its own rebuild follows.
         if (generation !== run) continue;
+        let membersChanged = false;
         for (const [author, membership] of memberships) {
-          if (currentMemberships.get(author) !== membership) changed.add(author);
+          if (currentMemberships.get(author) === membership) continue;
+          changed.add(author);
+          membersChanged = membersChanged || membership === 'member' || currentMemberships.get(author) === 'member';
         }
-        for (const author of currentMemberships.keys()) if (!memberships.has(author)) changed.add(author);
+        for (const [author, membership] of currentMemberships) {
+          if (memberships.has(author)) continue;
+          changed.add(author);
+          membersChanged = membersChanged || membership === 'member';
+        }
+        const kinds = kindsOf(current, view, changed, activity || membersChanged, membersChanged);
         current = view;
         currentMemberships = memberships;
         viewError = null;
         if (hasScope || settled) markReady();
         if (settled) markSynced();
         if (changed.size > 0) {
-          const change = { authors: [...changed] };
+          const change: SocialChange = { authors: [...changed], membersChanged, kinds };
           for (const listener of listeners) listener(change);
         }
       } catch (error) {
+        pendingActivity = pendingActivity || activity;
         viewError = asError(error);
       }
     } while (again);
@@ -382,6 +457,7 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
     for (const scope of change.scopes) {
       const id = scopeId(scope);
       changeCounts.set(id, (changeCounts.get(id) ?? 0) + 1);
+      if (scope.group !== SOCIAL_GRAPH && scope.group !== PROFILE_GROUP) pendingActivity = true;
     }
     void requestRebuild(change.scopes.map(({ author }) => author));
   });
@@ -458,6 +534,11 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
       return ensureLeaf(ensuredPosts, JSON.stringify([author, leaf.group]), leaf, limits.maxLoosePosts);
     },
     ensureProfile: (user) => ensureLeaf(ensuredProfiles, user, profileLeaf(user), limits.maxProfiles),
+    setExcluded(users) {
+      excluded = new Set(users);
+      runtime.setExcluded(excluded);
+      void requestRebuild([]);
+    },
     backfill: (author, group, pages, options) => runtime.backfill(author, group, pages, options),
     view: () => current,
     ready: () => readyPromise,
@@ -471,7 +552,7 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
         const queries = createSocialQueries(current, { seed, now, syncing });
         routed = { view: current, syncing, router: createNexusRouter(queries) };
       }
-      return { ...(await routed.router.route(request)), syncing };
+      return { ...(await routed.router.route(request)), syncing, asOf: runtime.status().asOf };
     },
     onChange(listener) {
       listeners.add(listener);
