@@ -64,6 +64,9 @@ export class LocksController {
   /** Setup checks can overlap across dialogs and publishing; only the latest may clear shared readiness. */
   private static paykitSetupGeneration = 0;
 
+  /** The session whose account is being deleted: no reader file copy starts for it. */
+  private static readerFileCopyStopped: (() => boolean) | null = null;
+
   /** An awaited Locks operation belongs to both its app account and its original Locks session. */
   private static captureSessionOwner(): () => boolean {
     const { generation, currentUserPubky } = useAuthStore.getState();
@@ -199,6 +202,8 @@ export class LocksController {
     if (current.generation === generation && current.currentUserPubky === currentUserPubky) {
       this.clearLocalSession(persist);
     }
+    // Not in clearLocalSession: a Lock Server sign-out during an account deletion must not resume the copy.
+    this.readerFileCopyStopped = null;
   }
 
   /**
@@ -485,11 +490,28 @@ export class LocksController {
    * load with a lock.
    */
   private static startReaderFileCopy(readerPubky: string, isCurrent: () => boolean): void {
+    if (this.readerFileCopyStopped?.()) return;
     const { session } = useAuthStore.getState();
     if (!session || !hasCapabilities(session.info.capabilities, LOCKS_READER_COPY_CAPABILITIES)) return;
-    void LocksApplication.copySocialReaderFiles({ readerPubky, isCurrent }).then((copied) => {
+    // A run stops before its next write once a deletion starts, so the deletion waits for one write at most.
+    const runIsCurrent = () => isCurrent() && !this.readerFileCopyStopped?.();
+    void LocksApplication.copySocialReaderFiles({ readerPubky, isCurrent: runIsCurrent }).then((copied) => {
       if (copied && isCurrent()) markLocksReaderFilesCopied(readerPubky);
     });
+  }
+
+  /**
+   * Account deletion lists the account's files once, so a copy write after that list would survive it. Waits for
+   * the copy runs of this page to end and starts no new one until the session changes.
+   */
+  static async stopReaderFileCopy(): Promise<void> {
+    this.readerFileCopyStopped = captureViewerSession();
+    await LocksApplication.settleSocialCopyRuns();
+  }
+
+  /** After a deletion that failed: the account and its files stay. */
+  static resumeReaderFileCopy(): void {
+    this.readerFileCopyStopped = null;
   }
 
   /** Creator reads their own locked content directly from the guarded original (owner == signed-in). */

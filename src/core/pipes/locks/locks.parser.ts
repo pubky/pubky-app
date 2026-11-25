@@ -31,7 +31,10 @@ import {
 const UNLOCKED_PREFIX = APP_LOCKS_UNLOCKED_PATH;
 /** Where a reader keeps each purchase's bundle id; without it the paid content cannot be fetched again. */
 const PURCHASES_PREFIX = APP_LOCKS_PURCHASES_PATH;
-/** Where builds before #3206 kept the same files. Read, never written; removed in #3207. */
+/**
+ * Where builds before #3206 kept the same files. The copy reads both, and `startPayment` still writes a new bundle id
+ * under the purchases one until #3207.
+ */
 const SOCIAL_UNLOCKED_PREFIX = SOCIAL_LOCKS_UNLOCKED_PATH;
 const SOCIAL_PURCHASES_PREFIX = SOCIAL_LOCKS_PURCHASES_PATH;
 /**

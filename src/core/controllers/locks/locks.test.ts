@@ -39,6 +39,7 @@ const mocks = vi.hoisted(() => ({
   fetchReplicatedContent: vi.fn(),
   fetchUnlockedList: vi.fn(),
   copySocialReaderFiles: vi.fn(),
+  settleSocialCopyRuns: vi.fn(),
   fetchOwnContent: vi.fn(),
 }));
 
@@ -68,6 +69,7 @@ vi.mock('@/application/locks/locks', () => ({
     fetchReplicatedContent: mocks.fetchReplicatedContent,
     fetchUnlockedList: mocks.fetchUnlockedList,
     copySocialReaderFiles: mocks.copySocialReaderFiles,
+    settleSocialCopyRuns: mocks.settleSocialCopyRuns,
     fetchOwnContent: mocks.fetchOwnContent,
   },
 }));
@@ -968,6 +970,56 @@ describe('LocksController reader file copy (#3206)', () => {
   afterEach(() => {
     useAuthStore.setState({ session: null });
     localStorage.removeItem(locksReaderFilesCopiedKey(READER));
+    LocksController.resumeReaderFileCopy();
+  });
+
+  it('starts no copy while the account is being deleted, until the session changes', async () => {
+    signIn(COPY_GRANT);
+    mocks.settleSocialCopyRuns.mockResolvedValue(undefined);
+
+    await LocksController.stopReaderFileCopy();
+    await LocksController.fetchUnlockedList({ readerPubky: READER });
+
+    expect(mocks.settleSocialCopyRuns).toHaveBeenCalledOnce();
+    expect(mocks.copySocialReaderFiles).not.toHaveBeenCalled();
+
+    signIn(COPY_GRANT);
+    await LocksController.fetchUnlockedList({ readerPubky: READER });
+
+    expect(mocks.copySocialReaderFiles).toHaveBeenCalledOnce();
+  });
+
+  it('stops a run already going once the account deletion starts', async () => {
+    signIn(COPY_GRANT);
+    mocks.settleSocialCopyRuns.mockResolvedValue(undefined);
+    await LocksController.fetchUnlockedList({ readerPubky: READER });
+    const [{ isCurrent }] = mocks.copySocialReaderFiles.mock.calls[0];
+
+    expect(isCurrent()).toBe(true);
+    await LocksController.stopReaderFileCopy();
+    expect(isCurrent()).toBe(false);
+  });
+
+  it('forgets the deleted session at logout, so the next sign-in on the page copies again', async () => {
+    signIn(COPY_GRANT);
+    mocks.settleSocialCopyRuns.mockResolvedValue(undefined);
+
+    await LocksController.stopReaderFileCopy();
+    await LocksController.logout(false);
+    await LocksController.fetchUnlockedList({ readerPubky: READER });
+
+    expect(mocks.copySocialReaderFiles).toHaveBeenCalledOnce();
+  });
+
+  it('starts the copy again after a deletion that failed', async () => {
+    signIn(COPY_GRANT);
+    mocks.settleSocialCopyRuns.mockResolvedValue(undefined);
+
+    await LocksController.stopReaderFileCopy();
+    LocksController.resumeReaderFileCopy();
+    await LocksController.fetchUnlockedList({ readerPubky: READER });
+
+    expect(mocks.copySocialReaderFiles).toHaveBeenCalledOnce();
   });
 
   it.each(reads)('starts it on %s without waiting for it, and reads both roots', async (_label, read, appRead) => {

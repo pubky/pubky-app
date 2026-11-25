@@ -160,9 +160,12 @@ The copy is permanent code; a reader who comes back at any time is copied the fi
    the marker last, its attachment URLs pointing at the copies, and the cached row replaced with it. The copied
    marker carries `unlocked_at`, the source marker's write time (0 when it has none), so the Unlocked screen keeps
    its order. A file that fails (a full quota, say) is left for a later page load while the rest are copied; a run
-   whose account signs out is finished by the next read after a sign-in on the same page. A legacy purchase file
-   that cannot be parsed, or a name in neither layout, stays where it is, and a replica whose marker cannot be parsed
-   is skipped.
+   whose account signs out is finished by the next read after a sign-in on the same page. A replica the new root
+   already has (another browser copied it) is not copied again, but a cached row that still points at the social
+   copies is replaced from the new marker, so it does not lose its attachments once #3207 deletes them. Account
+   deletion lists the files once, so it first stops the copy runs of the page before their next write, waits for
+   them, and starts none for that session until it changes. A legacy purchase file that cannot be parsed, or a name in neither layout, stays where it is,
+   and a replica whose marker cannot be parsed is skipped.
 2. **Record.** A run in which no file failed to copy (empty social roots included) while its session is still
    current is recorded by `LocksController` in localStorage, per browser and account
    (`src/libs/locks/reader-files-copied.ts`). Nothing is written to the homeserver, so reading the record costs no
@@ -620,8 +623,9 @@ profile/(own)/layout.tsx → ProfilePageContainer
   sidebar and the screen would enumerate `/priv` twice.
 - **`completedLockIds` only counts an exact `<lockId>/post.json` entry.** Anything else under
   a lock folder is an interrupted replication, which must not appear as unlocked content.
-- **Sorted by unlock time.** Homeserver fetches use the marker's `Last-Modified`, so the
-  ordering key is server-authoritative rather than a number in the body. A just-completed unlock
+- **Sorted by unlock time.** Homeserver fetches use the marker's `unlocked_at` when it has one (a marker copied
+  from `/priv/social/`, [Reader files before #3206](#reader-files-before-3206)), otherwise its `Last-Modified`, so
+  a copied item keeps its original unlock time and a fresh one is server-authoritative. A just-completed unlock
   uses the device clock in IndexedDB until the next fetch supplies the server timestamp. It costs no
   extra request — the header rides along with the marker read. (Path order is no help: `list` sorts
   by path and a lock id is a hash.)
