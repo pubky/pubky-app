@@ -29,7 +29,7 @@ export const VRT_ROOT_TESTID = 'vrt-root';
  *
  * Playwright leaves the cursor in the centre of the body by default. On a
  * small mobile viewport that can land on an action button, so the
- * screenshot captures the `:hover` state (e.g. `bg-brand/30` instead of
+ * screenshot captures the `:hover` state (e.g. `bg-brand/32` instead of
  * `bg-brand/16`). `page.unhover()` is not enough — it moves the cursor to
  * the body, which can still sit over a centre-screen button.
  *

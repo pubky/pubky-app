@@ -166,7 +166,7 @@ export function PostInputActionBar({
         >
           <Container className="flex items-center gap-2" overrideDefaults>
             <PostButtonIconComponent className={cn('size-4 text-brand', postButtonIconClassName)} strokeWidth={2} />
-            <Typography as="span" size="sm" className={'text-brand'}>
+            <Typography as="span" overrideDefaults>
               {postButtonText}
             </Typography>
           </Container>
