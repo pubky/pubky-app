@@ -158,7 +158,10 @@ describe('merging folds of a random history', () => {
       const trustedHead = merged.trusted?.head ?? BigInt(0);
       const deleted = [...lastEvents(history, trustedHead)].filter(([, event]) => event.type === 'DEL');
 
-      expect(deleted.filter(([path]) => merged.live.has(path)).map(([path]) => path), `seed ${seed}`).toEqual([]);
+      expect(
+        deleted.filter(([path]) => merged.live.has(path)).map(([path]) => path),
+        `seed ${seed}`,
+      ).toEqual([]);
     });
   });
 });

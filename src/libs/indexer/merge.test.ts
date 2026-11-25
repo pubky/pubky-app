@@ -168,7 +168,7 @@ describe('compactRuns', () => {
 
 describe('evictBelow', () => {
   it('removes runs ending at or below the cutoff and trims the run spanning it', () => {
-    const runs = [runOf(0, 3, [rec('a', 1)]), runOf(3, 5, [rec('b', 5)]), runOf(4, 10, [rec('c', 4), rec('d', 8)])];
+    const runs = [runOf(0, 3, [rec('a', 1)]), runOf(3, 5, [rec('b', 5)]), runOf(3, 10, [rec('c', 4), rec('d', 8)])];
 
     expect(evictBelow(runs, c(5))).toEqual([runOf(5, 10, [rec('d', 8)])]);
   });
