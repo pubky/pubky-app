@@ -18,6 +18,7 @@ import {
   buildV1CdnUrl,
   carryNexusResponseStartedAt,
   createFetchOptions,
+  fetchNexus,
   getNexusResponseStartedAt,
   mapNexusResponse,
   markNexusResponseStartedAt,
@@ -132,6 +133,20 @@ describe('nexus.utils', () => {
     it('refuses to build a CDN URL rather than a path on the app origin', () => {
       expect(() => buildCdnUrl('avatar/user123')).toThrow('No CDN URL is configured');
       expect(() => buildV1CdnUrl('files/user123/abc.png/main')).toThrow('No CDN URL is configured');
+    });
+
+    it('builds Nexus URLs on an origin that never resolves, never as a relative path', () => {
+      expect(buildNexusUrl('user/alice/details')).toBe('https://nexus.invalid/v1/user/alice/details');
+    });
+
+    it('refuses to fetch Nexus at all', async () => {
+      const fetch = vi.spyOn(globalThis, 'fetch');
+
+      await expect(fetchNexus({ url: buildNexusUrl('user/alice/details') })).rejects.toThrow(
+        'Nexus is not an indexer source',
+      );
+      expect(fetch).not.toHaveBeenCalled();
+      fetch.mockRestore();
     });
   });
 

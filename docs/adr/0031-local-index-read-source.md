@@ -46,6 +46,11 @@ default, today's behavior), `local`, or `local,nexus`. Without `nexus` the Nexus
   reads the file through `HomeserverService.getPublicFileBytes`, and an avatar through the image of the profile in
   the index's view. The avatar URL keeps the profile version, so a new avatar is a new cache entry; sign-out deletes
   the cache with the index database (`docs/pwa.md`, _Local media_).
+- **Server.** The Next.js server has no index: without `nexus`, page metadata, mention names and preview images
+  (`fetchWithValidation`, the mention lookup) make no request and render the generic fallback a failed fetch
+  renders. A Nexus URL built without a configured one gets the origin `https://nexus.invalid`, which never resolves
+  and which the local index ignores, and `fetchNexus` refuses to send anything without the source, so no stray
+  request can reach the app's own origin.
 - **Freshness.** Every owned write lands through `HomeserverService`, which now tells subscribers the path written;
   `IndexerService` refreshes the account after each public write. Each change of the index marks every cached post
   stream dirty (`postStreamDirtyRegistry`, scope `local_index`), so a stream rebuilds on its next initial load and
@@ -63,6 +68,7 @@ default, today's behavior), `local`, or `local,nexus`. Without `nexus` the Nexus
 
 - A signed-out visitor has no local index: with `local` alone every read is unavailable.
 - Global search, rankings and hot tags need Nexus.
+- Without Nexus a shared link previews with the generic title, description and image.
 - The first sync of a new device crawls the whole scope before the first answer, and the sign-in bootstrap waits for
   it.
 - Without Nexus there are no resized variants: feeds and thumbnails load the original file. Media shows only in a

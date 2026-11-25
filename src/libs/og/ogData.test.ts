@@ -1,5 +1,6 @@
 import sharp from 'sharp';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { resetRuntimeConfigForTests } from '@/libs/runtime-config/runtime-config';
 
 vi.mock('@/services/nexus/file/file.api', () => ({
   filesApi: {
@@ -52,6 +53,20 @@ describe('fetchProfileForMetadata', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('Not Found', { status: 404 }));
 
     expect(await fetchProfileForMetadata('somepubky')).toBeNull();
+  });
+
+  it('returns null with no request without the nexus source, so the profile renders its generic metadata', async () => {
+    const SOURCES_ENV = 'PUBKY_RUNTIME_INDEXER_SOURCES';
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    process.env[SOURCES_ENV] = 'local';
+    resetRuntimeConfigForTests();
+    try {
+      expect(await fetchProfileForMetadata('somepubky')).toBeNull();
+    } finally {
+      delete process.env[SOURCES_ENV];
+      resetRuntimeConfigForTests();
+    }
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 
   it('defaults counts to zeros when the counts request 404s but the user resolves', async () => {

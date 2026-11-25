@@ -34,13 +34,18 @@ import type {
 const FETCH_NEXUS_OPERATION = 'fetchNexus';
 
 /**
+ * The origin of Nexus URLs when a deploy without the nexus source leaves the Nexus URL unset. The local index routes on
+ * the path alone, and `.invalid` never resolves: a URL that reached the network fails there, where a relative path
+ * would have hit this app.
+ */
+const UNSET_NEXUS_ORIGIN = 'https://nexus.invalid';
+
+/**
  * Builds a Nexus API URL: `{nexus}/{version}/{endpoint}`, with `endpoint` spelled without a version.
  * Every call uses `NEXUS_API_VERSION`; the one documented `/v0` call passes its version explicitly.
- * A deploy that reads from the local index alone may leave the Nexus URL unset: the URL is then the
- * bare path, which is all the local index routes on.
  */
 export function buildNexusUrl(endpoint: string, { version = NEXUS_API_VERSION }: TBuildNexusUrlOptions = {}): string {
-  return `${getNexusUrl() ?? ''}/${version}/${endpoint}`;
+  return `${getNexusUrl() ?? UNSET_NEXUS_ORIGIN}/${version}/${endpoint}`;
 }
 
 /** The CDN bases exist whenever Nexus is a source; a media URL without one would point at the app's own origin. */
@@ -127,6 +132,14 @@ export function createFetchOptions({ method = HttpMethod.GET, body }: TCreateFet
  * @throws {NexusError} When response is not ok or JSON parsing fails
  */
 export async function fetchNexus<T>({ url, method = HttpMethod.GET, body = null }: TFetchNexusParams): Promise<T> {
+  // Without the nexus source `buildNexusUrl` spells a bare path for the local index; fetched, it would hit this app.
+  if (!hasNexusSource()) {
+    throw Err.validation(ValidationErrorCode.MISSING_FIELD, 'Nexus is not an indexer source', {
+      service: ErrorService.Nexus,
+      operation: FETCH_NEXUS_OPERATION,
+      context: { endpoint: url },
+    });
+  }
   const response = await safeFetch(
     url,
     createFetchOptions({ method, body }),
