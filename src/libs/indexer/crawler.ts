@@ -274,30 +274,41 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
    * The highest cursor of a write older than the window, read backwards over the windowed paths one batch at a
    * time. Only a write dates its cursor: a delete of an old path can happen any time later. Zero when none has one:
    * the users' history is younger than the window.
+   *
+   * The cursor is the homeserver's, but the users only sample it: a seed whose last old post is a year old would set
+   * a year-wide window for everyone after it. So the search goes on through the batches until a write within a tenth
+   * of the window from its edge settles it, and only a settled start is kept for the homeserver; any other serves
+   * this call alone, and the next call, with other users, searches again.
    */
   async function windowStartOf(ctx: OperationContext, homeserver: string, users: readonly string[]) {
     const known = ctx.windowStart.get(homeserver);
     if (known !== undefined) return known;
     const { windowStart } = await store.readHomeserverState(homeserver);
-    let cursor = windowStart !== null && now() - windowStart.foundAt < WINDOW_START_TTL_MS ? windowStart.cursor : null;
-    if (cursor === null) {
-      const cutoff = BigInt(Math.floor(now() - options.windowDays * DAY_MS)) * MICROS_PER_MS;
-      const olderThanWindow = (page: AuthoredStreamEvent[]) =>
-        page.reduce<Cursor | null>((found, event) => {
-          const time = event.type === 'PUT' ? domain.timeOfPath(event.path) : null;
-          const older = time !== null && time < cutoff;
-          return older && (found === null || event.cursor > found) ? event.cursor : found;
-        }, null);
-      const read = reader(ctx, homeserver, windowPaths, options.pageLimit);
-      for (const batch of chunks(users, options.batchSize)) {
-        cursor = await readBackward(batch, options.pageLimit, read, olderThanWindow);
-        if (cursor !== null) break;
-      }
-      cursor = cursor ?? CURSOR_ZERO;
-      await store.patchHomeserverState(homeserver, { windowStart: { cursor, foundAt: now() } });
+    if (windowStart !== null && now() - windowStart.foundAt < WINDOW_START_TTL_MS) {
+      ctx.windowStart.set(homeserver, windowStart.cursor);
+      return windowStart.cursor;
     }
-    ctx.windowStart.set(homeserver, cursor);
-    return cursor;
+    const windowMs = options.windowDays * DAY_MS;
+    const microsBefore = (ms: number) => BigInt(Math.floor(now() - ms)) * MICROS_PER_MS;
+    const cutoff = microsBefore(windowMs);
+    const settled = microsBefore(windowMs + windowMs / 10);
+    const olderThanWindow = (page: AuthoredStreamEvent[]) =>
+      page.reduce<{ cursor: Cursor; time: bigint } | null>((found, event) => {
+        const time = event.type === 'PUT' ? domain.timeOfPath(event.path) : null;
+        const older = time !== null && time < cutoff;
+        return older && (found === null || event.cursor > found.cursor) ? { cursor: event.cursor, time } : found;
+      }, null);
+    const read = reader(ctx, homeserver, windowPaths, options.pageLimit);
+    let best: { cursor: Cursor; time: bigint } | null = null;
+    for (const batch of chunks(users, options.batchSize)) {
+      const found = await readBackward(batch, options.pageLimit, read, olderThanWindow);
+      if (found !== null && (best === null || found.cursor > best.cursor)) best = found;
+      if (best !== null && best.time >= settled) break;
+    }
+    if (best === null || best.time < settled) return best?.cursor ?? CURSOR_ZERO;
+    await store.patchHomeserverState(homeserver, { windowStart: { cursor: best.cursor, foundAt: now() } });
+    ctx.windowStart.set(homeserver, best.cursor);
+    return best.cursor;
   }
 
   /** Crawls the group for the users batch by batch, each from the tail `tailOf` gives for its stored head. */

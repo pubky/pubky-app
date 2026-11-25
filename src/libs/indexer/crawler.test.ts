@@ -280,7 +280,7 @@ describe('syncScope window', () => {
     network.addUser('alice', 'hs1').addUser('bob', 'hs2');
     network.put('alice', `${FOLLOWS}bob`);
     network.putJson('alice', postPath(40 * DAY_MS), { text: 'old' });
-    const windowStart = network.putJson('alice', postPath(35 * DAY_MS), { text: 'old too' });
+    const windowStart = network.putJson('alice', postPath(32 * DAY_MS), { text: 'old too' });
     network.putJson('alice', postPath(2 * DAY_MS), { text: 'recent' });
     network.putJson('alice', postPath(DAY_MS), { text: 'newest' });
     network.putJson('bob', postPath(3 * DAY_MS), { text: 'young homeserver' });
@@ -294,8 +294,26 @@ describe('syncScope window', () => {
     ]);
     expect(await served(store, 'alice', 'hs1', ACTIVITY)).toEqual(network.liveOf('alice', [POSTS], windowStart));
     expect((await store.readHomeserverState('hs1')).windowStart).toEqual({ cursor: windowStart, foundAt: NOW });
-    expect((await store.readHomeserverState('hs2')).windowStart?.cursor).toBe(CURSOR_ZERO);
+    // Bob's history alone proves nothing about the homeserver's: the next sync looks again.
+    expect((await store.readHomeserverState('hs2')).windowStart).toBeNull();
     expect(await served(store, 'bob', 'hs2', ACTIVITY)).toEqual(network.liveOf('bob', [POSTS]));
+  });
+
+  it("keeps a seed's long quiet spell out of the window its followees are read from", async () => {
+    const { network, store, crawler } = harness();
+    network.addHomeserver('hs1').addUser('alice', 'hs1').addUser('bob', 'hs1');
+    network.put('alice', `${FOLLOWS}bob`);
+    network.putJson('alice', postPath(200 * DAY_MS), { text: 'long ago' });
+    network.putJson('bob', postPath(100 * DAY_MS), { text: 'outside the window' });
+    const windowStart = network.putJson('bob', postPath(31 * DAY_MS), { text: 'just before the window' });
+    network.putJson('bob', postPath(10 * DAY_MS), { text: 'inside' });
+    network.putJson('alice', postPath(DAY_MS), { text: 'back' });
+
+    await crawler.syncScope('alice');
+
+    expect([...(await servedData(store, 'alice', 'hs1', ACTIVITY)).values()]).toEqual([{ text: 'back' }]);
+    expect([...(await servedData(store, 'bob', 'hs1', ACTIVITY)).values()]).toEqual([{ text: 'inside' }]);
+    expect((await store.readHomeserverState('hs1')).windowStart).toEqual({ cursor: windowStart, foundAt: NOW });
   });
 
   it('dates the window start by writes only, never by a later delete of an old post', async () => {
