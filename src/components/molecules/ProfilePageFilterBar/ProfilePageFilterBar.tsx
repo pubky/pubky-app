@@ -5,9 +5,11 @@ import { Bell, HeartHandshake, Library, LockOpen, MessageCircle, StickyNote, Tag
 import { type FilterBarPageType, PROFILE_PAGE_TYPES } from '@/app/profile/types';
 import { Container } from '@/atoms/Container/Container';
 import { FilterItem, FilterItemIcon, FilterItemLabel } from '@/atoms/Filter/Filter';
+import { HintTooltip } from '@/atoms/HintTooltip/HintTooltip';
 import { Spinner } from '@/atoms/Spinner/Spinner';
 import { Typography } from '@/atoms/Typography/Typography';
 import { LAYOUT_DIMENSIONS } from '@/config/layoutDimensions';
+import { useLocalScopeHint, withLocalScopeHint } from '@/hooks/useLocalScopeHint/useLocalScopeHint';
 import type { ProfileStats } from '@/hooks/useProfileStats/useProfileStats.types';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useStickyWhenFits } from '@/hooks/useStickyWhenFits/useStickyWhenFits';
@@ -27,6 +29,8 @@ export interface ProfilePageFilterBarItem {
   showCount?: boolean;
   /** Whether this item should only be shown for own profile */
   ownProfileOnly?: boolean;
+  /** The count is of what reaches the user's network when the local index answers it, rather than of everyone. */
+  networkCount?: boolean;
 }
 export interface ProfilePageFilterBarProps {
   items?: ProfilePageFilterBarItem[];
@@ -54,6 +58,8 @@ const FILTER_ITEMS_CONFIG: Array<{
   statKey?: keyof ProfileStats;
   /** Whether this item should only be shown for own profile */
   ownProfileOnly?: boolean;
+  /** Counts reverse edges, which the local index sees only from the user's network */
+  networkCount?: boolean;
 }> = [
   {
     icon: Bell,
@@ -83,6 +89,7 @@ const FILTER_ITEMS_CONFIG: Array<{
     label: 'Followers',
     pageType: PROFILE_PAGE_TYPES.FOLLOWERS,
     statKey: 'followers',
+    networkCount: true,
   },
   {
     icon: UsersRound2,
@@ -97,6 +104,7 @@ const FILTER_ITEMS_CONFIG: Array<{
     label: 'Friends',
     pageType: PROFILE_PAGE_TYPES.FRIENDS,
     statKey: 'friends',
+    networkCount: true,
   },
   {
     icon: Tag,
@@ -104,6 +112,7 @@ const FILTER_ITEMS_CONFIG: Array<{
     label: 'Tagged',
     pageType: PROFILE_PAGE_TYPES.UNIQUE_TAGS,
     statKey: 'uniqueTags',
+    networkCount: true,
   },
   {
     icon: Library,
@@ -153,6 +162,7 @@ export const getDefaultItems = ({
       showCount: isUnlocked ? unlockedCount !== null : config.statKey !== undefined,
       count: isUnlocked ? (unlockedCount ?? undefined) : statCount,
       ownProfileOnly: config.ownProfileOnly,
+      networkCount: config.networkCount,
     };
   });
 };
@@ -165,6 +175,7 @@ export function ProfilePageFilterBar({
   isOwnProfile = true,
 }: ProfilePageFilterBarProps) {
   const { requireAuth } = useRequireAuth();
+  const scopeHint = useLocalScopeHint();
 
   // Use provided items or generate default items with stats
   const filterItems = React.useMemo(() => {
@@ -206,12 +217,18 @@ export function ProfilePageFilterBar({
           const isActive = item.pageType === activePage;
           const showCount = item.showCount !== false;
           const isLoading = showCount && item.count === undefined;
+          const countHint = item.networkCount ? scopeHint : undefined;
           return (
             <FilterItem
               key={index}
               isSelected={isActive}
               onClick={() => handleItemClick(item.pageType)}
               className="w-full items-start justify-between px-0 py-1"
+              aria-label={
+                countHint && showCount && !isLoading
+                  ? withLocalScopeHint(`${item.label} ${item.count}`, countHint)
+                  : undefined
+              }
             >
               <Container
                 data-cy={`profile-filter-item-${item.id}`}
@@ -225,13 +242,15 @@ export function ProfilePageFilterBar({
                 (isLoading ? (
                   <Spinner size="sm" className="size-4" />
                 ) : (
-                  <Typography
-                    data-cy={`profile-filter-item-${item.id}-count`}
-                    as="span"
-                    className={`text-base font-medium ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}
-                  >
-                    {item.count}
-                  </Typography>
+                  <HintTooltip hint={countHint}>
+                    <Typography
+                      data-cy={`profile-filter-item-${item.id}-count`}
+                      as="span"
+                      className={`text-base font-medium ${isActive ? 'text-foreground' : 'text-muted-foreground'}`}
+                    >
+                      {item.count}
+                    </Typography>
+                  </HintTooltip>
                 ))}
             </FilterItem>
           );

@@ -4,7 +4,7 @@ import { resetRuntimeConfigForTests } from '@/libs/runtime-config/runtime-config
 import type { Pubky } from '@/models/models.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { authInitialState } from '@/stores/auth/auth.types';
-import { LOCAL_SCOPE_HINT, useLocalScopeHint } from './useLocalScopeHint';
+import { LOCAL_SCOPE_HINT, localScopeHintSuffix, useLocalScopeHint, withLocalScopeHint } from './useLocalScopeHint';
 
 const ALICE = 'alice-pubky' as Pubky;
 
@@ -44,5 +44,16 @@ describe('useLocalScopeHint', () => {
     const { result } = renderHook(() => useLocalScopeHint());
 
     expect(result.current).toBeUndefined();
+  });
+});
+
+describe('withLocalScopeHint', () => {
+  it('ends an accessible name with the hint', () => {
+    expect(withLocalScopeHint('Repost (3)', LOCAL_SCOPE_HINT)).toBe('Repost (3), in your network');
+  });
+
+  it('leaves the name alone without a hint', () => {
+    expect(withLocalScopeHint('Repost (3)', undefined)).toBe('Repost (3)');
+    expect(localScopeHintSuffix(undefined)).toBe('');
   });
 });

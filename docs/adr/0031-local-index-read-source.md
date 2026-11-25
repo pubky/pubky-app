@@ -95,7 +95,12 @@ default, today's behavior), `local`, or `local,nexus`. Without `nexus` the Nexus
 - **Visibility.** With `local` among the sources the privacy settings page shows the index's live status (state,
   users per hop, homeservers reached and failed, request counts, last sync, first sync, saved index) and a sync
   button. Sidebar rankings and suggestions answered by the index (hot tags, active users, who to follow) carry an
-  "In your network" hint, decided by the sources and the session rather than per response.
+  "In your network" hint, decided by the sources and the session rather than per response (`useLocalScopeHint`).
+  Counts that range over reverse edges carry the same hint without changing layout: a tooltip on the number
+  (`HintTooltip`) and the hint appended to the accessible name (`withLocalScopeHint`). They are a post's tag, reply
+  and repost counts (`PostActionsBar`), a tag chip's tagger count (`PostTag`, through the `Tag` atom's `countHint`),
+  and a profile's follower, friend and tagged counts (`ProfilePageFilterBar`, the own profile header). Following
+  counts are left unmarked: a user's follows are their own file, which the index reads whole.
 
 ## Consequences
 
@@ -118,8 +123,9 @@ default, today's behavior), `local`, or `local,nexus`. Without `nexus` the Nexus
 
 ### Neutral ⚠️
 
-- Counts, rankings and reverse edges are correct for the crawled scope, not globally. Only the sidebar rankings say
-  so; counts on posts and profiles carry no hint yet.
+- Counts, rankings and reverse edges are correct for the crawled scope, not globally. The sidebar rankings and the
+  main post and profile counts say so; the follower counts in user lists and popovers, and post and reply totals
+  limited by the activity window, carry no hint yet.
 - One more IndexedDB database per account, deleted on sign-out.
 
 ## Alternatives Considered

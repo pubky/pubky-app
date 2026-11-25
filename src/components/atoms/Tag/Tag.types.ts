@@ -9,5 +9,7 @@ export interface TagProps {
   'data-testid'?: string;
   'data-cy'?: string;
   countDataCy?: string;
+  /** A tooltip on the count saying what it counts. */
+  countHint?: string;
   style?: React.CSSProperties;
 }

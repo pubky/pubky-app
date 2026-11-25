@@ -1,7 +1,27 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
+import { resetRuntimeConfigForTests } from '@/libs/runtime-config/runtime-config';
 import { getTagDayPalette } from '@/libs/utils/tagPalette';
+import type { Pubky } from '@/models/models.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { authInitialState } from '@/stores/auth/auth.types';
 import { PostTag } from './PostTag';
+
+const VIEWER = 'viewer-pubky' as Pubky;
+
+/** Runs the app on the local index for a signed-in viewer, as counts are then of their network. */
+function runLocalIndexForViewer() {
+  process.env.PUBKY_RUNTIME_INDEXER_SOURCES = 'local';
+  resetRuntimeConfigForTests();
+  useAuthStore.setState({ currentUserPubky: VIEWER });
+}
+
+function runNexus() {
+  delete process.env.PUBKY_RUNTIME_INDEXER_SOURCES;
+  resetRuntimeConfigForTests();
+  useAuthStore.setState({ ...authInitialState });
+}
 
 describe('PostTag', () => {
   it('calls onClick when tag is clicked', () => {
@@ -129,5 +149,28 @@ describe('PostTag', () => {
   it('merges a custom className', () => {
     render(<PostTag label="bitcoin" className="custom-tag" />);
     expect(screen.getByRole('button')).toHaveClass('custom-tag', 'rounded-md', 'h-8');
+  });
+
+  describe('with the local index', () => {
+    afterEach(runNexus);
+
+    it('says the tagger count is of the viewer network in the accessible name', () => {
+      runLocalIndexForViewer();
+      render(
+        <TooltipProvider>
+          <PostTag label="bitcoin" count={16} />
+        </TooltipProvider>,
+      );
+
+      expect(screen.getByRole('button', { name: 'bitcoin tag (16 posts), in your network' })).toBeInTheDocument();
+      expect(screen.getByText('16')).toHaveAttribute('data-cy', 'post-tag-count');
+    });
+
+    it('leaves a tag without a count unmarked', () => {
+      runLocalIndexForViewer();
+      render(<PostTag label="bitcoin" />);
+
+      expect(screen.getByRole('button', { name: 'bitcoin tag' })).toBeInTheDocument();
+    });
   });
 });

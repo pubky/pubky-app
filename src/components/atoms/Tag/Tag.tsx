@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useTagDayPalette } from '@/hooks/useTagDayPalette/useTagDayPalette';
 import { getTagPaletteStyle } from '@/libs/utils/tagPalette';
 import { cn, generateRandomColor, hexToRgba } from '@/libs/utils/utils';
+import { HintTooltip } from '../HintTooltip/HintTooltip';
 import { Typography } from '../Typography/Typography';
 import type { TagProps } from './Tag.types';
 
@@ -16,6 +17,7 @@ export const Tag = ({
   'data-testid': dataTestId,
   'data-cy': dataCy,
   countDataCy,
+  countHint,
   ...props
 }: TagProps) => {
   const [isHovered, setIsHovered] = React.useState(false);
@@ -71,14 +73,16 @@ export const Tag = ({
       </Typography>
 
       {count !== undefined && (
-        <Typography
-          size="sm"
-          className="ml-1.5 shrink-0 font-medium text-(--tag-count)"
-          data-testid="tag-count"
-          data-cy={countDataCy || `${dataCy || 'tag'}-count`}
-        >
-          {count}
-        </Typography>
+        <HintTooltip hint={countHint}>
+          <Typography
+            size="sm"
+            className="ml-1.5 shrink-0 font-medium text-(--tag-count)"
+            data-testid="tag-count"
+            data-cy={countDataCy || `${dataCy || 'tag'}-count`}
+          >
+            {count}
+          </Typography>
+        </HintTooltip>
       )}
     </div>
   );
