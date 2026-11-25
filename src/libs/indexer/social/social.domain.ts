@@ -71,6 +71,13 @@ function postIdOfPath(path: string): string | null {
   return isTimestampId(segments[0]) ? segments[0] : null;
 }
 
+/** The edit id of a `posts/{postId}/{editId}.json` path, the time that version was written; `null` for any other path. */
+function editIdOfPath(path: string): string | null {
+  if (postIdOfPath(path) === null) return null;
+  const editId = path.slice(path.lastIndexOf('/') + 1, -JSON_EXT.length);
+  return isTimestampId(editId) ? editId : null;
+}
+
 /** The followee of a follow path, `null` for any other path. */
 export function followeeOfPath(path: string): string | null {
   if (!path.startsWith(FOLLOWS_PREFIX) || !path.endsWith(JSON_EXT)) return null;
@@ -319,9 +326,10 @@ export function createSocialDomain(): Domain<SocialData> {
         return null;
       }
     },
+    // A version's own id, not the post's: an edit of an old post is written now.
     timeOfPath: (path) => {
-      const postId = postIdOfPath(path);
-      return postId === null ? null : BigInt(idMicros(postId));
+      const editId = editIdOfPath(path);
+      return editId === null ? null : BigInt(idMicros(editId));
     },
     reviveData,
   };

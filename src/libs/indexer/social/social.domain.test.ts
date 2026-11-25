@@ -258,11 +258,10 @@ describe('needsBody', () => {
 });
 
 describe('timeOfPath', () => {
-  it('is the post id time in microseconds for every version, null elsewhere', () => {
-    const created = BigInt(idMicros(posts.article.id));
-
-    expect(domain.timeOfPath(posts.article.path)).toBe(created);
-    expect(domain.timeOfPath(posts.articleEdit.path)).toBe(created);
+  it('is the time each version was written in microseconds, its edit id, null elsewhere', () => {
+    expect(domain.timeOfPath(posts.article.path)).toBe(BigInt(idMicros(posts.article.id)));
+    expect(domain.timeOfPath(posts.articleEdit.path)).toBe(BigInt(idMicros(posts.articleEdit.editId)));
+    expect(posts.articleEdit.editId).not.toBe(posts.articleEdit.id);
     expect(domain.timeOfPath(PROFILE_PATH)).toBeNull();
     expect(domain.timeOfPath(tagWrite(BRAN, 0).path)).toBeNull();
     expect(domain.timeOfPath(buildFollow(ALICE, BRAN).path)).toBeNull();

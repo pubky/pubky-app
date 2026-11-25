@@ -20,7 +20,10 @@ export interface Domain<D> {
   needsBody(path: string): boolean;
   /** Parses and validates a fetched file. `null` means invalid: the record is kept without data. */
   reduce(author: string, path: string, bytes: Uint8Array): D | null;
-  /** Creation time in microseconds when the path encodes one, else `null`. Finds the window start. */
+  /**
+   * When the record at the path was written, in microseconds, when the path encodes it, else `null`. Finds the window
+   * start, so it is the time of the write itself: a new version of an old record is new.
+   */
   timeOfPath(path: string): bigint | null;
   /**
    * Integrity check of fetched bytes against the event's content hash. A record read from a saved index keeps only
