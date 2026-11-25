@@ -9,10 +9,12 @@ import {
   formatList,
   formatMinutes,
   formatMoney,
+  getBlockedNote,
   getFactLabel,
   getResourceDetailRows,
   getResourceFactRows,
   getResourceSummary,
+  isBlockedCard,
   type TResourceFactsCard,
 } from './ResourceFacts.utils';
 
@@ -353,5 +355,43 @@ describe('fact rows', () => {
     );
     expect(rows.map((row) => row.label)).toEqual(['Address', 'Kind', 'Map', 'Mined', 'Pool']);
     expect(rows[2].href).toBe('https://www.openstreetmap.org/?mlat=47.37000&mlon=8.54000#map=17/47.37000/8.54000');
+  });
+});
+
+describe('a card whose site refused Pinakes’ read', () => {
+  const post = card(
+    'SocialMediaPosting',
+    { blocked: 'true' },
+    { type_path: ['Thing', 'CreativeWork', 'Article', 'SocialMediaPosting'] },
+  );
+
+  it('lists no raw `blocked` row, and keeps every other fact', () => {
+    const rows = getResourceDetailRows({ ...post, facts: { blocked: 'true', author: 'someone' } }, { withDates: true });
+
+    expect(rows.map((row) => `${row.label}: ${row.value}`)).toEqual(['Author: someone']);
+  });
+
+  it('says in one plain line that the site shared nothing, with the site’s name and the card’s shape', () => {
+    expect(getBlockedNote(post, 'instagram.com')).toBe("instagram.com didn't share this post's details.");
+    expect(getBlockedNote(card('VideoObject', { blocked: 'true' }), 'tiktok.com')).toBe(
+      "tiktok.com didn't share this video's details.",
+    );
+    expect(getBlockedNote(card('Person', { blocked: 'true' }), 'threads.com')).toBe(
+      "threads.com didn't share this profile's details.",
+    );
+    expect(getBlockedNote(card('WebPage', { blocked: 'true' }), null)).toBe(
+      "The site didn't share this page's details.",
+    );
+  });
+
+  it('says nothing for a card that was read', () => {
+    expect(isBlockedCard(post)).toBe(true);
+    expect(isBlockedCard(card('SocialMediaPosting', { blocked: 'TRUE' }))).toBe(true);
+    // Only "true" counts, the value Pinakes sends.
+    for (const value of ['false', '0', 'no', 'null']) {
+      expect(isBlockedCard(card('SocialMediaPosting', { blocked: value }))).toBe(false);
+    }
+    expect(isBlockedCard(card('SocialMediaPosting', { author: 'someone' }))).toBe(false);
+    expect(getBlockedNote(card('SocialMediaPosting', { author: 'someone' }), 'x.com')).toBeNull();
   });
 });

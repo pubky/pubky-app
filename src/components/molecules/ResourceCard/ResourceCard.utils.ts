@@ -43,10 +43,27 @@ const TYPE_LABEL_WORDS: Readonly<Record<string, string>> = {
   TVSeries: 'TV series',
 };
 
+/** The one other type word: a site's own object as Pinakes titles it ("Post on x.com"), for `getShapeWord`. */
+const SHAPE_WORDS: Readonly<Record<string, string>> = {
+  SocialMediaPosting: 'post',
+  VideoObject: 'video',
+  Person: 'profile',
+};
+
+/** What a card of a site's own object is, as Pinakes titles it (`post`, `video`, `profile`; nearest type wins), else `null`. */
+export function getShapeWord(card: Pick<TPinakesCard, 'type' | 'type_path'>): string | null {
+  return (
+    getNearestTypes(card)
+      .map((type) => (Object.hasOwn(SHAPE_WORDS, type) ? SHAPE_WORDS[type] : undefined))
+      .find(Boolean) ?? null
+  );
+}
+
 /**
  * The card's type in plain words, from its schema.org `type` (else the deepest `type_path` entry):
  * `MusicRecording` → `Song`, `VideoObject` → `Video`, `FAQPage` → `FAQ page`. `null` when the card
- * has no type. Every place that names a card's type reads it here, so they all say the same word.
+ * has no type. Every place that names a card's type reads it here, so they all say the same word
+ * (but for a site's own object named as Pinakes titles it, `getShapeWord`).
  */
 export function getResourceTypeLabel(card: Pick<TPinakesCard, 'type' | 'type_path'>): string | null {
   const type = card.type || card.type_path.at(-1);

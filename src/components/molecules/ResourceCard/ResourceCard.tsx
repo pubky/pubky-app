@@ -56,7 +56,13 @@ import { ResourceCredits } from './ResourceCredits';
 import { getCardAttribution, getMapDataCredit, getShownCredits } from './ResourceCredits.utils';
 import { ResourceEpisodes } from './ResourceEpisodes';
 import { ResourceFactList } from './ResourceFactList';
-import { formatDuration, getResourceDetailRows, getResourceSummary } from './ResourceFacts.utils';
+import {
+  formatDuration,
+  getBlockedNote,
+  getResourceDetailRows,
+  getResourceSummary,
+  isBlockedCard,
+} from './ResourceFacts.utils';
 import { useResourceSurface } from './ResourceSurfaceContext';
 import { getResourceTypeIcon } from './ResourceTypeIcon';
 import { useResourceFallback } from './useResourceFallback';
@@ -92,14 +98,16 @@ const DETAIL_ICON_SIZE = 14;
  * organizer and attendance; a card with an audio `stream` (an episode, or a recording's preview)
  * plays it, and a show its latest episodes (`ResourceEpisodes`). A sparse card fills a missing
  * description or image from a general database in its
- * group (`useResourceFallback`), then a missing title or image from the link's OpenGraph data.
+ * group (`useResourceFallback`), then a missing title or image from the link's OpenGraph data
+ * (never for a link whose site refused Pinakes' read, `isBlockedCard`: that page is a sign-in wall).
  *
  * The title opens the resource's page (in a new tab where links may not navigate), and so does a
  * click on the card outside its controls (`ResourceCardFrame`); a tap on the image opens it in the
  * post's lightbox. The header's source is the one link out (none on a `missing` card). A player or
  * embed in the body (`isBodyReplaced`) is its own set of controls, as the episode's audio is, and
  * takes the image's place too. The `large` card heads the resource page, lists every fact under
- * "Details" (not while an X post's embed is its body, `isBodyReplaced`) and is no click-through.
+ * "Details" (not while an X post's embed is its body, `isBodyReplaced`), with one plain line in place
+ * of a refused read's `blocked` fact (`getBlockedNote`), and is no click-through.
  * Only `http(s)` values become links, images or audio.
  */
 export function ResourceCard({
@@ -142,7 +150,9 @@ export function ResourceCard({
   const canFillIn = isLarge || wasOnScreen;
 
   const imageUrl = getHttpUrl(card.image);
-  const description = card.description?.trim() || null;
+  // A refused read's description is Pinakes' "Blocked by the site.", not the object's: the resource
+  // page's Details say it in words (`getBlockedNote`), a feed card shows its title alone.
+  const description = isBlockedCard(card) ? null : card.description?.trim() || null;
   // An own image that failed to load leaves the slot to a group member's, like no image at all.
   const ownImageShown = imageUrl !== null && !failedImages.includes(imageUrl);
   const fallback = useResourceFallback(card, {
@@ -153,9 +163,15 @@ export function ResourceCard({
   const cardImage = ownImageShown ? imageUrl : (fallback.image?.value ?? null);
   const usableCardImage = cardImage && !failedImages.includes(cardImage) ? cardImage : null;
   // A title or image the card still lacks comes from the link's own preview (`/api/og-metadata`),
-  // asked once the group has answered so a group image is never first replaced by the OG one.
+  // asked once the group has answered so a group image is never first replaced by the OG one. Not
+  // for a link whose site refused Pinakes' read: the app's read meets the same wall, and its
+  // preview is the site's sign-in page (its logo), not the object.
   const needsOg =
-    canFillIn && titleUrl !== null && !fallback.pending && (!card.name?.trim() || usableCardImage === null);
+    canFillIn &&
+    titleUrl !== null &&
+    !fallback.pending &&
+    !isBlockedCard(card) &&
+    (!card.name?.trim() || usableCardImage === null);
   const { metadata: og } = useOgMetadata(needsOg ? titleUrl : null);
   const ogImage = getHttpUrl(og?.image);
   const shownImage = usableCardImage ?? (ogImage && !failedImages.includes(ogImage) ? ogImage : null);
@@ -491,7 +507,9 @@ export function ResourceCard({
         )}
         {isLarge && chain && !isBodyReplaced && <ResourceChainBody view={chain} target={titleTarget} />}
 
-        {isLarge && <ResourceFactList rows={detailRows} />}
+        {isLarge && (
+          <ResourceFactList rows={detailRows} note={isBodyReplaced ? null : getBlockedNote(card, siteName)} />
+        )}
 
         <ResourceCredits
           credits={mapCredit ? [...credits, mapCredit] : credits}

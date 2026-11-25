@@ -25,6 +25,7 @@ schema drift in a re-capture fails the typecheck.
 | `by-uri.mb-group.json`          | 200  | `/v1/resources/by-uri?uri=https%3A%2F%2Fmusicbrainz.org%2Fartist%2F056e4f3e-d505-4dad-8ec1-d04f521cbb56`                                            | `MusicGroup` (Daft Punk)                    |
 | `by-uri.missing.json`           | 200  | `/v1/resources/by-uri?uri=https%3A%2F%2Fmusic.apple.com%2Fsong%2F1440717826`                                                                        | `WebPage`, status `missing`                 |
 | `by-uri.unreachable.json`       | 200  | `/v1/resources/by-uri?uri=https%3A%2F%2Fwww.binance.com%2F`                                                                                         | `WebPage`, status `unreachable`             |
+| `by-uri.instagram-blocked.json` | 200  | `/v1/resources/by-uri?uri=https%3A%2F%2Fwww.instagram.com%2Fp%2FDgB34vHhlaT%2F` (captured 2026-11-25)                                               | `SocialMediaPosting`, `facts.blocked`       |
 | `by-uri.not-found.json`         | 404  | `/v1/resources/by-uri?uri=https%3A%2F%2Fexample.com%2Fpinakes-does-not-know-this-link-1104`                                                         | unknown link: `{"error": "link not known"}` |
 | `search.related.json`           | 200  | `/v1/search?related=0f3820de1c3532e8805674cc996978f9&limit=5`                                                                                       | 5 related cards of the video                |
 | `search.related.because.json`   | 200  | `/v1/search?related=<id>`                                                                                                                           | 2 related cards, each with `because`        |
@@ -36,7 +37,9 @@ same paper as `by-uri.scholarly-article`, read by its publisher's link: its `als
 `doi:` identifier by its service (`"site": "DOI"`). `by-uri.pubky` is a Loopky deck
 (found with `/v1/search?sort=recent&limit=500`): a `pubky://` card whose `image` is `pubky://` too
 and whose `open_in` names the client that opens it. `by-uri.missing` (the object
-is gone upstream) and `by-uri.unreachable` were found with `/v1/search?sort=recent&limit=500`.
+is gone upstream) and `by-uri.unreachable` were found with `/v1/search?sort=recent&limit=500`. `by-uri.instagram-blocked` is
+a post whose site refused Pinakes' read (a sign-in wall): the card of the link's shape alone ("Post on
+instagram.com"), marked `blocked`.
 
 The four `by-uri.mb-*.json` captures are MusicBrainz cards, captured the same way. The recording
 is _Bohemian Rhapsody_ (found with `/v1/search?type=MusicRecording&limit=200`).
