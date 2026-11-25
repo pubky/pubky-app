@@ -120,6 +120,7 @@ describe('SocialMigrationApplication', () => {
 
     it("refuses to list another account's 0.x tree through this session", async () => {
       await expect(SocialMigrationApplication.hasLegacyData({ session, pubky: fakeOwner(2) })).rejects.toMatchObject({
+        code: AuthErrorCode.UNAUTHORIZED,
         service: ErrorService.Homeserver,
       });
     });

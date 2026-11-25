@@ -1,11 +1,14 @@
+import type { Session } from '@synonymdev/pubky';
 import { buildPost, buildUri, decodeObject, listPrefix } from 'pubky-social-specs';
 import { fakeOwner } from 'pubky-social-specs/testing';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { AuthErrorCode } from '@/libs/error/error.codes';
 import { hasHttpStatus } from '@/libs/error/error.utils';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { stubMemoryHomeserver } from './homeserver';
 import { freezeSpecClock, restoreSpecClock } from './spec-clock';
+import { asOpaque } from './type-assertions';
 
 describe('stubMemoryHomeserver', () => {
   const owner = fakeOwner(1);
@@ -51,6 +54,30 @@ describe('stubMemoryHomeserver', () => {
     expect(hasHttpStatus(error, HttpStatusCode.NOT_FOUND)).toBe(true);
     expect(await HomeserverService.list({ baseDirectory: `${listPrefix(owner, 'public')}posts/` })).toEqual([]);
     await expect(HomeserverService.deleteIdempotent(url)).resolves.toBeUndefined();
+  });
+
+  it("lists through the explicit session's own tree and refuses one for another account", async () => {
+    const { friend, friendSession, session } = stubMemoryHomeserver(owner);
+    const own = buildPost(owner, { content: 'Mine' });
+    const theirs = buildPost(friend, { content: 'Theirs' });
+    await session.storage.putBytes(own.path, own.body);
+    await friendSession.storage.putBytes(theirs.path, theirs.body);
+
+    const friendSignedIn = asOpaque<Session>(friendSession);
+
+    await expect(
+      HomeserverService.list({
+        baseDirectory: `${listPrefix(friend, 'public')}posts/`,
+        session: friendSignedIn,
+      }),
+    ).resolves.toEqual([theirs.url]);
+
+    await expect(
+      HomeserverService.list({
+        baseDirectory: `${listPrefix(owner, 'public')}posts/`,
+        session: friendSignedIn,
+      }),
+    ).rejects.toMatchObject({ code: AuthErrorCode.UNAUTHORIZED });
   });
 
   it("reads a friend's public tree and refuses to write to it", async () => {
