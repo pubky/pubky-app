@@ -171,8 +171,9 @@ const SSE_LINE_BREAK = /\r\n|\r|\n/;
 const fieldOf = (fields: readonly string[], prefix: string): string | undefined =>
   fields.find((field) => field.startsWith(prefix))?.slice(prefix.length);
 
-const toStreamEvent = (eventType: string, data: readonly string[]): THomeserverStreamEvent | null => {
-  if (eventType !== 'PUT' && eventType !== 'DEL') return null;
+const toStreamEvent = (type: string, data: readonly string[]): THomeserverStreamEvent | null => {
+  const eventType = type === 'PUT' || type === 'DEL' ? type : null;
+  if (eventType === null) return null;
   const [resource, ...fields] = data;
   const owner = resource?.startsWith(PUBKY_PROTOCOL) ? extractPubkyZ32(resource) : null;
   const path = resource?.startsWith(PUBKY_PROTOCOL) ? toPathname(resource) : null;

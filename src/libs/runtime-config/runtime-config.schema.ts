@@ -353,6 +353,8 @@ export const runtimeConfigValueSchema = networkConfigValueSchema.extend({
 const lenientRuntimeConfigValueSchema = runtimeConfigValueSchema.extend({
   // Zod v4 `.default()` bypasses validation; `.prefault()` sends the staging fallback through pubkyValue.
   moderationId: pubkyValue.prefault(APP_RUNTIME_DEFAULTS.moderationId),
+  // Dev and tests always resolve a Nexus URL (the staging default), whatever the indexer sources.
+  nexusUrl: urlValue,
 });
 
 export type RuntimeConfig = z.infer<typeof runtimeConfigValueSchema>;

@@ -57,7 +57,7 @@ describe('createIndexerTransport', () => {
       const events = await transport.readEvents({
         homeserver: 'hs',
         users: [
-          { user: 'alice', cursor: 10n },
+          { user: 'alice', cursor: BigInt(10) },
           { user: 'bob', cursor: null },
         ],
         paths: ['/pub/'],
@@ -78,8 +78,8 @@ describe('createIndexerTransport', () => {
         signal,
       });
       expect(events).toEqual([
-        { type: 'PUT', author: 'alice', path: '/pub/a', cursor: 18446744073709551615n, hash: 'aA==' },
-        { type: 'DEL', author: 'bob', path: '/pub/b', cursor: 3n },
+        { type: 'PUT', author: 'alice', path: '/pub/a', cursor: BigInt('18446744073709551615'), hash: 'aA==' },
+        { type: 'DEL', author: 'bob', path: '/pub/b', cursor: BigInt(3) },
       ]);
     });
 
