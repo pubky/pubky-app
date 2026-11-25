@@ -7,6 +7,7 @@ import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import type { TMergedTag } from '@/hooks/useOtherLinkTags/useOtherLinkTags.types';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import type { UseResourceTagsResult } from '@/hooks/useResourceTags/useResourceTags.types';
+import { useStableValue } from '@/hooks/useStableValue/useStableValue';
 import { canonicalizeTagLabel, generateRandomColor, getDisplayTags } from '@/libs/utils/utils';
 import { PostTag } from '@/molecules/PostTag/PostTag';
 import { PostTagAddButton } from '@/molecules/PostTagAddButton/PostTagAddButton';
@@ -82,7 +83,9 @@ export function ResourceTagBar({
     if (!other) return undefined;
     return getTagPeople(tag.isSecondary ? undefined : tags.find((own) => own.label === tag.label), other);
   };
-  const { enrichedTags } = useEnrichedTags([
+  // One list while its tags read the same: a new one on every render would make useEnrichedTags look up
+  // the taggers again (a Dexie live query) and its answer render the bar again, without end.
+  const barTags = useStableValue([
     ...tags.map((tag): TagWithAvatars => {
       const people = peopleOf(tag);
       if (!people) return { ...tag, taggers: tag.taggers.map((tagger) => ({ id: tagger })) };
@@ -104,6 +107,7 @@ export function ResourceTagBar({
         isSecondary: true,
       })),
   ]);
+  const { enrichedTags } = useEnrichedTags(barTags);
   const viewerTags = tags.filter((tag) => tag.relationship);
   // An own chip toggles the viewer's tag; a secondary one adds it to this link (it then is an own chip).
   const pressTag = (tag: TagWithAvatars) =>

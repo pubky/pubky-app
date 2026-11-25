@@ -24,6 +24,7 @@ const mocks = vi.hoisted(() => ({
   addTag: vi.fn(),
   toggleTag: vi.fn(),
   onAddingChange: vi.fn(),
+  enrichedInputs: [] as unknown[][],
 }));
 
 vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
@@ -38,7 +39,10 @@ vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
 }));
 vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({ useIsMobile: () => mocks.isMobile }));
 vi.mock('@/hooks/useEnrichedTags/useEnrichedTags', () => ({
-  useEnrichedTags: (tags: unknown[]) => ({ enrichedTags: tags, isLoading: false }),
+  useEnrichedTags: (tags: unknown[]) => {
+    mocks.enrichedInputs.push(tags);
+    return { enrichedTags: tags, isLoading: false };
+  },
 }));
 // The hover detail as the content it is given (the default avatars when none).
 vi.mock('@/molecules/PostTagPopoverWrapper/PostTagPopoverWrapper', () => ({
@@ -209,6 +213,29 @@ describe('ResourceTagBar', () => {
     mocks.inputProps = [];
     mocks.tags = NEXUS_TAGS;
     mocks.addTag.mockResolvedValue({ success: true });
+  });
+
+  it('hands the tagger lookup one list while the tags stay the same, a new one once they change', () => {
+    // A new list on every render made useEnrichedTags look up the taggers again (a Dexie live query) and its
+    // answer render the bar again: a page with cards kept a CPU core busy for as long as it was open.
+    mocks.enrichedInputs = [];
+    const { rerender } = render(<TagBar />);
+    rerender(<TagBar />);
+    rerender(<TagBar />);
+    expect(new Set(mocks.enrichedInputs).size).toBe(1);
+
+    mocks.tags = TWO_TAGS;
+    rerender(<TagBar />);
+    const changed = mocks.enrichedInputs[mocks.enrichedInputs.length - 1];
+    expect(changed).not.toBe(mocks.enrichedInputs[0]);
+    expect(changed).toHaveLength(2);
+
+    // The resource page: the other services' tags join the list, the same while they stay the same.
+    mocks.enrichedInputs = [];
+    rerender(<TagBar otherTags={OTHER_TAGS} uri={LINK} />);
+    rerender(<TagBar otherTags={OTHER_TAGS} uri={LINK} />);
+    rerender(<TagBar otherTags={[...OTHER_TAGS]} uri={LINK} />);
+    expect(new Set(mocks.enrichedInputs).size).toBe(1);
   });
 
   it('shows each tag with its count, the viewer’s own selected, then "+"', () => {

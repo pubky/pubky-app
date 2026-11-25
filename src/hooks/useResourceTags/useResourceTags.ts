@@ -11,6 +11,9 @@ import { RESOURCE_TAGS_LIMIT } from '@/services/nexus/resource/resource.constant
 import { useAuthStore } from '@/stores/auth/auth.store';
 import type { TResourceTagWriteResult, UseResourceTagsOptions, UseResourceTagsResult } from './useResourceTags.types';
 
+/** No tags yet, or no link: one list, so the hooks keyed on it are not handed a new one on every render. */
+const NO_TAGS: NexusTag[] = [];
+
 /**
  * `isTruncated`: Nexus answered with as many labels as it is asked for, so the link may have more.
  * Taken from Nexus' answer, never from the list after the viewer's writes: removing a tag from a
@@ -131,7 +134,7 @@ export function useResourceTags(
   const toggleTag = (tag: Pick<NexusTag, 'label' | 'relationship' | 'tag_uri'>) =>
     write(tag.label, !tag.relationship, tag.tag_uri);
 
-  const tags = current?.tags ?? [];
+  const tags = current?.tags ?? NO_TAGS;
   return {
     tags,
     isLoading: Boolean(uri) && !current,

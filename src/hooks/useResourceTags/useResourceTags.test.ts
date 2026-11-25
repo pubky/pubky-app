@@ -122,6 +122,21 @@ describe('useResourceTags', () => {
     expect(result.current.tags.map((tag) => tag.label)).toEqual(['berlin', 'city', 'travel']);
   });
 
+  it('hands out one empty list while it reads and without a link, not a new one on every render', () => {
+    // A new `[]` on every render made the hooks keyed on the list (the resource page's participants, through a
+    // Dexie live query) subscribe again on every render for as long as the tags loaded.
+    vi.mocked(TagController.fetchResourceTags).mockReturnValue(new Promise(() => {}));
+    const reading = renderHook(() => useResourceTags(URI));
+    const whileReading = reading.result.current.tags;
+    reading.rerender();
+    expect(reading.result.current.tags).toBe(whileReading);
+
+    const noLink = renderHook(() => useResourceTags(null));
+    const withoutLink = noLink.result.current.tags;
+    noLink.rerender();
+    expect(noLink.result.current.tags).toBe(withoutLink);
+  });
+
   it('reads nothing without a link', () => {
     const { result } = renderHook(() => useResourceTags(null));
 
