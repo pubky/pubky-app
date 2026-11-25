@@ -12,6 +12,7 @@ import {
 import { goToHomePage } from '../../support/header';
 import {
   expectAppWithoutNexus,
+  FIRST_SYNC_TIMEOUT,
   forbidNexusRequests,
   localIndexStat,
   type LocalNetwork,
@@ -141,14 +142,17 @@ describe('local index: reading the network without Nexus', () => {
     });
 
     cy.get('#local-index-sync-btn').filter(':visible').should('not.be.disabled');
-    localIndexStat('Stream requests')
-      .invoke('text')
-      .then((requestsBefore) => {
-        cy.get('#local-index-sync-btn').filter(':visible').click();
-        localIndexStat('Stream requests').should(($value) => {
-          expect(Number($value.text()), 'stream requests after the sync').to.be.greaterThan(Number(requestsBefore));
-        });
-      });
+    // The card counts the requests of the last sync alone, the same for two syncs of an unchanged network, so the
+    // button's sync shows in the homeserver reads it sends
+    const streamReads: string[] = [];
+    cy.intercept({ url: /\/events-stream(\?|$)/ }, (req) => {
+      streamReads.push(req.url);
+    });
+    cy.get('#local-index-sync-btn').filter(':visible').click();
+    cy.wrap(streamReads, FIRST_SYNC_TIMEOUT).should('have.length.greaterThan', 0);
+    localIndexStat('Stream requests').should(($value) => {
+      expect(Number($value.text()), 'stream requests of the last sync').to.be.greaterThan(0);
+    });
     localIndexStat('State').should('have.text', 'Idle');
     cy.get('#local-index-sync-btn').filter(':visible').should('not.be.disabled').and('contain.text', 'Sync now');
   });
