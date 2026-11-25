@@ -530,7 +530,7 @@ describe('Header Components', () => {
 
       const collectionsButton = document.querySelector('.lucide-library')?.closest('button');
       expect(collectionsButton).toBeTruthy();
-      expect(collectionsButton).toHaveClass('bg-glass');
+      expect(collectionsButton).toHaveClass('bg-glass', 'border-border', 'light:shadow-none');
       expect(collectionsButton).not.toHaveClass('border-brand');
       expect(screen.getByRole('button', { name: 'Collections' })).toBeInTheDocument();
       expect(screen.queryByText('New')).not.toBeInTheDocument();

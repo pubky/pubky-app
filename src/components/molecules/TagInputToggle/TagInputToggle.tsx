@@ -90,7 +90,7 @@ export function TagInputToggle({
       transition={{ duration: 0.2, ease: 'easeInOut' }}
       style={{ originX: 0 }}
       className={cn(
-        'relative h-8 overflow-hidden rounded-md border border-dashed border-input shadow-sm',
+        'relative h-8 overflow-hidden rounded-md border border-dashed border-input shadow-sm light:shadow-none',
         containerClassName,
       )}
     >

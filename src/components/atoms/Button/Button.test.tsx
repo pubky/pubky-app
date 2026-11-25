@@ -17,7 +17,7 @@ describe('Button', () => {
   it('renders different variants correctly', () => {
     const { rerender } = render(<Button variant={ButtonVariant.SECONDARY}>Secondary</Button>);
     let button = screen.getByRole('button');
-    expect(button).toHaveClass('bg-secondary', 'text-secondary-foreground');
+    expect(button).toHaveClass('border-transparent', 'bg-secondary', 'text-secondary-foreground');
 
     rerender(<Button variant={ButtonVariant.OUTLINE}>Outline</Button>);
     button = screen.getByRole('button');

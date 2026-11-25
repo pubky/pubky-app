@@ -84,7 +84,7 @@ export function Fab() {
     'bg-glass-strong backdrop-blur-lg',
     'hover:bg-brand',
     'text-foreground',
-    'shadow-xl transition-colors',
+    'shadow-xl transition-colors light:shadow-md',
     'group cursor-pointer',
     'z-40',
   );

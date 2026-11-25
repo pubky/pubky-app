@@ -17,6 +17,7 @@ describe('Card', () => {
     );
 
     expect(screen.getByTestId('complete-card')).toBeInTheDocument();
+    expect(screen.getByTestId('complete-card')).toHaveClass('shadow-sm', 'light:shadow-none');
     expect(screen.getByText('Card Title')).toBeInTheDocument();
     expect(screen.getByText('Card Description')).toBeInTheDocument();
     expect(screen.getByText('Action')).toBeInTheDocument();

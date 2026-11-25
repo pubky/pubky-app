@@ -245,7 +245,7 @@ function CollectionHeroContent({
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 -z-10 bg-cover bg-center bg-no-repeat"
           style={{
-            backgroundImage: `linear-gradient(to right, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.6) 45%, rgba(0,0,0,0.2) 100%), url(${coverImage})`,
+            backgroundImage: `linear-gradient(to right, var(--collection-hero-cover-from) 0%, var(--collection-hero-cover-mid) 45%, var(--collection-hero-cover-to) 100%), url(${coverImage})`,
           }}
         />
       )}

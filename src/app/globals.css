@@ -169,21 +169,26 @@ body:has([data-slot='shop-route']) {
    * Translucent chrome fill for outline-style controls (nav buttons, FAB,
    * sidebar "See all", checkbox/radio wells). Mirrors the Figma variable
    * `custom/background dark:input\30`: a faint white wash in dark mode and
-   * the opaque card surface in light mode, so these controls read lighter
-   * than the grey light page. Hover follows `custom/accent dark:input\50`.
+   * the opaque page surface in light mode. Hover follows `custom/accent dark:input\50`.
    */
   --glass: rgb(255 255 255 / 0.05);
   --glass-hover: rgb(255 255 255 / 0.1);
   --glass-strong: rgb(255 255 255 / 0.12);
   /**
    * Surface of the `outline` Button variant. Dark mode matches `bg-foreground/4`.
-   * Light mode uses the card surface, so these buttons read lighter than the page.
+   * Light mode uses the page surface (`#ffffff`).
    */
   --button-outline: color-mix(in oklab, var(--foreground) 4%, transparent);
   /** Surface of the post action pills (tag / reply / repost / save / more): secondary in dark, page in light. */
   --action-pill: var(--secondary);
-  /** Surface of a post or link embedded in a post (repost preview, link preview): muted in dark, page in light. */
+  /** Surface of a post or link embedded in a post (repost preview, link preview): muted in both themes. */
   --embed: var(--muted);
+  /** Collection cover-image scrims: dark wash in dark mode, white wash in light mode (Figma v3). */
+  --collection-cover-from: rgb(0 0 0 / 0.7);
+  --collection-cover-to: rgb(0 0 0 / 0.35);
+  --collection-hero-cover-from: rgb(0 0 0 / 0.92);
+  --collection-hero-cover-mid: rgb(0 0 0 / 0.6);
+  --collection-hero-cover-to: rgb(0 0 0 / 0.2);
   /** Wash laid over a tag's colour in PostTag (Figma `alpha/30` → 70% background). */
   --tag-overlay: rgb(5 5 10 / 0.7);
   --toast-action-muted: oklch(0.218 0.006 286);
@@ -449,24 +454,24 @@ body:has([data-slot='shop-route']) {
 
 /**
  * Light theme. Values come from the Figma "Pubky SHADCN" library, mode "Light"
- * (Feed - Column - 1280px (Light Mode) frame). Tokens the frame does not
- * exercise (primary, accent, popover, toast, search chrome) mirror the dark
- * scale so hover/active states keep the same relative contrast.
+ * (Feed - Column - 1280px (Light Mode) v3 frame). Tokens the frame does not
+ * exercise (primary, popover, toast, search chrome) keep lower contrast along
+ * the same neutral scale so hover/active states stay readable and soft.
  */
 .light {
-  --background: #eeeef6;
+  --background: #ffffff;
   --foreground: #303034;
-  --card: #ffffff;
+  --card: #f8f8fc;
   --card-foreground: #303034;
   --popover: #ffffff;
   --popover-foreground: #303034;
   --primary: #48484f;
   --primary-foreground: #eeeef6;
-  --secondary: #d4d4db;
+  --secondary: #eeeef6;
   --secondary-foreground: #1d1d20;
-  --muted: #d4d4db;
+  --muted: #eeeef6;
   --muted-foreground: #717176;
-  --accent: #c4c4cc;
+  --accent: #d4d4db;
   --accent-foreground: #303034;
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.985 0.013 17.38);
@@ -475,31 +480,35 @@ body:has([data-slot='shop-route']) {
   --error-foreground: var(--color-red-700);
   --border: #babac1;
   --input: #babac1;
-  --ring: oklch(0.55 0.008 286.145);
-  --sidebar-background: #ffffff;
-  --sidebar: #ffffff;
+  --ring: #89898f;
+  --sidebar-background: #eeeef6;
+  --sidebar: #eeeef6;
   --sidebar-foreground: #303034;
   --sidebar-primary: #88ad00;
   --sidebar-primary-foreground: #303034;
   --sidebar-accent: #d4d4db;
   --sidebar-accent-foreground: #303034;
   --sidebar-border: #babac1;
-  --sidebar-ring: oklch(0.55 0.008 274.863);
+  --sidebar-ring: #89898f;
   --brand: #88ad00;
   --brand-foreground: var(--foreground);
-  --glass: var(--card);
+  --glass: var(--background);
   --glass-hover: var(--accent);
-  --glass-strong: var(--card);
-  --button-outline: var(--card);
+  --glass-strong: var(--background);
+  --button-outline: var(--background);
   --action-pill: var(--background);
-  --embed: var(--background);
+  --collection-cover-from: rgb(255 255 255 / 0.9);
+  --collection-cover-to: rgb(255 255 255 / 0.5);
+  --collection-hero-cover-from: rgb(255 255 255 / 0.94);
+  --collection-hero-cover-mid: rgb(255 255 255 / 0.72);
+  --collection-hero-cover-to: rgb(255 255 255 / 0.4);
   --tag-overlay: rgb(255 255 255 / 0.7);
   --toast-action-muted: #f4f4f9;
   --toast-action-muted-hover-border: #e4e4ec;
   --transparent: rgb(255 255 255 / 0);
-  --search-closed-from: #eeeef6;
-  --search-closed-to: #dfdfe7;
-  --search-expanded-fade: rgb(238 238 246 / 0.5);
+  --search-closed-from: #ffffff;
+  --search-closed-to: #efefef;
+  --search-expanded-fade: rgb(255 255 255 / 0.5);
   /* Figma `shadow/*` colour: the dark-mode solid black reads as a smudge on the light page. */
   --search-expanded-shadow: rgb(5 5 10 / 0.25);
 }
@@ -514,10 +523,10 @@ body:has([data-slot='shop-route']) {
   /*
     emoji-mart paints its search field and dividers with `--color-border`, which Tailwind
     also defines as the opaque border token. On the white light picker that reads as a heavy
-    grey slab, so hand it the page surface (and the accent on hover) instead.
+    grey slab, so hand it the muted surface (and the accent on hover) instead.
   */
   .light em-emoji-picker {
-    --color-border: var(--background);
+    --color-border: var(--muted);
     --color-border-over: var(--accent);
   }
   /*

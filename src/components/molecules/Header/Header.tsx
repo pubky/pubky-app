@@ -102,7 +102,7 @@ const NavigationButton = ({
   const button = (
     <Button
       data-cy={href ? undefined : dataCy}
-      className={cn('h-12 w-12 backdrop-blur-md', isActive ? '' : 'border bg-glass')}
+      className={cn('h-12 w-12 backdrop-blur-md', isActive ? '' : 'border border-border bg-glass light:shadow-none')}
       variant="secondary"
       size="icon"
       aria-label={label}
@@ -211,7 +211,7 @@ export function HeaderExploreNavigationButtons({
           <Button
             variant="secondary"
             size="icon"
-            className="h-12 w-12 border bg-glass"
+            className="h-12 w-12 border border-border bg-glass light:shadow-none"
             onClick={() => setShowSignInDialog(true)}
             aria-label="Join Pubky"
             data-testid="header-explore-join-button"
