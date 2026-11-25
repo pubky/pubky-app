@@ -72,7 +72,9 @@ default, today's behavior), `local`, or `local,nexus`. Without `nexus` the Nexus
   the stream coordinator polls its head as soon as that sync ends, rather than an interval later.
 - **Visitors.** Without a session the coordinator runs a visitor index (`start(null)`) in its own database: no scope,
   no saved index, no tab coordination. Shared post and profile links render from what it loads on demand, through
-  the same `more` hints. Starting an account's index deletes the visitor's. With `local` as the only source a
+  the same `more` hints. A post loads with its author's profile in one batch of leaf reads, and the posts it replies
+  to or quotes start loading as soon as it lands, so a shared post costs one lookup per author and the thread the
+  page asks for next is already on its way. Starting an account's index deletes the visitor's. With `local` as the only source a
   visitor's Home, Hot and Search show a join prompt instead of a feed nothing can answer; sidebar rankings and
   suggestions answer empty.
 - **Mutes.** The account's muted users go to `setExcluded` from a Dexie live query on the local muted stream, where a
