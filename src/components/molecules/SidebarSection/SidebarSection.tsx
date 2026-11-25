@@ -3,6 +3,7 @@ import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { SidebarButton } from '@/atoms/SidebarButton/SidebarButton';
+import { Typography } from '@/atoms/Typography/Typography';
 import { cn } from '@/libs/utils/utils';
 import type { SidebarSectionProps } from './SidebarSection.types';
 
@@ -10,10 +11,11 @@ import type { SidebarSectionProps } from './SidebarSection.types';
  * SidebarSection
  *
  * Reusable section wrapper for sidebar content.
- * Includes title, optional header action, content area, and optional footer button.
+ * Includes title, optional hint, optional header action, content area, and optional footer button.
  */
 export function SidebarSection({
   title,
+  hint,
   children,
   headerActionIcon: HeaderActionIcon,
   onHeaderAction,
@@ -50,6 +52,11 @@ export function SidebarSection({
           </Button>
         )}
       </Container>
+      {hint && (
+        <Typography as="p" size="sm" className="text-muted-foreground">
+          {hint}
+        </Typography>
+      )}
 
       {/* Content */}
       <Container overrideDefaults className="flex w-full min-w-0 flex-col gap-2">

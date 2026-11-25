@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { UsersRound } from 'lucide-react';
 import { APP_ROUTES, getUserProfileUrl } from '@/app/routes';
+import { useLocalScopeHint } from '@/hooks/useLocalScopeHint/useLocalScopeHint';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
 import { useUserStream } from '@/hooks/useUserStream/useUserStream';
 import {
@@ -45,6 +46,7 @@ export function WhoToFollowSidebar() {
     preserveFollowedUserIds: preservedFollowedUserIds,
   });
   const visibleUsers = isAuthenticated ? users : users.slice(0, WHO_TO_FOLLOW_USER_LIMIT);
+  const scopeHint = useLocalScopeHint();
 
   const handleUserClick = (pubky: Pubky) => {
     router.push(getUserProfileUrl(pubky, currentUserPubky));
@@ -56,6 +58,7 @@ export function WhoToFollowSidebar() {
   return (
     <SidebarSection
       title={'Who to follow'}
+      hint={scopeHint}
       footerIcon={UsersRound}
       footerText={'See all'}
       onFooterClick={handleSeeAll}
