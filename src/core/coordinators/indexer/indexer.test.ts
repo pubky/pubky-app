@@ -3,7 +3,7 @@ import { IndexerController } from '@/controllers/indexer/indexer';
 import type { Pubky } from '@/models/models.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { authInitialState } from '@/stores/auth/auth.types';
-import { mockSession } from '@/test-utils/pubky';
+import { mockGrantReference, mockSession } from '@/test-utils/pubky';
 import { IndexerCoordinator } from './indexer';
 
 const config = vi.hoisted(() => ({ local: true, respectVisibility: true }));
@@ -104,6 +104,27 @@ describe('IndexerCoordinator', () => {
     useAuthStore.setState({ session: null });
     expect(IndexerController.startLocalIndex).toHaveBeenLastCalledWith(null);
     expect(IndexerController.stopLocalIndex).not.toHaveBeenCalled();
+  });
+
+  it('runs the account’s index while its saved session restores, and the visitor’s behind the gate or after a failed restore', () => {
+    // A reload: the saved reference is in the store before the session is restored.
+    useAuthStore.setState({ sessionReference: mockGrantReference(), currentUserPubky: ALICE, restoreStatus: 'idle' });
+    coordinator.start();
+    expect(IndexerController.startLocalIndex).toHaveBeenCalledExactlyOnceWith(ALICE);
+
+    useAuthStore.setState({ restoreStatus: 'restoring' });
+    useAuthStore.setState({ session: mockSession(), restoreStatus: 'ready' });
+    expect(IndexerController.startLocalIndex).toHaveBeenCalledOnce();
+
+    useAuthStore.setState({ session: null, restoreStatus: 'social-migration' });
+    expect(IndexerController.startLocalIndex).toHaveBeenLastCalledWith(null);
+
+    useAuthStore.setState({ restoreStatus: 'restoring' });
+    expect(IndexerController.startLocalIndex).toHaveBeenLastCalledWith(ALICE);
+
+    useAuthStore.setState({ restoreStatus: 'temporary-error' });
+    expect(IndexerController.startLocalIndex).toHaveBeenLastCalledWith(null);
+    expect(IndexerController.startLocalIndex).toHaveBeenCalledTimes(4);
   });
 
   it('starts for a session already in the store, and stops the index with the coordinator', () => {
