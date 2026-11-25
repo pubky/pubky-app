@@ -4,6 +4,8 @@ import { ClientErrorCode, RateLimitErrorCode, ServerErrorCode } from '@/libs/err
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpMethod } from '@/libs/http/http.types';
 import { parseResponseOrThrow } from '@/libs/http/response.utils';
+import { resetRuntimeConfigForTests, RUNTIME_CONFIG_WINDOW_KEY } from '@/libs/runtime-config/runtime-config';
+import { NETWORK_RUNTIME_DEFAULTS } from '@/libs/runtime-config/runtime-config.schema';
 import { filesApi } from '@/services/nexus/file/file.api';
 import { nexusQueryClient } from '@/services/nexus/nexus.query-client';
 import { NexusPostStreamService } from '@/services/nexus/stream/posts/postStream';
@@ -13,6 +15,7 @@ import {
   buildCdnUrl,
   buildNexusUrl,
   buildUrlWithQuery,
+  buildV1CdnUrl,
   carryNexusResponseStartedAt,
   createFetchOptions,
   getNexusResponseStartedAt,
@@ -111,6 +114,24 @@ describe('nexus.utils', () => {
   describe('buildCdnUrl', () => {
     it('should build correct CDN URL', () => {
       expect(buildCdnUrl('avatar/user123')).toBe(`${getCdnUrl()}/avatar/user123`);
+    });
+  });
+
+  describe('a deploy without the nexus source and its URLs', () => {
+    beforeEach(() => {
+      const { nexusUrl: _nexusUrl, cdnUrl: _cdnUrl, ...network } = NETWORK_RUNTIME_DEFAULTS;
+      window[RUNTIME_CONFIG_WINDOW_KEY] = { ...network, indexerSources: ['local'] };
+      resetRuntimeConfigForTests();
+    });
+
+    afterEach(() => {
+      Reflect.deleteProperty(window, RUNTIME_CONFIG_WINDOW_KEY);
+      resetRuntimeConfigForTests();
+    });
+
+    it('refuses to build a CDN URL rather than a path on the app origin', () => {
+      expect(() => buildCdnUrl('avatar/user123')).toThrow('No CDN URL is configured');
+      expect(() => buildV1CdnUrl('files/user123/abc.png/main')).toThrow('No CDN URL is configured');
     });
   });
 

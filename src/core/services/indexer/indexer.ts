@@ -7,6 +7,7 @@ import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { postStreamDirtyRegistry } from '@/services/local/stream/posts/postStreamDirtyRegistry';
+import { clearLocalMedia, serveLocalMedia } from './indexer.media';
 import { createIndexerTransport } from './indexer.transport';
 
 const databaseName = (owner: Pubky) => `${INDEXER_DATABASE_PREFIX}${owner}`;
@@ -49,6 +50,12 @@ export class IndexerService {
     // A sync or older history can place posts anywhere in a cached stream page: each stream rebuilds on its next
     // initial load, and mounted feeds keep their position.
     const stopInvalidating = indexer.onChange(() => postStreamDirtyRegistry.markDirty('local_index'));
+    // Without Nexus, avatars and attachments are same-origin paths the service worker asks this page to fill.
+    const stopServingMedia = serveLocalMedia({
+      profile: (user) => indexer.view().profile(user),
+      ensureUser: (user) => indexer.ensureUser(user),
+      readFile: (uri) => HomeserverService.getPublicFileBytes({ url: uri }),
+    });
     indexer.start(owner);
     this.running = {
       owner,
@@ -57,6 +64,7 @@ export class IndexerService {
       unsubscribe: () => {
         stopRefreshing();
         stopInvalidating();
+        stopServingMedia();
       },
     };
   }
@@ -80,10 +88,10 @@ export class IndexerService {
     this.running?.indexer.resume();
   }
 
-  /** Deletes `owner`'s index database, stopping the index first when it runs. */
+  /** Deletes `owner`'s index database and the media the service worker kept, stopping the index first when it runs. */
   static async clear(owner: Pubky): Promise<void> {
     if (this.running?.owner === owner) this.stop();
-    await createIdbStore<SocialData>(databaseName(owner)).destroy();
+    await Promise.all([createIdbStore<SocialData>(databaseName(owner)).destroy(), clearLocalMedia()]);
   }
 
   /** The running index, `null` when this tab runs none. */

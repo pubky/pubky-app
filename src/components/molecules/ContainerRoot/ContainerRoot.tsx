@@ -28,8 +28,10 @@ export function RootContainer({ children }: RootContainerProps) {
   // multi-megabyte file: warm DNS + TLS for it while the document is still parsing.
   // Two hints, because a CORS request (the Nexus API) cannot reuse a non-credentialed
   // preconnected socket. The origins are equal on production; keeping both hints means
-  // the config can split them (staging CDN vs API host) without losing either.
-  const cdnOrigin = new URL(getCdnUrl()).origin;
+  // the config can split them (staging CDN vs API host) without losing either. Without
+  // the nexus source, media is same-origin and neither hint applies.
+  const cdnUrl = hasNexusSource() ? getCdnUrl() : undefined;
+  const cdnOrigin = cdnUrl ? new URL(cdnUrl).origin : null;
   const nexusUrl = hasNexusSource() ? getNexusUrl() : undefined;
   const nexusOrigin = nexusUrl ? new URL(nexusUrl).origin : null;
 
@@ -52,7 +54,7 @@ export function RootContainer({ children }: RootContainerProps) {
           their position here is for readability: the runtime-config script above stays the
           first element in <body>, as its own comment requires.
         */}
-        <link rel="preconnect" href={cdnOrigin} />
+        {cdnOrigin && <link rel="preconnect" href={cdnOrigin} />}
         {nexusOrigin && <link rel="preconnect" href={nexusOrigin} crossOrigin="anonymous" />}
         {plausibleDomain && plausibleScriptUrl && (
           <Script

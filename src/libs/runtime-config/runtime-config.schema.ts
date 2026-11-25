@@ -256,7 +256,8 @@ export const MARKETPLACE_RUNTIME_DEFAULTS = {
 export const networkConfigValueSchema = z.object({
   /** Required only when `indexerSources` includes `nexus` (`runtimeEnvInputSchema`). */
   nexusUrl: urlValue.optional(),
-  cdnUrl: urlValue,
+  /** Required only when `indexerSources` includes `nexus`: without Nexus, media is read from homeservers. */
+  cdnUrl: urlValue.optional(),
   homeserver: homeserverValue,
   /** Homeserver HTTP base URL: the homeserver pubkey has no resolvable HTTPS endpoint (pubky-homeserver#410) */
   homeserverUrl: urlValue,
@@ -353,8 +354,9 @@ export const runtimeConfigValueSchema = networkConfigValueSchema.extend({
 const lenientRuntimeConfigValueSchema = runtimeConfigValueSchema.extend({
   // Zod v4 `.default()` bypasses validation; `.prefault()` sends the staging fallback through pubkyValue.
   moderationId: pubkyValue.prefault(APP_RUNTIME_DEFAULTS.moderationId),
-  // Dev and tests always resolve a Nexus URL (the staging default), whatever the indexer sources.
+  // Dev and tests always resolve a Nexus and a CDN URL (the staging defaults), whatever the indexer sources.
   nexusUrl: urlValue,
+  cdnUrl: urlValue,
 });
 
 export type RuntimeConfig = z.infer<typeof runtimeConfigValueSchema>;
@@ -369,7 +371,7 @@ export type RuntimeConfig = z.infer<typeof runtimeConfigValueSchema>;
 export const runtimeEnvInputSchema = z
   .object({
     nexusUrl: optionalUrlFromString,
-    cdnUrl: urlValue,
+    cdnUrl: optionalUrlFromString,
     homeserver: homeserverValue,
     homeserverUrl: urlValue,
     homegateUrl: urlValue,
@@ -442,6 +444,13 @@ export const runtimeEnvInputSchema = z
         code: 'custom',
         path: ['nexusUrl'],
         message: 'PUBKY_RUNTIME_NEXUS_URL is required while PUBKY_RUNTIME_INDEXER_SOURCES includes nexus',
+      });
+    }
+    if (config.indexerSources.includes('nexus') && !config.cdnUrl) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['cdnUrl'],
+        message: 'PUBKY_RUNTIME_CDN_URL is required while PUBKY_RUNTIME_INDEXER_SOURCES includes nexus',
       });
     }
     if (config.deployEnv === 'production' && config.e2eLocksStubUrl) {

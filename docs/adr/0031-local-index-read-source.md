@@ -22,7 +22,7 @@ the read boundary and the `*.fromNexus` mappers behind it can stay as they are.
 ## Decision
 
 A runtime setting, `PUBKY_RUNTIME_INDEXER_SOURCES`, names where Nexus reads are answered, in order: `nexus` (the
-default, today's behavior), `local`, or `local,nexus`. Without `nexus` the Nexus URL may be left unset.
+default, today's behavior), `local`, or `local,nexus`. Without `nexus` the Nexus and CDN URLs may be left unset.
 
 - **Transport.** `createIndexerTransport` (`src/core/services/indexer/`) implements the library's transport over
   `HomeserverService`, which stays the only holder of the SDK client. The crawl's reads are anonymous: a batched,
@@ -39,6 +39,13 @@ default, today's behavior), `local`, or `local,nexus`. Without `nexus` the Nexus
   post or user, that names something to load gets one load and one more ask. With `local,nexus`, an unavailable read
   or an unproven 404 goes on to Nexus. Local answers bypass the Nexus transport cache and carry no response start
   stamp: they reflect the index's last sync, not the time of the call.
+- **Media.** Without `nexus` there is no CDN. The two media URL builders (`filesApi.getAvatarUrl`,
+  `filesApi.getFileUrl`) return same-origin paths under `/_pubky/`, so components, the persisted file rows and the
+  avatar URL parser keep working with strings. The service worker answers them: from its own bounded cache, or with
+  the bytes it asks a controlled page for over a `MessageChannel`, since only the page holds the SDK client. The page
+  reads the file through `HomeserverService.getPublicFileBytes`, and an avatar through the image of the profile in
+  the index's view. The avatar URL keeps the profile version, so a new avatar is a new cache entry; sign-out deletes
+  the cache with the index database (`docs/pwa.md`, _Local media_).
 - **Freshness.** Every owned write lands through `HomeserverService`, which now tells subscribers the path written;
   `IndexerService` refreshes the account after each public write. Each change of the index marks every cached post
   stream dirty (`postStreamDirtyRegistry`, scope `local_index`), so a stream rebuilds on its next initial load and
@@ -58,7 +65,9 @@ default, today's behavior), `local`, or `local,nexus`. Without `nexus` the Nexus
 - Global search, rankings and hot tags need Nexus.
 - The first sync of a new device crawls the whole scope before the first answer, and the sign-in bootstrap waits for
   it.
-- Media still comes from the CDN URL, which stays required.
+- Without Nexus there are no resized variants: feeds and thumbnails load the original file. Media shows only in a
+  page the service worker controls, so the first visit before the worker activates, a hard reload and a dev build
+  without the worker show fallbacks.
 
 ### Neutral ⚠️
 
@@ -71,6 +80,11 @@ default, today's behavior), `local`, or `local,nexus`. Without `nexus` the Nexus
 
 Each Nexus service would call the index directly. Every service would need two code paths and the read boundary
 would be duplicated; routing in the one function keeps the services unchanged.
+
+### Media through a server route
+
+A Next.js route could fetch homeserver files for the browser, but that makes the app server a central media proxy,
+the role this setting removes. The worker keeps every read in the browser.
 
 ### Running the index in a service worker
 

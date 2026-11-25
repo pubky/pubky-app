@@ -133,10 +133,25 @@ describe('runtimeEnvInputSchema', () => {
     }
   });
 
-  it('keeps the CDN URL required with the local index alone, since media still comes from it', () => {
+  it('requires the CDN URL only while nexus is an indexer source', () => {
     const { cdnUrl: _cdnUrl, ...withoutCdn } = VALID_ENV_INPUT;
 
-    expect(() => runtimeEnvInputSchema.parse({ ...withoutCdn, indexerSources: 'local' })).toThrow();
+    expect(runtimeEnvInputSchema.parse({ ...withoutCdn, indexerSources: 'local' }).cdnUrl).toBeUndefined();
+    for (const indexerSources of [undefined, 'nexus', 'local,nexus']) {
+      const result = runtimeEnvInputSchema.safeParse({ ...withoutCdn, indexerSources });
+      expect(result.success).toBe(false);
+      expect(result.error?.issues).toEqual([expect.objectContaining({ path: ['cdnUrl'] })]);
+    }
+  });
+
+  it('runs with the local index alone and neither Nexus nor CDN URL', () => {
+    const { nexusUrl: _nexusUrl, cdnUrl: _cdnUrl, ...withoutNexus } = VALID_ENV_INPUT;
+
+    const parsed = runtimeEnvInputSchema.parse({ ...withoutNexus, indexerSources: 'local' });
+
+    expect(parsed).toMatchObject({ indexerSources: ['local'] });
+    expect(parsed.nexusUrl).toBeUndefined();
+    expect(parsed.cdnUrl).toBeUndefined();
   });
 
   it('throws on malformed PKARR_RELAYS JSON', () => {

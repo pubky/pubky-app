@@ -31,8 +31,14 @@ export const NEXUS_V1_STATIC_PATH = '/v1/static';
 export const NEXUS_API_VERSION = 'v1';
 export type NexusApiVersion = typeof NEXUS_API_VERSION | 'v0';
 
-/** The base of the v1 file routes, derived from the CDN runtime value: it has no env var of its own. */
-export const getV1CdnUrl = (): string => `${getCdnUrl().replace(/(?:\/static)?\/?$/, '')}${NEXUS_V1_STATIC_PATH}`;
+/**
+ * The base of the v1 file routes, derived from the CDN runtime value: it has no env var of its own. `undefined`
+ * like the CDN value, only when the indexer sources leave Nexus out.
+ */
+export const getV1CdnUrl = (): string | undefined => {
+  const cdnUrl = getCdnUrl();
+  return cdnUrl === undefined ? undefined : `${cdnUrl.replace(/(?:\/static)?\/?$/, '')}${NEXUS_V1_STATIC_PATH}`;
+};
 
 export const NEXUS_NOTIFICATIONS_LIMIT = 30;
 export const NEXUS_POSTS_PER_PAGE = 10; // Number of posts to fetch per page in streams

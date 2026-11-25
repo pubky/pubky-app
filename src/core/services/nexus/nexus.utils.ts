@@ -8,7 +8,7 @@ import {
   NEXUS_API_VERSION,
 } from '@/config/nexus';
 import type { AppError } from '@/libs/error/error';
-import { ClientErrorCode } from '@/libs/error/error.codes';
+import { ClientErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { httpResponseToError, httpStatusCodeToError, safeFetch } from '@/libs/error/error.http';
 import { ErrorService } from '@/libs/error/error.types';
@@ -43,12 +43,21 @@ export function buildNexusUrl(endpoint: string, { version = NEXUS_API_VERSION }:
   return `${getNexusUrl() ?? ''}/${version}/${endpoint}`;
 }
 
+/** The CDN bases exist whenever Nexus is a source; a media URL without one would point at the app's own origin. */
+function requireCdnBase(base: string | undefined, operation: string): string {
+  if (base !== undefined) return base;
+  throw Err.validation(ValidationErrorCode.MISSING_FIELD, 'No CDN URL is configured without the nexus source', {
+    service: ErrorService.Nexus,
+    operation,
+  });
+}
+
 export function buildCdnUrl(endpoint: string): string {
-  return `${getCdnUrl()}/${endpoint}`;
+  return `${requireCdnBase(getCdnUrl(), 'buildCdnUrl')}/${endpoint}`;
 }
 
 export function buildV1CdnUrl(endpoint: string): string {
-  return `${getV1CdnUrl()}/${endpoint}`;
+  return `${requireCdnBase(getV1CdnUrl(), 'buildV1CdnUrl')}/${endpoint}`;
 }
 
 /**

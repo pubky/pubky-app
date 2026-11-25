@@ -46,7 +46,7 @@ describe('RootContainer', () => {
     ]);
   });
 
-  it('skips the Nexus API hint when the local index is the only source', () => {
+  it('skips both hints when the local index is the only source', () => {
     indexerSources.current = ['local'];
     try {
       render(
@@ -62,7 +62,7 @@ describe('RootContainer', () => {
       hint.getAttribute('href'),
     );
 
-    expect(hints).toEqual(['https://cdn.example.com']);
+    expect(hints).toEqual([]);
   });
 
   it('keeps the raw runtime-config script first in <body>', () => {

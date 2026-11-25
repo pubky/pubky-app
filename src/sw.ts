@@ -1,7 +1,22 @@
 /// <reference lib="webworker" />
 
 import { NetworkOnly, type PrecacheEntry, Serwist, type SerwistGlobalConfig } from 'serwist';
-import { SW_CLIENT_ANNOUNCE, SW_TAKEOVER_SKIPPED } from '@/config/pwa';
+import {
+  LOCAL_MEDIA_CACHE,
+  LOCAL_MEDIA_CACHE_MAX_ENTRIES,
+  LOCAL_MEDIA_CLIENT_TIMEOUT_MS,
+  LOCAL_MEDIA_PATH_PREFIX,
+  SW_CLIENT_ANNOUNCE,
+  SW_LOCAL_MEDIA_REQUEST,
+  SW_TAKEOVER_SKIPPED,
+} from '@/config/pwa';
+import {
+  isLocalMediaAnswer,
+  type LocalMediaAnswer,
+  type LocalMediaMessage,
+  type LocalMediaRequest,
+  respondLocalMedia,
+} from '@/libs/pwa/localMedia';
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -65,11 +80,47 @@ async function handleShareTarget(request: Request): Promise<Response> {
   return Response.redirect(redirectUrl, 303);
 }
 
-// Register the share target handler before Serwist to intercept POST to /share
+/**
+ * Asks a page for local media over a `MessageChannel`: the page holds the SDK client that reaches homeservers. The
+ * requesting page goes first; a navigation to a media path has no page yet, so any window this worker controls
+ * answers it. Resolves `null` when there is no window to ask.
+ */
+async function askWindowForMedia(clientId: string, request: LocalMediaRequest): Promise<LocalMediaAnswer | null> {
+  const requester = clientId ? await self.clients.get(clientId) : undefined;
+  const client = requester ?? (await self.clients.matchAll({ type: 'window' }))[0];
+  if (!client) return null;
+  return await new Promise<LocalMediaAnswer>((resolve) => {
+    const channel = new MessageChannel();
+    channel.port1.onmessage = (event: MessageEvent) => {
+      channel.port1.close();
+      resolve(isLocalMediaAnswer(event.data) ? event.data : { status: 'failed' });
+    };
+    const message: LocalMediaMessage = { type: SW_LOCAL_MEDIA_REQUEST, request };
+    client.postMessage(message, [channel.port2]);
+  });
+}
+
+const isLocalMediaUrl = (url: URL) =>
+  url.origin === self.location.origin && url.pathname.startsWith(LOCAL_MEDIA_PATH_PREFIX);
+
+// Registered before Serwist: the share target's POST to /share, and homeserver media under the local media prefix
+// (`src/libs/pwa/localMedia.ts`), whose URLs the app builds only when Nexus is not an indexer source.
 self.addEventListener('fetch', (event: FetchEvent) => {
   const requestUrl = new URL(event.request.url);
   if (requestUrl.pathname === '/share' && event.request.method === 'POST') {
     event.respondWith(handleShareTarget(event.request));
+    return;
+  }
+  if (event.request.method === 'GET' && isLocalMediaUrl(requestUrl)) {
+    event.respondWith(
+      respondLocalMedia({
+        request: event.request,
+        openCache: () => caches.open(LOCAL_MEDIA_CACHE),
+        ask: (media) => askWindowForMedia(event.clientId, media),
+        timeoutMs: LOCAL_MEDIA_CLIENT_TIMEOUT_MS,
+        maxEntries: LOCAL_MEDIA_CACHE_MAX_ENTRIES,
+      }),
+    );
   }
 });
 
@@ -176,9 +227,13 @@ const serwist = new Serwist({
     // an HTTP error response. Shop documents also consume preload, but have no App fallback.
     // No other runtime caching on purpose: Dexie is the data
     // cache, and homeserver / pkarr / httprelay / nexus / CDN must never be cached here.
+    // A navigation to a local media path is answered by the fetch listener above.
     {
       matcher: ({ request, sameOrigin, url }) =>
-        sameOrigin && request.mode === 'navigate' && !url.pathname.startsWith('/api/'),
+        sameOrigin &&
+        request.mode === 'navigate' &&
+        !url.pathname.startsWith('/api/') &&
+        !url.pathname.startsWith(LOCAL_MEDIA_PATH_PREFIX),
       handler: new NetworkOnly(),
     },
   ],

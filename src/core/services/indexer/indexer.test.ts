@@ -142,6 +142,18 @@ describe('IndexerService', () => {
     expect(IndexerService.current()).toBeNull();
   });
 
+  it('deletes the media cache of the service worker with the database', async () => {
+    const deleteCache = vi.fn().mockResolvedValue(true);
+    Object.defineProperty(globalThis, 'caches', { configurable: true, value: { delete: deleteCache } });
+    try {
+      await IndexerService.clear(ALICE);
+    } finally {
+      Reflect.deleteProperty(globalThis, 'caches');
+    }
+
+    expect(deleteCache).toHaveBeenCalledExactlyOnceWith('pubky-local-media');
+  });
+
   it('deletes another account’s database without touching the running index', async () => {
     IndexerService.start(ALICE);
 

@@ -26,13 +26,24 @@ How the installed-app layer works, what the service worker is allowed to do, and
 1. **Precaches the app shell**: every `_next/static` asset the build emits plus a short allow-list of `public/` files (`offline.html`, the manifest, the logos, the manifest icons). See _Precache diet_ below.
 2. **Handles the share target**: a `POST /share` from the OS share sheet is turned into a `303` to `/share?…` with any files stashed in the `share-target-files` cache (see `src/libs/share/shareTarget.ts`).
 3. **Serves an offline fallback for App navigations**: same-origin page navigations outside `/api/` go to the network (`NetworkOnly`, consuming navigation preload). When the fetch itself fails (offline, DNS), Serwist's `fallbacks` returns the precached `offline.html`, except under the separate `/shop-embed` mount. An HTTP error response is passed through untouched.
+4. **Serves local media**: a same-origin GET under `/_pubky/` (only built when Nexus is not an indexer source) is answered with homeserver bytes a page hands over. See _Local media_ below.
 
 ## What it must never do
 
-- **Cache data.** Dexie is the app's only data cache and the TTL layer is its only freshness mechanism (`docs/local-first.md`, `docs/data-patterns.md`). A runtime cache in the worker would hand the app a stale response it then stamps as fresh. There is no `defaultCache`, and no `runtimeCaching` entry other than the navigation route.
+- **Cache data.** Dexie is the app's only data cache and the TTL layer is its only freshness mechanism (`docs/local-first.md`, `docs/data-patterns.md`). A runtime cache in the worker would hand the app a stale response it then stamps as fresh. There is no `defaultCache`, and no `runtimeCaching` entry other than the navigation route. The one exception is the `pubky-local-media` cache of _Local media_: content-addressed files and versioned avatars, whose URL changes whenever the bytes do, so a cached copy is never stale.
 - **Touch cross-origin traffic.** Homeserver, pkarr relays, httprelay, Nexus and the CDN are excluded from the worker's runtime handlers. Homeserver writes use the WASM SDK's grant authorization; they do not depend on cross-origin session cookies. PR #1384 removed `defaultCache` after concurrent pkarr lookups cancelled each other through the cache.
 - **Take over open tabs on its own.** `skipWaiting` is off; see _Update flow_. The social v1 cut-over is the one recorded exception, in force from that release until PR-E2 reverts it (_Rollout note_, ADR-0021 amendment).
 - **Boot the app when offline.** The fallback is a static file, not a Next route: it keeps startup, session restore and other network-dependent initialization out of the offline response. Grant restore now retains its reference on temporary network failure; the static fallback does not depend on that recovery path.
+
+## Local media
+
+Without the `nexus` indexer source there is no CDN, so `filesApi.getAvatarUrl` and `filesApi.getFileUrl` return same-origin paths: `/_pubky/avatar/{user}?v={version}` and `/_pubky/file/{owner}/{hash}.{ext}`. Next.js never routes a folder starting with `_`, so the prefix cannot shadow an app route. Every variant (`small`, `feed`, `large`, `main`) is the same path, the original file: only Nexus makes resized copies.
+
+A homeserver file can only be read through the SDK client, which resolves the owner's homeserver and lives in the page. The worker (`src/sw.ts`, pure logic in `src/libs/pwa/localMedia.ts`) answers a request from the `pubky-local-media` cache when it holds the URL; otherwise it posts the request over a `MessageChannel` to the requesting window (any controlled window for a navigation), responds with the bytes and their type, and caches the response. The cache keeps `LOCAL_MEDIA_CACHE_MAX_ENTRIES` entries, oldest out first. No answer within `LOCAL_MEDIA_CLIENT_TIMEOUT_MS` is a 504, nothing to serve a 404 and a failed read a 502; none of them is cached, so the image shows its fallback and the next render asks again. Responses carry `X-Content-Type-Options: nosniff` and, except for PDFs, `Content-Security-Policy: sandbox`, so a user's SVG or HTML file opened as a page cannot script the app's origin.
+
+The page side runs with the local index (`IndexerService`, `src/core/services/indexer/indexer.media.ts`): a file is read with `HomeserverService.getPublicFileBytes`, an avatar from the image the profile in the index's view names (after one `ensureUser` when the view does not hold the user yet). Only v1 public media is served. Sign-out deletes the cache with the index database.
+
+Limits: a page the worker does not control (the first visit before the worker activates, a hard reload, dev without `SERWIST_DEV`) gets 404s from the server and shows fallbacks until the next load; the whole file passes through memory once, with no range responses, which Safari wants for video; and a signed-out page runs no index, so nothing answers.
 
 ## Update flow
 

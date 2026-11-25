@@ -1,4 +1,5 @@
-import type { NexusApiVersion } from '@/config/nexus';
+import { hasNexusSource, type NexusApiVersion } from '@/config/nexus';
+import { buildLocalAvatarPath, buildLocalFilePath } from '@/libs/pwa/localMedia';
 import type { Pubky } from '@/models/models.types';
 import type { TFileBody, TFileParams } from '@/services/nexus/file/file.types';
 import { buildCdnUrl, buildNexusUrl, buildV1CdnUrl, encodePathSegment } from '@/services/nexus/nexus.utils';
@@ -39,13 +40,20 @@ export function buildFileBodyUrl(fileUris: Pubky[]) {
   return body;
 }
 
+/**
+ * Media URLs. Without the nexus source there is no CDN: both builders return same-origin paths the service worker
+ * answers from the owner's homeserver (`src/libs/pwa/localMedia.ts`), and every variant is the original file,
+ * since only Nexus makes resized ones.
+ */
 export const filesApi = {
   getAvatarUrl: (pubky: Pubky, version?: string | number) => {
+    if (!hasNexusSource()) return buildLocalAvatarPath(pubky, version);
     const encodedPubky = encodePathSegment(pubky);
     const url = buildCdnUrl(`avatar/${encodedPubky}`);
     return version ? `${url}?v=${version}` : url;
   },
   getFileUrl: ({ pubky, file_id, variant }: TFileParams) => {
+    if (!hasNexusSource()) return buildLocalFilePath(pubky, file_id);
     const encodedPubky = encodePathSegment(pubky);
     const encodedFileId = encodePathSegment(file_id);
     const path = `${STATIC_PREFIX}/${encodedPubky}/${encodedFileId}/${variant}`;

@@ -34,7 +34,7 @@ let didWarnModerationDisabled = false;
 
 const REQUIRED_NETWORK_ENV_MESSAGE =
   'Set all required PUBKY_RUNTIME_* network variables: ' +
-  'PUBKY_RUNTIME_NEXUS_URL (unless PUBKY_RUNTIME_INDEXER_SOURCES leaves nexus out), PUBKY_RUNTIME_CDN_URL, ' +
+  'PUBKY_RUNTIME_NEXUS_URL and PUBKY_RUNTIME_CDN_URL (unless PUBKY_RUNTIME_INDEXER_SOURCES leaves nexus out), ' +
   'PUBKY_RUNTIME_HOMESERVER, PUBKY_RUNTIME_HOMESERVER_URL, PUBKY_RUNTIME_HOMEGATE_URL, ' +
   'PUBKY_RUNTIME_DEFAULT_HTTP_RELAY, PUBKY_RUNTIME_PKARR_RELAYS, PUBKY_RUNTIME_TESTNET, and PUBKY_RUNTIME_ENV ' +
   '("production" or "staging"). ' +
@@ -161,7 +161,8 @@ export function resetRuntimeConfigForTests(): void {
 // Lazy getters: read the resolved config at call time (never captured at module load).
 /** `undefined` only when the indexer sources leave Nexus out. */
 export const getNexusUrl = (): string | undefined => getRuntimeConfig().nexusUrl;
-export const getCdnUrl = (): string => getRuntimeConfig().cdnUrl;
+/** `undefined` only when the indexer sources leave Nexus out. */
+export const getCdnUrl = (): string | undefined => getRuntimeConfig().cdnUrl;
 export const getHomeserver = (): string => getRuntimeConfig().homeserver;
 export const getHomeserverUrl = (): string => getRuntimeConfig().homeserverUrl;
 export const getHomegateUrl = (): string => getRuntimeConfig().homegateUrl;

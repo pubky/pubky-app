@@ -1,4 +1,5 @@
 import { getCdnUrl } from '@/config/nexus';
+import { LOCAL_AVATAR_PATH_PREFIX } from '@/libs/pwa/localMedia';
 import { extractInitials, isUserDeleted } from '@/libs/utils/utils';
 import type { ResolveAvatarFallbackInitialProps, ResolveAvatarFallbackSeedProps } from './AvatarWithFallback.types';
 
@@ -11,8 +12,9 @@ const USER_ID_PATTERN = /^[a-z0-9]{52}$/;
 /**
  * Extracts the userId from an avatar URL.
  *
- * The expected URL format is: `${getCdnUrl()}/avatar/${userId}`
- * where userId is a 52-character lowercase alphanumeric string.
+ * The expected URL format is: `${getCdnUrl()}/avatar/${userId}`, or the same-origin
+ * `/_pubky/avatar/${userId}` without the nexus source, where userId is a 52-character
+ * lowercase alphanumeric string.
  *
  * @param avatarUrl - The full avatar URL to extract the userId from
  * @returns The userId if extraction and validation succeed, null otherwise
@@ -26,9 +28,11 @@ const USER_ID_PATTERN = /^[a-z0-9]{52}$/;
 export function extractUserIdFromAvatarUrl(avatarUrl: string | undefined | null): string | null {
   if (!avatarUrl) return null;
 
-  const expectedPrefix = `${getCdnUrl()}/avatar/`;
+  const cdnUrl = getCdnUrl();
+  const prefixes = cdnUrl ? [`${cdnUrl}/avatar/`, LOCAL_AVATAR_PATH_PREFIX] : [LOCAL_AVATAR_PATH_PREFIX];
+  const expectedPrefix = prefixes.find((prefix) => avatarUrl.startsWith(prefix));
 
-  if (!avatarUrl.startsWith(expectedPrefix)) return null;
+  if (!expectedPrefix) return null;
 
   // Extract the userId portion (everything after the prefix, excluding query params)
   const userIdWithParams = avatarUrl.slice(expectedPrefix.length);
