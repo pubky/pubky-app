@@ -90,8 +90,9 @@ export interface SocialIndexer {
    */
   ensureUser(user: string): Promise<void>;
   /**
-   * Loads one post with its whole history and keeps it resolvable by key, for a post the scope does not hold. Its
-   * author joins no stream, ranking or count.
+   * Loads one post with its whole history and keeps it resolvable by key, for a post the scope does not hold, with
+   * its author's profile when the view has none, both at once. Its author joins no stream, ranking or count. Resolves
+   * once the view holds the post; the posts it replies to or quotes start loading then, with their authors' profiles.
    */
   ensurePost(author: string, postId: string): Promise<void>;
   /** Loads only the user's profile, for an avatar or a name; a user the view lacks joins it as `referenced`. */
@@ -539,6 +540,30 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
     return loadedThen(runtime.ensureLeaf(leaf), evicted.length === 0 ? null : runtime.forget({ leaves: evicted }));
   }
 
+  function ensurePostAlone(author: string, postId: string): Promise<void> {
+    const leaf = postLeaf(author, postId);
+    return ensureLeaf(ensuredPosts, JSON.stringify([author, leaf.group]), leaf, limits.maxLoosePosts);
+  }
+
+  function ensureProfile(user: string): Promise<void> {
+    return ensureLeaf(ensuredProfiles, user, profileLeaf(user), limits.maxProfiles);
+  }
+
+  /** Never rejects: the post loads without it. */
+  function ensureProfileIfMissing(user: string): Promise<void> {
+    return current.profile(user) === null ? ensureProfile(user).catch(() => undefined) : Promise.resolve();
+  }
+
+  function prefetchReferences(author: string, postId: string): void {
+    const post = current.post(author, postId);
+    if (post === null) return;
+    for (const target of [post.data.parent, post.data.embed]) {
+      if (target === null || target.kind !== 'post' || current.post(target.author, target.postId) !== null) continue;
+      void ensurePostAlone(target.author, target.postId).catch(() => undefined);
+      void ensureProfileIfMissing(target.author);
+    }
+  }
+
   const status = (): RuntimeStatus => {
     const base = runtime.status();
     const error = mismatch ?? (base.state === 'stopped' ? null : viewError);
@@ -589,10 +614,14 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
       return loadedThen(runtime.ensureUser(user), evicted.length === 0 ? null : runtime.forget({ users: evicted }));
     },
     ensurePost(author, postId) {
-      const leaf = postLeaf(author, postId);
-      return ensureLeaf(ensuredPosts, JSON.stringify([author, leaf.group]), leaf, limits.maxLoosePosts);
+      const post = ensurePostAlone(author, postId);
+      // A card needs its author's name and avatar: asked in the same turn, the two leaves load as one batch.
+      const profile = ensureProfileIfMissing(author);
+      // The thread and quote the page shows next, one level ahead and never awaited.
+      void post.then(() => prefetchReferences(author, postId)).catch(() => undefined);
+      return Promise.all([post, profile]).then(() => undefined);
     },
-    ensureProfile: (user) => ensureLeaf(ensuredProfiles, user, profileLeaf(user), limits.maxProfiles),
+    ensureProfile,
     setExcluded(users) {
       excluded = new Set(users);
       runtime.setExcluded(excluded);

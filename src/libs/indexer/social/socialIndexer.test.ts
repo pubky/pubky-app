@@ -382,6 +382,24 @@ describe('createSocialIndexer', () => {
       expect(touched.files).toBe(0);
     });
 
+    it('loads a post with its author profile, then the post it replies to ahead of the ask', async () => {
+      const { fixture, indexer } = visitor();
+      const { a1, b1 } = fixture.posts;
+      await indexer.ready();
+
+      await indexer.ensurePost(BRAN, b1.id);
+      const author = await indexer.request({
+        url: '/v1/stream/users/by_ids',
+        method: 'POST',
+        body: { user_ids: [BRAN] },
+      });
+      await until(() => indexer.view().post(ALICE, a1.id) !== null, 'the parent post');
+
+      expect(author).toMatchObject({ status: 200, json: [{ details: { id: BRAN } }] });
+      expect(author.more).toBeUndefined();
+      expect(indexer.view().profile(ALICE)).not.toBeNull();
+    });
+
     it('opens a profile with its own stream', async () => {
       const { fixture, indexer, touched } = visitor();
 

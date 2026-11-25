@@ -103,6 +103,10 @@ sync. Until then answers say `syncing: true` and the bootstrap `indexed: false`,
 `ensureUser`, `ensurePost` and `request` work. A profile, a user's stream, a post and its loaded thread answer from
 what was loaded; feeds, rankings, searches and hot tags over the scope are unavailable, there being no scope.
 
+`ensurePost` loads the post together with its author's profile when the view has none, so a post card renders from
+one load, and once the post is in the view it starts loading the posts it replies to or quotes, with their authors'
+profiles, without waiting for them: a page that asks for them next joins those loads.
+
 `ensureProfile` loads a profile alone, for avatars. What a tab loads on demand is capped (`maxVisitedUsers`,
 `maxLoosePosts`, `maxProfiles`): past a cap the least recently ensured item leaves the view and the runtime's `forget`
 deletes its scopes, an eviction at the largest cursor, which every tab hears. A `backfill` of one author's group runs at
