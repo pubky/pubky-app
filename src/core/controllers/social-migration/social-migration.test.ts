@@ -1,5 +1,6 @@
 import type { Session } from '@synonymdev/pubky';
 import type { MigrationReport, Outcome } from 'pubky-social-migrator';
+import { listPrefix } from 'pubky-social-specs';
 import { fakeOwner } from 'pubky-social-specs/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { HOMESERVER_SYNC_READ_TIMEOUT_MS } from '@/config/network';
@@ -473,6 +474,7 @@ describe('SocialMigrationController', () => {
         expect(seen).toEqual([]);
         expect(continues).toBe(0);
         expect(run).not.toHaveBeenCalled();
+        expect(homeserver.spies.list).not.toHaveBeenCalled();
         expect(status()).toBe('restoring');
         expect(readSocialMigrationRecord(owner)).toMatchObject({
           migratedRev: SOCIAL_MIGRATION_TRANSFORM_REV,
@@ -480,6 +482,90 @@ describe('SocialMigrationController', () => {
         });
       },
     );
+
+    it.each(['signin', 'upgrade'] as const)(
+      'marks an empty account with no flag inline at %s without showing the screen',
+      async (entry) => {
+        autoContinue = false;
+        const { seen, unsubscribe } = stages();
+
+        expect(await ensure(entry)).toBe('passed');
+        unsubscribe();
+
+        expect(continues).toBe(0);
+        expect(seen).not.toContain('confirm');
+        expect(status()).toBe('restoring');
+        expect(homeserver.spies.list).toHaveBeenCalledWith({
+          baseDirectory: listPrefix(owner, 'legacy'),
+          limit: 1,
+          session: expect.anything(),
+        });
+        expect(await homeserver.session.storage.exists(SOCIAL_MIGRATION_FLAG_PATH)).toBe(true);
+        expect(readSocialMigrationRecord(owner)).toMatchObject({
+          migratedRev: SOCIAL_MIGRATION_TRANSFORM_REV,
+          admittedGrantIds: [GRANT],
+        });
+      },
+    );
+
+    it('marks an empty account inline on a restore of an admitted grant with no flag', async () => {
+      autoContinue = false;
+      writeSocialMigrationRecord(owner, { v: 1, admittedGrantIds: [GRANT] });
+      const { seen, unsubscribe } = stages();
+
+      expect(await ensure('restore')).toBe('passed');
+      unsubscribe();
+
+      expect(continues).toBe(0);
+      expect(seen).not.toContain('confirm');
+      expect(status()).toBe('restoring');
+      expect(await homeserver.session.storage.exists(SOCIAL_MIGRATION_FLAG_PATH)).toBe(true);
+      expect(readSocialMigrationRecord(owner)?.migratedRev).toBe(SOCIAL_MIGRATION_TRANSFORM_REV);
+    });
+
+    it('marks an empty account inline when the flag is at an older revision', async () => {
+      autoContinue = false;
+      await flagAt(SOCIAL_MIGRATION_TRANSFORM_REV - 1);
+      const { seen, unsubscribe } = stages();
+
+      expect(await ensure('signin')).toBe('passed');
+      unsubscribe();
+
+      expect(continues).toBe(0);
+      expect(seen).not.toContain('confirm');
+      expect(status()).toBe('restoring');
+      const flag = JSON.parse(
+        new TextDecoder().decode(await homeserver.session.storage.getBytes(SOCIAL_MIGRATION_FLAG_PATH)),
+      );
+      expect(flag.transform_rev).toBe(SOCIAL_MIGRATION_TRANSFORM_REV);
+      expect(readSocialMigrationRecord(owner)?.migratedRev).toBe(SOCIAL_MIGRATION_TRANSFORM_REV);
+    });
+
+    it('cancels a sign-in whose auth generation changed during the legacy-data check, without asking or loading the engine', async () => {
+      autoContinue = false;
+      let answer!: (value: string[]) => void;
+      homeserver.spies.list.mockReturnValueOnce(
+        new Promise((resolve) => {
+          answer = resolve;
+        }),
+      );
+      const run = vi.spyOn(HomeserverService, 'migrateToSocialV1');
+      const { seen, unsubscribe } = stages();
+      const gate = ensure('signin');
+      await vi.waitFor(() => expect(homeserver.spies.list).toHaveBeenCalledOnce());
+
+      useAuthStore.setState({ generation: 'another-tab' });
+      answer([]);
+      const outcome = await Promise.race([
+        gate,
+        new Promise((resolve) => setTimeout(() => resolve('still waiting'), 200)),
+      ]);
+      unsubscribe();
+
+      expect(outcome).toBe('canceled');
+      expect(run).not.toHaveBeenCalled();
+      expect(seen).not.toContain('confirm');
+    });
 
     it.each(['signin', 'restore'] as const)(
       'cancels a %s whose auth generation changed during the flag read, without asking or loading the engine',
@@ -588,6 +674,7 @@ describe('SocialMigrationController', () => {
         if (failure === 'timeout') await vi.advanceTimersByTimeAsync(HOMESERVER_SYNC_READ_TIMEOUT_MS);
         await vi.waitFor(() => expect(stage().stage).toBe('confirm'));
         expect(status()).toBe('social-migration');
+        expect(homeserver.spies.list).not.toHaveBeenCalled();
         expect(run).not.toHaveBeenCalled();
         vi.useRealTimers();
         SocialMigrationController.confirm();
@@ -595,6 +682,43 @@ describe('SocialMigrationController', () => {
         expect(await migrating).toBe('passed');
         expect(run).toHaveBeenCalledOnce();
         await expect(run.mock.results[0].value).resolves.toMatchObject({ status: 'already_migrated' });
+        expect(readSocialMigrationRecord(owner)?.migratedRev).toBe(SOCIAL_MIGRATION_TRANSFORM_REV);
+      },
+    );
+
+    it.each([
+      ['a network failure', 'network'],
+      ['a 401', 'unauthorized'],
+      ['a 403', 'forbidden'],
+      ['a timeout', 'timeout'],
+    ] as const)(
+      'shows the screen when the legacy-data check fails with %s instead of treating the account as empty',
+      async (_, failure) => {
+        if (failure === 'timeout') {
+          vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+          homeserver.spies.list.mockReturnValueOnce(new Promise(() => {}));
+        } else {
+          homeserver.spies.list.mockRejectedValueOnce(
+            failure === 'network' ? offline() : failure === 'forbidden' ? forbidden() : unauthorized(),
+          );
+        }
+        autoContinue = false;
+        const run = vi.spyOn(HomeserverService, 'migrateToSocialV1');
+        const migrating = ensure('signin');
+
+        if (failure === 'timeout') {
+          await vi.waitFor(() => expect(homeserver.spies.list).toHaveBeenCalledOnce());
+          await vi.advanceTimersByTimeAsync(HOMESERVER_SYNC_READ_TIMEOUT_MS);
+        }
+        await vi.waitFor(() => expect(stage().stage).toBe('confirm'));
+        expect(status()).toBe('social-migration');
+        expect(run).not.toHaveBeenCalled();
+        vi.useRealTimers();
+        SocialMigrationController.confirm();
+
+        expect(await migrating).toBe('passed');
+        expect(run).toHaveBeenCalledOnce();
+        expect(await homeserver.session.storage.exists(SOCIAL_MIGRATION_FLAG_PATH)).toBe(true);
         expect(readSocialMigrationRecord(owner)?.migratedRev).toBe(SOCIAL_MIGRATION_TRANSFORM_REV);
       },
     );

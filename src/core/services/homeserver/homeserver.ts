@@ -733,10 +733,15 @@ export class HomeserverService {
    *
    * Supports pagination with cursor and optional filtering.
    *
+   * `session` lists through a session that is not (yet) in the auth store: the social
+   * migration gate checks the 0.x tree before the session enters the store (ADR-0026).
+   * Without it, the active session resolves owned paths and other URLs use public storage.
+   *
    * @param {string} baseDirectory - Base directory path to list files from.
    * @param {string} [cursor] - Optional cursor for pagination.
    * @param {boolean} [reverse=false] - Whether to list in reverse order.
    * @param {number} [limit=500] - Maximum number of files to return.
+   * @param {Session} [session] - Optional explicit session for pre-store owned listings.
    * @returns {Promise<string[]>} Array of file URLs.
    */
   static async list({
@@ -744,10 +749,20 @@ export class HomeserverService {
     cursor,
     reverse = false,
     limit = LIST_DEFAULT_LIMIT,
+    session,
   }: THomeserverListParams): Promise<string[]> {
-    const pubkySdk = this.getPubkySdk();
+    const owned = session
+      ? resolveOwnedSessionPath({ url: baseDirectory, session, allowedPrefixes: STORAGE_PATH_PREFIXES })
+      : this.resolveOwnedSessionPath(baseDirectory);
+    if (session && !owned) {
+      throw Err.auth(AuthErrorCode.UNAUTHORIZED, 'Listing owned storage requires a session for the resource owner.', {
+        service: ErrorService.Homeserver,
+        operation: 'list',
+        context: { url: baseDirectory },
+      });
+    }
+
     try {
-      const owned = this.resolveOwnedSessionPath(baseDirectory);
       if (owned) {
         const dirPath = owned.path.endsWith('/') ? owned.path : (`${owned.path}/` as StoragePath<string>);
         const files = await this.withActiveSession(owned.session, () =>
@@ -757,6 +772,7 @@ export class HomeserverService {
         return files;
       }
 
+      const pubkySdk = this.getPubkySdk();
       const files = await pubkySdk.publicStorage.list(baseDirectory as Address, cursor ?? null, reverse, limit, false);
       Logger.debug('List successful', { baseDirectory, filesCount: files.length });
       return files;

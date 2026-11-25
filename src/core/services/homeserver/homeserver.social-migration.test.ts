@@ -360,3 +360,76 @@ describe('HomeserverService.getBytesIfExists with an explicit session', () => {
     ).rejects.toMatchObject({ code: 'UNAUTHORIZED' });
   });
 });
+
+describe('HomeserverService.list with an explicit session', () => {
+  const owner = 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo';
+  const sessionFor = (list: (...args: unknown[]) => Promise<string[]>): Session =>
+    asOpaque<Session>({ info: { publicKey: { z32: () => owner }, capabilities: ['/:rw'] }, storage: { list } });
+
+  afterEach(() => useAuthStore.getState().reset());
+
+  it('lists through the given session while the store holds none', async () => {
+    const entry = `pubky://${owner}/pub/pubky.app/profile.json`;
+    const list = vi.fn(async () => [entry]);
+    useAuthStore.getState().reset();
+
+    const result = await HomeserverService.list({
+      baseDirectory: `pubky://${owner}/pub/pubky.app/`,
+      limit: 1,
+      session: sessionFor(list),
+    });
+
+    expect(list).toHaveBeenCalledWith('/pub/pubky.app/', null, false, 1, false);
+    expect(result).toEqual([entry]);
+  });
+
+  it('returns an empty list on a 404 and throws on a refused listing', async () => {
+    const missing = sessionFor(async () => {
+      throw { name: 'RequestError', message: 'Not Found', data: { statusCode: 404 } };
+    });
+    expect(
+      await HomeserverService.list({
+        baseDirectory: `pubky://${owner}/pub/pubky.app/`,
+        limit: 1,
+        session: missing,
+      }),
+    ).toEqual([]);
+
+    const refused = sessionFor(async () => {
+      throw { name: 'RequestError', message: 'Forbidden', data: { statusCode: 403 } };
+    });
+    await expect(
+      HomeserverService.list({
+        baseDirectory: `pubky://${owner}/pub/pubky.app/`,
+        limit: 1,
+        session: refused,
+      }),
+    ).rejects.toMatchObject({ context: expect.objectContaining({ statusCode: 403 }) });
+  });
+
+  it('throws on a 401 instead of reading the directory as empty', async () => {
+    const expired = sessionFor(async () => {
+      throw { name: 'AuthenticationError', message: 'Unauthorized', data: { statusCode: 401 } };
+    });
+    await expect(
+      HomeserverService.list({
+        baseDirectory: `pubky://${owner}/pub/pubky.app/`,
+        limit: 1,
+        session: expired,
+      }),
+    ).rejects.toMatchObject({
+      code: AuthErrorCode.SESSION_EXPIRED,
+    });
+  });
+
+  it("refuses another owner's URL for the given session", async () => {
+    const other = sessionFor(async () => []);
+    await expect(
+      HomeserverService.list({
+        baseDirectory: 'pubky://8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo/pub/pubky.app/',
+        limit: 1,
+        session: other,
+      }),
+    ).rejects.toMatchObject({ code: AuthErrorCode.UNAUTHORIZED });
+  });
+});

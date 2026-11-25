@@ -94,10 +94,11 @@ export class SocialMigrationController {
    * Restore: scopes, then the local record (no network), then the flag, then resume when this
    * browser's record saw the flag at an earlier revision or admitted the grant, and sign out
    * otherwise (D2). Fresh sign-in: admit the grant, pass on a trusted record or a current flag,
-   * and otherwise ask (`confirm`) before the engine runs; a failed flag read asks too, and the
-   * engine's own HEAD then finds a finished migration. Upgrade: the local record; without one,
-   * like a sign-in. A run that has not started in this browser (no `lastRun`) waits for Continue;
-   * a signup never does. Never hand-writes the flag.
+   * run inline when the 0.x tree is confirmed empty (such as a new Pubky Passport account), and
+   * otherwise ask (`confirm`) before the engine runs; a failed flag read or legacy-data check
+   * asks too, and the engine's own check then settles it. Upgrade: the local record; without one,
+   * like a sign-in. A run that has not started in this browser (no `lastRun`) waits for Continue
+   * unless it is inline; a signup and an empty-tree run never wait. Never hand-writes the flag.
    */
   static async ensureMigrated({
     session,
@@ -114,6 +115,8 @@ export class SocialMigrationController {
     const record = readSocialMigrationRecord(pubky);
     if (entry === 'upgrade' && isSocialMigrationRecordTrusted(record)) return 'passed';
     if (!hasSocialV1Capabilities(session)) return this.requireReauth({ generation, isCurrent }, 'missing-scopes');
+    let inline = entry === 'signup';
+    let checkLegacy = false;
     if (entry === 'restore') {
       if (isSocialMigrationRecordTrusted(record)) return 'passed';
       const rev = await SocialMigrationApplication.readFlag({ session, pubky });
@@ -125,27 +128,39 @@ export class SocialMigrationController {
       // A record that saw the flag means this browser saw the account pass; an outdated flag is then a revision bump
       if (record?.migratedRev === undefined && !isSocialMigrationGrantAdmitted(record, this.activeGrantId()))
         return this.requireReauth({ generation, isCurrent }, 'pre-migration-grant');
+      checkLegacy = true;
     } else {
       const grantId = this.activeGrantId();
       if (grantId) admitSocialMigrationGrant(pubky, grantId);
       if (entry !== 'signup') {
         // An account already updated is not asked. A failed read asks: the run that follows finds the flag itself.
         if (isSocialMigrationRecordTrusted(record)) return 'passed';
-        const rev = await SocialMigrationApplication.readFlag({ session, pubky }).catch(() => null);
+        const flag = await SocialMigrationApplication.readFlag({ session, pubky }).then(
+          (rev) => ({ ok: true as const, rev }),
+          () => ({ ok: false as const, rev: null }),
+        );
         if (!isCurrent()) return 'canceled';
-        if (rev !== null && rev >= SOCIAL_MIGRATION_TRANSFORM_REV) {
-          markSocialMigrated(pubky, rev);
+        if (flag.ok && flag.rev !== null && flag.rev >= SOCIAL_MIGRATION_TRANSFORM_REV) {
+          markSocialMigrated(pubky, flag.rev);
           return 'passed';
         }
+        checkLegacy = flag.ok;
       }
     }
-    // Read again after the flag read: a run another tab of this browser started meanwhile has started here too
+    if (checkLegacy) {
+      // An account with nothing under the 0.x tree (such as a new Pubky Passport account) is marked inline like a
+      // signup. A failed check falls back to the screen so an account with real data never skips it.
+      const hasLegacy = await SocialMigrationApplication.hasLegacyData({ session, pubky }).catch(() => true);
+      if (!isCurrent()) return 'canceled';
+      inline = !hasLegacy;
+    }
+    // Read again after the homeserver reads: a run another tab of this browser started meanwhile has started here too
     return this.migrate({
       session,
       pubky,
       generation,
       isCurrent,
-      inline: entry === 'signup',
+      inline,
       record: readSocialMigrationRecord(pubky),
     });
   }

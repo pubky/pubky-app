@@ -1,5 +1,6 @@
 import type { Session } from '@synonymdev/pubky';
 import type { MigrationReport, ProgressEvent } from 'pubky-social-migrator';
+import { listPrefix } from 'pubky-social-specs';
 import { z } from 'zod';
 import { SOCIAL_MIGRATION_FLAG_PATH } from '@/config/social-migration';
 import { HomeserverService } from '@/services/homeserver/homeserver';
@@ -35,6 +36,20 @@ export class SocialMigrationApplication {
     } catch {
       return 0;
     }
+  }
+
+  /**
+   * Whether the account holds any files under its 0.x tree (`pub/pubky.app/`): lists at most one
+   * entry with the explicit session, bounded like {@link readFlag}. A missing directory (404) or
+   * an empty listing resolves `false`; a refused read, transport failure or timeout rejects so
+   * the gate never mistakes a failed check for an empty account.
+   */
+  static async hasLegacyData({ session, pubky }: { session: Session; pubky: string }): Promise<boolean> {
+    const entries = await awaitBounded(
+      HomeserverService.list({ baseDirectory: listPrefix(pubky, 'legacy'), limit: 1, session }),
+      { operation: 'checkLegacyMigrationData', context: { pubky } },
+    );
+    return entries.length > 0;
   }
 
   /** One run of the engine; it resolves with a report whatever the outcome, and the controller classifies it. */
