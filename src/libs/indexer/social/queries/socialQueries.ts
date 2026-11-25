@@ -1,7 +1,6 @@
 import type { SocialView } from '../social.view';
 import { bootstrap } from './bootstrap';
-import { type NotificationsParams, notifications } from './notifications';
-import { type PostStreamParams, postStreamKeys } from './postStream';
+import { notifications, type NotificationsParams } from './notifications';
 import {
   postDetails,
   type PostRef,
@@ -14,6 +13,7 @@ import {
   postView,
   type PostViewParams,
 } from './posts';
+import { postStreamKeys, type PostStreamParams } from './postStream';
 import type {
   Answer,
   BootstrapJson,
@@ -32,24 +32,24 @@ import type {
   UserViewJson,
 } from './queries.types';
 import {
-  type PrefixSearchParams,
   postsByContent,
+  type PrefixSearchParams,
   tagsByPrefix,
   usersById,
   usersByName,
   usersByTags,
   type UsersByTagsParams,
 } from './search';
-import { type HotTagsParams, hotTags } from './tags';
+import { hotTags, type HotTagsParams } from './tags';
 import {
   ingest,
-  type UserRef,
   userCounts,
   userDetails,
+  type UserRef,
   usersByIds,
   type UsersByIdsParams,
-  type UserStreamParams,
   userStreamIds,
+  type UserStreamParams,
   userTaggers,
   type UserTaggersParams,
   userTags,

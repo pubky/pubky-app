@@ -9,8 +9,8 @@ import {
   userCounts,
   userDetails,
   usersByIds,
-  type UserStreamParams,
   userStreamIds,
+  type UserStreamParams,
   userTaggers,
   userTags,
 } from './users';

@@ -3,7 +3,7 @@ import type { BuiltPost } from 'pubky-social-specs';
 import { describe, expect, it } from 'vitest';
 import { ALICE, BRAN, CLEO, DION, MINUTE_MS, recordsOf, socialNetwork, T0 } from '../social.fixtures';
 import { buildSocialView } from '../social.view';
-import { type PostStreamParams, postStreamKeys } from './postStream';
+import { postStreamKeys, type PostStreamParams } from './postStream';
 import { InvalidQueryError, UnavailableQueryError } from './queries.errors';
 
 const network = socialNetwork();
@@ -190,9 +190,9 @@ describe('postStreamKeys pagination', () => {
     const seen: string[] = [];
     let params: PostStreamParams | null = { limit: 2 };
     while (params !== null) {
-      const { post_keys, last_post_score } = postStreamKeys(view, params).data;
-      seen.push(...post_keys);
-      params = post_keys.length === 0 ? null : next({ keys: seen, lastScore: last_post_score });
+      const page: { post_keys: string[]; last_post_score: number | null } = postStreamKeys(view, params).data;
+      seen.push(...page.post_keys);
+      params = page.post_keys.length === 0 ? null : next({ keys: seen, lastScore: page.last_post_score });
     }
     return seen;
   }
