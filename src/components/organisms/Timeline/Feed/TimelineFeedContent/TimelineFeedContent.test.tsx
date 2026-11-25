@@ -1,4 +1,4 @@
-import { createRef, type ReactNode, useEffect } from 'react';
+import { cloneElement, createRef, type ReactNode, useEffect } from 'react';
 import { act, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
@@ -1418,7 +1418,8 @@ describe('Visual layout variants', () => {
       expect(mockRefresh).not.toHaveBeenCalled();
 
       mockIndexStatus.current = pendingStatus(false);
-      rerender(home);
+      // A new element, or React keeps the first render and never reads the changed status.
+      rerender(cloneElement(home));
 
       expect(screen.queryByRole('heading', { name: 'Loading your network' })).not.toBeInTheDocument();
       expect(mockRefresh).toHaveBeenCalledOnce();
@@ -1431,7 +1432,8 @@ describe('Visual layout variants', () => {
 
       const { rerender } = render(home);
       mockIndexStatus.current = pendingStatus(false);
-      rerender(home);
+      // A new element, or React keeps the first render and never reads the changed status.
+      rerender(cloneElement(home));
 
       expect(mockRefresh).not.toHaveBeenCalled();
     });
