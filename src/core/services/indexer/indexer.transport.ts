@@ -1,0 +1,96 @@
+import { INDEXER_FILE_NAME_PATTERN, INDEXER_FILES_PATH } from '@/config/indexer';
+import { isAppError } from '@/libs/error/error';
+import { ErrorCategory } from '@/libs/error/error.types';
+import { getRetryAfter, hasHttpStatus } from '@/libs/error/error.utils';
+import { HttpStatusCode } from '@/libs/http/http.types';
+import {
+  HomeserverUnreachableError,
+  type IndexerError,
+  InvalidIndexInputError,
+  RateLimitedError,
+} from '@/libs/indexer/indexer.errors';
+import type { IndexerTransport } from '@/libs/indexer/transport.types';
+import type { Pubky } from '@/models/models.types';
+import { HomeserverService } from '@/services/homeserver/homeserver';
+
+/**
+ * The library throws only its own errors across the transport: a 429 becomes `RateLimitedError` with the
+ * homeserver's `retry-after`, anything else `HomeserverUnreachableError`, which the crawl backs off on.
+ */
+function toIndexerError(homeserver: string, error: unknown): IndexerError {
+  if (hasHttpStatus(error, HttpStatusCode.TOO_MANY_REQUESTS)) {
+    const retryAfterSeconds = getRetryAfter(error);
+    return new RateLimitedError(homeserver, retryAfterSeconds === undefined ? undefined : retryAfterSeconds * 1000, {
+      cause: error,
+    });
+  }
+  return new HomeserverUnreachableError(homeserver, { cause: error });
+}
+
+function indexFileUrl(owner: Pubky, name: string): string {
+  if (!INDEXER_FILE_NAME_PATTERN.test(name)) throw new InvalidIndexInputError(`invalid index file name: ${name}`);
+  return `pubky://${owner}${INDEXER_FILES_PATH}${name}`;
+}
+
+/**
+ * The local index's way out: anonymous public reads of any homeserver, and the index's own files in `owner`'s
+ * private tree, written with the session. Every request goes through `HomeserverService`.
+ */
+export function createIndexerTransport(owner: Pubky): IndexerTransport {
+  return {
+    async resolveHomeserver(user) {
+      try {
+        return await HomeserverService.resolveIndexedUserHomeserver(user);
+      } catch (error) {
+        // A malformed key in someone's follow list can never resolve.
+        if (isAppError(error) && error.category === ErrorCategory.Validation) return null;
+        throw toIndexerError(user, error);
+      }
+    },
+    async readEvents({ homeserver, users, paths, limit, reverse, signal }) {
+      try {
+        const events = await HomeserverService.readPublicEventPage({
+          homeserverZ32: homeserver,
+          users: users.map(({ user, cursor }) => ({ userZ32: user, cursor: cursor === null ? null : String(cursor) })),
+          paths,
+          limit,
+          reverse,
+          signal,
+        });
+        return events.map(({ owner: author, eventType, path, cursor, contentHash }) => ({
+          type: eventType,
+          author,
+          path,
+          cursor: BigInt(cursor),
+          ...(contentHash === undefined ? {} : { hash: contentHash }),
+        }));
+      } catch (error) {
+        throw toIndexerError(homeserver, error);
+      }
+    },
+    async getPublic({ author, path, signal }) {
+      try {
+        return await HomeserverService.getPublicFileBytes({ url: `pubky://${author}${path}`, signal });
+      } catch (error) {
+        // The transport is not told the author's homeserver; the author names the failing one well enough.
+        throw toIndexerError(author, error);
+      }
+    },
+    async listIndexFiles() {
+      const urls = await HomeserverService.listAll({ baseDirectory: `pubky://${owner}${INDEXER_FILES_PATH}` });
+      // A subdirectory ends in `/` and names nothing here.
+      const names = urls.map((url) => url.slice(url.lastIndexOf('/') + 1));
+      return names.filter((name) => INDEXER_FILE_NAME_PATTERN.test(name));
+    },
+    async readIndexFile(name) {
+      const file = await HomeserverService.getBytesIfExists(indexFileUrl(owner, name));
+      return file?.bytes ?? null;
+    },
+    async writeIndexFile(name, bytes) {
+      await HomeserverService.putBlob({ url: indexFileUrl(owner, name), blob: bytes });
+    },
+    async deleteIndexFile(name) {
+      await HomeserverService.deleteIdempotent(indexFileUrl(owner, name));
+    },
+  };
+}

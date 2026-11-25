@@ -14,9 +14,11 @@ import type {
   CancelableAuthApproval,
   StoragePath,
   TAssertOkParams,
+  TBuildEventStreamPageUrlParams,
   TBuildUserEventStreamUrlParams,
   TCheckSessionExpirationParams,
   TGetOwnedResponseParams,
+  THomeserverStreamEvent,
   THomeserverUserEvent,
   TOwnedSessionPath,
   TParseResponseOrUndefinedParams,
@@ -138,27 +140,61 @@ export const buildUserEventStreamUrl = ({
   return url.toString();
 };
 
-const USER_EVENT_TYPES = new Set(['PUT', 'DEL']);
-const USER_EVENT_CURSOR_PREFIX = 'cursor: ';
-const USER_EVENT_CURSOR_PATTERN = /^\d+$/;
+/**
+ * The anonymous, non-live `/events-stream` request of the SDK's `eventStreamFor(homeserver).addUsers(…).limit(…)`:
+ * one page of up to 50 users' public events, each user read after its own cursor.
+ */
+export const buildEventStreamPageUrl = ({
+  homeserverZ32,
+  users,
+  paths,
+  limit,
+  reverse,
+}: TBuildEventStreamPageUrlParams): string => {
+  const url = new URL(`https://${homeserverZ32}/events-stream`);
+  for (const { userZ32, cursor } of users) {
+    url.searchParams.append('user', cursor === null ? userZ32 : `${userZ32}:${cursor}`);
+  }
+  url.searchParams.append('limit', String(limit));
+  if (reverse) url.searchParams.append('reverse', 'true');
+  for (const path of paths) {
+    url.searchParams.append('path', path);
+  }
+  return url.toString();
+};
+
+const STREAM_EVENT_CURSOR_PREFIX = 'cursor: ';
+const STREAM_EVENT_HASH_PREFIX = 'content_hash: ';
+const STREAM_EVENT_CURSOR_PATTERN = /^\d+$/;
 const SSE_LINE_BREAK = /\r\n|\r|\n/;
 
-const toUserEvent = (eventType: string, data: readonly string[]): THomeserverUserEvent | null => {
-  if (!USER_EVENT_TYPES.has(eventType)) return null;
+const fieldOf = (fields: readonly string[], prefix: string): string | undefined =>
+  fields.find((field) => field.startsWith(prefix))?.slice(prefix.length);
+
+const toStreamEvent = (eventType: string, data: readonly string[]): THomeserverStreamEvent | null => {
+  if (eventType !== 'PUT' && eventType !== 'DEL') return null;
   const [resource, ...fields] = data;
+  const owner = resource?.startsWith(PUBKY_PROTOCOL) ? extractPubkyZ32(resource) : null;
   const path = resource?.startsWith(PUBKY_PROTOCOL) ? toPathname(resource) : null;
-  const cursor = fields
-    .find((field) => field.startsWith(USER_EVENT_CURSOR_PREFIX))
-    ?.slice(USER_EVENT_CURSOR_PREFIX.length);
-  if (!path || !cursor || !USER_EVENT_CURSOR_PATTERN.test(cursor)) return null;
-  return { cursor, eventType, path };
+  const cursor = fieldOf(fields, STREAM_EVENT_CURSOR_PREFIX);
+  if (!owner || !path || !cursor || !STREAM_EVENT_CURSOR_PATTERN.test(cursor)) return null;
+  const contentHash = fieldOf(fields, STREAM_EVENT_HASH_PREFIX);
+  return contentHash === undefined
+    ? { owner, cursor, eventType, path }
+    : { owner, cursor, eventType, path, contentHash };
+};
+
+const toUserEvent = (eventType: string, data: readonly string[]): THomeserverUserEvent | null => {
+  const event = toStreamEvent(eventType, data);
+  return event && { cursor: event.cursor, eventType: event.eventType, path: event.path };
 };
 
 /**
  * Incremental decoder for the `/events-stream` SSE body, parsed as the SDK does: `event: PUT | DEL`, then a first
- * `data:` line `pubky://<user>/<path>` and a `data: cursor: <id>` line. Malformed and unknown events are skipped.
+ * `data:` line `pubky://<user>/<path>`, a `data: cursor: <id>` line and, on a PUT, `data: content_hash: <base64>`.
+ * Malformed and unknown events are skipped.
  */
-export const createUserEventStreamDecoder = () => {
+const createEventStreamDecoder = <T>(toEvent: (eventType: string, data: readonly string[]) => T | null) => {
   const textDecoder = new TextDecoder();
   let unterminated = '';
   let eventType = '';
@@ -166,17 +202,17 @@ export const createUserEventStreamDecoder = () => {
 
   return {
     /** Decodes one body chunk and returns the events it completed. */
-    push(chunk: Uint8Array): THomeserverUserEvent[] {
+    push(chunk: Uint8Array): T[] {
       const text = unterminated + textDecoder.decode(chunk, { stream: true });
       // A trailing CR may be the first half of a CRLF split across chunks.
       const heldCarriageReturn = text.endsWith('\r');
       const lines = (heldCarriageReturn ? text.slice(0, -1) : text).split(SSE_LINE_BREAK);
       unterminated = (lines.pop() ?? '') + (heldCarriageReturn ? '\r' : '');
 
-      const events: THomeserverUserEvent[] = [];
+      const events: T[] = [];
       for (const line of lines) {
         if (line === '') {
-          const event = toUserEvent(eventType, data);
+          const event = toEvent(eventType, data);
           if (event) events.push(event);
           eventType = '';
           data = [];
@@ -194,6 +230,12 @@ export const createUserEventStreamDecoder = () => {
     },
   };
 };
+
+/** Decodes a one-user stream into its events' paths and cursors. */
+export const createUserEventStreamDecoder = () => createEventStreamDecoder(toUserEvent);
+
+/** Decodes a stream of several users into events that keep their owner and content hash. */
+export const createStreamEventDecoder = () => createEventStreamDecoder(toStreamEvent);
 
 /**
  * Parses a response as JSON, returning undefined if parsing fails with INVALID_RESPONSE error.

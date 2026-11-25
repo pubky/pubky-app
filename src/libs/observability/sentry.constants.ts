@@ -23,6 +23,12 @@ export const PHONE_PATTERN = /\+?\d[\d\s().-]{7,}\d/g;
 export const NEXUS_POST_TAGS_PATH_PATTERN = /^\/v1\/post\/[^/]+\/[^/]+\/tags$/;
 /** `operation` tag set by `HomeserverService.subscribeUserEventStream`; matched by a Sentry drop rule. */
 export const HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION = 'subscribeUserEventStream';
+/** `operation` tags of the anonymous `HomeserverService` reads the local index crawls with; matched by a Sentry drop rule. */
+export const HOMESERVER_INDEX_READ_OPERATIONS = {
+  resolveHomeserver: 'resolveIndexedUserHomeserver',
+  readEvents: 'readPublicEventPage',
+  readFile: 'getPublicFileBytes',
+} as const;
 /**
  * `callSite` tags the Pay to Unlock polling loops put on their Lock Server reads; matched by the
  * `locks-unlock-poll-repeat-reports` drop rule, so a rename here cannot leave the rule behind.

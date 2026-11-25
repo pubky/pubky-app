@@ -2873,6 +2873,180 @@ describe('HomeserverService', () => {
       });
     });
 
+    describe('local index reads', () => {
+      const HOMESERVER_Z32 = 'homeserver-z32';
+      const POSTS = '/pub/social/v1/posts/';
+      const encoder = new TextEncoder();
+
+      /** A fetch that waits for response headers until its signal aborts, as the browser's does. */
+      function fetchAwaitingHeaders() {
+        mockState.clientFetch.mockImplementation(
+          (_url: string, init: RequestInit) =>
+            new Promise<Response>((_resolve, reject) => {
+              init.signal?.addEventListener('abort', () => reject(init.signal?.reason), { once: true });
+            }),
+        );
+      }
+
+      it('resolves a user’s homeserver anonymously and reads an absent record as null', async () => {
+        mockState.getHomeserverOf.mockResolvedValueOnce({ z32: () => HOMESERVER_Z32 }).mockResolvedValueOnce(undefined);
+
+        await expect(HomeserverService.resolveIndexedUserHomeserver('alice')).resolves.toBe(HOMESERVER_Z32);
+        await expect(HomeserverService.resolveIndexedUserHomeserver('bob')).resolves.toBeNull();
+      });
+
+      it('rejects a failed lookup with an error kept out of Sentry', async () => {
+        mockState.getHomeserverOf.mockRejectedValue({ name: 'PkarrError', message: 'relay unreachable' });
+
+        const error = (await HomeserverService.resolveIndexedUserHomeserver('alice').catch(
+          (caught: unknown) => caught,
+        )) as AppError;
+
+        expect(error).toMatchObject({ service: ErrorService.Homeserver, category: ErrorCategory.Network });
+        expect(shouldDropAppErrorFromSentry(error)).toBe(true);
+      });
+
+      it('reads one anonymous, non-live page for several users with their own cursors', async () => {
+        mockState.currentSession = createMockSession();
+        mockState.clientFetch.mockResolvedValue(
+          new Response(
+            encoder.encode(
+              `event: PUT\ndata: pubky://alice${POSTS}0033\ndata: cursor: 12\ndata: content_hash: aGFzaA==\n\n` +
+                `event: DEL\ndata: pubky://bob${POSTS}0034\ndata: cursor: 13\n\n` +
+                `event: PUT\ndata: pubky://bob${POSTS}0035\ndata: cursor: 14\n`,
+            ),
+            { status: 200 },
+          ),
+        );
+
+        const events = await HomeserverService.readPublicEventPage({
+          homeserverZ32: HOMESERVER_Z32,
+          users: [
+            { userZ32: 'alice', cursor: '7' },
+            { userZ32: 'bob', cursor: null },
+          ],
+          paths: [POSTS, '/pub/social/v1/profile.json'],
+          limit: 500,
+          reverse: true,
+        });
+
+        const [url, init] = mockState.clientFetch.mock.calls[0] as [string, RequestInit];
+        const sent = new URL(url);
+        expect(`${sent.origin}${sent.pathname}`).toBe(`https://${HOMESERVER_Z32}/events-stream`);
+        expect(sent.searchParams.getAll('user')).toEqual(['alice:7', 'bob']);
+        expect(sent.searchParams.get('limit')).toBe('500');
+        expect(sent.searchParams.get('reverse')).toBe('true');
+        expect(sent.searchParams.has('live')).toBe(false);
+        expect(sent.searchParams.getAll('path')).toEqual([POSTS, '/pub/social/v1/profile.json']);
+        expect(init).toMatchObject({ method: HttpMethod.GET, credentials: 'omit' });
+        expect(mockState.sessionStorageGet).not.toHaveBeenCalled();
+        // The last event never got its closing blank line.
+        expect(events).toEqual([
+          { owner: 'alice', cursor: '12', eventType: 'PUT', path: `${POSTS}0033`, contentHash: 'aGFzaA==' },
+          { owner: 'bob', cursor: '13', eventType: 'DEL', path: `${POSTS}0034` },
+        ]);
+      });
+
+      it('rejects a 429 with its retry-after, kept out of Sentry', async () => {
+        mockState.clientFetch.mockResolvedValue(new Response('', { status: 429, headers: { 'retry-after': '7' } }));
+
+        const error = (await HomeserverService.readPublicEventPage({
+          homeserverZ32: HOMESERVER_Z32,
+          users: [{ userZ32: 'alice', cursor: null }],
+          paths: [POSTS],
+          limit: 10,
+          reverse: false,
+        }).catch((caught: unknown) => caught)) as AppError;
+
+        expect(error).toMatchObject({ service: ErrorService.Homeserver, context: { statusCode: 429, retryAfter: 7 } });
+        expect(shouldDropAppErrorFromSentry(error)).toBe(true);
+      });
+
+      it('aborts a page the homeserver holds past the read deadline', async () => {
+        vi.useFakeTimers();
+        try {
+          fetchAwaitingHeaders();
+          const reading = HomeserverService.readPublicEventPage({
+            homeserverZ32: HOMESERVER_Z32,
+            users: [{ userZ32: 'alice', cursor: null }],
+            paths: [POSTS],
+            limit: 10,
+            reverse: false,
+          }).catch((caught: unknown) => caught);
+
+          await vi.advanceTimersByTimeAsync(20_000);
+
+          const error = (await reading) as AppError;
+          const [, init] = mockState.clientFetch.mock.calls[0] as [string, RequestInit];
+          expect(init.signal?.aborted).toBe(true);
+          expect(error).toMatchObject({ service: ErrorService.Homeserver });
+          expect(shouldDropAppErrorFromSentry(error)).toBe(true);
+        } finally {
+          vi.useRealTimers();
+        }
+      });
+
+      it('aborts a page when the caller’s signal fires', async () => {
+        fetchAwaitingHeaders();
+        const abort = new AbortController();
+
+        const reading = HomeserverService.readPublicEventPage({
+          homeserverZ32: HOMESERVER_Z32,
+          users: [{ userZ32: 'alice', cursor: null }],
+          paths: [POSTS],
+          limit: 10,
+          reverse: false,
+          signal: abort.signal,
+        }).catch((caught: unknown) => caught);
+        await vi.waitFor(() => expect(mockState.clientFetch).toHaveBeenCalledOnce());
+        abort.abort();
+
+        await expect(reading).resolves.toMatchObject({ service: ErrorService.Homeserver });
+        const [, init] = mockState.clientFetch.mock.calls[0] as [string, RequestInit];
+        expect(init.signal?.aborted).toBe(true);
+      });
+
+      it('reads a public file anonymously, even the signed-in user’s own, and a 404 as null', async () => {
+        mockState.currentSession = createMockSession();
+        mockState.clientFetch
+          .mockResolvedValueOnce(new Response(encoder.encode('{"name":"alice"}'), { status: 200 }))
+          .mockResolvedValueOnce(new Response('', { status: 404 }));
+
+        const bytes = await HomeserverService.getPublicFileBytes({ url: 'pubky://user/pub/social/v1/profile.json' });
+        const missing = await HomeserverService.getPublicFileBytes({ url: 'pubky://user/pub/social/v1/gone.json' });
+
+        expect(new TextDecoder().decode(bytes ?? new Uint8Array())).toBe('{"name":"alice"}');
+        expect(missing).toBeNull();
+        expect(mockState.clientFetch).toHaveBeenCalledWith(
+          'https://user/pub/social/v1/profile.json',
+          expect.objectContaining({ method: HttpMethod.GET, credentials: 'omit' }),
+        );
+        expect(mockState.sessionStorageGet).not.toHaveBeenCalled();
+      });
+
+      it('rejects a failed file read with an error kept out of Sentry', async () => {
+        mockState.clientFetch.mockResolvedValue(new Response('', { status: 503 }));
+
+        const error = (await HomeserverService.getPublicFileBytes({ url: 'pubky://alice/pub/social/v1/a.json' }).catch(
+          (caught: unknown) => caught,
+        )) as AppError;
+
+        expect(error).toMatchObject({ service: ErrorService.Homeserver, category: ErrorCategory.Server });
+        expect(shouldDropAppErrorFromSentry(error)).toBe(true);
+      });
+
+      it('leaves the same failure on the app’s own public reads reportable', async () => {
+        mockState.clientFetch.mockResolvedValue(new Response('', { status: 503 }));
+
+        const error = (await HomeserverService.getFreshBytes('pubky://alice/pub/social/v1/a.json').catch(
+          (caught: unknown) => caught,
+        )) as AppError;
+
+        expect(error).toMatchObject({ service: ErrorService.Homeserver, category: ErrorCategory.Server });
+        expect(shouldDropAppErrorFromSentry(error)).toBe(false);
+      });
+    });
+
     describe('URL resolution', () => {
       it('should use session storage paths for pubky URLs', async () => {
         mockState.currentSession = createMockSession();

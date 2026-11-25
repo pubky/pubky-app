@@ -119,6 +119,32 @@ export type THomeserverUserEventStreamParams = {
   signal: AbortSignal;
 };
 
+/** One event of a public event stream read for several users, with the user whose file it touched. */
+export type THomeserverStreamEvent = {
+  owner: string;
+  cursor: string;
+  eventType: 'PUT' | 'DEL';
+  /** Absolute storage path of the changed resource. */
+  path: string;
+  /** The file's content hash in base64, present on a PUT. */
+  contentHash?: string;
+};
+
+export type THomeserverEventPageParams = {
+  homeserverZ32: string;
+  /** At most 50 users, each read after its own cursor; `null` starts at the stream start, or at its end when `reverse`. */
+  users: ReadonlyArray<{ userZ32: string; cursor: string | null }>;
+  /** Union of path filters: a trailing slash matches a directory subtree, otherwise one exact file. */
+  paths: readonly string[];
+  /** Events in the page, for all users together. */
+  limit: number;
+  /** Newest first. */
+  reverse: boolean;
+  signal?: AbortSignal;
+};
+
+export type TBuildEventStreamPageUrlParams = Omit<THomeserverEventPageParams, 'signal'>;
+
 export type TBuildUserEventStreamUrlParams = {
   homeserverZ32: string;
   userZ32: string;
