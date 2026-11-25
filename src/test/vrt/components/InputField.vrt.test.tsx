@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { InputField } from '@/molecules/InputField/InputField';
+import { contrastRatio, paintedHex } from '@/test-utils/color-contrast';
 import { renderForVRT } from '@/test-utils/vrt';
 
 for (const width of [390, 1440]) {
@@ -79,3 +80,17 @@ for (const width of [390, 1440]) {
     });
   });
 }
+
+it('keeps the profile error message readable on a dark card', async () => {
+  const screen = await renderForVRT(
+    <main className="bg-card p-4">
+      <InputField id="name" value="" readOnly status="error" messageType="error" message="Enter your name" />
+    </main>,
+    { viewport: { width: 390, height: 844 }, theme: 'dark' },
+  );
+  const message = screen.getByRole('alert');
+  await expect.element(message).toBeVisible();
+  const card = getComputedStyle(screen.getByRole('main').element()).backgroundColor;
+  const ink = getComputedStyle(message.element()).color;
+  expect(contrastRatio(paintedHex(card, ink), paintedHex(card))).toBeGreaterThanOrEqual(4.5);
+});

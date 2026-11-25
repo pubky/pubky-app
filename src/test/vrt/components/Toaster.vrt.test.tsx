@@ -1,55 +1,50 @@
-import { expect, it } from 'vitest';
-import { page } from 'vitest/browser';
+import { describe, expect, it } from 'vitest';
 import { toast } from '@/molecules/Toaster/toast';
 import { Toaster } from '@/molecules/Toaster/Toaster';
-import { contrastRatio } from '@/test-utils/color-contrast';
+import { contrastRatio, paintedHex } from '@/test-utils/color-contrast';
 import { renderForVRT } from '@/test-utils/vrt';
 
-// Canvas resolves CSS colours (including oklch and color-mix) and composites translucent layers in paint order.
-function paintedHex(...layers: string[]): string {
-  const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = 1;
-  const context = canvas.getContext('2d')!;
-  for (const layer of layers) {
-    context.fillStyle = layer;
-    context.fillRect(0, 0, 1, 1);
-  }
-  return (
-    '#' + Array.from(context.getImageData(0, 0, 1, 1).data.slice(0, 3), (n) => n.toString(16).padStart(2, '0')).join('')
-  );
+function expectReadable(element: Element, surface: string) {
+  const style = getComputedStyle(element);
+  const fill = paintedHex(surface, style.backgroundColor);
+  expect(contrastRatio(paintedHex(fill, style.color), fill)).toBeGreaterThanOrEqual(4.5);
 }
 
-it.each(['dark', 'light'] as const)(
-  'keeps the success OK button readable at rest and on hover in %s mode',
-  async (theme) => {
+describe.each(['var(--card)', '#000', '#606060', '#fff'])('Success toast over %s', (backdrop) => {
+  it.each(['dark', 'light'] as const)('keeps its text and OK button readable in %s mode', async (theme) => {
     const screen = await renderForVRT(
-      <>
-        <div className="fixed inset-0 bg-card" data-testid="backdrop" />
+      <main className="fixed inset-0" style={{ backgroundColor: backdrop }}>
         <Toaster />
-      </>,
+      </main>,
       { viewport: { width: 800, height: 600 }, theme },
     );
-    const handle = toast({ title: 'Collection order saved', dismissButton: true, persistent: true });
+    const handle = toast({
+      title: 'Collection order saved',
+      description: 'Changes saved.',
+      dismissButton: true,
+      persistent: true,
+    });
     try {
-      const ok = page.getByRole('button', { name: 'OK', exact: true });
+      const title = screen.getByText('Collection order saved', { exact: true });
+      const description = screen.getByText('Changes saved.', { exact: true });
+      const ok = screen.getByRole('button', { name: 'OK', exact: true });
       await expect.element(ok).toBeVisible();
-      const backdrop = getComputedStyle(screen.getByTestId('backdrop').element()).backgroundColor;
-      const surface = getComputedStyle(ok.element().closest('[data-cy="toast"]')!).backgroundColor;
-      const button = getComputedStyle(ok.element());
-      const ratio = () =>
-        contrastRatio(
-          paintedHex(backdrop, surface, button.backgroundColor),
-          paintedHex(backdrop, surface, button.backgroundColor, button.color),
-        );
-      expect(ratio()).toBeGreaterThanOrEqual(4.5);
-      const idleFill = button.backgroundColor;
+      const surface = paintedHex(
+        getComputedStyle(screen.getByRole('main').element()).backgroundColor,
+        getComputedStyle(ok.element().closest('[data-cy="toast"]')!).backgroundColor,
+      );
+      expectReadable(title.element(), surface);
+      expectReadable(description.element(), surface);
+      await title.hover();
+      expectReadable(ok.element(), surface);
+      const idleFill = getComputedStyle(ok.element()).backgroundColor;
       await ok.hover();
-      await expect.poll(() => button.backgroundColor).not.toBe(idleFill);
-      expect(ratio()).toBeGreaterThanOrEqual(4.5);
+      await expect.poll(() => getComputedStyle(ok.element()).backgroundColor).not.toBe(idleFill);
+      expectReadable(ok.element(), surface);
       await ok.click();
       await expect.element(ok).not.toBeInTheDocument();
     } finally {
       handle.dismiss();
     }
-  },
-);
+  });
+});

@@ -10,3 +10,17 @@ export function contrastRatio(a: string, b: string): number {
   const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x);
   return (light + 0.05) / (dark + 0.05);
 }
+
+// Canvas resolves CSS colours (including oklch and color-mix) and composites translucent layers in paint order.
+export function paintedHex(...layers: string[]): string {
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 1;
+  const context = canvas.getContext('2d')!;
+  for (const layer of layers) {
+    context.fillStyle = layer;
+    context.fillRect(0, 0, 1, 1);
+  }
+  return (
+    '#' + Array.from(context.getImageData(0, 0, 1, 1).data.slice(0, 3), (n) => n.toString(16).padStart(2, '0')).join('')
+  );
+}

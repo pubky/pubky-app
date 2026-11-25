@@ -60,3 +60,13 @@ describe('PostInputActionBar — narrow composer', () => {
     await matchVrtFrameScreenshot('lock-switch-narrow');
   });
 });
+
+it.each([VRT_VIEWPORT_MOBILE, VRT_VIEWPORT_DESKTOP])(
+  'renders the Post label in bold at $width px',
+  async (viewport) => {
+    const screen = await renderForVRT(<PostInputActionBar onPostClick={vi.fn()} hideArticleButton={false} />, {
+      viewport,
+    });
+    expect(getComputedStyle(screen.getByText('Post', { exact: true }).element()).fontWeight).toBe('700');
+  },
+);

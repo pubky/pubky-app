@@ -24,7 +24,7 @@ export const toastVariants = cva(
   {
     variants: {
       variant: {
-        default: 'rounded-md border-brand/50 bg-brand/25',
+        default: 'rounded-md border-brand/50 bg-toast-success',
         error: 'border-destructive/32 bg-destructive/8',
         warning: 'border-yellow-500/32 bg-yellow-500/8',
         info: 'border-accent/32 bg-accent/8',

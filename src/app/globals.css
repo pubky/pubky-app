@@ -85,7 +85,8 @@ body:has([data-slot='shop-route']) {
   );
   --color-action-pill: var(--action-pill);
   --color-embed: var(--embed);
-  /* Keep the small OK label legible over content behind a translucent success toast. */
+  /* Blend with the page color so text stays readable over photos. */
+  --color-toast-success: color-mix(in srgb, var(--brand) 25%, var(--background));
   --color-toast-action-brand: color-mix(in srgb, var(--brand) 32%, var(--background));
   --color-toast-action-brand-hover: color-mix(in srgb, var(--brand) 40%, var(--background));
   --color-toast-action-muted: var(--toast-action-muted);

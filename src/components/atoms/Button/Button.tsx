@@ -21,7 +21,7 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          'bg-brand/16 text-brand border-brand hover:!bg-brand/32 hover:bg-button-hover focus-visible:border-brand focus-visible:bg-brand/32 disabled:bg-brand/8 disabled:opacity-30',
+          'bg-brand/16 text-brand border-brand hover:!bg-brand/32 hover:bg-button-hover focus-visible:border-brand focus-visible:bg-brand/32 focus-visible:ring-ring disabled:bg-brand/8 disabled:opacity-30',
         destructive:
           'bg-destructive-button text-destructive-foreground hover:bg-destructive-button-hover focus-visible:ring-destructive/20 focus-visible:ring-destructive/40',
         'destructive-soft': 'bg-destructive/16 text-destructive hover:!bg-destructive/30 border-destructive',

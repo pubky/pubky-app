@@ -195,7 +195,7 @@ describe('Button', () => {
     render(<Button tabIndex={0}>Focusable Button</Button>);
     const button = screen.getByRole('button');
     expect(button).toHaveAttribute('tabIndex', '0');
-    expect(button).toHaveClass('focus-visible:border-brand', 'focus-visible:bg-brand/32', 'focus-visible:ring-ring/50');
+    expect(button).toHaveClass('focus-visible:border-brand', 'focus-visible:bg-brand/32', 'focus-visible:ring-ring');
   });
 
   it('handles hover states correctly', () => {
