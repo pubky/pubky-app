@@ -14,7 +14,10 @@ import { scopeId } from './store.helpers';
 import type { ScopeKey } from './store.types';
 
 const LOCK_PREFIX = 'pubky-indexer:';
-/** A scope sync pre-empted this many times in a row runs its next pass to the end, ahead of queued requests. */
+/**
+ * A scope sync pre-empted this many times in a row runs its next pass to the end. The requests queued when it was
+ * pre-empted the last time still go first; later ones wait for the pass.
+ */
 const MAX_PREEMPTIONS = 3;
 
 const defaultSchedule: Schedule = (callback, ms) => {
@@ -63,6 +66,8 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
   let preempt: AbortController | null = null;
   /** Scope syncs pre-empted since one last ran to its end. */
   let preempted = 0;
+  /** Requests that pre-empted the last allowed time, still run ahead of the pass that may not yield. */
+  let aheadOfForced = 0;
   /** Requests for one user, leaf or backfill, in arrival order. */
   let queue: Task[] = [];
   /** Requests for a whole scope sync: the next one to start settles them all. */
@@ -178,6 +183,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     } catch (error) {
       if (signal.aborted && !outer.aborted) {
         preempted += 1;
+        if (preempted >= MAX_PREEMPTIONS) aheadOfForced = queue.length;
         periodicDue = true;
         requeue(waiters);
         return;
@@ -206,8 +212,9 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
   }
 
   /**
-   * Starts the next crawl: requests first, then a scope sync, unless the scope sync was pre-empted too often. A
-   * request arriving during a scope sync that may yield aborts it at its next safe point.
+   * Starts the next crawl: requests first, then a scope sync, unless the scope sync was pre-empted too often: then
+   * only the requests that pre-empted it go first. A request arriving during a scope sync that may yield aborts it at
+   * its next safe point.
    */
   function pump() {
     const current = seed;
@@ -217,7 +224,9 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
       return;
     }
     const scopeWanted = periodicDue || scopeDue.length > 0;
-    const task = scopeWanted && preempted >= MAX_PREEMPTIONS ? undefined : queue.shift();
+    const forced = scopeWanted && preempted >= MAX_PREEMPTIONS && aheadOfForced === 0;
+    const task = forced ? undefined : queue.shift();
+    if (task !== undefined && aheadOfForced > 0) aheadOfForced -= 1;
     let work: Promise<void>;
     if (task !== undefined) work = execute(task, current, controller.signal);
     else if (scopeWanted) work = startScopeSync(current);
@@ -405,6 +414,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
       lastSyncAt = null;
       lastError = null;
       preempted = 0;
+      aheadOfForced = 0;
       if (coordination !== null) unsubscribe = coordination.subscribe(onMessage);
       seekLead();
       emitStatus();
