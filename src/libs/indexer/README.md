@@ -105,7 +105,9 @@ what was loaded; feeds, rankings, searches and hot tags over the scope are unava
 
 `ensurePost` loads the post together with its author's profile when the view has none, so a post card renders from
 one load, and once the post is in the view it starts loading the posts it replies to or quotes, with their authors'
-profiles, without waiting for them: a page that asks for them next joins those loads.
+profiles, without waiting for them: a page that asks for them next joins those loads. Those prefetched loads count
+toward the same limits but never push out an item that was asked for: each enters as the least recently ensured, and
+none starts while its limit is reached.
 
 `ensureProfile` loads a profile alone, for avatars. What a tab loads on demand is capped (`maxVisitedUsers`,
 `maxLoosePosts`, `maxProfiles`): past a cap the least recently ensured item leaves the view and the runtime's `forget`

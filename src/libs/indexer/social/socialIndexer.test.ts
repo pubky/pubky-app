@@ -400,6 +400,31 @@ describe('createSocialIndexer', () => {
       expect(indexer.view().profile(ALICE)).not.toBeNull();
     });
 
+    it('keeps prefetched posts under the limit, evicting them before any post asked for', async () => {
+      const world = socialWorld({}, { maxLoosePosts: 2 });
+      const { b1, c1, orphan } = world.fixture.posts;
+      const indexer = world.indexerOf();
+      indexer.start(null);
+      await indexer.ready();
+      const postScopes = async () =>
+        (await world.store.listScopes())
+          .filter(({ group }) => group.startsWith('post:'))
+          .map(({ group }) => group)
+          .sort();
+
+      await indexer.ensurePost(CLEO, c1.id);
+      await until(() => indexer.view().post(BRAN, b1.id) !== null, 'the prefetched parent');
+      await indexer.ensurePost(DION, orphan.id);
+      await until(async () => !(await postScopes()).includes(`post:${b1.id}`), 'the prefetched parent to be forgotten');
+
+      // The orphan's parent is not prefetched: the limit is reached by posts asked for.
+      expect(await postScopes()).toEqual([`post:${c1.id}`, `post:${orphan.id}`].sort());
+      expect(indexer.view().post(CLEO, c1.id)).not.toBeNull();
+
+      await indexer.ensurePost(BRAN, b1.id);
+      expect(indexer.view().post(BRAN, b1.id)).not.toBeNull();
+    });
+
     it('opens a profile with its own stream', async () => {
       const { fixture, indexer, touched } = visitor();
 
@@ -466,7 +491,8 @@ describe('createSocialIndexer', () => {
     expect(await scopesOf(BRAN)).toEqual([]);
     expect(view.post(DION, collection.id)).toBeNull();
     expect(view.post(DION, orphan.id)).not.toBeNull();
-    expect(await scopesOf(DION)).toEqual([`post:${orphan.id}`]);
+    // The author's profile loads with the first post and stays under its own limit.
+    expect((await scopesOf(DION)).sort()).toEqual([`post:${orphan.id}`, 'profile'].sort());
 
     await indexer.ensureUser(BRAN);
     expect(indexer.view().profile(BRAN)).toMatchObject({ name: 'Bran' });

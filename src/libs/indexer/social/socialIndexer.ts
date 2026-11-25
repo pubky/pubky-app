@@ -554,13 +554,31 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
     return current.profile(user) === null ? ensureProfile(user).catch(() => undefined) : Promise.resolve();
   }
 
+  /**
+   * Loads a leaf nobody asked for yet, inside the same limit as the asked ones but never pushing one of them out: it
+   * enters as the least recently ensured item, so it goes first, and is skipped while the limit is reached. Asking
+   * for it later makes it the most recent like any other.
+   */
+  function prefetchLeaf(items: Map<string, LeafRequest>, key: string, leaf: LeafRequest, max: number): void {
+    if (items.has(key) || items.size >= max) return;
+    const rest = [...items];
+    items.clear();
+    items.set(key, leaf);
+    for (const [known, item] of rest) items.set(known, item);
+    void requestRebuild([]);
+    void loadedThen(runtime.ensureLeaf(leaf), null).catch(() => undefined);
+  }
+
   function prefetchReferences(author: string, postId: string): void {
     const post = current.post(author, postId);
     if (post === null) return;
     for (const target of [post.data.parent, post.data.embed]) {
       if (target === null || target.kind !== 'post' || current.post(target.author, target.postId) !== null) continue;
-      void ensurePostAlone(target.author, target.postId).catch(() => undefined);
-      void ensureProfileIfMissing(target.author);
+      const leaf = postLeaf(target.author, target.postId);
+      prefetchLeaf(ensuredPosts, JSON.stringify([target.author, leaf.group]), leaf, limits.maxLoosePosts);
+      if (current.profile(target.author) === null) {
+        prefetchLeaf(ensuredProfiles, target.author, profileLeaf(target.author), limits.maxProfiles);
+      }
     }
   }
 
