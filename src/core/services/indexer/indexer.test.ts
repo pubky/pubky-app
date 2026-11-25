@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createBrowserCoordination } from '@/libs/indexer/browserCoordination';
+import { type BrowserCoordination, createBrowserCoordination } from '@/libs/indexer/browserCoordination';
 import { createIdbStore } from '@/libs/indexer/idbStore';
 import { createSocialIndexer } from '@/libs/indexer/social/socialIndexer';
 import type { Pubky } from '@/models/models.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { postStreamDirtyRegistry } from '@/services/local/stream/posts/postStreamDirtyRegistry';
+import { asOpaque } from '@/test-utils/type-assertions';
 import { IndexerService } from './indexer';
 
 const fakes = vi.hoisted(() => ({
@@ -156,6 +157,18 @@ describe('IndexerService', () => {
     expect(fakes.stores[0].close).toHaveBeenCalledOnce();
     expect(fakes.indexers[1].start).toHaveBeenCalledExactlyOnceWith(BOB);
     expect(IndexerService.current()).toBe(fakes.indexers[1]);
+  });
+
+  it('closes the tab coordination after the index stops', () => {
+    const close = vi.fn();
+    vi.mocked(createBrowserCoordination).mockReturnValueOnce(asOpaque<BrowserCoordination>({ close }));
+    IndexerService.start(ALICE);
+    expect(close).not.toHaveBeenCalled();
+
+    IndexerService.stop();
+
+    expect(close).toHaveBeenCalledOnce();
+    expect(fakes.indexers[0].stop.mock.invocationCallOrder[0]).toBeLessThan(close.mock.invocationCallOrder[0]);
   });
 
   it('keeps the database on stop and runs nothing afterwards', () => {

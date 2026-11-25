@@ -1,5 +1,5 @@
 import { INDEXER_DATABASE_PREFIX, INDEXER_VISITOR_DATABASE } from '@/config/indexer';
-import { browserApis, createBrowserCoordination } from '@/libs/indexer/browserCoordination';
+import { browserApis, type BrowserCoordination, createBrowserCoordination } from '@/libs/indexer/browserCoordination';
 import { createIdbStore, type IdbIndexStore } from '@/libs/indexer/idbStore';
 import type { SocialData } from '@/libs/indexer/social/social.types';
 import { createSocialIndexer, type SocialIndexer } from '@/libs/indexer/social/socialIndexer';
@@ -20,6 +20,7 @@ type RunningIndex = {
   owner: Pubky | null;
   indexer: SocialIndexer;
   store: IdbIndexStore<SocialData>;
+  coordination: BrowserCoordination | null;
   unsubscribe: () => void;
 };
 
@@ -48,13 +49,14 @@ export class IndexerService {
         .catch((error: unknown) => Logger.debug('Visitor index not deleted', { error }));
     }
     const store = createIdbStore<SocialData>(databaseName(owner));
+    // Scoped by the database: tabs of two accounts in one browser must not hear each other. A visitor's tabs each load
+    // on their own.
+    const coordination = owner === null ? null : createBrowserCoordination(browserApis(), databaseName(owner));
     const indexer = createSocialIndexer({
       transport: createIndexerTransport(owner),
       store,
       now: () => Date.now(),
-      // Scoped by the database: tabs of two accounts in one browser must not hear each other. A visitor's tabs each
-      // load on their own.
-      coordination: owner === null ? null : createBrowserCoordination(browserApis(), databaseName(owner)),
+      coordination,
     });
     // Every app write lands through HomeserverService; a refresh of the account makes it part of the answers.
     const stopRefreshing =
@@ -80,6 +82,7 @@ export class IndexerService {
       owner,
       indexer,
       store,
+      coordination,
       unsubscribe: () => {
         stopRefreshing();
         stopInvalidating();
@@ -88,13 +91,15 @@ export class IndexerService {
     };
   }
 
-  /** Stops the running index and closes its database; what it stored stays for the next start. */
+  /** Stops the running index and closes its database and tab channel; what it stored stays for the next start. */
   static stop(): void {
     const running = this.running;
     if (!running) return;
     this.running = null;
     running.unsubscribe();
     running.indexer.stop();
+    // The indexer never closes the coordination it was given.
+    running.coordination?.close();
     running.store.close();
   }
 
