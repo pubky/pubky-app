@@ -40,6 +40,9 @@ vi.mock('@/providers/RouteGuardProvider/RouteGuardProvider', () => ({
 vi.mock('@/organisms/CoordinatorsManager/CoordinatorsManager', () => ({
   CoordinatorsManager: () => <div data-testid="coordinators-manager" />,
 }));
+vi.mock('@/organisms/LocalIndexManager/LocalIndexManager', () => ({
+  LocalIndexManager: () => <div data-testid="local-index-manager" />,
+}));
 vi.mock('@/organisms/Header/Header', () => ({
   Header: () => <header data-testid="header" />,
 }));
@@ -60,6 +63,7 @@ const PUBLIC_DOCUMENT_ROUTES = [...Object.values(LEGAL_ROUTES), COPYRIGHT_ROUTES
 const APP_ONLY_TEST_IDS = [
   'database-provider',
   'route-guard-provider',
+  'local-index-manager',
   'coordinators-manager',
   'fab',
   'guest-contextual-banner',
@@ -103,9 +107,13 @@ describe('AppShell', () => {
     expect(screen.getByTestId('database-provider')).toContainElement(routeGuard);
     expect(routeGuard).toContainElement(screen.getByText('Feed'));
     expect(routeGuard).toContainElement(screen.getByTestId('header'));
-    for (const testId of APP_ONLY_TEST_IDS.slice(2)) {
+    for (const testId of APP_ONLY_TEST_IDS.slice(3)) {
       expect(routeGuard).toContainElement(screen.getByTestId(testId));
     }
+    // The local index answers reads made while the gate shows its spinner, such as the sign-in bootstrap.
+    const localIndex = screen.getByTestId('local-index-manager');
+    expect(screen.getByTestId('database-provider')).toContainElement(localIndex);
+    expect(routeGuard).not.toContainElement(localIndex);
   });
 
   it.each(['/', ...PUBLIC_DOCUMENT_ROUTES])('renders %s with only the header, outside the gate', (pathname) => {

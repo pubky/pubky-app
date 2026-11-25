@@ -14,7 +14,6 @@ const mocks = vi.hoisted(() => {
     muteListSync: coordinator(),
     notificationLastReadPoll: coordinator(),
     lastReadChannel: coordinator(),
-    indexer: coordinator(),
   };
 });
 
@@ -33,19 +32,11 @@ vi.mock('@/coordinators/mute-list-sync/mute-list-sync', () => ({
 vi.mock('@/coordinators/notification-last-read-poll/notification-last-read-poll', () => ({
   NotificationLastReadPollCoordinator: { getInstance: () => mocks.notificationLastReadPoll },
 }));
-vi.mock('@/coordinators/indexer/indexer', () => ({ IndexerCoordinator: { getInstance: () => mocks.indexer } }));
 vi.mock('@/coordinators/notification-last-read-sync/notification-last-read-sync', () => ({
   NotificationLastReadSyncCoordinator: { getInstance: () => mocks.lastReadChannel },
 }));
 
-const all = () => [
-  mocks.notification,
-  mocks.stream,
-  mocks.ttl,
-  mocks.muteListSync,
-  mocks.notificationLastReadPoll,
-  mocks.indexer,
-];
+const all = () => [mocks.notification, mocks.stream, mocks.ttl, mocks.muteListSync, mocks.notificationLastReadPoll];
 
 describe('CoordinatorsManager', () => {
   beforeEach(() => {

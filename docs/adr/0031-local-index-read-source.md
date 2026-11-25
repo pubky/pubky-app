@@ -31,8 +31,9 @@ default, today's behavior), `local`, or `local,nexus`. Without `nexus` the Nexus
   homeservers other people run, so they carry dedicated operations that a Sentry drop rule matches.
 - **Lifecycle.** `IndexerService` owns one `SocialIndexer` per tab, in a database named by the account's key, with
   cross-tab coordination scoped by that name so one tab per account crawls. `IndexerCoordinator` (started by
-  `CoordinatorsManager`) starts it when a session enters the auth store, which is after the migration gate and before
-  the profile bootstrap, stops it when the session leaves and pauses it with the tab. Sign-out deletes its database
+  `LocalIndexManager`, outside the route guard, whose spinner unmounts `CoordinatorsManager` while the account is
+  prepared) starts it when a session enters the auth store, which is after the migration gate and before the profile
+  bootstrap, stops it when the session leaves and pauses it with the tab. Sign-out deletes its database
   next to the app's own. Without `local` among the sources, the coordinator only deletes, best effort, the database an
   earlier `local` deploy left for an account that signs in.
 - **Routing.** `queryNexus` asks the local index first when `local` is a source. A 200 returns its JSON; a 404 raises

@@ -6,12 +6,15 @@ import { CoordinatorsManager } from '@/organisms/CoordinatorsManager/Coordinator
 import { DialogSignIn } from '@/organisms/DialogSignIn/DialogSignIn';
 import { GuestContextualBanner } from '@/organisms/GuestContextualBanner/GuestContextualBanner';
 import { Header } from '@/organisms/Header/Header';
+import { LocalIndexManager } from '@/organisms/LocalIndexManager/LocalIndexManager';
 import { DatabaseProvider } from '@/providers/DatabaseProvider/DatabaseProvider';
 import { RouteGuardProvider } from '@/providers/RouteGuardProvider/RouteGuardProvider';
 
 export function GuardedAppShell({ children }: { children: ReactNode }) {
   return (
     <DatabaseProvider>
+      {/* Outside the guard: its spinner unmounts what it wraps while the account is prepared. */}
+      <LocalIndexManager />
       <RouteGuardProvider>
         <CoordinatorsManager />
         <Header />
