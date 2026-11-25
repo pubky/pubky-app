@@ -55,10 +55,11 @@ export const toastIconVariants = cva('size-5 shrink-0', {
 export const toastActionVariants = cva('', {
   variants: {
     variant: {
-      // The tinted toast needs a stronger dark focus ring and the hover wash to keep OK readable.
+      // Light `--ring` is under 3:1 on the success tint, so OK uses muted foreground there.
+      // Dark mode keeps the primary ring, and the hover wash keeps the label readable.
       brand: [
         buttonVariants({ variant: 'default', size: 'sm' }),
-        'px-3.5 text-xs light:text-brand-foreground focus:bg-brand/32 focus:ring-[3px] focus:ring-ring dark:focus:bg-button-hover dark:focus:ring-primary forced-colors:focus:outline-2 forced-colors:focus:outline-solid',
+        'px-3.5 text-xs light:text-brand-foreground focus:bg-brand/32 focus:ring-[3px] focus:ring-ring light:focus:ring-muted-foreground dark:focus:bg-button-hover dark:focus:ring-primary forced-colors:focus:outline-2 forced-colors:focus:outline-solid',
       ],
       muted:
         'inline-flex h-8 shrink-0 cursor-pointer items-center justify-center rounded-full border bg-toast-action-muted px-3 text-xs font-bold text-foreground shadow-xs transition-all hover:border-toast-action-muted-hover-border focus:-outline-offset-2 focus:outline-2 focus:outline-foreground disabled:pointer-events-none disabled:opacity-50',
