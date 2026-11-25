@@ -51,6 +51,14 @@ const regionModesValue = z
     const parsed = parseRegionModes(val);
     if (!parsed.ok) ctx.addIssue({ code: 'custom', message: `Invalid REGION_MODES value: ${parsed.error}` });
   });
+/** The source lists Nexus reads may be answered from, in the order they are asked. */
+export const INDEXER_SOURCE_LISTS = ['nexus', 'local', 'local,nexus'] as const;
+const indexerSourcesValue = z
+  .array(z.enum(['nexus', 'local']))
+  .refine((sources) => (INDEXER_SOURCE_LISTS as readonly string[]).includes(sources.join(',')), {
+    message: `Expected one of: ${INDEXER_SOURCE_LISTS.join(', ')}`,
+  });
+export type IndexerSource = z.infer<typeof indexerSourcesValue>[number];
 const pubkyValue = z
   .string()
   .trim()
@@ -145,6 +153,11 @@ const optionalTrimmedString = z
 
 const optionalUrlFromString = optionalTrimmedString.pipe(urlValue.optional());
 
+/** `local,nexus` to `['local', 'nexus']`; unset keeps the value-schema default. */
+const indexerSourcesFromString = optionalTrimmedString
+  .transform((val) => val?.split(',').map((source) => source.trim()))
+  .pipe(indexerSourcesValue.optional());
+
 /** Rates validate eagerly (bad number/range throws here); the default applies in the value schema. */
 const sampleRateFromString = z
   .string()
@@ -182,6 +195,7 @@ export const APP_RUNTIME_DEFAULTS = {
   ttlRetryDelayMs: 60_000,
   // Bounded indexing grace period, matching the existing tag-mutation default, not an SLA.
   profileLocalEditTtlMs: 300_000,
+  indexerSources: ['nexus'],
   moderationId: 'nto4u7kkagk5hfjk4wgueemzy61nssic811hid1ty9u81uatmqzy',
   moderatedTags: ['nudity'],
   exchangeRateApi: 'https://api1.blocktank.to/api/fx/rates/btc',
@@ -240,7 +254,8 @@ export const MARKETPLACE_RUNTIME_DEFAULTS = {
  * must set all of them (see `runtimeEnvInputSchema`).
  */
 export const networkConfigValueSchema = z.object({
-  nexusUrl: urlValue,
+  /** Required only when `indexerSources` includes `nexus` (`runtimeEnvInputSchema`). */
+  nexusUrl: urlValue.optional(),
   cdnUrl: urlValue,
   homeserver: homeserverValue,
   /** Homeserver HTTP base URL: the homeserver pubkey has no resolvable HTTPS endpoint (pubky-homeserver#410) */
@@ -286,6 +301,8 @@ export const runtimeConfigValueSchema = networkConfigValueSchema.extend({
   ttlUserMaxBatchSize: positiveIntValue.default(APP_RUNTIME_DEFAULTS.ttlUserMaxBatchSize),
   ttlRetryDelayMs: positiveIntValue.default(APP_RUNTIME_DEFAULTS.ttlRetryDelayMs),
   profileLocalEditTtlMs: positiveIntValue.default(APP_RUNTIME_DEFAULTS.profileLocalEditTtlMs),
+  /** Where Nexus reads are answered, in order: Nexus itself, the index this browser builds, or the index first. */
+  indexerSources: indexerSourcesValue.default([...APP_RUNTIME_DEFAULTS.indexerSources]),
   moderationId: pubkyValue.optional(),
   moderatedTags: z.array(nonEmptyStringValue).default([...APP_RUNTIME_DEFAULTS.moderatedTags]),
   exchangeRateApi: urlValue.default(APP_RUNTIME_DEFAULTS.exchangeRateApi),
@@ -349,7 +366,7 @@ export type RuntimeConfig = z.infer<typeof runtimeConfigValueSchema>;
  */
 export const runtimeEnvInputSchema = z
   .object({
-    nexusUrl: urlValue,
+    nexusUrl: optionalUrlFromString,
     cdnUrl: urlValue,
     homeserver: homeserverValue,
     homeserverUrl: urlValue,
@@ -386,6 +403,7 @@ export const runtimeEnvInputSchema = z
     ttlUserMaxBatchSize: optionalPositiveIntFromString,
     ttlRetryDelayMs: optionalPositiveIntFromString,
     profileLocalEditTtlMs: optionalPositiveIntFromString,
+    indexerSources: indexerSourcesFromString,
     moderationId: optionalTrimmedString,
     moderatedTags: optionalStringArrayFromString('MODERATED_TAGS'),
     exchangeRateApi: optionalUrlFromString,
@@ -417,6 +435,13 @@ export const runtimeEnvInputSchema = z
   })
   .pipe(runtimeConfigValueSchema)
   .superRefine((config, ctx) => {
+    if (config.indexerSources.includes('nexus') && !config.nexusUrl) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['nexusUrl'],
+        message: 'PUBKY_RUNTIME_NEXUS_URL is required while PUBKY_RUNTIME_INDEXER_SOURCES includes nexus',
+      });
+    }
     if (config.deployEnv === 'production' && config.e2eLocksStubUrl) {
       ctx.addIssue({
         code: 'custom',
@@ -429,7 +454,7 @@ export const runtimeEnvInputSchema = z
 /**
  * Canonical staging defaults for the required network tier (single source of truth, parsed shape).
  */
-export const NETWORK_RUNTIME_DEFAULTS: NetworkRuntimeConfig = {
+export const NETWORK_RUNTIME_DEFAULTS = {
   nexusUrl: 'https://nexus.staging.pubky.app',
   cdnUrl: 'https://nexus.staging.pubky.app/static',
   homeserver: 'ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy',
@@ -439,7 +464,7 @@ export const NETWORK_RUNTIME_DEFAULTS: NetworkRuntimeConfig = {
   pkarrRelays: ['https://pkarr.pubky.app', 'https://pkarr.pubky.org'],
   testnet: false,
   deployEnv: 'staging',
-};
+} satisfies NetworkRuntimeConfig;
 
 /**
  * Env-input schema WITH staging defaults layered. Used only by the lenient dev/test parse of
@@ -484,6 +509,7 @@ export const runtimeEnvInputSchemaWithDefaults = z
     ttlUserMaxBatchSize: optionalPositiveIntFromString,
     ttlRetryDelayMs: optionalPositiveIntFromString,
     profileLocalEditTtlMs: optionalPositiveIntFromString,
+    indexerSources: indexerSourcesFromString,
     moderationId: optionalTrimmedString,
     moderatedTags: optionalStringArrayFromString('MODERATED_TAGS'),
     exchangeRateApi: optionalUrlFromString,
@@ -575,6 +601,7 @@ export const PUBKY_RUNTIME_ENV_NAMES: Record<keyof RuntimeConfig, string> = {
   ttlUserMaxBatchSize: 'PUBKY_RUNTIME_TTL_USER_MAX_BATCH_SIZE',
   ttlRetryDelayMs: 'PUBKY_RUNTIME_TTL_RETRY_DELAY_MS',
   profileLocalEditTtlMs: 'PUBKY_RUNTIME_PROFILE_LOCAL_EDIT_TTL_MS',
+  indexerSources: 'PUBKY_RUNTIME_INDEXER_SOURCES',
   moderationId: 'PUBKY_RUNTIME_MODERATION_ID',
   moderatedTags: 'PUBKY_RUNTIME_MODERATED_TAGS',
   exchangeRateApi: 'PUBKY_RUNTIME_EXCHANGE_RATE_API',

@@ -1,6 +1,7 @@
 import { PHASE_PRODUCTION_BUILD } from 'next/constants';
 import {
   type DeployEnv,
+  type IndexerSource,
   PUBKY_RUNTIME_ENV_NAMES,
   type RuntimeConfig,
   runtimeConfigValueSchema,
@@ -33,9 +34,9 @@ let didWarnModerationDisabled = false;
 
 const REQUIRED_NETWORK_ENV_MESSAGE =
   'Set all required PUBKY_RUNTIME_* network variables: ' +
-  'PUBKY_RUNTIME_NEXUS_URL, PUBKY_RUNTIME_CDN_URL, PUBKY_RUNTIME_HOMESERVER, ' +
-  'PUBKY_RUNTIME_HOMESERVER_URL, PUBKY_RUNTIME_HOMEGATE_URL, PUBKY_RUNTIME_DEFAULT_HTTP_RELAY, ' +
-  'PUBKY_RUNTIME_PKARR_RELAYS, PUBKY_RUNTIME_TESTNET, and PUBKY_RUNTIME_ENV ' +
+  'PUBKY_RUNTIME_NEXUS_URL (unless PUBKY_RUNTIME_INDEXER_SOURCES leaves nexus out), PUBKY_RUNTIME_CDN_URL, ' +
+  'PUBKY_RUNTIME_HOMESERVER, PUBKY_RUNTIME_HOMESERVER_URL, PUBKY_RUNTIME_HOMEGATE_URL, ' +
+  'PUBKY_RUNTIME_DEFAULT_HTTP_RELAY, PUBKY_RUNTIME_PKARR_RELAYS, PUBKY_RUNTIME_TESTNET, and PUBKY_RUNTIME_ENV ' +
   '("production" or "staging"). ' +
   'Optional/defaulted PUBKY_RUNTIME_* values may be set independently.';
 
@@ -158,7 +159,8 @@ export function resetRuntimeConfigForTests(): void {
 }
 
 // Lazy getters: read the resolved config at call time (never captured at module load).
-export const getNexusUrl = (): string => getRuntimeConfig().nexusUrl;
+/** `undefined` only when the indexer sources leave Nexus out. */
+export const getNexusUrl = (): string | undefined => getRuntimeConfig().nexusUrl;
 export const getCdnUrl = (): string => getRuntimeConfig().cdnUrl;
 export const getHomeserver = (): string => getRuntimeConfig().homeserver;
 export const getHomeserverUrl = (): string => getRuntimeConfig().homeserverUrl;
@@ -204,6 +206,8 @@ export const getTtlUserMaxBatchSize = (): number => getRuntimeConfig().ttlUserMa
 export const getTtlRetryDelayMs = (): number => getRuntimeConfig().ttlRetryDelayMs;
 /** Indexing protection after a local profile write, independent of the normal refresh TTL. */
 export const getProfileLocalEditTtlMs = (): number => getRuntimeConfig().profileLocalEditTtlMs;
+/** Where Nexus reads are answered, in the order they are asked. */
+export const getIndexerSources = (): readonly IndexerSource[] => getRuntimeConfig().indexerSources;
 export const getModerationId = (): string | undefined => getRuntimeConfig().moderationId;
 export const getModeratedTags = (): string[] => getRuntimeConfig().moderatedTags;
 export const getExchangeRateApi = (): string => getRuntimeConfig().exchangeRateApi;

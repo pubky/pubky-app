@@ -1,8 +1,19 @@
-import { getCdnUrl, getNexusUrl, getStreamCacheMaxAgeMs } from '@/libs/runtime-config/runtime-config';
+import {
+  getCdnUrl,
+  getIndexerSources,
+  getNexusUrl,
+  getStreamCacheMaxAgeMs,
+} from '@/libs/runtime-config/runtime-config';
 
 // Runtime-configurable: read via getters at call time (PUBKY_RUNTIME_*, staging defaults in
 // dev/test). See @/libs/runtime-config.
-export { getCdnUrl, getNexusUrl, getStreamCacheMaxAgeMs };
+export { getCdnUrl, getIndexerSources, getNexusUrl, getStreamCacheMaxAgeMs };
+
+/** Whether Nexus itself answers reads, alone or after the local index (`PUBKY_RUNTIME_INDEXER_SOURCES`). */
+export const hasNexusSource = (): boolean => getIndexerSources().includes('nexus');
+
+/** Whether the index this browser builds from homeservers answers reads, alone or before Nexus. */
+export const hasLocalIndexSource = (): boolean => getIndexerSources().includes('local');
 
 /**
  * The path Nexus serves v1 files under, in place of the `/static` the CDN runtime value ends in:

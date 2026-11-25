@@ -1,6 +1,7 @@
 import { Inter_Tight } from 'next/font/google';
 import Script from 'next/script';
 import { Container } from '@/atoms/Container/Container';
+import { hasNexusSource } from '@/config/nexus';
 import {
   getCdnUrl,
   getNexusUrl,
@@ -29,7 +30,8 @@ export function RootContainer({ children }: RootContainerProps) {
   // preconnected socket. The origins are equal on production; keeping both hints means
   // the config can split them (staging CDN vs API host) without losing either.
   const cdnOrigin = new URL(getCdnUrl()).origin;
-  const nexusOrigin = new URL(getNexusUrl()).origin;
+  const nexusUrl = hasNexusSource() ? getNexusUrl() : undefined;
+  const nexusOrigin = nexusUrl ? new URL(nexusUrl).origin : null;
 
   return (
     <Container as="html" lang="en-US" dir="ltr" suppressHydrationWarning>
@@ -51,7 +53,7 @@ export function RootContainer({ children }: RootContainerProps) {
           first element in <body>, as its own comment requires.
         */}
         <link rel="preconnect" href={cdnOrigin} />
-        <link rel="preconnect" href={nexusOrigin} crossOrigin="anonymous" />
+        {nexusOrigin && <link rel="preconnect" href={nexusOrigin} crossOrigin="anonymous" />}
         {plausibleDomain && plausibleScriptUrl && (
           <Script
             data-domain={plausibleDomain}

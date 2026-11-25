@@ -104,6 +104,41 @@ describe('runtimeEnvInputSchema', () => {
     expect(runtimeEnvInputSchema.parse(VALID_ENV_INPUT).e2eLocksStubUrl).toBeUndefined();
   });
 
+  it('defaults the indexer sources to nexus alone', () => {
+    expect(runtimeEnvInputSchema.parse(VALID_ENV_INPUT).indexerSources).toEqual(['nexus']);
+    expect(runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, indexerSources: ' ' }).indexerSources).toEqual(['nexus']);
+  });
+
+  it.each([
+    ['nexus', ['nexus']],
+    ['local', ['local']],
+    ['local,nexus', ['local', 'nexus']],
+    [' local , nexus ', ['local', 'nexus']],
+  ])('parses the indexer sources %j', (value, expected) => {
+    expect(runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, indexerSources: value }).indexerSources).toEqual(expected);
+  });
+
+  it.each(['nexus,local', 'local,local', 'remote', 'local,'])('rejects the indexer sources %j', (value) => {
+    expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, indexerSources: value })).toThrow();
+  });
+
+  it('requires the Nexus URL only while nexus is an indexer source', () => {
+    const { nexusUrl: _nexusUrl, ...withoutNexus } = VALID_ENV_INPUT;
+
+    expect(runtimeEnvInputSchema.parse({ ...withoutNexus, indexerSources: 'local' }).nexusUrl).toBeUndefined();
+    for (const indexerSources of [undefined, 'nexus', 'local,nexus']) {
+      const result = runtimeEnvInputSchema.safeParse({ ...withoutNexus, indexerSources });
+      expect(result.success).toBe(false);
+      expect(result.error?.issues).toEqual([expect.objectContaining({ path: ['nexusUrl'] })]);
+    }
+  });
+
+  it('keeps the CDN URL required with the local index alone, since media still comes from it', () => {
+    const { cdnUrl: _cdnUrl, ...withoutCdn } = VALID_ENV_INPUT;
+
+    expect(() => runtimeEnvInputSchema.parse({ ...withoutCdn, indexerSources: 'local' })).toThrow();
+  });
+
   it('throws on malformed PKARR_RELAYS JSON', () => {
     expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, pkarrRelays: 'not-json' })).toThrow();
   });

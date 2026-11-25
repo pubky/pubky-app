@@ -17,9 +17,11 @@ const FETCH_NEXUS_OPERATION = 'fetchNexus';
 /**
  * Builds a Nexus API URL: `{nexus}/{version}/{endpoint}`, with `endpoint` spelled without a version.
  * Every call uses `NEXUS_API_VERSION`; the one documented `/v0` call passes its version explicitly.
+ * A deploy that reads from the local index alone may leave the Nexus URL unset: the URL is then the
+ * bare path, which is all the local index routes on.
  */
 export function buildNexusUrl(endpoint: string, { version = NEXUS_API_VERSION }: TBuildNexusUrlOptions = {}): string {
-  return `${getNexusUrl()}/${version}/${endpoint}`;
+  return `${getNexusUrl() ?? ''}/${version}/${endpoint}`;
 }
 
 export function buildCdnUrl(endpoint: string): string {
