@@ -1,0 +1,230 @@
+// @vitest-environment node
+import type { BuiltPost } from 'pubky-social-specs';
+import { describe, expect, it } from 'vitest';
+import { ALICE, BRAN, CLEO, DION, MINUTE_MS, recordsOf, socialNetwork, T0 } from '../social.fixtures';
+import { buildSocialView } from '../social.view';
+import { type PostStreamParams, postStreamKeys } from './postStream';
+import { InvalidQueryError, UnavailableQueryError } from './queries.errors';
+
+const network = socialNetwork();
+const { a1, b1, repost, quote, article, image, collection } = network.posts;
+const view = buildSocialView(recordsOf(network));
+const minute = (n: number) => T0 + n * MINUTE_MS;
+const key = (author: string, post: BuiltPost) => `${author}:${post.id}`;
+const keys = (params: PostStreamParams) => postStreamKeys(view, params).data.post_keys;
+
+/** Every root post in scope, newest first. */
+const ALL = [
+  key(DION, collection),
+  key(BRAN, image),
+  key(ALICE, article),
+  key(CLEO, quote),
+  key(BRAN, repost),
+  key(ALICE, a1),
+];
+
+function invalid(params: PostStreamParams): string {
+  try {
+    postStreamKeys(view, params);
+  } catch (error) {
+    if (error instanceof InvalidQueryError) return error.parameter;
+    throw error;
+  }
+  throw new Error('expected an InvalidQueryError');
+}
+
+describe('postStreamKeys sources', () => {
+  it('streams every root post in scope by creation time, scored in milliseconds', () => {
+    const answer = postStreamKeys(view, {});
+
+    expect(answer.data).toEqual({ post_keys: ALL, last_post_score: minute(1) });
+    expect(answer.coverage.kind).toBe('scope');
+  });
+
+  it('streams the root posts of the observer’s followees, exact when every followee is in scope', () => {
+    const answer = postStreamKeys(view, { source: 'following', observer_id: ALICE });
+
+    expect(answer.data.post_keys).toEqual([key(BRAN, image), key(CLEO, quote), key(BRAN, repost)]);
+    expect(answer.coverage.kind).toBe('exact');
+    expect(postStreamKeys(view, { source: 'following', observer_id: CLEO }).coverage.kind).toBe('exact');
+  });
+
+  it('streams followers and friends from what the scope saw, never the observer’s own posts', () => {
+    const followers = postStreamKeys(view, { source: 'followers', observer_id: ALICE });
+
+    expect(followers.data.post_keys).toEqual([key(BRAN, image), key(BRAN, repost)]);
+    expect(followers.coverage.kind).toBe('scope');
+    expect(keys({ source: 'friends', observer_id: ALICE })).toEqual([key(BRAN, image), key(BRAN, repost)]);
+    expect(keys({ source: 'friends', observer_id: CLEO })).toEqual([]);
+  });
+
+  it('streams an author’s root posts or replies, exactly', () => {
+    const author = postStreamKeys(view, { source: 'author', author_id: ALICE });
+
+    expect(author.data.post_keys).toEqual([key(ALICE, article), key(ALICE, a1)]);
+    expect(author.coverage.kind).toBe('exact');
+    expect(keys({ source: 'author_replies', author_id: BRAN })).toEqual([key(BRAN, b1)]);
+  });
+
+  it('streams the replies to a post and the collections that hold it', () => {
+    expect(keys({ source: 'post_replies', author_id: ALICE, post_id: a1.id })).toEqual([key(BRAN, b1)]);
+    expect(keys({ source: 'post_collections', author_id: ALICE, post_id: a1.id })).toEqual([key(DION, collection)]);
+  });
+
+  it('streams a collection’s posts in curator order, with no score', () => {
+    const answer = postStreamKeys(view, { source: 'collection', author_id: DION, post_id: collection.id });
+
+    expect(answer.data).toEqual({ post_keys: [key(ALICE, a1), key(ALICE, article)], last_post_score: null });
+    expect(answer.coverage.kind).toBe('exact');
+    expect(keys({ source: 'collection', author_id: DION, post_id: collection.id, skip: 1, limit: 1 })).toEqual([
+      key(ALICE, article),
+    ]);
+  });
+
+  it('streams the web of trust at depth 1 and 2', () => {
+    expect(keys({ source: 'wot', observer_id: ALICE, depth: 1 })).toEqual([
+      key(BRAN, image),
+      key(CLEO, quote),
+      key(BRAN, repost),
+    ]);
+    expect(keys({ source: 'wot', observer_id: ALICE })).toEqual([
+      key(DION, collection),
+      key(BRAN, image),
+      key(CLEO, quote),
+      key(BRAN, repost),
+    ]);
+  });
+});
+
+describe('postStreamKeys parameters', () => {
+  it('sorts by engagement, ties by key, scored by replies, reposts and tags', () => {
+    const answer = postStreamKeys(view, { sorting: 'total_engagement' });
+
+    expect(answer.data).toEqual({
+      post_keys: [
+        key(ALICE, a1),
+        key(BRAN, image),
+        key(BRAN, repost),
+        key(DION, collection),
+        key(ALICE, article),
+        key(CLEO, quote),
+      ],
+      last_post_score: 0,
+    });
+    expect(postStreamKeys(view, { sorting: 'total_engagement', limit: 1 }).data.last_post_score).toBe(7);
+    expect(answer.coverage.kind).toBe('scope');
+    expect(
+      postStreamKeys(view, { source: 'author', author_id: ALICE, sorting: 'total_engagement' }).coverage.kind,
+    ).toBe('scope');
+  });
+
+  it('orders ascending and bounds the score inclusively, start from above and end from below', () => {
+    expect(keys({ order: 'ascending' })).toEqual([...ALL].reverse());
+    expect(keys({ start: minute(8), end: minute(6) })).toEqual([
+      key(ALICE, article),
+      key(CLEO, quote),
+      key(BRAN, repost),
+    ]);
+    expect(keys({ order: 'ascending', end: minute(8) })).toEqual([
+      key(ALICE, article),
+      key(BRAN, image),
+      key(DION, collection),
+    ]);
+  });
+
+  it('filters by kind, excluded kinds, lock and tags', () => {
+    expect(keys({ kind: 'image' })).toEqual([key(BRAN, image)]);
+    expect(keys({ kind: 'unknown' })).toEqual([]);
+    expect(keys({ exclude_kinds: ['note'] })).toEqual([key(DION, collection), key(BRAN, image), key(ALICE, article)]);
+    expect(keys({ locked: true })).toEqual([]);
+    expect(keys({ tags: ['rust'] })).toEqual([key(ALICE, a1)]);
+    expect(keys({ tags: [' RUST', 'none'] })).toEqual([key(ALICE, a1)]);
+    expect(postStreamKeys(view, { source: 'author', author_id: ALICE, tags: ['rust'] }).coverage.kind).toBe('scope');
+  });
+
+  it('pages with skip and limit, 10 by default and 50 at most', () => {
+    expect(keys({ skip: 2, limit: 2 })).toEqual(ALL.slice(2, 4));
+    expect(keys({ skip: 6 })).toEqual([]);
+    expect(postStreamKeys(view, { skip: 6 }).data.last_post_score).toBeNull();
+  });
+
+  it('rejects what the central indexer rejects, naming the parameter', () => {
+    expect(invalid({ source: 'bookmarks' })).toBe('source');
+    expect(invalid({ limit: 0 })).toBe('limit');
+    expect(invalid({ limit: 51 })).toBe('limit');
+    expect(invalid({ skip: 10001 })).toBe('skip');
+    expect(invalid({ sorting: 'random' })).toBe('sorting');
+    expect(invalid({ order: 'up' })).toBe('order');
+    expect(invalid({ kind: 'short' })).toBe('kind');
+    expect(invalid({ exclude_kinds: ['note', 'long'] })).toBe('exclude_kinds');
+    expect(invalid({ kind: 'note', exclude_kinds: ['image'] })).toBe('exclude_kinds');
+    expect(invalid({ kind: 'note', locked: true })).toBe('locked');
+    expect(invalid({ tags: ['a', 'b', 'c', 'd', 'e', 'f'] })).toBe('tags');
+    expect(invalid({ source: 'following' })).toBe('observer_id');
+    expect(invalid({ source: 'post_replies', author_id: ALICE })).toBe('post_id');
+    expect(invalid({ source: 'author_replies', author_id: BRAN, kind: 'note' })).toBe('kind');
+    expect(invalid({ source: 'post_collections', author_id: ALICE, post_id: a1.id, locked: true })).toBe('locked');
+    expect(invalid({ source: 'collection', author_id: DION, post_id: collection.id, sorting: 'timeline' })).toBe(
+      'sorting',
+    );
+    expect(invalid({ source: 'wot', observer_id: ALICE, depth: 0 })).toBe('depth');
+    expect(invalid({ source: 'wot', observer_id: ALICE, depth: 4 })).toBe('depth');
+  });
+
+  it('refuses what needs more than the scope', () => {
+    const unavailable = (params: PostStreamParams) => () => postStreamKeys(view, params);
+
+    expect(unavailable({ source: 'wot', observer_id: ALICE, depth: 3 })).toThrow(UnavailableQueryError);
+    expect(unavailable({ source: 'wot_domain', observer_id: ALICE, domain_tags: ['dev'] })).toThrow(
+      UnavailableQueryError,
+    );
+    expect(unavailable({ source: 'following', observer_id: 'stranger' })).toThrow(UnavailableQueryError);
+    expect(unavailable({ source: 'author', author_id: 'stranger' })).toThrow(UnavailableQueryError);
+    expect(unavailable({ source: 'collection', author_id: DION, post_id: a1.id })).toThrow(UnavailableQueryError);
+  });
+});
+
+describe('postStreamKeys pagination', () => {
+  /** Walks a stream page by page the way the app does, collecting every key served. */
+  function walk(next: (served: { keys: string[]; lastScore: number | null }) => PostStreamParams | null): string[] {
+    const seen: string[] = [];
+    let params: PostStreamParams | null = { limit: 2 };
+    while (params !== null) {
+      const { post_keys, last_post_score } = postStreamKeys(view, params).data;
+      seen.push(...post_keys);
+      params = post_keys.length === 0 ? null : next({ keys: seen, lastScore: last_post_score });
+    }
+    return seen;
+  }
+
+  it('visits every post once by skip', () => {
+    expect(walk(({ keys: served }) => ({ limit: 2, skip: served.length }))).toEqual(ALL);
+  });
+
+  it('visits every post once by score, descending from just below the last score', () => {
+    expect(walk(({ lastScore }) => (lastScore === null ? null : { limit: 2, start: lastScore - 1 }))).toEqual(ALL);
+  });
+
+  it('visits every post once by score, ascending from just above the last score', () => {
+    const seen: string[] = [];
+    let end: number | undefined;
+    for (;;) {
+      const { post_keys, last_post_score } = postStreamKeys(view, { order: 'ascending', limit: 2, end }).data;
+      if (post_keys.length === 0 || last_post_score === null) break;
+      seen.push(...post_keys);
+      end = last_post_score + 1;
+    }
+    expect(seen).toEqual([...ALL].reverse());
+  });
+
+  it('visits every engagement-sorted post once by skip', () => {
+    const seen: string[] = [];
+    for (let skip = 0; ; skip += 4) {
+      const { post_keys } = postStreamKeys(view, { sorting: 'total_engagement', skip, limit: 4 }).data;
+      if (post_keys.length === 0) break;
+      seen.push(...post_keys);
+    }
+    expect(new Set(seen).size).toBe(ALL.length);
+    expect([...seen].sort()).toEqual([...ALL].sort());
+  });
+});
