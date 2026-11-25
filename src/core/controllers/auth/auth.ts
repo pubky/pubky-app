@@ -3,6 +3,7 @@ import { validateCapabilities } from '@synonymdev/pubky';
 import type { PersistStorage } from 'zustand/middleware';
 import { AuthApplication } from '@/application/auth/auth';
 import { BootstrapApplication, type BootstrapProgressCallback } from '@/application/bootstrap/bootstrap';
+import { IndexerApplication } from '@/application/indexer/indexer';
 import { NotificationApplication } from '@/application/notification/notification';
 import { SettingsApplication } from '@/application/settings/settings';
 import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
@@ -10,6 +11,7 @@ import { UserApplication } from '@/application/user/user';
 import { APP_CAPABILITIES, LOCKS_CAPABILITIES, SOCIAL_V1_APP_CAPABILITIES } from '@/config/auth';
 import { getModerationId } from '@/config/moderation';
 import { getHomeserverCapabilities } from '@/config/network';
+import { hasLocalIndexSource } from '@/config/nexus';
 import type { SessionReadiness } from '@/controllers/auth/auth.types';
 import { LocksController } from '@/controllers/locks/locks';
 import { SocialMigrationController, type SocialMigrationEntry } from '@/controllers/social-migration/social-migration';
@@ -1023,11 +1025,11 @@ export class AuthController {
 
   /**
    * Centralizes all local state cleanup: resets every Zustand store,
-   * IndexedDB, query cache, singletons, in-memory stream pagination queues, persisted localStorage keys,
-   * and the last_read-sync `sessionStorage` cursors.
+   * IndexedDB (the app's database and the account's local index), query cache, singletons, in-memory stream
+   * pagination queues, persisted localStorage keys, and the last_read-sync `sessionStorage` cursors.
    * Used after explicit logout. Failed restoration never clears account data.
    */
-  private static async cleanupLocalState(isCurrent: () => boolean, persist = true) {
+  private static async cleanupLocalState(isCurrent: () => boolean, persist = true, pubky: Pubky | null = null) {
     if (!isCurrent()) return;
     this.cancelModerationFollow();
     // The last_read SSE cursor lives in sessionStorage; clear before the next account might reuse the same tab.
@@ -1066,6 +1068,18 @@ export class AuthController {
       },
     );
     if (!isCurrent()) return;
+    // The local index is the account's data too: its database goes with the app's.
+    if (pubky && hasLocalIndexSource()) {
+      await this.bounded(
+        IndexerApplication.clear(pubky),
+        'clearLocalIndex',
+        LOGOUT_TIMEOUT_MS,
+        ErrorService.Local,
+      ).catch((error) => {
+        if (!isAppError(error)) toAppError(error, ErrorService.Local, 'clearLocalIndex');
+      });
+      if (!isCurrent()) return;
+    }
     // Skip post-migration resync — full cleanup resets all state
     useMigrationStore.getState().reset();
   }
@@ -1280,7 +1294,7 @@ export class AuthController {
               Logger.warn('Local sign-out completed; remote revocation could not be confirmed.');
           })
           .catch(() => {});
-      await this.cleanupLocalState(isCurrent, persisted);
+      await this.cleanupLocalState(isCurrent, persisted, snapshot.currentUserPubky);
       if (!isCurrent()) {
         await this.syncSessionFromStorage();
         throw createCanceledError();
