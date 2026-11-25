@@ -345,6 +345,22 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     });
   }
 
+  /** Runs `work` for every homeserver at once, so a slow one holds up none of the others; rethrows after all end. */
+  async function eachHomeserver(
+    byHomeserver: ReadonlyMap<string, string[]>,
+    work: (homeserver: string, users: string[]) => Promise<void>,
+  ) {
+    const errors: unknown[] = [];
+    await Promise.all(
+      [...byHomeserver].map(([homeserver, users]) =>
+        work(homeserver, users).catch((error: unknown) => {
+          errors.push(error);
+        }),
+      ),
+    );
+    if (errors.length > 0) throw errors[0];
+  }
+
   /** The user's homeserver from the store while fresh, else from the transport; a failed lookup keeps the old. */
   async function resolve(ctx: OperationContext, user: string): Promise<string | null> {
     throwIfAborted(ctx.signal);
@@ -436,11 +452,11 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
       counters.usersPerHop.push(frontier.length);
       changed();
       const { homeserverOf, byHomeserver } = await resolveAll(ctx, frontier);
-      for (const [homeserver, users] of byHomeserver) await syncFull(ctx, homeserver, users);
+      await eachHomeserver(byHomeserver, (homeserver, users) => syncFull(ctx, homeserver, users));
       // The seed's profile and follows are enough for a first answer: it is a member before its activity is read.
       if (hop === 0) await publish(new Map([...before, ...members]), false);
       const next = hop < options.hops ? await nextHop(frontier, homeserverOf, members, hop + 1, skipped) : [];
-      for (const [homeserver, users] of byHomeserver) await syncWindow(ctx, homeserver, users);
+      await eachHomeserver(byHomeserver, (homeserver, users) => syncWindow(ctx, homeserver, users));
       if (hop === 0) {
         const homeserver = homeserverOf.get(seed) ?? null;
         seedReach = { homeserver, failed: homeserver !== null && ctx.failed.has(homeserver) };
@@ -460,8 +476,8 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
   async function syncUsers(users: readonly string[], signal?: AbortSignal): Promise<SyncOutcome> {
     const ctx = contextOf(signal);
     const { byHomeserver } = await resolveAll(ctx, [...new Set(users)]);
-    for (const [homeserver, batch] of byHomeserver) await syncFull(ctx, homeserver, batch);
-    for (const [homeserver, batch] of byHomeserver) await syncWindow(ctx, homeserver, batch);
+    await eachHomeserver(byHomeserver, (homeserver, batch) => syncFull(ctx, homeserver, batch));
+    await eachHomeserver(byHomeserver, (homeserver, batch) => syncWindow(ctx, homeserver, batch));
     throwIfAborted(signal);
     return { failedHomeservers: [...ctx.failed] };
   }

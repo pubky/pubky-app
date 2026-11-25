@@ -88,6 +88,39 @@ describe('syncScope failures', () => {
     expect(await served(store, 'bob', 'hs2', ACTIVITY)).toEqual(network.liveOf('bob', [POSTS]));
   });
 
+  it('crawls the homeservers of a hop together, so a stalled one holds up none of the others', async () => {
+    const { network, store, crawlerOf } = threeHomeservers();
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const stalling: IndexerTransport = {
+      resolveHomeserver: (user) => network.resolveHomeserver(user),
+      readEvents: async (request) => {
+        if (request.homeserver === 'hs2') await held;
+        return network.readEvents(request);
+      },
+      getPublic: (request) => network.getPublic(request),
+      listIndexFiles: () => network.listIndexFiles(),
+      readIndexFile: (name) => network.readIndexFile(name),
+      writeIndexFile: (name, bytes) => network.writeIndexFile(name, bytes),
+      deleteIndexFile: (name) => network.deleteIndexFile(name),
+    };
+
+    network.put('carol', `${FOLLOWS}alice`);
+
+    const sync = crawlerOf(stalling).syncScope('alice');
+    for (let turn = 0; turn < 100 && (await served(store, 'carol', 'hs3', GRAPH)).size === 0; turn += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+
+    expect(await served(store, 'carol', 'hs3', GRAPH)).toEqual(network.liveOf('carol', [FOLLOWS]));
+    expect((await store.listScopes()).some((scope) => scope.author === 'bob')).toBe(false);
+    release();
+    expect((await sync).failedHomeservers).toEqual([]);
+    expect(await served(store, 'bob', 'hs2', ACTIVITY)).toEqual(network.liveOf('bob', [POSTS]));
+  });
+
   it('detects a restored homeserver and resyncs it, leaving no stale record', async () => {
     const { network, store, crawler } = harness();
     network.addHomeserver('hs1').addUser('alice', 'hs1').addUser('bob', 'hs1');
