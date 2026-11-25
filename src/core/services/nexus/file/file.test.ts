@@ -124,11 +124,20 @@ describe('File API', () => {
       expect(filesApi.getAvatarUrl(pubky, 12345)).toBe(`/_pubky/avatar/${encodedPubky}?v=12345`);
     });
 
-    it.each(Object.values(FileVariant))('serves the original file for the %s variant', (variant) => {
-      expect(filesApi.getFileUrl({ pubky, file_id: HASH_NAME, variant })).toBe(
+    it('builds the original file path for the main variant', () => {
+      expect(filesApi.getFileUrl({ pubky, file_id: HASH_NAME, variant: FileVariant.MAIN })).toBe(
         `/_pubky/file/${encodedPubky}/${HASH_NAME}`,
       );
     });
+
+    it.each([FileVariant.SMALL, FileVariant.FEED, FileVariant.LARGE])(
+      'names the %s variant for the service worker to resize',
+      (variant) => {
+        expect(filesApi.getFileUrl({ pubky, file_id: HASH_NAME, variant })).toBe(
+          `/_pubky/file/${encodedPubky}/${HASH_NAME}?variant=${variant}`,
+        );
+      },
+    );
   });
 
   describe('filesApi.getFiles', () => {

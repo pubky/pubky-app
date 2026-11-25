@@ -33,7 +33,9 @@ import { PostType } from '../../support/types/enums';
 const STORED_INDEX_TIMEOUT = { timeout: 10_000 };
 // A local file is served by the worker once the page reads it from the homeserver
 const LOCAL_MEDIA_TIMEOUT = { timeout: 30_000 };
-const LOCAL_FILE_URL = /\/_pubky\/file\/[a-z0-9]{52}\/[^/]+$/;
+// The feed shows the `feed` variant, which the worker fits to 720 px wide from the 2304 px seeded image
+const LOCAL_FEED_FILE_URL = /\/_pubky\/file\/[a-z0-9]{52}\/[^/?]+\?variant=feed$/;
+const FEED_VARIANT_WIDTH = 720;
 
 describe('local index: reading the network without Nexus', () => {
   forbidNexusRequests();
@@ -180,9 +182,9 @@ describe('local index: reading the network without Nexus', () => {
       .find('[data-cy="post-attachment-image"]', LOCAL_MEDIA_TIMEOUT)
       .should(($image) => {
         const image = $image[0] as HTMLImageElement;
-        expect(image.currentSrc || image.src, 'image URL').to.match(LOCAL_FILE_URL);
+        expect(image.currentSrc || image.src, 'image URL').to.match(LOCAL_FEED_FILE_URL);
         expect(image.complete, 'image loaded').to.equal(true);
-        expect(image.naturalWidth, 'decoded width').to.be.greaterThan(0);
+        expect(image.naturalWidth, 'width of the resized copy').to.equal(FEED_VARIANT_WIDTH);
       });
   });
 

@@ -42,8 +42,7 @@ export function buildFileBodyUrl(fileUris: Pubky[]) {
 
 /**
  * Media URLs. Without the nexus source there is no CDN: both builders return same-origin paths the service worker
- * answers from the owner's homeserver (`src/libs/pwa/localMedia.ts`), and every variant is the original file,
- * since only Nexus makes resized ones.
+ * answers from the owner's homeserver (`src/libs/pwa/localMedia.ts`), resizing image variants itself as Nexus does.
  */
 export const filesApi = {
   getAvatarUrl: (pubky: Pubky, version?: string | number) => {
@@ -53,7 +52,7 @@ export const filesApi = {
     return version ? `${url}?v=${version}` : url;
   },
   getFileUrl: ({ pubky, file_id, variant }: TFileParams) => {
-    if (!hasNexusSource()) return buildLocalFilePath(pubky, file_id);
+    if (!hasNexusSource()) return buildLocalFilePath(pubky, file_id, variant);
     const encodedPubky = encodePathSegment(pubky);
     const encodedFileId = encodePathSegment(file_id);
     const path = `${STATIC_PREFIX}/${encodedPubky}/${encodedFileId}/${variant}`;

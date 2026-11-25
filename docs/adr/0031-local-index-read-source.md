@@ -52,7 +52,9 @@ default, today's behavior), `local`, or `local,nexus`. Without `nexus` the Nexus
   the bytes it asks a controlled page for over a `MessageChannel`, since only the page holds the SDK client. The page
   reads the file through `HomeserverService.getPublicFileBytes`, and an avatar through the image of the profile in
   the index's view. The avatar URL keeps the profile version, so a new avatar is a new cache entry; sign-out deletes
-  the cache with the index database (`docs/pwa.md`, _Local media_).
+  the cache with the index database (`docs/pwa.md`, _Local media_). The worker makes the resized image variants
+  itself, to the widths and fit rule of the Nexus CDN, from the one cached original, so feeds do not download
+  full-size uploads.
 - **Server.** The Next.js server has no index: without `nexus`, page metadata, mention names and preview images
   (`fetchWithValidation`, the mention lookup) make no request and render the generic fallback a failed fetch
   renders. A Nexus URL built without a configured one gets the origin `https://nexus.invalid`, which never resolves
@@ -109,8 +111,8 @@ default, today's behavior), `local`, or `local,nexus`. Without `nexus` the Nexus
 - Without Nexus a shared link previews with the generic title, description and image.
 - Until the first sync of a new device ends, feeds show a partial network; a device with a saved index from another
   one starts from it.
-- Without Nexus there are no resized variants: feeds and thumbnails load the original file. Media shows only in a
-  page the service worker controls, so the first visit before the worker activates, a hard reload and a dev build
+- Without Nexus the worker resizes images on the device, from an original that each device downloads once. Media
+  shows only in a page the service worker controls, so the first visit before the worker activates, a hard reload and a dev build
   without the worker show fallbacks.
 
 ### Neutral ⚠️

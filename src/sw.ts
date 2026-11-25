@@ -17,6 +17,7 @@ import {
   type LocalMediaRequest,
   respondLocalMedia,
 } from '@/libs/pwa/localMedia';
+import { decodeImageWithCanvas } from '@/libs/pwa/localMediaVariant';
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -117,6 +118,7 @@ self.addEventListener('fetch', (event: FetchEvent) => {
         request: event.request,
         openCache: () => caches.open(LOCAL_MEDIA_CACHE),
         ask: (media) => askWindowForMedia(event.clientId, media),
+        decodeImage: decodeImageWithCanvas,
         timeoutMs: LOCAL_MEDIA_CLIENT_TIMEOUT_MS,
         maxEntries: LOCAL_MEDIA_CACHE_MAX_ENTRIES,
       }),

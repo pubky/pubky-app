@@ -118,6 +118,12 @@ type PostKey =
   | 'olgaReply'
   | 'bobRepost';
 
+/**
+ * Wider than the `feed` variant (2304 x 800 px), so the worker's resized copy shows in the served image. The app's own
+ * landing image, reused rather than copied into the fixtures.
+ */
+const LARGE_IMAGE_FIXTURE = '../../public/images/landing-experience1.png';
+
 export type LocalNetwork = Record<UserKey, SeededUser> & { posts: Record<PostKey, SeededPost> };
 
 /**
@@ -144,7 +150,9 @@ export const seedLocalNetwork = (): Cypress.Chainable<LocalNetwork> => {
     createPostViaApi(users.viewer, NETWORK_TEXTS.viewerRoot).then(keep('viewerRoot'));
     createPostViaApi(users.alice, NETWORK_TEXTS.aliceBeforeEdit).then(keep('aliceEdited'));
     createPostViaApi(users.alice, NETWORK_TEXTS.aliceDeleted).then(keep('aliceDeleted'));
-    createImagePostViaApi(users.alice, NETWORK_TEXTS.aliceImage).then(keep('aliceImage'));
+    createImagePostViaApi(users.alice, NETWORK_TEXTS.aliceImage, { fixture: LARGE_IMAGE_FIXTURE }).then(
+      keep('aliceImage'),
+    );
     createPostViaApi(users.alice, NETWORK_TEXTS.aliceTagged).then(keep('aliceTagged'));
     createPostViaApi(users.bob, NETWORK_TEXTS.bobNote).then(keep('bobNote'));
     createPostViaApi(users.carol, NETWORK_TEXTS.carolNote).then(keep('carolNote'));
