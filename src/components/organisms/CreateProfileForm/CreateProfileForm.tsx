@@ -214,7 +214,7 @@ export const CreateProfileForm = () => {
                 )}
               </Button>
               {errors.avatarError && (
-                <Typography as="small" size="sm" className="ml-1 text-red-500">
+                <Typography as="small" size="sm" className="ml-1 text-error-foreground">
                   {errors.avatarError}
                 </Typography>
               )}

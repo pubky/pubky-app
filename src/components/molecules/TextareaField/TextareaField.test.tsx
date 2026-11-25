@@ -117,7 +117,7 @@ describe('TextareaField', () => {
 
   it.each([
     ['success', ['border-brand', 'text-brand']],
-    ['error', ['border-red-500', 'text-red-500']],
+    ['error', ['border-destructive', 'text-error-foreground']],
   ] as const)('applies status=%s classes', (status, classNames) => {
     render(<TextareaField value="" status={status} />);
     expect(screen.getByTestId('container')).toHaveClass(...classNames);

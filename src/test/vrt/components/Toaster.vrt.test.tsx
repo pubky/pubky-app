@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { userEvent } from 'vitest/browser';
 import { toast } from '@/molecules/Toaster/toast';
 import { Toaster } from '@/molecules/Toaster/Toaster';
 import { contrastRatio, paintedHex } from '@/test-utils/color-contrast';
@@ -6,7 +7,9 @@ import { renderForVRT } from '@/test-utils/vrt';
 
 function expectReadable(element: Element, surface: string) {
   const style = getComputedStyle(element);
-  const fill = paintedHex(surface, style.backgroundColor);
+  // The button's hover gradient paints the same translucent colour at both stops.
+  const hoverWash = style.backgroundImage.match(/^linear-gradient\((.+), \1\)$/)?.[1];
+  const fill = paintedHex(surface, style.backgroundColor, ...(hoverWash ? [hoverWash] : []));
   expect(contrastRatio(paintedHex(fill, style.color), fill)).toBeGreaterThanOrEqual(4.5);
 }
 
@@ -37,9 +40,15 @@ describe.each(['var(--card)', '#000', '#606060', '#fff'])('Success toast over %s
       expectReadable(description.element(), surface);
       await title.hover();
       expectReadable(ok.element(), surface);
-      const idleFill = getComputedStyle(ok.element()).backgroundColor;
+      const idle = getComputedStyle(ok.element());
+      expect(idle.paddingLeft).toBe('14px');
+      expect(idle.paddingRight).toBe('14px');
+      expect(idle.fontSize).toBe('12px');
+      expect(idle.lineHeight).toBe('16px');
+      const idleFill = idle.backgroundColor;
       await ok.hover();
       await expect.poll(() => getComputedStyle(ok.element()).backgroundColor).not.toBe(idleFill);
+      expect(getComputedStyle(ok.element()).backgroundImage).toMatch(/^linear-gradient/);
       expectReadable(ok.element(), surface);
       await ok.click();
       await expect.element(ok).not.toBeInTheDocument();
@@ -47,4 +56,26 @@ describe.each(['var(--card)', '#000', '#606060', '#fff'])('Success toast over %s
       handle.dismiss();
     }
   });
+});
+
+it.each(['dark', 'light'] as const)('shows keyboard focus on OK against the %s success surface', async (theme) => {
+  const screen = await renderForVRT(<Toaster />, { viewport: { width: 800, height: 600 }, theme });
+  const handle = toast({ title: 'Saved', dismissButton: true, persistent: true });
+  try {
+    const ok = screen.getByRole('button', { name: 'OK' });
+    await expect.element(ok).toBeVisible();
+    await userEvent.keyboard('{F8}');
+    await userEvent.tab();
+    await userEvent.tab();
+    await expect.element(ok).toHaveFocus();
+    const style = getComputedStyle(ok.element());
+    const surface = getComputedStyle(ok.element().closest('[data-cy="toast"]')!).backgroundColor;
+    expect(style.boxShadow).toContain('0px 0px 0px 3px');
+    const ring = style.getPropertyValue('--tw-ring-color');
+    expect(CSS.supports('color', ring)).toBe(true);
+    expect(contrastRatio(paintedHex(surface, ring), paintedHex(surface))).toBeGreaterThanOrEqual(3);
+    expectReadable(ok.element(), surface);
+  } finally {
+    handle.dismiss();
+  }
 });

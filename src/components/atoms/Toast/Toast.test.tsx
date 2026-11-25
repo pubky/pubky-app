@@ -34,7 +34,7 @@ describe('Toast', () => {
 
     const toast = screen.getByText('Toast content').closest('[data-variant]');
     expect(toast).toHaveAttribute('data-variant', variant);
-    expect(toast).toHaveClass(className);
+    expect(toast).toHaveClass(className, 'rounded-md');
   });
 
   it('renders title and description inside the toast', () => {
@@ -63,7 +63,7 @@ describe('ToastAction', () => {
   });
 
   it.each([
-    ['brand', 'bg-toast-action-brand'],
+    ['brand', 'bg-brand/16'],
     ['muted', 'bg-toast-action-muted'],
   ] as const)('applies variant=%s', (variant, className) => {
     renderToast(

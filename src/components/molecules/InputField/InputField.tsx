@@ -5,6 +5,7 @@ import { Loader2 } from 'lucide-react';
 import { Container } from '@/atoms/Container/Container';
 import { Input } from '@/atoms/Input/Input';
 import { Typography } from '@/atoms/Typography/Typography';
+import { FIELD_MESSAGE_CLASSES, FIELD_STATUS_CLASSES } from '@/config/forms';
 import { cn } from '@/libs/utils/utils';
 
 interface InputFieldProps {
@@ -37,8 +38,6 @@ interface InputFieldProps {
   dataCy?: string;
   inputClassName?: React.HTMLAttributes<HTMLInputElement>['className'];
 }
-// Pure destructive red meets text contrast on the dark page, but not on the profile forms’ card surface.
-const errorTextClasses = 'text-destructive in-[.dark_.bg-card]:text-red-400 light:text-error-foreground';
 
 export function InputField({
   id,
@@ -72,22 +71,10 @@ export function InputField({
 }: InputFieldProps) {
   const resolvedLoadingText = loadingText ?? 'Loading...';
   const containerClasses = variant === 'dashed' && 'border-dashed';
-  const statusClasses = {
-    default: 'focus-within:border-ring',
-    success: 'border-brand text-brand focus-within:ring-1 focus-within:ring-ring',
-    error: cn('border-destructive focus-within:ring-1 focus-within:ring-ring', errorTextClasses),
-  };
   const sizeClasses = {
     sm: 'min-h-10 text-sm',
     md: 'min-h-12 text-base',
     lg: 'min-h-14 text-lg',
-  } as const;
-  const messageClasses = {
-    default: 'text-muted-foreground',
-    info: 'text-blue-500',
-    alert: 'text-yellow-500',
-    error: errorTextClasses,
-    success: 'text-brand',
   } as const;
   const messageId = id && message ? `${id}-message` : undefined;
   // An actionable icon renders as a real button (keyboard/screen-reader reachable) and stays mounted while
@@ -124,7 +111,7 @@ export function InputField({
           'mx-0 mb-2 w-full cursor-pointer flex-row items-center gap-0 rounded-md border border-input !bg-background/20',
           icon && iconPosition === 'left' ? 'pl-4.5' : 'pl-2',
           containerClasses,
-          statusClasses[status],
+          FIELD_STATUS_CLASSES[status],
           loading && 'border-brand text-brand',
           sizeClasses[size],
           className,
@@ -165,7 +152,7 @@ export function InputField({
           size="sm"
           id={messageId}
           role={messageType === 'error' ? 'alert' : undefined}
-          className={cn('ml-1', messageClasses[messageType])}
+          className={cn('ml-1', FIELD_MESSAGE_CLASSES[messageType])}
         >
           {message}
         </Typography>

@@ -29,7 +29,7 @@ describe('Button', () => {
 
     rerender(<Button variant={ButtonVariant.BRAND}>Brand</Button>);
     button = screen.getByRole('button');
-    expect(button).toHaveClass('bg-brand', 'text-primary-foreground', 'light:text-brand-foreground');
+    expect(button).toHaveClass('bg-brand', 'text-brand-foreground');
 
     rerender(<Button variant="destructive">Destructive</Button>);
     button = screen.getByRole('button');
@@ -63,7 +63,7 @@ describe('Button', () => {
 
     rerender(<Button size="icon">Icon</Button>);
     button = screen.getByRole('button');
-    expect(button).toHaveClass('size-9');
+    expect(button).toHaveClass('size-9', 'font-semibold');
   });
 
   it('handles click events', () => {

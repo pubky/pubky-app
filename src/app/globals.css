@@ -87,8 +87,6 @@ body:has([data-slot='shop-route']) {
   --color-embed: var(--embed);
   /* Blend with the page color so text stays readable over photos. */
   --color-toast-success: color-mix(in srgb, var(--brand) 25%, var(--background));
-  --color-toast-action-brand: color-mix(in srgb, var(--brand) 32%, var(--background));
-  --color-toast-action-brand-hover: color-mix(in srgb, var(--brand) 40%, var(--background));
   --color-toast-action-muted: var(--toast-action-muted);
   --color-toast-action-muted-hover-border: var(--toast-action-muted-hover-border);
   --color-transparent: var(--transparent);
@@ -151,8 +149,8 @@ body:has([data-slot='shop-route']) {
    */
   --destructive-button: color-mix(in oklab, var(--destructive) 60%, transparent);
   --destructive-button-hover: color-mix(in oklab, var(--destructive) 90%, transparent);
-  /** Input and textarea validation message text. */
-  --error-foreground: var(--color-red-500);
+  /** Validation text on both page and card backgrounds. */
+  --error-foreground: var(--color-red-400);
   --border: oklch(0.311 0.007 285.98);
   --input: #525252;
   --ring: oklch(0.55 0.008 286.145);
@@ -172,11 +170,11 @@ body:has([data-slot='shop-route']) {
   --sidebar-border: oklch(0.311 0.007 285.98);
   --sidebar-ring: oklch(0.472 0.007 274.863);
   --brand: oklch(0.928 0.23 123.978);
-  /** Text and icons on a `bg-brand` fill. Dark in both themes: the light theme's page colour on its green is 2.3:1. */
-  --brand-foreground: var(--background);
+  /** Text and icons on solid brand fills. */
+  --brand-foreground: var(--primary-foreground);
   /**
    * Translucent chrome fill for outline-style controls (nav buttons, FAB,
-   * sidebar "See all", checkbox/radio wells). Mirrors the Figma variable
+   * sidebar "See all", unchecked radio wells). Mirrors the Figma variable
    * `custom/background dark:input\30`: a faint white wash in dark mode and
    * the opaque card surface in light mode, so these controls read lighter
    * than the grey light page. Hover follows `custom/accent dark:input\50`.
@@ -736,7 +734,7 @@ body:has([data-slot='shop-route']) {
   /* 4a. Primary button (Save) */
   .mdxeditor-popup-container [class*='linkDialogPopoverContent'] [class*='primaryButton'] {
     background-color: var(--brand) !important;
-    color: var(--background) !important;
+    color: var(--brand-foreground) !important;
     border: none !important;
     border-radius: var(--radius-sm) !important;
   }

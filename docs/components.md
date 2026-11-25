@@ -375,8 +375,8 @@ When a surface really differs per theme, use the `light:` and `dark:` variants d
 // Same colour in both themes: say it once
 <div className="bg-white" /> // QR plate, not `bg-foreground light:bg-white`
 
-// Text on a brand-green fill
-<Button variant="brand" /> // primary-foreground in dark mode, dark brand ink in light mode
+// Text and icons on solid brand fills share the same foreground token
+<Button variant="brand" />
 <div className="bg-brand text-brand-foreground" />
 ```
 
