@@ -4,7 +4,7 @@ import Dexie from 'dexie';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MAX_CURSOR } from './cursor';
 import { createIdbStore, type IdbIndexStore } from './idbStore';
-import type { Run } from './indexer.types';
+import type { MergedRuns, Run } from './indexer.types';
 import { mergeRuns } from './merge';
 import { c, describeIndexStoreContract, META, type Payload, rec, runOf, runWith, tomb } from './store.contract';
 
@@ -36,34 +36,91 @@ describe('createIdbStore', () => {
     for (const store of opened.splice(0).reverse()) await store.destroy();
   });
 
-  /** Counts the rows written to the entries object store from now on. */
-  function countEntryWrites(): () => number {
-    const put = IDBObjectStore.prototype.put;
-    let writes = 0;
+  /** Counts the rows written to each object store from now on, added or put. */
+  function countWrites(): (store: string) => number {
+    const writes = new Map<string, number>();
+    const count = (store: IDBObjectStore) => writes.set(store.name, (writes.get(store.name) ?? 0) + 1);
+    const { add, put } = IDBObjectStore.prototype;
+    vi.spyOn(IDBObjectStore.prototype, 'add').mockImplementation(function (
+      this: IDBObjectStore,
+      ...args: Parameters<IDBObjectStore['add']>
+    ) {
+      count(this);
+      return add.apply(this, args);
+    });
     vi.spyOn(IDBObjectStore.prototype, 'put').mockImplementation(function (
       this: IDBObjectStore,
       ...args: Parameters<IDBObjectStore['put']>
     ) {
-      if (this.name === 'entries') writes += 1;
+      count(this);
       return put.apply(this, args);
     });
-    return () => writes;
+    return (store) => writes.get(store) ?? 0;
   }
 
-  it('writes only the entry rows a run wins', async () => {
+  it('writes only the entry rows a run wins, and the scope row only when its coverage grows', async () => {
     const store = open(nextName());
     const run = runWith(0, 10, [rec('a', 3), rec('b', 5), tomb('c', 7)]);
-    const writes = countEntryWrites();
+    const writes = countWrites();
 
     await store.applyRuns([run]);
-    expect(writes()).toBe(3);
+    expect(writes('paths')).toBe(3);
+    expect(writes('scopes')).toBe(1);
 
     await store.applyRuns([run]);
-    expect(writes()).toBe(3);
+    expect(writes('paths')).toBe(3);
+    expect(writes('scopes')).toBe(1);
 
     await store.applyRuns([runWith(10, 12, [rec('a', 11)]), runWith(0, 4, [rec('a', 2), tomb('d', 4)])]);
-    expect(writes()).toBe(5);
+    expect(writes('paths')).toBe(5);
+    expect(writes('scopes')).toBe(2);
     expect([...(await store.readScope(META)).entries.keys()]).toEqual(['a', 'b', 'c', 'd']);
+  });
+
+  it('keys entries by scope id and path and stores each as a short tuple', async () => {
+    const name = nextName();
+    const store = open(name);
+    await store.applyRuns([runWith(0, 2, [rec('a', 1, 'h'), tomb('b', 2)]), runOf(0, 3, { ...META, author: 'bob' })]);
+    store.close();
+
+    const raw = new Dexie(name);
+    await raw.open();
+    const scopes = await raw.table('scopes').toArray();
+    const keys = await raw.table('paths').toCollection().primaryKeys();
+    const values = await raw.table('paths').toArray();
+    raw.close();
+
+    expect(scopes).toEqual([
+      { id: 1, ...META, coverage: [{ tail: c(0), head: c(2) }] },
+      { id: 2, ...META, author: 'bob', coverage: [{ tail: c(0), head: c(3) }] },
+    ]);
+    expect(keys).toEqual([
+      [1, 'a'],
+      [1, 'b'],
+      [2, 'a'],
+    ]);
+    expect(values).toEqual([
+      [1, c(1), 'h', { n: 1 }],
+      [0, c(2)],
+      [1, c(3), undefined, { n: 3 }],
+    ]);
+  });
+
+  it('reads many scopes in one transaction, each as a read of its own gives it', async () => {
+    const store = open(nextName());
+    const other = { ...META, author: 'bob' };
+    const missing = { ...META, group: 'graph' };
+    await store.applyRuns([runWith(0, 10, [rec('a', 4), tomb('b', 7)]), runOf(0, 3, other)]);
+    const asked = [other, missing, META, other];
+    const each: MergedRuns<Payload>[] = [];
+    for (const scope of asked) each.push(await store.readScope(scope));
+    const transactions = vi.spyOn(IDBDatabase.prototype, 'transaction');
+
+    const read = await store.readScopes(asked);
+
+    expect(transactions).toHaveBeenCalledTimes(1);
+    expect(read).toEqual(each);
+    expect(await store.readScopes([])).toEqual([]);
   });
 
   it('reads entries and coverage back after closing and reopening the database', async () => {
@@ -137,6 +194,47 @@ describe('createIdbStore', () => {
     expect(await store.readUserHomeserver('alice')).toEqual({ homeserver: 'hs1', resolvedAt: 5 });
     await store.applyRuns([runOf(0, 2)]);
     expect(await store.readCoverage(META)).toEqual([{ tail: c(0), head: c(2) }]);
+  });
+
+  it('drops the entries and coverage of a version 2 database and keeps the rest', async () => {
+    const name = nextName();
+    const old = new Dexie(name);
+    old.version(1).stores({
+      runs: '++id, [author+homeserver+group], homeserver',
+      userHomeservers: 'user',
+      homeserverStates: 'homeserver',
+      scopeMembers: 'seed',
+    });
+    old.version(2).stores({
+      runs: null,
+      entries: '[author+homeserver+group+path]',
+      coverage: '[author+homeserver+group], homeserver',
+    });
+    await old.table('entries').put({ ...META, path: 'a', entry: rec('a', 2) });
+    await old.table('coverage').put({ ...META, coverage: [{ tail: c(0), head: c(2) }] });
+    await old.table('userHomeservers').put({ user: 'alice', value: { homeserver: 'hs1', resolvedAt: 5 } });
+    old.close();
+
+    const store = open(name);
+
+    expect(await store.listScopes()).toEqual([]);
+    expect(await store.readScope(META)).toEqual(mergeRuns([]));
+    expect(await store.readUserHomeserver('alice')).toEqual({ homeserver: 'hs1', resolvedAt: 5 });
+    await store.applyRuns([runOf(2, 4)]);
+    expect(await store.readScope(META)).toEqual(mergeRuns([runOf(2, 4)]));
+  });
+
+  it('keeps meta values across a reopen, null for a key never written', async () => {
+    const name = nextName();
+    const first = open(name);
+    await first.writeMeta('writer', 'w1');
+    await first.writeMeta('writer', 'w2');
+    first.close();
+
+    const second = open(name);
+
+    expect(await second.readMeta('writer')).toBe('w2');
+    expect(await second.readMeta('other')).toBeNull();
   });
 
   it('starts empty after destroy', async () => {

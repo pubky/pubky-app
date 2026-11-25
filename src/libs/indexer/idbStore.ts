@@ -1,5 +1,6 @@
 import Dexie from 'dexie';
-import type { Coverage, Entry } from './indexer.types';
+import type { Coverage, Cursor, Entry, MergedRuns, RecordEntry } from './indexer.types';
+import type { BulkScopeReader } from './readScopes';
 import {
   applyRun,
   assertValidBatch,
@@ -18,15 +19,24 @@ import {
   type UserHomeserver,
 } from './store.types';
 
-/** A scope's winning entry for one path. */
-interface EntryRow<D> extends ScopeKey {
-  path: string;
-  entry: Entry<D>;
-}
-
-interface CoverageRow extends ScopeKey {
+/** A scope with coverage, under the small id its entry rows carry instead of its three names. */
+interface ScopeRow extends ScopeKey {
+  id: number;
   coverage: Coverage;
 }
+
+type NewScopeRow = Omit<ScopeRow, 'id'> & { id?: number };
+
+const TOMBSTONE = 0;
+const RECORD = 1;
+
+/**
+ * A path's winning entry, stored under the key `[scope id, path]`, so the value holds neither. A tombstone is
+ * `[0, cursor]`, a record `[1, cursor, hash, data]` with absent trailing fields cut off.
+ */
+type StoredEntry<D> = [kind: typeof TOMBSTONE | typeof RECORD, cursor: Cursor, hash?: string, data?: D];
+
+type PathKey = [number, string];
 
 interface UserHomeserverRow {
   user: string;
@@ -43,32 +53,53 @@ interface ScopeMembersRow {
   members: Map<string, number>;
 }
 
-type ScopeTuple = [string, string, string];
-type EntryKey = [string, string, string, string];
+interface MetaRow {
+  key: string;
+  value: string;
+}
 
-const ENTRY_KEY = '[author+homeserver+group+path]';
-const SCOPE_KEY = '[author+homeserver+group]';
+const SCOPE_INDEX = '[author+homeserver+group]';
 
-const scopeTuple = ({ author, homeserver, group }: ScopeKey): ScopeTuple => [author, homeserver, group];
+const scopeTuple = ({ author, homeserver, group }: ScopeKey): [string, string, string] => [author, homeserver, group];
 
-export type IdbIndexStore<D> = IndexStore<D> & {
-  /** Closes the connection for good; a new store on the same name reads the data again. */
-  close(): void;
-  /** Deletes the database and everything in it. */
-  destroy(): Promise<void>;
-};
+function packEntry<D>(entry: Entry<D>): StoredEntry<D> {
+  if (entry.kind === 'tombstone') return [TOMBSTONE, entry.cursor];
+  if (entry.data !== undefined) return [RECORD, entry.cursor, entry.hash, entry.data];
+  return entry.hash === undefined ? [RECORD, entry.cursor] : [RECORD, entry.cursor, entry.hash];
+}
+
+function unpackEntry<D>(path: string, [kind, cursor, hash, data]: StoredEntry<D>): Entry<D> {
+  if (kind === TOMBSTONE) return { kind: 'tombstone', path, cursor };
+  const record: RecordEntry<D> = { kind: 'record', path, cursor };
+  if (hash !== undefined) record.hash = hash;
+  if (data !== undefined) record.data = data;
+  return record;
+}
+
+const sameCoverage = (a: Coverage, b: Coverage) =>
+  a.length === b.length && a.every((range, i) => range.tail === b[i].tail && range.head === b[i].head);
+
+export type IdbIndexStore<D> = IndexStore<D> &
+  Required<Pick<IndexStore<D>, 'readMeta' | 'writeMeta'>> &
+  BulkScopeReader<D> & {
+    /** Closes the connection for good; a new store on the same name reads the data again. */
+    close(): void;
+    /** Deletes the database and everything in it. */
+    destroy(): Promise<void>;
+  };
 
 /**
  * An `IndexStore` in IndexedDB, with the same semantics as the memory store. Payloads are stored by structured
  * clone, so `D` must be structured-cloneable: no functions, and class instances lose their prototype. Cursors
  * stay `bigint`, which structured clone keeps exactly. IndexedDB cannot index a `bigint`, so no key holds one.
  *
- * Entries are keyed by scope then path, so a scope's entries are one range of the primary key.
+ * Each scope gets a small integer id and its entries are keyed by that id then path, so a scope is one range of
+ * the primary key and no entry row repeats the author, homeserver or group.
  */
 export function createIdbStore<D>(databaseName: string): IdbIndexStore<D> {
   const db = new Dexie(databaseName);
   db.version(1).stores({
-    runs: `++id, ${SCOPE_KEY}, homeserver`,
+    runs: `++id, ${SCOPE_INDEX}, homeserver`,
     userHomeservers: 'user',
     homeserverStates: 'homeserver',
     scopeMembers: 'seed',
@@ -76,21 +107,41 @@ export function createIdbStore<D>(databaseName: string): IdbIndexStore<D> {
   // Nothing on version 1 has shipped, so its runs are dropped instead of migrated.
   db.version(2).stores({
     runs: null,
-    entries: ENTRY_KEY,
-    coverage: `${SCOPE_KEY}, homeserver`,
+    entries: '[author+homeserver+group+path]',
+    coverage: `${SCOPE_INDEX}, homeserver`,
   });
-  const entries = db.table<EntryRow<D>, EntryKey>('entries');
-  const coverage = db.table<CoverageRow, ScopeTuple>('coverage');
+  // Nothing on version 2 has shipped, so its entries and coverage are dropped instead of migrated.
+  db.version(3).stores({
+    entries: null,
+    coverage: null,
+    scopes: `++id, &${SCOPE_INDEX}, homeserver`,
+    paths: '',
+    meta: 'key',
+  });
+  const scopes = db.table<ScopeRow, number, NewScopeRow>('scopes');
+  const paths = db.table<StoredEntry<D>, PathKey>('paths');
   const userHomeservers = db.table<UserHomeserverRow, string>('userHomeservers');
   const homeserverStates = db.table<HomeserverStateRow, string>('homeserverStates');
   const scopeMembers = db.table<ScopeMembersRow, string>('scopeMembers');
-  const tables = [entries, coverage, userHomeservers, homeserverStates, scopeMembers];
+  const meta = db.table<MetaRow, string>('meta');
+  const tables = [scopes, paths, userHomeservers, homeserverStates, scopeMembers];
 
-  const entriesOf = (scope: ScopeKey) =>
-    entries.where(ENTRY_KEY).between([...scopeTuple(scope), Dexie.minKey], [...scopeTuple(scope), Dexie.maxKey]);
+  const scopeRow = (scope: ScopeKey) => scopes.where(SCOPE_INDEX).equals(scopeTuple(scope)).first();
 
-  const coverageOf = async (scope: ScopeKey): Promise<Coverage> =>
-    (await coverage.get(scopeTuple(scope)))?.coverage ?? [];
+  const pathsOf = (id: number) => paths.where(':id').between([id, Dexie.minKey], [id, Dexie.maxKey]);
+
+  /** A scope's entries in path order, its keys and values read as two batches over the same range. */
+  async function entriesOf(id: number): Promise<Entry<D>[]> {
+    const [keys, values] = await Promise.all([pathsOf(id).primaryKeys(), pathsOf(id).toArray()]);
+    return values.map((value, i) => unpackEntry(keys[i][1], value));
+  }
+
+  async function stateOf(row: ScopeRow | undefined): Promise<MergedRuns<D>> {
+    if (row === undefined) return scopeState([], []);
+    // Ranges copied, so a scope asked for twice in one read gives two answers that share nothing.
+    const coverage = row.coverage.map(({ tail, head }) => ({ tail, head }));
+    return scopeState(await entriesOf(row.id), coverage);
+  }
 
   async function commit(batch: StoreBatch<D>): Promise<void> {
     // Validate and copy before the transaction: a rejected batch never touches the database.
@@ -100,29 +151,37 @@ export function createIdbStore<D>(databaseName: string): IdbIndexStore<D> {
     // One transaction for the whole batch, so a throw or a crash leaves all of it or none.
     await db.transaction('rw', tables, async () => {
       for (const homeserver of copy.deleteHomeservers ?? []) {
-        for (const row of await coverage.where('homeserver').equals(homeserver).toArray()) {
-          await entriesOf(row).delete();
-          await coverage.delete(scopeTuple(row));
-        }
+        const ids = await scopes.where('homeserver').equals(homeserver).primaryKeys();
+        for (const id of ids) await pathsOf(id).delete();
+        await scopes.bulkDelete(ids);
       }
       for (const { scope, cutoff } of copy.evictions ?? []) {
-        await entriesOf(scope)
-          .filter((row) => row.entry.cursor <= cutoff)
-          .delete();
-        const kept = evictCoverage(await coverageOf(scope), cutoff);
-        if (kept.length === 0) await coverage.delete(scopeTuple(scope));
-        else await coverage.put({ ...scopeOf(scope), coverage: kept });
+        const row = await scopeRow(scope);
+        if (row === undefined) continue;
+        const evicted = (await entriesOf(row.id)).filter((entry) => entry.cursor <= cutoff);
+        await paths.bulkDelete(evicted.map((entry): PathKey => [row.id, entry.path]));
+        const kept = evictCoverage(row.coverage, cutoff);
+        if (kept.length === 0) await scopes.delete(row.id);
+        else await scopes.put({ ...row, coverage: kept });
       }
       for (const run of copy.applyRuns ?? []) {
-        // Reads and writes only the rows of the run's own paths.
-        const keys = run.entries.map((entry): EntryKey => [...scopeTuple(run), entry.path]);
+        // Reads and writes only the rows of the run's own paths; a new scope has none to read.
+        const row = await scopeRow(run);
         const stored = new Map<string, Entry<D>>();
-        for (const row of await entries.bulkGet(keys)) if (row !== undefined) stored.set(row.path, row.entry);
-        const applied = applyRun(run, (path) => stored.get(path), await coverageOf(run));
-        if (applied.changed.length > 0) {
-          await entries.bulkPut(applied.changed.map((entry) => ({ ...scopeOf(run), path: entry.path, entry })));
+        if (row !== undefined) {
+          const values = await paths.bulkGet(run.entries.map((entry): PathKey => [row.id, entry.path]));
+          values.forEach((value, i) => {
+            const { path } = run.entries[i];
+            if (value !== undefined) stored.set(path, unpackEntry(path, value));
+          });
         }
-        await coverage.put({ ...scopeOf(run), coverage: applied.coverage });
+        const applied = applyRun(run, (path) => stored.get(path), row?.coverage ?? []);
+        const id = row?.id ?? (await scopes.add({ ...scopeOf(run), coverage: applied.coverage }));
+        if (row !== undefined && !sameCoverage(row.coverage, applied.coverage)) {
+          await scopes.put({ ...row, coverage: applied.coverage });
+        }
+        // Dexie types `bulkPut` keys as plain values, so compound keys go one `put` each, all in flight at once.
+        await Promise.all(applied.changed.map((entry) => paths.put(packEntry(entry), [id, entry.path])));
       }
       await userHomeservers.bulkPut((copy.userHomeservers ?? []).map(({ user, value }) => ({ user, value })));
       for (const { homeserver, patch } of copy.homeserverStates ?? []) {
@@ -135,25 +194,23 @@ export function createIdbStore<D>(databaseName: string): IdbIndexStore<D> {
     });
   }
 
-  async function readScope(scope: ScopeKey) {
-    return db.transaction('r', [entries, coverage], async () => {
-      const rows = await entriesOf(scope).toArray();
-      return scopeState(
-        rows.map((row) => row.entry),
-        await coverageOf(scope),
-      );
-    });
-  }
+  const readScope = (scope: ScopeKey) =>
+    db.transaction('r', [scopes, paths], async () => stateOf(await scopeRow(scope)));
+
+  // One transaction with every scope's reads in flight together, instead of a transaction per scope.
+  const readScopes = (asked: readonly ScopeKey[]) =>
+    db.transaction('r', [scopes, paths], () => Promise.all(asked.map(async (scope) => stateOf(await scopeRow(scope)))));
 
   // Reads need no copy: IndexedDB hands out a fresh structured clone on every read.
   return {
     commit,
     applyRuns: (runs) => commit({ applyRuns: runs }),
     readScope,
-    readCoverage: coverageOf,
+    readScopes,
+    readCoverage: async (scope) => (await scopeRow(scope))?.coverage ?? [],
     exportRuns: async (scope) => runsOfScope(scope, await readScope(scope)),
     evictBelow: (scope, cutoff) => commit({ evictions: [{ scope, cutoff }] }),
-    listScopes: async () => (await coverage.toArray()).map(scopeOf),
+    listScopes: async () => (await scopes.toArray()).map(scopeOf),
     deleteHomeserver: (homeserver) => commit({ deleteHomeservers: [homeserver] }),
     readUserHomeserver: async (user) => (await userHomeservers.get(user))?.value ?? null,
     writeUserHomeserver: (user, value) => commit({ userHomeservers: [{ user, value }] }),
@@ -162,6 +219,10 @@ export function createIdbStore<D>(databaseName: string): IdbIndexStore<D> {
     patchHomeserverState: (homeserver, patch) => commit({ homeserverStates: [{ homeserver, patch }] }),
     readScopeMembers: async (seed) => (await scopeMembers.get(seed))?.members ?? new Map<string, number>(),
     writeScopeMembers: (seed, members) => commit({ scopeMembers: [{ seed, members }] }),
+    readMeta: async (key) => (await meta.get(key))?.value ?? null,
+    writeMeta: async (key, value) => {
+      await meta.put({ key, value });
+    },
     close: () => db.close(),
     destroy: () => db.delete(),
   };

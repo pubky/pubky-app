@@ -3,6 +3,7 @@ import { InvalidIndexInputError } from './indexer.errors';
 import type { Cursor, Entry, Run, RunMeta } from './indexer.types';
 import { compactRuns, evictBelow, mergeRuns } from './merge';
 import { GENERATED_META, int, randomCase, seeded, shuffled } from './merge.generators';
+import { readScopesOf } from './readScopes';
 import { comparePaths } from './run';
 import { scopeId } from './store.helpers';
 import { EMPTY_HOMESERVER_STATE, type IndexStore, type ScopeKey, type StoreBatch } from './store.types';
@@ -88,6 +89,27 @@ export function describeIndexStoreContract<S extends IndexStore<Payload>>(
       expect(await store.exportRuns(META)).toEqual([runOf(0, 4)]);
       await expectScopeOf(store, other, [runOf(0, 1, other)]);
       expect(sortedScopes(await store.listScopes())).toEqual(sortedScopes([META, other]));
+    });
+
+    it('reads many scopes at once as it reads each, in the order asked, sharing nothing', async () => {
+      const store = fresh();
+      const other: RunMeta = { ...META, author: 'bob' };
+      const missing: RunMeta = { ...META, group: 'graph' };
+      const runs = [runWith(0, 10, [rec('a', 4), tomb('b', 7)]), runWith(20, 30, [rec('c', 25)])];
+      await store.applyRuns([...runs, runOf(0, 3, other)]);
+
+      const read = await readScopesOf(store, [other, missing, META, other]);
+
+      expect(read).toEqual([
+        mergeRuns([runOf(0, 3, other)]),
+        mergeRuns([]),
+        mergeRuns(runs),
+        mergeRuns([runOf(0, 3, other)]),
+      ]);
+      read[0].entries.clear();
+      read[0].coverage.length = 0;
+      expect(read[3]).toEqual(mergeRuns([runOf(0, 3, other)]));
+      expect(await readScopesOf(store, [])).toEqual([]);
     });
 
     it('keeps the highest cursor per path, tombstones included, and serves only above a gap', async () => {
