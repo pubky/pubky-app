@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react';
+import { fakeOwner } from 'pubky-social-specs/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { IMAGE_MAX_RAW_SIZE } from '@/config/images';
@@ -2586,6 +2587,55 @@ describe('usePostInput', () => {
       const { result } = renderHook(() => usePostInput(options));
 
       expect(result.current.embedUrl).toBeNull();
+    });
+
+    describe('with a link to a post on the host the app runs on', () => {
+      const APP_AUTHOR = fakeOwner(5);
+      const APP_POST = `${window.location.origin}/post/${APP_AUTHOR}/00357R34CQ8Q0`;
+
+      it('embeds it in a new post, as the text writes it (published as a quote of the post)', async () => {
+        mockContent = `Look ${APP_POST}`;
+
+        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+        expect(result.current.embedUrl).toBe(APP_POST);
+        await act(async () => {
+          await result.current.handleSubmit();
+        });
+        expect(mockPost).toHaveBeenCalledWith({ embedUrl: APP_POST, onSuccess: expect.any(Function) });
+      });
+
+      it('offers it in the switch with the other links', () => {
+        mockContent = `Read ${LINK} and ${APP_POST}`;
+
+        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+        expect(result.current.embedChoices).toEqual([LINK, APP_POST]);
+      });
+
+      it('embeds nothing for it in an edit: which post a post quotes is fixed', () => {
+        mockContent = `Look ${APP_POST}`;
+
+        const { result } = renderHook(() =>
+          usePostInput({
+            variant: 'edit',
+            editPostId: 'post-to-edit-id',
+            editContent: mockContent,
+            editEmbedUrl: null,
+          }),
+        );
+
+        expect(result.current.embedUrl).toBeNull();
+        expect(result.current.isEmbedRemoved).toBe(false);
+      });
+
+      it('embeds nothing for a profile link on this host', () => {
+        mockContent = `Meet ${window.location.origin}/profile/${APP_AUTHOR}`;
+
+        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+
+        expect(result.current.embedUrl).toBeNull();
+      });
     });
 
     it('embeds nothing in an article', () => {

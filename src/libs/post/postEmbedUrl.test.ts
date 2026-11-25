@@ -17,6 +17,10 @@ const GEO = 'geo:47.3769,8.5417';
 const BTC_TX = 'btc:tx/3d365ba65953e39c2ff64186022fe9ccf4ac0694888d9bf0c57a45de23e46fd5';
 const DOI = 'doi:10.1038/nature14539';
 const MAGNET = 'magnet:?xt=urn:btih:c12fe1c06bba254a9dc9f519b335aa7c1367a88a';
+const APP_AUTHOR = fakeOwner(3);
+const APP_POST_ID = '00357R34CQ8Q0';
+/** A post's link on the host the app runs on (the test page's own origin). */
+const APP_POST_LINK = `${window.location.origin}/post/${APP_AUTHOR}/${APP_POST_ID}`;
 
 /** Whether the data model stores `embed` (`buildPost` from pubky-social-specs). */
 const isStored = (embed: string) => {
@@ -141,6 +145,39 @@ describe('getComposerEmbedUrl', () => {
 
   it('returns null for a link to this app', () => {
     expect(getComposerEmbedUrl(`look ${window.location.origin}/post/abc/123`)).toBeNull();
+    expect(getComposerEmbedUrl(`look ${APP_POST_LINK}`)).toBeNull();
+  });
+
+  describe('with quotesAppPosts (a new post)', () => {
+    it('returns the link to a post on the host the app runs on, as the text writes it', () => {
+      expect(getComposerEmbedUrl(`look ${APP_POST_LINK}`, { quotesAppPosts: true })).toBe(APP_POST_LINK);
+    });
+
+    it.each([
+      ['a profile', `${window.location.origin}/profile/${APP_AUTHOR}`],
+      ['a collection', `${window.location.origin}/collections/${APP_AUTHOR}/${APP_POST_ID}`],
+      ['a post link the data model refuses', `${window.location.origin}/post/abc/123`],
+      [
+        'a post link on the same name with another port',
+        `http://${window.location.hostname}:3999/post/${APP_AUTHOR}/${APP_POST_ID}`,
+      ],
+    ])('still returns null for another link to this app: %s', (_, link) => {
+      expect(getComposerEmbedUrl(`look ${link}`, { quotesAppPosts: true })).toBeNull();
+    });
+
+    it('embeds a post link on another host as the external link it is', () => {
+      const other = `https://pubky.app/post/${APP_AUTHOR}/${APP_POST_ID}`;
+      expect(getComposerEmbedUrl(other, { quotesAppPosts: true })).toBe(other);
+      expect(getComposerEmbedUrl(other)).toBe(other);
+    });
+
+    it('lists the post link among the links the author may pick from', () => {
+      expect(getComposerEmbedUrls(`https://e.example/5 ${APP_POST_LINK}`, { quotesAppPosts: true })).toEqual([
+        'https://e.example/5',
+        APP_POST_LINK,
+      ]);
+      expect(getComposerEmbedUrls(`https://e.example/5 ${APP_POST_LINK}`)).toEqual(['https://e.example/5']);
+    });
   });
 
   it('returns null for a link longer than the data model stores', () => {

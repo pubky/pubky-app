@@ -20,28 +20,37 @@ const mockExistingAttachment = (uri: string): ExistingAttachment => ({
 });
 
 // Hoist mock data and functions
-const { mockCurrentUserId, setMockCurrentUserId, mockPostControllerCreate, mockPostControllerEdit, mockLoggerError } =
-  vi.hoisted(() => {
-    const userId = { current: 'test-user-id' as string | null };
-    const postControllerCreate = vi.fn();
-    const postControllerEdit = vi.fn();
-    const loggerError = vi.fn();
-    return {
-      mockCurrentUserId: userId,
-      setMockCurrentUserId: (value: string | null) => {
-        userId.current = value;
-      },
-      mockPostControllerCreate: postControllerCreate,
-      mockPostControllerEdit: postControllerEdit,
-      mockLoggerError: loggerError,
-    };
-  });
+const {
+  mockCurrentUserId,
+  setMockCurrentUserId,
+  mockPostControllerCreate,
+  mockPostControllerEdit,
+  mockPostControllerGetDetails,
+  mockLoggerError,
+} = vi.hoisted(() => {
+  const userId = { current: 'test-user-id' as string | null };
+  const postControllerCreate = vi.fn();
+  const postControllerEdit = vi.fn();
+  const postControllerGetDetails = vi.fn();
+  const loggerError = vi.fn();
+  return {
+    mockCurrentUserId: userId,
+    setMockCurrentUserId: (value: string | null) => {
+      userId.current = value;
+    },
+    mockPostControllerCreate: postControllerCreate,
+    mockPostControllerEdit: postControllerEdit,
+    mockPostControllerGetDetails: postControllerGetDetails,
+    mockLoggerError: loggerError,
+  };
+});
 
 // Mock dependencies
 vi.mock('@/controllers/post/post', () => ({
   PostController: {
     commitCreate: mockPostControllerCreate,
     commitEdit: mockPostControllerEdit,
+    getDetails: mockPostControllerGetDetails,
   },
 }));
 vi.mock('@/controllers/file/file', () => ({
@@ -782,6 +791,77 @@ describe('usePost', () => {
           embedUrl: 'https://en.wikipedia.org/wiki/Bitcoin',
         }),
       );
+    });
+
+    describe('a link to a post on the host the app runs on', () => {
+      const AUTHOR = fakeOwner(4);
+      const POST_ID = '00357R34CQ8Q0';
+      const LINK = `${window.location.origin}/post/${AUTHOR}/${POST_ID}`;
+      const publish = async (embedUrl: string) => {
+        const { result } = renderHook(() => usePost());
+        act(() => {
+          result.current.setContent(`Look ${embedUrl}`);
+        });
+        await act(async () => {
+          await result.current.post({ embedUrl, onSuccess: vi.fn() });
+        });
+      };
+
+      it('quotes the post by its reference instead of embedding the web link', async () => {
+        mockPostControllerGetDetails.mockResolvedValueOnce({ id: `${AUTHOR}:${POST_ID}`, content: 'hi' });
+
+        await publish(LINK);
+
+        expect(mockPostControllerGetDetails).toHaveBeenCalledWith({ compositeId: `${AUTHOR}:${POST_ID}` });
+        const params = mockPostControllerCreate.mock.calls[0][0];
+        expect(params).toMatchObject({ content: `Look ${LINK}`, originalPostId: `${AUTHOR}:${POST_ID}` });
+        expect(params.embedUrl).toBeUndefined();
+      });
+
+      it.each([
+        ['not read yet', null],
+        ['deleted by its author', { id: `${AUTHOR}:${POST_ID}`, content: '', deleted: true }],
+      ])('embeds nothing for a post %s: no quote, and never the web link', async (_, details) => {
+        mockPostControllerGetDetails.mockResolvedValueOnce(details);
+
+        await publish(LINK);
+
+        const params = mockPostControllerCreate.mock.calls[0][0];
+        expect(params.originalPostId).toBeUndefined();
+        expect(params.embedUrl).toBeUndefined();
+        expect(params.content).toBe(`Look ${LINK}`);
+      });
+
+      it('publishes nothing when the linked post can not be read, and says so', async () => {
+        mockPostControllerGetDetails.mockRejectedValueOnce(new Error('local database closed'));
+
+        await publish(LINK);
+
+        expect(mockPostControllerCreate).not.toHaveBeenCalled();
+        expect(vi.mocked(toast)).toHaveBeenCalledWith(
+          expect.objectContaining({ variant: 'error', description: 'Could not create post. Try again.' }),
+        );
+      });
+
+      it('embeds nothing for a profile link on this host', async () => {
+        await publish(`${window.location.origin}/profile/${AUTHOR}`);
+
+        const params = mockPostControllerCreate.mock.calls[0][0];
+        expect(params.originalPostId).toBeUndefined();
+        expect(params.embedUrl).toBeUndefined();
+        expect(mockPostControllerGetDetails).not.toHaveBeenCalled();
+      });
+
+      it('embeds a post link on another host as the link it is', async () => {
+        const other = `https://pubky.app/post/${AUTHOR}/${POST_ID}`;
+
+        await publish(other);
+
+        const params = mockPostControllerCreate.mock.calls[0][0];
+        expect(params.embedUrl).toBe(other);
+        expect(params.originalPostId).toBeUndefined();
+        expect(mockPostControllerGetDetails).not.toHaveBeenCalled();
+      });
     });
 
     it('should handle post with empty tags array', async () => {

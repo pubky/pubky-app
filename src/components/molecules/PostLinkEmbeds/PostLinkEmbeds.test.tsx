@@ -810,6 +810,13 @@ describe('PostLinkEmbeds', () => {
       expect(screen.queryByTestId('generic-preview')).not.toBeInTheDocument();
     });
 
+    it('renders PostPreviewCard for a current-origin post URL a new post embeds (the post it quotes)', () => {
+      render(<PostLinkEmbeds url={`${origin}/post/${pubky}/${postId}`} isComposing />);
+
+      expect(screen.getByTestId('post-preview-card')).toHaveAttribute('data-post-id', `${pubky}:${postId}`);
+      expect(screen.queryByTestId('generic-preview')).not.toBeInTheDocument();
+    });
+
     it('renders PostPreviewCard for a current-origin collection URL', () => {
       render(<PostLinkEmbeds content={`My collection: ${origin}/collections/${pubky}/${postId}`} />);
 

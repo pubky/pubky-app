@@ -1,4 +1,5 @@
 import { limits } from 'pubky-social-specs';
+import { getAppLinkReference } from '@/libs/pubkyApp/appLink';
 import { getSafeExternalUrl } from '@/libs/utils/safeExternalUrl';
 import { isSameDomain } from '@/libs/utils/utils';
 import { getEmbedLinkMatches, getLinkUrls, getUriUrls, IGNORED_PROTOCOLS, type LinkMatch } from './postLinkUrl';
@@ -60,17 +61,28 @@ export function getResourceEmbedUrl(embed: string | null | undefined): string | 
   return getWebEmbedUrl(embed) ?? getUriEmbedUrl(embed);
 }
 
+/** Which links the composer offers besides external resources. */
+export interface ComposerEmbedOptions {
+  /**
+   * A link to a post on the host the app runs on (`getAppLinkReference`) is offered too, as the link
+   * the text writes: a new post embeds that post by its reference (a quote) instead of the web link.
+   * Off for an edit: a post's embedded post is fixed when it is created.
+   */
+  quotesAppPosts?: boolean;
+}
+
 /**
  * The link a new post embeds: the first link of its text, when it is an external web link the
  * data model can store as `embed` (at most `referenceUriMaxLength` code points), or a URI of
  * another scheme written in it (`isbn:…`, `geo:…`: `getUriEmbedUrl`). The data model
  * stores a web reference as written, so only a link written with its `http://` or `https://`
  * scheme is embedded; one written without a scheme keeps the plain preview. A link to this app's
- * own pages is not an external resource and is left to the in-app preview. A URI the composer does
- * not offer (`isOfferedUri`) is skipped as linkify skips it, so it never hides a later web link.
+ * own pages is not an external resource: it is left to the in-app preview, except a post's link
+ * with `quotesAppPosts` (`ComposerEmbedOptions`). A URI the composer does not offer
+ * (`isOfferedUri`) is skipped as linkify skips it, so it never hides a later web link.
  */
-export function getComposerEmbedUrl(content: string): string | null {
-  return toComposerEmbedUrl(getEmbedLinkMatches(content, isOfferedUri)[0] ?? null);
+export function getComposerEmbedUrl(content: string, options: ComposerEmbedOptions = {}): string | null {
+  return toComposerEmbedUrl(getEmbedLinkMatches(content, isOfferedUri)[0] ?? null, options);
 }
 
 /** Whether the composer offers the URI of another scheme `uri` as an embed (`UNOFFERED_EMBED_SCHEMES`). */
@@ -79,11 +91,11 @@ function isOfferedUri(uri: string): boolean {
 }
 
 /** The link `match` names when a new post can embed it (see `getComposerEmbedUrl`), else null. */
-function toComposerEmbedUrl(match: LinkMatch | null): string | null {
+function toComposerEmbedUrl(match: LinkMatch | null, { quotesAppPosts = false }: ComposerEmbedOptions): string | null {
   if (!match?.schema) return null;
   const url = getWebEmbedUrl(match.url);
   if (!url) return isOfferedUri(match.url) ? match.url : null;
-  if (isSameDomain(url)) return null;
+  if (isSameDomain(url)) return quotesAppPosts && getAppLinkReference(url)?.kind === 'post' ? url : null;
   return [...url].length <= limits.referenceUriMaxLength ? url : null;
 }
 
@@ -110,11 +122,11 @@ export function getShownEmbedUrl(embedUrl: string | null | undefined, content: s
  * order: the links the author may pick from. Two spellings of one web link (a fragment, the host's
  * case, a default port) count once, under the first spelling; a URI of another scheme is its spelling.
  */
-export function getComposerEmbedUrls(content: string): string[] {
+export function getComposerEmbedUrls(content: string, options: ComposerEmbedOptions = {}): string[] {
   const urls: string[] = [];
   const keys = new Set<string>();
   for (const match of getEmbedLinkMatches(content, isOfferedUri)) {
-    const url = toComposerEmbedUrl(match);
+    const url = toComposerEmbedUrl(match, options);
     const key = url && (getWebEmbedUrl(url) ? (normalizeEmbedUrl(url) ?? url) : url);
     if (!url || !key || keys.has(key)) continue;
     keys.add(key);

@@ -5,6 +5,7 @@ import { isPinakesConfigured } from '@/config/pinakes';
 import { PinakesController } from '@/controllers/pinakes/pinakes';
 import { usePinakesQuery } from '@/hooks/usePinakesQuery/usePinakesQuery';
 import type { UsePinakesQueryResult } from '@/hooks/usePinakesQuery/usePinakesQuery.types';
+import { getAppLinkReference } from '@/libs/pubkyApp/appLink';
 import { getRecheckDelay, isUnsettledCard } from '@/pipes/pinakes/pinakes.recheck';
 import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 
@@ -131,7 +132,9 @@ function useResolvedCard(uri: string | null, ask: boolean): { card: TPinakesReso
  * The Pinakes card for a link.
  *
  * `data` is `null` when there is no card to show: Pinakes does not know the link (404), Pinakes is
- * not configured (`PUBKY_RUNTIME_PINAKES_URL` unset, no request is made), or `uri` is empty.
+ * not configured (`PUBKY_RUNTIME_PINAKES_URL` unset, no request is made), `uri` is empty, or `uri`
+ * links a post or a profile on the host the app runs on (`getAppLinkReference`): the app's own object,
+ * never an external resource, so Pinakes is neither read nor asked to read it.
  * Callers keep their plain link preview then. See `UsePinakesCardOptions` for re-reading a link
  * Pinakes is about to know and for having it read one it does not (`isResolving` while it is asked).
  * Without `resolve`, a link Pinakes does not know that is being read on demand elsewhere in the
@@ -150,7 +153,7 @@ export function usePinakesCard(
   uri: string | null | undefined,
   { recheck = false, resolve = false }: UsePinakesCardOptions = {},
 ): UsePinakesQueryResult<TPinakesResourceDetail> & { isResolving?: boolean } {
-  const enabled = Boolean(uri) && isPinakesConfigured();
+  const enabled = Boolean(uri) && isPinakesConfigured() && getAppLinkReference(uri ?? '') === null;
   const read = usePinakesQuery({
     key: uri ?? '',
     fetchFn: () => PinakesController.fetchCardByUri({ uri: uri! }),

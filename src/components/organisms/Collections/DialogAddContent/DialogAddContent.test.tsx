@@ -12,7 +12,8 @@ const VIEWER = 'o4dksfbqk85ogzdb5osziw6befigbuxmuxkuxq8434q89uj56uyy';
 const POST_ID = '00357R34CQ8Q0';
 const COMPOSITE_ID = `${AUTHOR}:${POST_ID}`;
 const POST_URI = `pubky://${AUTHOR}/pub/social/v1/posts/${POST_ID}`;
-const POST_URL = `https://pubky.app/post/${AUTHOR}/${POST_ID}`;
+/** A post's link on the host the app runs on (the test page's own origin). */
+const POST_URL = `${window.location.origin}/post/${AUTHOR}/${POST_ID}`;
 
 const mocks = vi.hoisted(() => ({
   currentUserPubky: 'v'.repeat(52) as string | null,
