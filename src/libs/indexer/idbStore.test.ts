@@ -4,6 +4,7 @@ import Dexie from 'dexie';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MAX_CURSOR } from './cursor';
 import { createIdbStore, type IdbIndexStore } from './idbStore';
+import { benchIndexStore, type BenchPayload } from './idbStore.bench';
 import type { MergedRuns, Run } from './indexer.types';
 import { mergeRuns } from './merge';
 import { c, describeIndexStoreContract, META, type Payload, rec, runOf, runWith, tomb } from './store.contract';
@@ -235,6 +236,18 @@ describe('createIdbStore', () => {
 
     expect(await second.readMeta('writer')).toBe('w2');
     expect(await second.readMeta('other')).toBeNull();
+  });
+
+  it('runs the store benchmark on a small fill', async () => {
+    const store = createIdbStore<BenchPayload>(nextName());
+    try {
+      const timings = await benchIndexStore(() => store, { users: 4, recordsPerUser: 10, usersPerCommit: 3 });
+
+      expect(timings).toMatchObject({ records: 40, scopes: 8 });
+      expect(await store.listScopes()).toHaveLength(8);
+    } finally {
+      await store.destroy();
+    }
   });
 
   it('starts empty after destroy', async () => {
