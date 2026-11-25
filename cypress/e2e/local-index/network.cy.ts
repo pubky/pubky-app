@@ -185,6 +185,16 @@ describe('local index: reading the network without Nexus', () => {
         expect(image.currentSrc || image.src, 'image URL').to.match(LOCAL_FEED_FILE_URL);
         expect(image.complete, 'image loaded').to.equal(true);
         expect(image.naturalWidth, 'width of the resized copy').to.equal(FEED_VARIANT_WIDTH);
+      })
+      .then(($image) => {
+        // The original file, which the worker cached while it made the variant; a page fetch passes through the worker
+        const originalUrl = ($image[0] as HTMLImageElement).currentSrc.split('?')[0];
+        return cy.window().then((win) => win.fetch(originalUrl, { headers: { Range: 'bytes=0-9' } }));
+      })
+      .then((response) => {
+        expect(response.status, 'range response status').to.equal(206);
+        expect(response.headers.get('content-range'), 'content range').to.match(/^bytes 0-9\/\d+$/);
+        expect(response.headers.get('accept-ranges'), 'accept ranges').to.equal('bytes');
       });
   });
 

@@ -5,6 +5,7 @@ import {
   LOCAL_MEDIA_CACHE,
   LOCAL_MEDIA_CACHE_MAX_ENTRIES,
   LOCAL_MEDIA_CLIENT_TIMEOUT_MS,
+  LOCAL_MEDIA_MAX_BYTES,
   LOCAL_MEDIA_PATH_PREFIX,
   SW_CLIENT_ANNOUNCE,
   SW_LOCAL_MEDIA_REQUEST,
@@ -121,6 +122,7 @@ self.addEventListener('fetch', (event: FetchEvent) => {
         decodeImage: decodeImageWithCanvas,
         timeoutMs: LOCAL_MEDIA_CLIENT_TIMEOUT_MS,
         maxEntries: LOCAL_MEDIA_CACHE_MAX_ENTRIES,
+        maxBytes: LOCAL_MEDIA_MAX_BYTES,
       }),
     );
   }

@@ -45,7 +45,9 @@ Variants are made in the worker the way Nexus makes them (`nexus-webapi`, `media
 
 The page side runs with the local index (`IndexerService`, `src/core/services/indexer/indexer.media.ts`): a file is read with `HomeserverService.getPublicFileBytes`, an avatar from the image the profile in the index's view names (after one `ensureUser` when the view does not hold the user yet). Only v1 public media is served. Sign-out deletes the cache with the index database.
 
-Limits: a page the worker does not control (the first visit before the worker activates, a hard reload, dev without `SERWIST_DEV`) gets 404s from the server and shows fallbacks until the next load; the whole file passes through memory once, with no range responses, which Safari wants for video; and a signed-out page runs no index, so nothing answers.
+Every response says `Accept-Ranges: bytes` and carries its `Content-Length`. A request with a single `bytes=` range (`start-end`, `start-` or the suffix `-length`) gets a 206 with `Content-Range` and that slice of the cached file, a range starting past the end a 416, and several ranges or a malformed header the whole file as a 200 (`src/libs/pwa/localMediaRange.ts`). Safari plays `<video>` and `<audio>` only from a server that answers ranges. A range is sliced from the cached `Blob`, not from a copy of the whole file.
+
+Limits: a page the worker does not control (the first visit before the worker activates, a hard reload, dev without `SERWIST_DEV`) gets 404s from the server and shows fallbacks until the next load; the first read of a file passes it through memory whole, once in the page (the read and the copy it transfers) and once in the worker (the transferred buffer and its `Blob`), so the worker refuses a file over `LOCAL_MEDIA_MAX_BYTES` (100 MiB, the most a v1 file may hold) with a 507 instead of caching it; that check runs after the page's read, which only the read's deadline (`INDEXER_READ_TIMEOUT_MS`) and the worker's wait (`LOCAL_MEDIA_CLIENT_TIMEOUT_MS`) bound; and a signed-out page runs no index, so nothing answers.
 
 ## Update flow
 

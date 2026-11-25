@@ -40,6 +40,12 @@ export const LOCAL_MEDIA_CACHE = 'pubky-local-media';
 /** Entries kept in `LOCAL_MEDIA_CACHE`; the oldest go first. */
 export const LOCAL_MEDIA_CACHE_MAX_ENTRIES = 500;
 
+/**
+ * The largest file the worker serves, 100 MiB, the most a v1 file may hold. A file passes through the page's and the
+ * worker's memory whole when it is first read, so a larger one is refused with a 507 instead.
+ */
+export const LOCAL_MEDIA_MAX_BYTES = 100 * 1024 * 1024;
+
 /** How long the worker waits for a page to hand over media before it responds 504. */
 export const LOCAL_MEDIA_CLIENT_TIMEOUT_MS = 15_000;
 

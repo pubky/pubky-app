@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
+import { ATTACHMENT_MAX_OTHER_SIZE } from '@/config/posts';
+import { LOCAL_MEDIA_MAX_BYTES } from '@/config/pwa';
 import { asOpaque } from '@/test-utils/type-assertions';
 import {
   buildLocalAvatarPath,
@@ -54,20 +56,31 @@ type RespondOptions = {
   maxEntries?: number;
   timeoutMs?: number;
   decodeImage?: DecodeImage;
+  maxBytes?: number;
+  range?: string;
 };
 
 function respond(
   path: string,
-  { answer, cache = memoryCache(), maxEntries = 10, timeoutMs = 1000, decodeImage = decodesNothing }: RespondOptions,
+  {
+    answer,
+    cache = memoryCache(),
+    maxEntries = 10,
+    timeoutMs = 1000,
+    decodeImage = decodesNothing,
+    maxBytes = 1000,
+    range,
+  }: RespondOptions,
 ) {
   const ask = vi.fn((_media: LocalMediaRequest) => answer);
   const response = respondLocalMedia({
-    request: new Request(`${ORIGIN}${path}`),
+    request: new Request(`${ORIGIN}${path}`, range === undefined ? {} : { headers: { Range: range } }),
     openCache: async () => asOpaque<Cache>(cache),
     ask,
     decodeImage,
     timeoutMs,
     maxEntries,
+    maxBytes,
   });
   return { response, ask, cache };
 }
@@ -251,9 +264,82 @@ describe('respondLocalMedia', () => {
       decodeImage: decodesNothing,
       timeoutMs: 1000,
       maxEntries: 10,
+      maxBytes: 1000,
     });
 
     expect(await response.text()).toBe('avatar');
+  });
+});
+
+describe('respondLocalMedia with byte ranges', () => {
+  const VIDEO_URL = `${ORIGIN}/_pubky/file/${ALICE}/clip.mp4`;
+
+  it('says ranges are accepted and how long a whole response is', async () => {
+    const { response } = respond(`/_pubky/file/${ALICE}/clip.mp4`, {
+      answer: Promise.resolve(found('0123456789', 'video/mp4')),
+    });
+
+    const served = await response;
+    expect(served.status).toBe(200);
+    expect(served.headers.get('accept-ranges')).toBe('bytes');
+    expect(served.headers.get('content-length')).toBe('10');
+    expect(served.headers.get('x-content-type-options')).toBe('nosniff');
+  });
+
+  it('answers a range from the cached file with a 206', async () => {
+    const cache = memoryCache();
+    cache.entries.set(VIDEO_URL, new Response('0123456789', { headers: { 'Content-Type': 'video/mp4' } }));
+
+    const { response, ask } = respond(`/_pubky/file/${ALICE}/clip.mp4`, {
+      cache,
+      answer: Promise.resolve(null),
+      range: 'bytes=0-3',
+    });
+
+    const served = await response;
+    expect(ask).not.toHaveBeenCalled();
+    expect(served.status).toBe(206);
+    expect(served.headers.get('content-range')).toBe('bytes 0-3/10');
+    expect(served.headers.get('content-type')).toBe('video/mp4');
+    expect(served.headers.get('content-security-policy')).toBe('sandbox');
+    expect(await served.text()).toBe('0123');
+  });
+
+  it('answers the first range with a 206 and caches the whole file', async () => {
+    const { response, cache } = respond(`/_pubky/file/${ALICE}/clip.mp4`, {
+      answer: Promise.resolve(found('0123456789', 'video/mp4')),
+      range: 'bytes=4-',
+    });
+
+    const served = await response;
+    expect(served.status).toBe(206);
+    expect(await served.text()).toBe('456789');
+    expect(await cache.entries.get(VIDEO_URL)?.text()).toBe('0123456789');
+  });
+
+  it('answers a range past the end with a 416', async () => {
+    const { response } = respond(`/_pubky/file/${ALICE}/clip.mp4`, {
+      answer: Promise.resolve(found('0123456789', 'video/mp4')),
+      range: 'bytes=10-',
+    });
+
+    const served = await response;
+    expect(served.status).toBe(416);
+    expect(served.headers.get('content-range')).toBe('bytes */10');
+  });
+
+  it('refuses a file over the size cap with a 507 and caches nothing', async () => {
+    const { response, cache } = respond(`/_pubky/file/${ALICE}/clip.mp4`, {
+      answer: Promise.resolve(found('0123456789', 'video/mp4')),
+      maxBytes: 9,
+    });
+
+    expect((await response).status).toBe(507);
+    expect(cache.put).not.toHaveBeenCalled();
+  });
+
+  it('caps files at the largest a v1 file may hold', () => {
+    expect(LOCAL_MEDIA_MAX_BYTES).toBe(ATTACHMENT_MAX_OTHER_SIZE);
   });
 });
 

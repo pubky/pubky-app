@@ -1,4 +1,5 @@
 import { LOCAL_MEDIA_PATH_PREFIX, SW_LOCAL_MEDIA_REQUEST } from '@/config/pwa';
+import { rangedResponse } from './localMediaRange';
 import {
   type DecodeImage,
   isLocalMediaVariant,
@@ -160,6 +161,8 @@ export interface RespondLocalMediaParams {
   decodeImage: DecodeImage;
   timeoutMs: number;
   maxEntries: number;
+  /** The largest file a page may hand over; a larger one is refused with a 507. */
+  maxBytes: number;
 }
 
 type LoadParams = Omit<RespondLocalMediaParams, 'request' | 'openCache'> & { cache: Cache | null };
@@ -167,7 +170,7 @@ type LoadParams = Omit<RespondLocalMediaParams, 'request' | 'openCache'> & { cac
 /** What `target` serves, or the error status to respond with. */
 async function loadLocalMedia(
   target: LocalMediaTarget,
-  { cache, ask, decodeImage, timeoutMs, maxEntries }: LoadParams,
+  { cache, ask, decodeImage, timeoutMs, maxEntries, maxBytes }: LoadParams,
 ): Promise<LocalMediaBody | number> {
   const served = await readCached(cache, target.key);
   if (served) return served;
@@ -180,6 +183,7 @@ async function loadLocalMedia(
     if (answer === null) return 504;
     if (answer.status === 'none') return 404;
     if (answer.status === 'failed') return 502;
+    if (answer.bytes.byteLength > maxBytes) return 507;
     // Through a Response, so the Blob comes from the same realm as the Response that later carries it
     original = { blob: await new Response(answer.bytes).blob(), contentType: answer.contentType };
     if (target.originalKey !== null) await store(cache, target.originalKey, original, maxEntries);
@@ -199,9 +203,10 @@ async function loadLocalMedia(
 
 /**
  * The worker's answer to a GET under `LOCAL_MEDIA_PATH_PREFIX`: the cached copy, else the bytes a page hands over,
- * cached for next time. A variant is made in the worker from the original, which is cached once for every variant
- * of it; when it cannot be made the original is served. Nothing to serve is a 404, a failed read a 502 and no answer
- * in time a 504, none of them cached, so the image shows its fallback and the next render asks again.
+ * cached for next time, whole or as the single byte range the request asks for. A variant is made in the worker from
+ * the original, which is cached once for every variant of it; when it cannot be made the original is served. Nothing
+ * to serve is a 404, a failed read a 502, no answer in time a 504 and a file over `maxBytes` a 507, none of them
+ * cached, so the image shows its fallback and the next render asks again.
  */
 export async function respondLocalMedia({ request, openCache, ...params }: RespondLocalMediaParams): Promise<Response> {
   const target = parseLocalMediaUrl(new URL(request.url));
@@ -210,5 +215,5 @@ export async function respondLocalMedia({ request, openCache, ...params }: Respo
   const cache = await openCache().catch(() => null);
   const body = await loadLocalMedia(target, { cache, ...params });
   if (typeof body === 'number') return new Response(null, { status: body });
-  return new Response(body.blob, { status: 200, headers: mediaHeaders(body.contentType) });
+  return rangedResponse(body.blob, mediaHeaders(body.contentType), request.headers.get('Range'));
 }
