@@ -155,13 +155,19 @@ describe('backfill', () => {
     await crawler.syncScope('alice');
     expect(await served(store, 'alice', 'hs1', ACTIVITY)).toEqual(network.liveOf('alice', [POSTS], old[11]));
 
+    const scope = { author: 'alice', homeserver: 'hs1', group: ACTIVITY };
     const once = await crawler.backfill('alice', ACTIVITY, 1);
 
     expect(once).toEqual({ tail: old[7] - BigInt(1), pages: 1 });
+    // Each page joins the top range, so it merges into the one stored run.
+    expect(await store.readRuns(scope)).toHaveLength(1);
     expect(await served(store, 'alice', 'hs1', ACTIVITY)).toEqual(network.liveOf('alice', [POSTS], old[7] - BigInt(1)));
 
     expect(await crawler.backfill('alice', ACTIVITY, 10)).toEqual({ tail: CURSOR_ZERO, pages: 2 });
     expect(await served(store, 'alice', 'hs1', ACTIVITY)).toEqual(network.liveOf('alice', [POSTS]));
+    expect((await store.readRuns(scope)).map(({ tail, head }) => [tail, head])).toEqual([
+      [CURSOR_ZERO, network.headOf('hs1')],
+    ]);
   });
 });
 

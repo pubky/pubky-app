@@ -15,11 +15,11 @@ import {
   InvalidIndexInputError,
   RateLimitedError,
 } from './indexer.errors';
-import type { Cursor, RecordEntry, Run } from './indexer.types';
-import { mergeRuns } from './merge';
+import type { Cursor, Range, RecordEntry, Run } from './indexer.types';
+import { compactRuns, mergeRuns } from './merge';
 import { readBackward, readForward, type ReadPage } from './paging';
 import { foldEvents } from './run';
-import type { HighWater } from './store.types';
+import type { HighWater, ScopeKey } from './store.types';
 import type { AuthoredStreamEvent } from './transport.types';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -41,6 +41,9 @@ interface OperationContext {
 }
 
 type Counter = 'lookups' | 'streamRequests' | 'bodyRequests' | 'events';
+
+const headOf = (runs: readonly Range[]): Cursor | null =>
+  runs.reduce<Cursor | null>((head, run) => (head === null || run.head > head ? run.head : head), null);
 
 const newestOf = (current: HighWater | null, event: AuthoredStreamEvent | null): HighWater | null =>
   event !== null && (current === null || event.cursor > current.cursor)
@@ -162,9 +165,11 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     return guard(ctx, homeserver, () => detectRestore(ctx, homeserver, state.highWater));
   }
 
-  async function headOf(author: string, homeserver: string, group: PathGroup): Promise<Cursor | null> {
-    const runs = await store.readRuns({ author, homeserver, group: group.id });
-    return runs.reduce<Cursor | null>((head, run) => (head === null || run.head > head ? run.head : head), null);
+  /** The stored runs of each user in the group, in batch order. */
+  async function storedRuns(homeserver: string, group: PathGroup, users: readonly string[]) {
+    const stored = new Map<string, Run<D>[]>();
+    for (const user of users) stored.set(user, await store.readRuns({ author: user, homeserver, group: group.id }));
+    return stored;
   }
 
   async function bodyOf(ctx: OperationContext, author: string, record: RecordEntry<D>): Promise<D | null> {
@@ -193,8 +198,18 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     });
   }
 
-  /** Reads one batch forward from its tails and commits one run per user that moved, with the new high water. */
-  async function crawlBatch(ctx: OperationContext, homeserver: string, group: PathGroup, tails: Map<string, Cursor>) {
+  /**
+   * Reads one batch forward from its tails and commits, with the new high water, each user that moved: its
+   * stored runs compacted with the new one, so a scope keeps one run per contiguous range instead of one more
+   * run per sync.
+   */
+  async function crawlBatch(
+    ctx: OperationContext,
+    homeserver: string,
+    group: PathGroup,
+    tails: Map<string, Cursor>,
+    stored: ReadonlyMap<string, Run<D>[]>,
+  ) {
     const read = reader(ctx, homeserver, group.paths, options.pageLimit);
     const { heads, events, newest } = await readForward(tails, options.pageLimit, read);
     const runs: Run<D>[] = [];
@@ -204,9 +219,13 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
       runs.push(foldEvents<D>({ author, homeserver, group: group.id }, tail, head, events.get(author) ?? []));
     }
     await attachBodies(ctx, runs);
+    const replaceRuns = runs.map((run) => {
+      const scope: ScopeKey = { author: run.author, homeserver, group: group.id };
+      return { scope, runs: compactRuns([...(stored.get(run.author) ?? []), run]) };
+    });
     const highWater = newestOf(ctx.highWater.get(homeserver) ?? null, newest);
     await store.commit({
-      appendRuns: runs,
+      replaceRuns,
       homeserverStates: [{ homeserver, patch: { highWater, failure: null } }],
     });
     ctx.highWater.set(homeserver, highWater);
@@ -246,9 +265,10 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     await guard(ctx, homeserver, async () => {
       for (const group of fullGroups) {
         for (const batch of chunks(users, options.batchSize)) {
+          const stored = await storedRuns(homeserver, group, batch);
           const tails = new Map<string, Cursor>();
-          for (const user of batch) tails.set(user, (await headOf(user, homeserver, group)) ?? CURSOR_ZERO);
-          await crawlBatch(ctx, homeserver, group, tails);
+          for (const [user, runs] of stored) tails.set(user, headOf(runs) ?? CURSOR_ZERO);
+          await crawlBatch(ctx, homeserver, group, tails, stored);
         }
       }
     });
@@ -260,12 +280,13 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
       const start = await windowStartOf(ctx, homeserver, users);
       for (const group of windowGroups) {
         for (const batch of chunks(users, options.batchSize)) {
+          const stored = await storedRuns(homeserver, group, batch);
           const tails = new Map<string, Cursor>();
-          for (const user of batch) {
-            const head = await headOf(user, homeserver, group);
+          for (const [user, runs] of stored) {
+            const head = headOf(runs);
             tails.set(user, head === null || head < start ? start : head);
           }
-          await crawlBatch(ctx, homeserver, group, tails);
+          await crawlBatch(ctx, homeserver, group, tails, stored);
         }
       }
     });
@@ -353,7 +374,8 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     const read = reader(ctx, homeserver, group.paths, options.pageLimit);
     for (let done = 0; ; done += 1) {
       // Re-merge each time: the new run may join a lower stored range, and reading resumes below it.
-      const { trusted } = mergeRuns(await store.readRuns(scope));
+      const stored = await store.readRuns(scope);
+      const { trusted } = mergeRuns(stored);
       if (trusted === null) return { tail: null, pages: done };
       if (done >= pages || trusted.tail === CURSOR_ZERO) return { tail: trusted.tail, pages: done };
       // The tail itself is outside the range, so read from one above it.
@@ -365,7 +387,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
       const tail = page.length >= options.pageLimit && lowest !== null ? lowest - ONE : CURSOR_ZERO;
       const run = foldEvents<D>(scope, tail, trusted.tail, page);
       await attachBodies(ctx, [run]);
-      await store.appendRuns([run]);
+      await store.replaceRuns(scope, compactRuns([...stored, run]));
     }
   }
 

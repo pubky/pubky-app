@@ -226,3 +226,64 @@ describe('syncScope window', () => {
     expect(await served(store, 'bob', 'hs2', ACTIVITY)).toEqual(network.liveOf('bob', [POSTS]));
   });
 });
+
+describe('syncScope compaction', () => {
+  it('keeps one run per scope over syncs where only one user of the batch writes', async () => {
+    const { network, store, crawler } = harness();
+    network.addHomeserver('hs1');
+    chain(network, ['alice', 'bob']);
+    network.addUser('carol', 'hs1');
+    network.put('alice', `${FOLLOWS}carol`);
+    await crawler.syncScope('alice');
+    let lastPost = CURSOR_ZERO;
+    let lastFollow = CURSOR_ZERO;
+    for (let round = 1; round <= 5; round += 1) {
+      lastPost = network.putJson('bob', postPath(round * MINUTE_MS), { text: `round ${round}` });
+      // Toggling a link already in scope moves the graph group without growing the scope.
+      lastFollow = round % 2 === 1 ? network.put('bob', `${FOLLOWS}alice`) : network.del('bob', `${FOLLOWS}alice`);
+      await crawler.syncScope('alice');
+    }
+    await crawler.syncScope('alice');
+
+    // carol never wrote: each sync only moved her ranges up behind bob's events, one run more without compaction.
+    expect(await store.readRuns({ author: 'carol', homeserver: 'hs1', group: GRAPH })).toEqual([
+      { author: 'carol', homeserver: 'hs1', group: GRAPH, tail: CURSOR_ZERO, head: lastFollow, entries: [] },
+    ]);
+    expect(await store.readRuns({ author: 'carol', homeserver: 'hs1', group: ACTIVITY })).toEqual([
+      { author: 'carol', homeserver: 'hs1', group: ACTIVITY, tail: CURSOR_ZERO, head: lastPost, entries: [] },
+    ]);
+    const scopes = await store.listScopes();
+    expect(scopes).toHaveLength(5);
+    for (const scope of scopes) expect(await store.readRuns(scope)).toHaveLength(1);
+    expect(await served(store, 'bob', 'hs1', GRAPH)).toEqual(network.liveOf('bob', [FOLLOWS]));
+    expect(await served(store, 'bob', 'hs1', ACTIVITY)).toEqual(network.liveOf('bob', [POSTS]));
+  });
+
+  it('keeps a stored range below the window start apart, behind the gap', async () => {
+    const { network, store, crawler } = harness();
+    network.addHomeserver('hs1').addUser('alice', 'hs1');
+    const ancient = postPath(40 * DAY_MS);
+    const ancientCursor = network.putJson('alice', ancient, { text: 'ancient' });
+    const windowStart = network.putJson('alice', postPath(35 * DAY_MS), { text: 'old' });
+    const recent = network.putJson('alice', postPath(DAY_MS), { text: 'recent' });
+    const scope = { author: 'alice', homeserver: 'hs1', group: ACTIVITY };
+    await store.appendRuns([
+      {
+        ...scope,
+        tail: CURSOR_ZERO,
+        head: ancientCursor,
+        entries: [{ kind: 'record', path: ancient, cursor: ancientCursor }],
+      },
+    ]);
+
+    await crawler.syncScope('alice');
+    await crawler.syncScope('alice');
+
+    // A delete inside (ancientCursor, windowStart] would be missed, so the two ranges must not join.
+    expect((await store.readRuns(scope)).map(({ tail, head }) => [tail, head])).toEqual([
+      [CURSOR_ZERO, ancientCursor],
+      [windowStart, recent],
+    ]);
+    expect(await served(store, 'alice', 'hs1', ACTIVITY)).toEqual(network.liveOf('alice', [POSTS], windowStart));
+  });
+});
