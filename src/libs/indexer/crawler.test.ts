@@ -297,6 +297,21 @@ describe('syncScope window', () => {
     expect((await store.readHomeserverState('hs2')).windowStart?.cursor).toBe(CURSOR_ZERO);
     expect(await served(store, 'bob', 'hs2', ACTIVITY)).toEqual(network.liveOf('bob', [POSTS]));
   });
+
+  it('dates the window start by writes only, never by a later delete of an old post', async () => {
+    const { network, store, crawler } = harness();
+    network.addHomeserver('hs1').addUser('alice', 'hs1');
+    const old = postPath(31 * DAY_MS);
+    const windowStart = network.putJson('alice', old, { text: 'old' });
+    const recent = postPath(2 * DAY_MS);
+    network.putJson('alice', recent, { text: 'recent' });
+    network.del('alice', old);
+
+    await crawler.syncScope('alice');
+
+    expect((await store.readHomeserverState('hs1')).windowStart?.cursor).toBe(windowStart);
+    expect(await servedData(store, 'alice', 'hs1', ACTIVITY)).toEqual(new Map([[recent, { text: 'recent' }]]));
+  });
 });
 
 describe('syncScope coverage', () => {

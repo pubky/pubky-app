@@ -271,8 +271,9 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
   }
 
   /**
-   * The highest cursor of an event older than the window, read backwards over the windowed paths one batch at a
-   * time. Zero when none has one: the homeserver's history is younger than the window.
+   * The highest cursor of a write older than the window, read backwards over the windowed paths one batch at a
+   * time. Only a write dates its cursor: a delete of an old path can happen any time later. Zero when none has one:
+   * the users' history is younger than the window.
    */
   async function windowStartOf(ctx: OperationContext, homeserver: string, users: readonly string[]) {
     const known = ctx.windowStart.get(homeserver);
@@ -283,7 +284,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
       const cutoff = BigInt(Math.floor(now() - options.windowDays * DAY_MS)) * MICROS_PER_MS;
       const olderThanWindow = (page: AuthoredStreamEvent[]) =>
         page.reduce<Cursor | null>((found, event) => {
-          const time = domain.timeOfPath(event.path);
+          const time = event.type === 'PUT' ? domain.timeOfPath(event.path) : null;
           const older = time !== null && time < cutoff;
           return older && (found === null || event.cursor > found) ? event.cursor : found;
         }, null);
