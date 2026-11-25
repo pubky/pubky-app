@@ -141,8 +141,8 @@ export function postViewJson(
   };
 }
 
-/** A profile carries no time of its own, so `indexed_at` is 0. */
-export function userDetailsJson(user: string, profile: UserData): UserDetailsJson {
+/** A profile carries no time of its own: `indexed_at` is the estimated time of its write, 0 when unknown. */
+export function userDetailsJson(user: string, profile: UserData, indexedAt: number): UserDetailsJson {
   return {
     name: profile.name,
     bio: profile.bio,
@@ -150,7 +150,7 @@ export function userDetailsJson(user: string, profile: UserData): UserDetailsJso
     links: profile.links.map(({ title, url }) => ({ title, url })),
     status: profile.status,
     image: profile.image,
-    indexed_at: 0,
+    indexed_at: indexedAt,
     deleted: false,
     epoch: 'v1',
   };
@@ -181,7 +181,7 @@ export function userViewJson(
   const profile = view.profile(user);
   if (profile === null) return null;
   return {
-    details: userDetailsJson(user, profile),
+    details: userDetailsJson(user, profile, view.profileAtMs(user) ?? 0),
     counts: userCountsJson(view, user),
     tags: tagDetailsJson(view.tagsOnUser(user), userUri(user), viewer, tagPage),
     relationship: {

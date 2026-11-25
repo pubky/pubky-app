@@ -42,11 +42,11 @@ export function bootstrap(
   });
   const replies = posted.flatMap((post) => view.repliesTo(post.author, post.postId).slice(0, REPLIES_PER_POST));
   const posts = [...posted, ...replies].flatMap((post) => attempt(() => [postViewJson(view, post, viewer)], []));
-  const influencers = attempt(() => userStreamIds(view, { source: 'influencers', preview: true }).data, []);
+  const influencers = attempt(() => userStreamIds(view, context, { source: 'influencers', preview: true }).data, []);
   const recommended = indexed
-    ? attempt(() => userStreamIds(view, { source: 'recommended', user_id, limit: RECOMMENDED_LIMIT }).data, [])
+    ? attempt(() => userStreamIds(view, context, { source: 'recommended', user_id, limit: RECOMMENDED_LIMIT }).data, [])
     : [];
-  const hot = attempt(() => hotTags(view, { limit: HOT_TAGS_LIMIT }).data, []);
+  const hot = attempt(() => hotTags(view, context, { limit: HOT_TAGS_LIMIT }).data, []);
   const named = new Set<string>([
     ...(indexed ? [user_id] : []),
     ...[...posted, ...replies].map(({ author }) => author),
@@ -61,11 +61,8 @@ export function bootstrap(
     indexed && user_id === context.seed && inScope(view, user_id)
       ? attempt(() => notifications(view, context, { user_id, limit: NOTIFICATIONS_LIMIT }).data, [])
       : [];
-  return scoped({
-    users,
-    posts,
-    ids: { stream, influencers, recommended, hot_tags: hot },
-    indexed,
-    notifications: notified,
-  });
+  return scoped(
+    { users, posts, ids: { stream, influencers, recommended, hot_tags: hot }, indexed, notifications: notified },
+    'notification and indexed_at times estimated from homeserver event order',
+  );
 }

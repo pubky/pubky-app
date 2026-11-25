@@ -1,7 +1,19 @@
 // @vitest-environment node
-import { buildUri } from 'pubky-social-specs';
+import { buildFollow, buildPost, buildUri } from 'pubky-social-specs';
 import { describe, expect, it } from 'vitest';
-import { ALICE, BRAN, CLEO, DION, MINUTE_MS, recordsOf, socialNetwork, T0 } from '../social.fixtures';
+import {
+  ALICE,
+  at,
+  BRAN,
+  CLEO,
+  DION,
+  MINUTE_MS,
+  recordsFrom,
+  recordsOf,
+  type SocialFile,
+  socialNetwork,
+  T0,
+} from '../social.fixtures';
 import { buildSocialView } from '../social.view';
 import { notifications } from './notifications';
 import { InvalidQueryError, UnavailableQueryError } from './queries.errors';
@@ -15,10 +27,19 @@ const uri = (author: string, postId: string) => buildUri(author, 'post', postId)
 const a1Uri = uri(ALICE, a1.id);
 
 describe('notifications', () => {
-  it('derives the seed’s notifications from the authors in scope, newest first and undated ones last', () => {
+  it('derives the seed’s notifications from the authors in scope, newest first, follows and tags dated', () => {
     const answer = notifications(view, context, { user_id: ALICE });
+    // The tags come after the last post, so they date to it; the follows came before the first.
+    const tagPost = (tagger: string, label: string) => ({
+      timestamp: minute(12),
+      body: { type: 'tag_post', tagged_by: tagger, tag_label: label, post_uri: a1Uri, post_kind: 'note' },
+    });
 
     expect(answer.data).toEqual([
+      tagPost(CLEO, 'pubky'),
+      tagPost(CLEO, 'rust'),
+      tagPost(DION, 'rust'),
+      tagPost(BRAN, 'rust'),
       {
         timestamp: minute(7),
         body: { type: 'mention', mentioned_by: CLEO, post_uri: uri(CLEO, quote.id), post_kind: 'note' },
@@ -53,25 +74,42 @@ describe('notifications', () => {
           post_kind: 'note',
         },
       },
-      { timestamp: 0, body: { type: 'follow', followed_by: BRAN } },
-      {
-        timestamp: 0,
-        body: { type: 'tag_post', tagged_by: CLEO, tag_label: 'pubky', post_uri: a1Uri, post_kind: 'note' },
-      },
-      {
-        timestamp: 0,
-        body: { type: 'tag_post', tagged_by: CLEO, tag_label: 'rust', post_uri: a1Uri, post_kind: 'note' },
-      },
-      {
-        timestamp: 0,
-        body: { type: 'tag_post', tagged_by: DION, tag_label: 'rust', post_uri: a1Uri, post_kind: 'note' },
-      },
-      {
-        timestamp: 0,
-        body: { type: 'tag_post', tagged_by: BRAN, tag_label: 'rust', post_uri: a1Uri, post_kind: 'note' },
-      },
+      // Both follows date to the first post, so bran's is not earlier than alice's: he made the friendship.
+      { timestamp: minute(1), body: { type: 'new_friend', followed_by: BRAN } },
     ]);
     expect(answer.coverage.kind).toBe('scope');
+    expect(answer.coverage.note).toContain('estimated');
+  });
+
+  it('tells a follow from a new friend by which follow came later, and puts unknown times last', () => {
+    const files: SocialFile[] = [
+      { author: ALICE, ...at(10, () => buildPost(ALICE, { content: 'ten' })) },
+      { author: CLEO, ...at(0, () => buildFollow(CLEO, ALICE)) },
+      { author: BRAN, ...at(20, () => buildPost(BRAN, { content: 'twenty' })) },
+      { author: ALICE, ...at(0, () => buildFollow(ALICE, CLEO)) },
+      { author: CLEO, ...at(30, () => buildPost(CLEO, { content: 'thirty' })) },
+      { author: ALICE, ...at(0, () => buildFollow(ALICE, BRAN)) },
+      { author: BRAN, ...at(40, () => buildPost(BRAN, { content: 'forty' })) },
+      { author: BRAN, ...at(0, () => buildFollow(BRAN, ALICE)) },
+      { author: ALICE, ...at(50, () => buildPost(ALICE, { content: 'fifty' })) },
+      { author: DION, ...at(0, () => buildFollow(DION, ALICE)) },
+    ];
+    const hops = new Map([
+      [ALICE, 0],
+      [BRAN, 1],
+      [CLEO, 1],
+      [DION, 1],
+    ]);
+    // Dion publishes elsewhere, on a homeserver with no post to date his follow by.
+    const records = recordsFrom(files, hops).map((entry) =>
+      entry.author === DION ? { ...entry, homeserver: 'hs2' } : entry,
+    );
+
+    expect(notifications(buildSocialView(records), context, { user_id: ALICE }).data).toEqual([
+      { timestamp: minute(45), body: { type: 'new_friend', followed_by: BRAN } },
+      { timestamp: minute(15), body: { type: 'follow', followed_by: CLEO } },
+      { timestamp: 0, body: { type: 'follow', followed_by: DION } },
+    ]);
   });
 
   it('notifies a profile tag and never the seed’s own acts', () => {
@@ -92,7 +130,7 @@ describe('notifications', () => {
         timestamp,
       ]);
 
-    expect(types({ skip: 1, limit: 2 })).toEqual([
+    expect(types({ skip: 5, limit: 2 })).toEqual([
       ['repost', minute(7)],
       ['repost', minute(6)],
     ]);

@@ -54,6 +54,25 @@ export function labelsOf(query: string, name: string, labels: readonly string[] 
 }
 
 export const TIMEFRAMES = ['today', 'this_week', 'this_month', 'all_time'] as const;
+export type Timeframe = (typeof TIMEFRAMES)[number];
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const TIMEFRAME_DAYS: Record<Exclude<Timeframe, 'all_time'>, number> = { today: 1, this_week: 7, this_month: 30 };
+
+/** The half-open window `[from, to)` of times a timeframe keeps. */
+export interface TimeWindow {
+  from: number;
+  to: number;
+}
+
+/** The trailing 24 hours, 7 or 30 days before `now`, as the central indexer counts them; `null` for all time. */
+export function windowOf(timeframe: Timeframe, now: number): TimeWindow | null {
+  return timeframe === 'all_time' ? null : { from: now - TIMEFRAME_DAYS[timeframe] * DAY_MS, to: now };
+}
+
+/** An unknown time is in no window. */
+export const inWindow = (frame: TimeWindow | null, ms: number | null): boolean =>
+  frame === null || (ms !== null && ms >= frame.from && ms < frame.to);
 
 /** Text compared by code unit, the order the central indexer's sorted sets keep. */
 export const compareText = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);

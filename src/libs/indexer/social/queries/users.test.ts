@@ -1,7 +1,19 @@
 // @vitest-environment node
 import { buildTag, buildUri } from 'pubky-social-specs';
 import { describe, expect, it } from 'vitest';
-import { ALICE, BRAN, CLEO, DION, recordsOf, socialNetwork, withProfile } from '../social.fixtures';
+import {
+  ALICE,
+  BRAN,
+  CLEO,
+  DAY_MS,
+  DION,
+  HOUR_MS,
+  MINUTE_MS,
+  recordsOf,
+  socialNetwork,
+  T0,
+  withProfile,
+} from '../social.fixtures';
 import { buildSocialView } from '../social.view';
 import { InvalidQueryError, UnavailableQueryError } from './queries.errors';
 import {
@@ -20,9 +32,11 @@ const view = buildSocialView(records);
 /** The same network with a profile for dion, the one user two hops out. */
 const profiled = buildSocialView(withProfile(records, DION, 'Dion'));
 const branUri = buildUri(BRAN, 'user');
+/** An hour after the network was written, so every post and tag is inside the trailing timeframes. */
+const context = { seed: ALICE, now: () => T0 + HOUR_MS };
 
 describe('userDetails and userCounts', () => {
-  it('serves a profile exactly, with no time of its own', () => {
+  it('serves a profile exactly, indexed at the estimated time of its write', () => {
     const answer = userDetails(view, { user_id: ALICE });
 
     expect(answer.data).toEqual({
@@ -32,11 +46,11 @@ describe('userDetails and userCounts', () => {
       links: [],
       status: 'Around',
       image: null,
-      indexed_at: 0,
+      indexed_at: T0 + MINUTE_MS,
       deleted: false,
       epoch: 'v1',
     });
-    expect(answer.coverage.kind).toBe('exact');
+    expect(answer.coverage).toEqual({ kind: 'exact', note: 'indexed_at estimated from homeserver event order' });
     expect(userDetails(view, { user_id: BRAN }).data.links).toEqual([
       { title: 'Site', url: 'https://example.com/bran' },
     ]);
@@ -102,14 +116,14 @@ describe('usersByIds', () => {
 });
 
 describe('userStreamIds', () => {
-  const ids = (params: UserStreamParams, on = view) => userStreamIds(on, params).data;
+  const ids = (params: UserStreamParams, on = view, at = context) => userStreamIds(on, at, params).data;
 
   it('lists follows, followers and friends', () => {
-    expect(userStreamIds(view, { source: 'following', user_id: ALICE })).toEqual({
+    expect(userStreamIds(view, context, { source: 'following', user_id: ALICE })).toEqual({
       data: [CLEO, BRAN],
       coverage: { kind: 'exact' },
     });
-    expect(userStreamIds(view, { source: 'followers', user_id: CLEO }).coverage.kind).toBe('scope');
+    expect(userStreamIds(view, context, { source: 'followers', user_id: CLEO }).coverage.kind).toBe('scope');
     expect(ids({ source: 'followers', user_id: CLEO })).toEqual([ALICE, BRAN]);
     expect(ids({ source: 'friends', user_id: ALICE })).toEqual([BRAN]);
     expect(ids({ source: 'following', user_id: ALICE, skip: 1, limit: 1 })).toEqual([BRAN]);
@@ -118,9 +132,25 @@ describe('userStreamIds', () => {
   it('ranks users with a profile by followers in the scope, then by id', () => {
     expect(ids({ source: 'most_followed' })).toEqual([CLEO, ALICE, BRAN]);
     expect(ids({ source: 'most_followed' }, profiled)).toEqual([CLEO, ALICE, DION, BRAN]);
-    expect(ids({ source: 'influencers', timeframe: 'today' })).toEqual([CLEO, ALICE, BRAN]);
+  });
+
+  it('ranks influencers by tags given and posts times the square root of followers, then by id', () => {
+    // All time: cleo (3 + 2) * sqrt(2), bran and dion (1 + 3) and (2 + 2) * 1, alice (1 + 2) * 1.
+    expect(ids({ source: 'influencers' })).toEqual([CLEO, BRAN, ALICE]);
     expect(ids({ source: 'influencers', user_id: ALICE, reach: 'following' })).toEqual([CLEO, BRAN]);
-    expect(ids({ source: 'influencers', preview: true, skip: 2, limit: 1 }, profiled)).toEqual([CLEO, ALICE, DION]);
+    expect(ids({ source: 'influencers', preview: true, skip: 2, limit: 1 }, profiled)).toEqual([CLEO, DION, BRAN]);
+    // Today only tags on posts count: alice's tag on bran's profile drops out.
+    expect(ids({ source: 'influencers', timeframe: 'today' })).toEqual([CLEO, BRAN, ALICE]);
+  });
+
+  it('counts only the activity inside the trailing timeframe', () => {
+    const later = { ...context, now: () => T0 + 2 * DAY_MS };
+    const today = userStreamIds(view, later, { source: 'influencers', timeframe: 'today' });
+
+    expect(today.data).toEqual([CLEO, ALICE, BRAN]);
+    expect(today.coverage.note).toBe('ranked inside the scope; tag and follow times estimated');
+    expect(ids({ source: 'influencers', timeframe: 'this_week' }, view, later)).toEqual([CLEO, BRAN, ALICE]);
+    expect(userStreamIds(view, later, { source: 'influencers' }).coverage.note).toBe('ranked inside the scope');
   });
 
   it('recommends the users the user’s followees follow', () => {

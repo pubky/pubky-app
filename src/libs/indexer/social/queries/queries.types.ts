@@ -28,6 +28,12 @@ export const scoped = <T>(data: T, note?: string): Answer<T> => ({
   coverage: note === undefined ? { kind: 'scope' } : { kind: 'scope', note },
 });
 
+/** Notes joined into one, `undefined` when there are none. */
+export function noteOf(...notes: (string | null)[]): string | undefined {
+  const kept = notes.filter((note): note is string => note !== null);
+  return kept.length === 0 ? undefined : kept.join('; ');
+}
+
 // The JSON the central indexer's `/v1` API serves, field for field, so the app parses an answer unchanged.
 
 export interface PostDetailsJson {
@@ -138,12 +144,14 @@ export interface UserTagSearchJson {
 
 export type NotificationBodyJson =
   | { type: 'follow'; followed_by: string }
+  | { type: 'new_friend'; followed_by: string }
   | { type: 'reply'; replied_by: string; parent_post_uri: string; reply_uri: string; post_kind: string }
   | { type: 'repost'; reposted_by: string; embed_uri: string; repost_uri: string; post_kind: string }
   | { type: 'mention'; mentioned_by: string; post_uri: string; post_kind: string }
   | { type: 'tag_post'; tagged_by: string; tag_label: string; post_uri: string; post_kind: string }
   | { type: 'tag_profile'; tagged_by: string; tag_label: string };
 
+/** A follow, tag or profile time is estimated from the homeserver's event order; 0 when unknown. */
 export interface NotificationJson {
   timestamp: number;
   body: NotificationBodyJson;

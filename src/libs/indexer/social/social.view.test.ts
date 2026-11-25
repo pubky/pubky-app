@@ -1,10 +1,23 @@
 // @vitest-environment node
-import { buildPost, buildUri, type BuiltPost } from 'pubky-social-specs';
+import { buildFollow, buildPost, buildTag, buildUri, buildUser, type BuiltPost } from 'pubky-social-specs';
 import { describe, expect, it } from 'vitest';
 import type { RecordEntry } from '../indexer.types';
 import { createSocialDomain } from './social.domain';
-import { ALICE, at, BRAN, CLEO, DION, MINUTE_MS, recordsOf, socialNetwork, T0 } from './social.fixtures';
-import type { SocialData } from './social.types';
+import {
+  ALICE,
+  at,
+  BRAN,
+  CLEO,
+  DION,
+  HOMESERVER,
+  MINUTE_MS,
+  recordsFrom,
+  recordsOf,
+  type SocialFile,
+  socialNetwork,
+  T0,
+} from './social.fixtures';
+import type { AuthorRecords, SocialData } from './social.types';
 import { buildSocialView, type SocialPost } from './social.view';
 
 const network = socialNetwork();
@@ -22,6 +35,11 @@ function recordOf(author: string, post: BuiltPost, withData = true): [string, Re
   const data = withData ? domain.reduce(author, post.path, post.body) : null;
   if (data !== null) record.data = data;
   return [post.path, record];
+}
+
+/** An author with no graph records and the activity given. */
+function authorRecords(author: string, hop: number, activity: Map<string, RecordEntry<SocialData>>): AuthorRecords {
+  return { author, homeserver: HOMESERVER, hop, graph: new Map(), activity };
 }
 
 describe('buildSocialView users', () => {
@@ -207,8 +225,8 @@ describe('buildSocialView timeline', () => {
       buildPost(ALICE, { content: 'three' }),
     ]);
     const tied = buildSocialView([
-      { author: BRAN, hop: 0, graph: new Map(), activity: new Map([recordOf(BRAN, first), recordOf(BRAN, second)]) },
-      { author: ALICE, hop: 1, graph: new Map(), activity: new Map([recordOf(ALICE, theirs)]) },
+      authorRecords(BRAN, 0, new Map([recordOf(BRAN, first), recordOf(BRAN, second)])),
+      authorRecords(ALICE, 1, new Map([recordOf(ALICE, theirs)])),
     ]);
 
     expect(second.id > first.id).toBe(true);
@@ -217,9 +235,78 @@ describe('buildSocialView timeline', () => {
 
   it('serves no post whose newest version has no data, even with an older version readable', () => {
     const activity = new Map([recordOf(ALICE, article), recordOf(ALICE, articleEdit, false)]);
-    const unreadable = buildSocialView([{ author: ALICE, hop: 0, graph: new Map(), activity }]);
+    const unreadable = buildSocialView([authorRecords(ALICE, 0, activity)]);
 
     expect(unreadable.post(ALICE, article.id)).toBeNull();
     expect(unreadable.postsBy(ALICE)).toEqual([]);
+  });
+});
+
+describe('buildSocialView time estimates', () => {
+  it('interpolates between the post versions of the homeserver and clamps past either end', () => {
+    // Cursors 9 to 20 are posts written at minutes 1 to 12; cursor 12 was the deleted post, between minutes 3 and 5.
+    expect(view.timeOf(ALICE, BigInt(13))).toBe(minute(5));
+    expect(view.timeOf(BRAN, BigInt(12))).toBe(minute(4));
+    expect(view.timeOf(ALICE, BigInt(1))).toBe(minute(1));
+    expect(view.timeOf(ALICE, BigInt(100))).toBe(minute(12));
+    expect(view.timeOf('stranger', BigInt(13))).toBeNull();
+  });
+
+  it('dates follows, tags and profiles by their cursors', () => {
+    expect(view.followedAtMs(CLEO, DION)).toBe(minute(1));
+    expect(view.followedAtMs(DION, CLEO)).toBeNull();
+    expect(view.profileAtMs(ALICE)).toBe(minute(1));
+    expect(view.profileAtMs(DION)).toBeNull();
+    expect(view.tagsBy(ALICE).map(({ atMs }) => atMs)).toEqual([minute(12), minute(12)]);
+  });
+
+  it('knows nothing of the time on a homeserver with no post, whatever the others hold', () => {
+    const moved = recordsOf(network).map((entry) =>
+      entry.author === DION
+        ? { ...entry, homeserver: 'hs2', activity: new Map<string, RecordEntry<SocialData>>() }
+        : entry,
+    );
+    const split = buildSocialView(moved);
+
+    expect(split.timeOf(DION, BigInt(13))).toBeNull();
+    expect(split.timeOf(ALICE, BigInt(13))).toBe(minute(5));
+  });
+
+  it('ignores a backdated and a future-dated post when estimating', () => {
+    const files: SocialFile[] = [
+      { author: ALICE, ...at(10, () => buildPost(ALICE, { content: 'ten' })) },
+      { author: BRAN, ...at(20, () => buildPost(BRAN, { content: 'twenty' })) },
+      { author: BRAN, ...at(1, () => buildPost(BRAN, { content: 'backdated' })) },
+      { author: ALICE, ...at(30, () => buildPost(ALICE, { content: 'thirty' })) },
+      { author: BRAN, ...at(10000000, () => buildPost(BRAN, { content: 'from the future' })) },
+      { author: ALICE, ...at(40, () => buildPost(ALICE, { content: 'forty' })) },
+      { author: ALICE, ...at(41, () => buildTag(ALICE, buildUri(BRAN, 'user'), 'friend')) },
+    ];
+    const timed = buildSocialView(
+      recordsFrom(
+        files,
+        new Map([
+          [ALICE, 0],
+          [BRAN, 1],
+        ]),
+      ),
+    );
+
+    expect(timed.timeOf(ALICE, BigInt(3))).toBe(minute(25));
+    expect(timed.timeOf(ALICE, BigInt(5))).toBe(minute(35));
+    expect(timed.tagsBy(ALICE)[0].atMs).toBe(minute(40));
+  });
+
+  it('counts a profile write and a follow on the graph clock', () => {
+    const files: SocialFile[] = [
+      { author: ALICE, ...at(10, () => buildPost(ALICE, { content: 'ten' })) },
+      { author: ALICE, ...at(0, () => buildUser(ALICE, { name: 'Alice' })) },
+      { author: ALICE, ...at(0, () => buildFollow(ALICE, BRAN)) },
+      { author: ALICE, ...at(40, () => buildPost(ALICE, { content: 'forty' })) },
+    ];
+    const timed = buildSocialView(recordsFrom(files, new Map([[ALICE, 0]])));
+
+    expect(timed.profileAtMs(ALICE)).toBe(minute(20));
+    expect(timed.followedAtMs(ALICE, BRAN)).toBe(minute(30));
   });
 });

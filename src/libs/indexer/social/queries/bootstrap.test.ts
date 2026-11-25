@@ -26,7 +26,7 @@ describe('bootstrap', () => {
       key(ALICE, a1),
     ]);
     expect(posts.map(({ details }) => `${details.author}:${details.id}`)).toEqual([...ids.stream, key(BRAN, b1)]);
-    expect(ids.influencers).toEqual([CLEO, ALICE, BRAN]);
+    expect(ids.influencers).toEqual([CLEO, BRAN, ALICE]);
     expect(ids.recommended).toEqual([]);
     expect(ids.hot_tags.map(({ label }) => label)).toEqual(['rust', 'pubky']);
     expect(users.map(({ details }) => details.id)).toEqual([CLEO, ALICE, BRAN]);

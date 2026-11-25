@@ -70,6 +70,8 @@ export type SocialData = UserData | PostData | TagData;
 /** One author's served records: the `live` maps of the merged runs of its two scopes. */
 export interface AuthorRecords {
   author: string;
+  /** The homeserver the records were read from: it scopes their cursors. */
+  homeserver: string;
   /** Link distance from the seed, `null` when unknown. */
   hop: number | null;
   graph: ReadonlyMap<string, RecordEntry<SocialData>>;

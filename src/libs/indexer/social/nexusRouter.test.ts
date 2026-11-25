@@ -10,7 +10,7 @@ import { buildSocialView } from './social.view';
 const network = socialNetwork();
 const { a1, b1, repost, quote, article, image, collection } = network.posts;
 const router = createNexusRouter(
-  createSocialQueries(buildSocialView(recordsOf(network)), { seed: ALICE, now: () => T0 }),
+  createSocialQueries(buildSocialView(recordsOf(network)), { seed: ALICE, now: () => T0 + 60 * MINUTE_MS }),
 );
 const NEXUS = 'https://nexus.staging.pubky.app/v1';
 const key = (author: string, post: BuiltPost) => `${author}:${post.id}`;
@@ -118,10 +118,11 @@ const LIVE = {
     tagged_count: 1046,
     taggers_count: 175,
   },
-  // GET user/{id}/notifications; reply, mention and tag_profile had no live example, so their bodies are the
-  // handler's `NotificationBody` fields.
+  // GET user/{id}/notifications; new_friend, reply, mention and tag_profile had no live example, so their bodies
+  // are the handler's `NotificationBody` fields.
   notificationBodies: {
     follow: { type: 'follow', followed_by: 'tkkhhegfofguoiqhdxjuggru6mgf83xa5xxsskwf1qs1eywumzto' },
+    new_friend: { type: 'new_friend', followed_by: USER },
     repost: {
       type: 'repost',
       reposted_by: 'b5gzsebcjwaoq6f7jufqg7pgsek8dyx64qjgok8aouktqbahi4cy',

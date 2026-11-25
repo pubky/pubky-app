@@ -1,7 +1,8 @@
 import { idMicros, type KnownPostKind } from 'pubky-social-specs';
-import type { RecordEntry } from '../indexer.types';
+import type { Cursor, RecordEntry } from '../indexer.types';
 import { followeeOfPath, locate, PROFILE_PATH } from './social.domain';
 import type { AuthorRecords, PostData, SocialData, SocialTarget, TagData, UserData } from './social.types';
+import { buildTimeTable, estimateMs, type TimeSample } from './timeTable';
 
 /** A logical post: its newest live version. */
 export interface SocialPost {
@@ -12,6 +13,11 @@ export interface SocialPost {
   /** When the newest version was written, `null` for a post never edited. */
   editedAtMs: number | null;
   data: PostData;
+}
+
+/** A tag with the estimated time it was written, `null` when unknown. */
+export interface SocialTag extends TagData {
+  atMs: number | null;
 }
 
 /** One label on a target and the users who put it there, sorted. */
@@ -70,16 +76,26 @@ export interface SocialView {
   mentionsOf(user: string): readonly SocialPost[];
   tagsOnPost(author: string, postId: string): readonly TagGroup[];
   tagsOnUser(user: string): readonly TagGroup[];
-  tagsBy(user: string): readonly TagData[];
+  tagsBy(user: string): readonly SocialTag[];
   collectionsContaining(author: string, postId: string): readonly SocialPost[];
   postCounts(author: string, postId: string): PostCounts;
   userCounts(user: string): UserCounts;
   /** The authors' posts merged, newest first. */
   timeline(authors: Iterable<string>, options?: TimelineOptions): SocialPost[];
+  /**
+   * The estimated time of an event of the author's homeserver, from the posts written there; `null` when that
+   * homeserver has no post. The same records give the same estimate on any device.
+   */
+  timeOf(author: string, cursor: Cursor): number | null;
+  /** The estimated time of the profile's last write. */
+  profileAtMs(user: string): number | null;
+  /** The estimated time `follower` followed `followee`, `null` when unknown or not following. */
+  followedAtMs(follower: string, followee: string): number | null;
 }
 
 const NONE: readonly never[] = Object.freeze([]);
 const postKey = (author: string, postId: string) => `${author}/${postId}`;
+const followKey = (follower: string, followee: string) => `${follower}/${followee}`;
 const userKey = (user: string) => `user/${user}`;
 
 /** The key of what a target names, `null` for a target outside the social tree. */
@@ -122,6 +138,21 @@ function postsOf({ author, activity }: AuthorRecords): SocialPost[] {
   return posts.sort(compareNewest);
 }
 
+/** Every post version is a sample: its edit id holds the time it was written. */
+function timeTablesOf(records: readonly AuthorRecords[]): Map<string, TimeSample[]> {
+  const samples = new Map<string, TimeSample[]>();
+  for (const { author, homeserver, activity } of records) {
+    for (const [path, record] of activity) {
+      const at = locate(author, path);
+      if (at === null || at.kind !== 'post' || at.editId === undefined) continue;
+      push(samples, homeserver, { cursor: record.cursor, ms: msOf(at.editId) });
+    }
+  }
+  const tables = new Map<string, TimeSample[]>();
+  for (const [homeserver, found] of samples) tables.set(homeserver, buildTimeTable(found));
+  return tables;
+}
+
 /** Labels by number of taggers, most first, then by label. */
 function groupTags(taggersByLabel: ReadonlyMap<string, ReadonlySet<string>> | undefined): TagGroup[] {
   if (taggersByLabel === undefined) return [];
@@ -131,6 +162,16 @@ function groupTags(taggersByLabel: ReadonlyMap<string, ReadonlySet<string>> | un
 }
 
 export function buildSocialView(records: Iterable<AuthorRecords>): SocialView {
+  const entries = [...records];
+  const tables = timeTablesOf(entries);
+  const homeservers = new Map(entries.map(({ author, homeserver }): [string, string] => [author, homeserver]));
+  const timeOf = (author: string, cursor: Cursor): number | null => {
+    const homeserver = homeservers.get(author);
+    const table = homeserver === undefined ? undefined : tables.get(homeserver);
+    return table === undefined ? null : estimateMs(table, cursor);
+  };
+  const profileCursors = new Map<string, Cursor>();
+  const followCursors = new Map<string, Cursor>();
   const hops = new Map<string, number | null>();
   const profiles = new Map<string, UserData>();
   const followingOf = new Map<string, string[]>();
@@ -141,17 +182,22 @@ export function buildSocialView(records: Iterable<AuthorRecords>): SocialView {
   const reposts = new Map<string, SocialPost[]>();
   const mentions = new Map<string, SocialPost[]>();
   const collections = new Map<string, SocialPost[]>();
-  const given = new Map<string, TagData[]>();
+  const given = new Map<string, SocialTag[]>();
   const tagsOn = new Map<string, Map<string, Set<string>>>();
 
-  for (const entry of records) {
+  for (const entry of entries) {
     const { author } = entry;
     hops.set(author, entry.hop);
     const following: string[] = [];
     for (const [path, record] of entry.graph) {
-      if (path === PROFILE_PATH && record.data?.type === 'user') profiles.set(author, record.data);
+      if (path === PROFILE_PATH && record.data?.type === 'user') {
+        profiles.set(author, record.data);
+        profileCursors.set(author, record.cursor);
+      }
       const followee = followeeOfPath(path);
-      if (followee !== null) following.push(followee);
+      if (followee === null) continue;
+      following.push(followee);
+      followCursors.set(followKey(author, followee), record.cursor);
     }
     followingOf.set(author, following.sort(compareText));
     for (const followee of following) push(followersOf, followee, author);
@@ -160,7 +206,7 @@ export function buildSocialView(records: Iterable<AuthorRecords>): SocialView {
 
     for (const record of entry.activity.values()) {
       if (record.data?.type !== 'tag') continue;
-      push(given, author, record.data);
+      push(given, author, { ...record.data, atMs: timeOf(author, record.cursor) });
       const key = targetKey(record.data.target);
       if (key === null) continue;
       const byLabel = tagsOn.get(key) ?? new Map<string, Set<string>>();
@@ -244,6 +290,15 @@ export function buildSocialView(records: Iterable<AuthorRecords>): SocialView {
         .filter((post) => (options.includeReplies ?? false) || !isReply(post))
         .filter((post) => kinds === null || kinds.has(post.data.kind))
         .sort(compareNewest);
+    },
+    timeOf,
+    profileAtMs: (user) => {
+      const cursor = profileCursors.get(user);
+      return cursor === undefined ? null : timeOf(user, cursor);
+    },
+    followedAtMs: (follower, followee) => {
+      const cursor = followCursors.get(followKey(follower, followee));
+      return cursor === undefined ? null : timeOf(follower, cursor);
     },
   };
 }

@@ -14,7 +14,7 @@ export interface NotificationsParams {
   end?: number;
 }
 
-/** A follow or a tag file carries no time, so those notifications sort as the oldest, at timestamp 0. */
+/** A follow or tag of unknown time sorts as the oldest, at timestamp 0. */
 const UNDATED = 0;
 
 /** Who acted and on what, so equal timestamps keep one order. */
@@ -22,11 +22,28 @@ function tieKey({ body }: NotificationJson): string {
   return Object.values(body).join('\u0000');
 }
 
-/** Everything the seed's scope says happened to the seed, newest first. Only events by authors in scope are known. */
+/**
+ * A follow of the seed, or `new_friend` when the seed already followed back: the later of two mutual follows
+ * makes the friendship. Follows of unknown order stay plain follows.
+ */
+function followOf(view: SocialView, seed: string, follower: string): NotificationJson {
+  const followedAt = view.followedAtMs(follower, seed);
+  const followedBackAt = view.followedAtMs(seed, follower);
+  const befriended = followedAt !== null && followedBackAt !== null && followedBackAt <= followedAt;
+  return {
+    timestamp: followedAt ?? UNDATED,
+    body: { type: befriended ? 'new_friend' : 'follow', followed_by: follower },
+  };
+}
+
+/**
+ * Everything the seed's scope says happened to the seed, newest first. Only events by authors in scope are known;
+ * follows and tags carry their estimated time.
+ */
 function notificationsOf(view: SocialView, seed: string): NotificationJson[] {
   const found: NotificationJson[] = [];
   for (const follower of view.followers(seed)) {
-    if (follower !== seed) found.push({ timestamp: UNDATED, body: { type: 'follow', followed_by: follower } });
+    if (follower !== seed) found.push(followOf(view, seed, follower));
   }
   for (const own of view.postsBy(seed)) {
     const ownUri = postUri(seed, own.postId);
@@ -56,18 +73,23 @@ function notificationsOf(view: SocialView, seed: string): NotificationJson[] {
         },
       });
     }
-    for (const { label, taggers } of view.tagsOnPost(seed, own.postId)) {
-      for (const tagger of taggers) {
-        if (tagger === seed) continue;
-        const body = {
-          type: 'tag_post' as const,
-          tagged_by: tagger,
-          tag_label: label,
-          post_uri: ownUri,
-          post_kind: own.data.kind,
-        };
-        found.push({ timestamp: UNDATED, body });
+  }
+  for (const tagger of view.authors) {
+    if (tagger === seed) continue;
+    for (const { target, label, atMs } of view.tagsBy(tagger)) {
+      if (target.kind === 'user' && target.author === seed) {
+        found.push({ timestamp: atMs ?? UNDATED, body: { type: 'tag_profile', tagged_by: tagger, tag_label: label } });
       }
+      const own = target.kind === 'post' && target.author === seed ? view.post(seed, target.postId) : null;
+      if (own === null) continue;
+      const body = {
+        type: 'tag_post' as const,
+        tagged_by: tagger,
+        tag_label: label,
+        post_uri: postUri(seed, own.postId),
+        post_kind: own.data.kind,
+      };
+      found.push({ timestamp: atMs ?? UNDATED, body });
     }
   }
   for (const mention of view.mentionsOf(seed)) {
@@ -81,12 +103,6 @@ function notificationsOf(view: SocialView, seed: string): NotificationJson[] {
         post_kind: mention.data.kind,
       },
     });
-  }
-  for (const { label, taggers } of view.tagsOnUser(seed)) {
-    for (const tagger of taggers) {
-      if (tagger === seed) continue;
-      found.push({ timestamp: UNDATED, body: { type: 'tag_profile', tagged_by: tagger, tag_label: label } });
-    }
   }
   return found.sort((a, b) => b.timestamp - a.timestamp || compareText(tieKey(a), tieKey(b)));
 }
@@ -107,5 +123,8 @@ export function notifications(
   const listed = notificationsOf(view, context.seed).filter(
     ({ timestamp }) => (start === undefined || timestamp <= start) && (end === undefined || timestamp >= end),
   );
-  return scoped(page(listed, skip, limit), 'events by authors in the scope; follows and tags undated');
+  return scoped(
+    page(listed, skip, limit),
+    'events by authors in the scope; follow and tag times estimated from homeserver event order',
+  );
 }

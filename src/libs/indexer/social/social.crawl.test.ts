@@ -28,8 +28,15 @@ describe('the social domain behind the crawler', () => {
     for (const [author, hop] of members) {
       const homeserver = (await store.readUserHomeserver(author))?.homeserver ?? null;
       if (homeserver === null) continue;
-      const live = async (group: string) => (await store.readScope({ author, homeserver, group })).live;
-      records.push({ author, hop, graph: await live(SOCIAL_GRAPH), activity: await live(SOCIAL_ACTIVITY) });
+      const graph = await store.readScope({ author, homeserver, group: SOCIAL_GRAPH });
+      const activity = await store.readScope({ author, homeserver, group: SOCIAL_ACTIVITY });
+      records.push({
+        author,
+        homeserver,
+        hop,
+        graph: graph.live,
+        activity: activity.live,
+      });
     }
     const view = buildSocialView(records);
     const expected = buildSocialView(recordsOf(fixture));

@@ -26,9 +26,14 @@ export const HOPS = new Map([
   [DION, 2],
 ]);
 
+/** The homeserver every fixture user publishes to, unless a test moves one. */
+export const HOMESERVER = 'hs1';
+
 /** The network's clock origin; everything is written within the hour after it. */
 export const T0 = Date.UTC(2026, 9, 1);
 export const MINUTE_MS = 60 * 1000;
+export const HOUR_MS = 60 * MINUTE_MS;
+export const DAY_MS = 24 * HOUR_MS;
 
 export interface SocialFile {
   author: string;
@@ -134,8 +139,19 @@ export type SocialNetwork = ReturnType<typeof socialNetwork>;
 
 /** What a full index serves for each user of the network: the files left after the deletes, reduced. */
 export function recordsOf({ writes, deletes }: SocialNetwork): AuthorRecords[] {
+  return recordsFrom(writes, HOPS, new Set(deletes.map(({ author, path }) => `${author}${path}`)));
+}
+
+/**
+ * What a full index of one homeserver serves for `files` committed in order: each file's cursor is its position
+ * from 1, deleted files (`{author}{path}`) left out.
+ */
+export function recordsFrom(
+  files: readonly SocialFile[],
+  hops: ReadonlyMap<string, number>,
+  deleted: ReadonlySet<string> = new Set(),
+): AuthorRecords[] {
   const domain = createSocialDomain();
-  const deleted = new Set(deletes.map(({ author, path }) => `${author}${path}`));
   const scopes = new Map<string, Map<string, RecordEntry<SocialData>>>();
   const scope = (author: string, group: string) => {
     const key = `${author}\u0000${group}`;
@@ -143,7 +159,7 @@ export function recordsOf({ writes, deletes }: SocialNetwork): AuthorRecords[] {
     scopes.set(key, live);
     return live;
   };
-  writes.forEach(({ author, path, body }, i) => {
+  files.forEach(({ author, path, body }, i) => {
     const group = domain.groups.find(({ paths }) => paths.some((prefix) => path.startsWith(prefix)));
     if (group === undefined || deleted.has(`${author}${path}`)) return;
     const record: RecordEntry<SocialData> = { kind: 'record', path, cursor: BigInt(i + 1) };
@@ -151,8 +167,9 @@ export function recordsOf({ writes, deletes }: SocialNetwork): AuthorRecords[] {
     if (data !== null) record.data = data;
     scope(author, group.id).set(path, record);
   });
-  return [...HOPS].map(([author, hop]) => ({
+  return [...hops].map(([author, hop]) => ({
     author,
+    homeserver: HOMESERVER,
     hop,
     graph: scope(author, SOCIAL_GRAPH),
     activity: scope(author, SOCIAL_ACTIVITY),
