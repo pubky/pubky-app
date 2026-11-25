@@ -171,7 +171,8 @@ describe('createIndexerRuntime changes', () => {
     await runtime.refresh(['bob']);
     expect(changes).toHaveLength(1);
     await w.time.advance(DEBOUNCE);
-    expect(changes).toEqual([{ scopes: [{ ...bob, group: ACTIVITY }], seeds: [] }]);
+    expect(changes).toHaveLength(2);
+    expect(changes[1]).toEqual({ scopes: [{ ...bob, group: ACTIVITY }], seeds: [] });
   });
 });
 
