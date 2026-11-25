@@ -415,10 +415,18 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
         return done();
       });
       const { seen, unsubscribe } = trackStore();
+      performance.clearMarks();
 
       expect(await signInWithRing()).toBe(session);
       unsubscribe();
 
+      // The e2e phase log reads these from the page
+      expect(
+        performance
+          .getEntriesByType('mark')
+          .map(({ name }) => name)
+          .filter((name) => name === 'pubky:gate passed' || name === 'pubky:bootstrap done'),
+      ).toEqual(['pubky:gate passed', 'pubky:bootstrap done']);
       expect(sessionDuringRun).toBeNull();
       expect(statusDuringRun).toBe('social-migration');
       expect(continues).toBe(1);

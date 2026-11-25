@@ -6,6 +6,7 @@ import type { RuntimeStatus } from '@/libs/indexer/runtime.types';
 import type { SocialData } from '@/libs/indexer/social/social.types';
 import { createSocialIndexer, type SocialChange, type SocialIndexer } from '@/libs/indexer/social/socialIndexer';
 import { Logger } from '@/libs/logger/logger';
+import { markPhase } from '@/libs/timing/timing';
 import type { Pubky } from '@/models/models.types';
 import { UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
@@ -122,14 +123,18 @@ export class IndexerService {
     const startedAt = Date.now();
     indexer.start(owner);
     // Timings of a start, which say whether a slow first page waited on the index or on something else
-    void indexer.ready().then(() => Logger.debug('Local index ready', { owner, ms: Date.now() - startedAt }));
-    void indexer.whenSynced().then(() =>
+    void indexer.ready().then(() => {
+      markPhase(owner === null ? 'visitor index ready' : 'local index ready');
+      Logger.debug('Local index ready', { owner, ms: Date.now() - startedAt });
+    });
+    void indexer.whenSynced().then(() => {
+      if (owner !== null) markPhase('local index first sync');
       Logger.debug('Local index first sync settled', {
         owner,
         ms: Date.now() - startedAt,
         stats: indexer.status().stats,
-      }),
-    );
+      });
+    });
     this.running = {
       owner,
       indexer,

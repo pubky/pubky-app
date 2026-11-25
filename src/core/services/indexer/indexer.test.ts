@@ -109,6 +109,16 @@ describe('IndexerService', () => {
     expect(IndexerService.current()).toBe(fakes.indexers[0]);
   });
 
+  it('marks when the account’s index is ready and when its first sync settles, for the e2e phase log', async () => {
+    performance.clearMarks();
+    IndexerService.start(ALICE);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(performance.getEntriesByName('pubky:local index ready', 'mark')).toHaveLength(1);
+    expect(performance.getEntriesByName('pubky:local index first sync', 'mark')).toHaveLength(1);
+  });
+
   it('runs a visitor’s index in its own database, with no tab coordination and no write refresh', () => {
     IndexerService.start(null);
     IndexerService.start(null);

@@ -42,6 +42,7 @@ import { Logger } from '@/libs/logger/logger';
 import { clearNotificationLastReadSyncCursorSessionStorage } from '@/libs/notification-last-read-sync/clear-cursor-session-storage';
 import { clearAllQueryClients } from '@/libs/query-client/query-client.factory';
 import { clearThemePreference } from '@/libs/theme/clear-theme-preference';
+import { markPhase } from '@/libs/timing/timing';
 import { sleep } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import { LastReadNormalizer } from '@/pipes/lastRead/lastRead.normalizer';
@@ -796,6 +797,7 @@ export class AuthController {
         // One write: a session beside a `social-migration` status would read as the account for a tick.
         useAuthStore.setState({ session, restoreStatus: 'restoring', isRestoringSession: true });
         placed = true;
+        markPhase('gate passed');
       }
       await this.prepareAccount(generation);
       if (!this.isCurrentGeneration(generation)) throw createCanceledError();
@@ -807,6 +809,7 @@ export class AuthController {
         previous.needsAccountSync
       )
         await this.bootstrapProfile(session, generation);
+      markPhase('bootstrap done');
       if (this.isCurrentGeneration(generation) && useAuthStore.getState().session === session)
         useAuthStore.getState().setRestoreStatus('ready');
       return true;
