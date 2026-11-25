@@ -1,7 +1,8 @@
 # indexer
 
 A client-side indexer. It crawls a user's social scope from Pubky homeservers and answers queries
-locally. This folder holds the pure data model so far: no I/O, no app state.
+locally. This folder holds the data model, the crawler and the stores; the network comes in through an
+injected transport, and nothing here touches app state.
 
 ## Isolation
 
@@ -34,3 +35,27 @@ Runs of one scope merge in any order to the same result.
 `compactRuns` rewrites a set of runs as one run per contiguous range of their coverage, tombstones
 included, and `evictBelow` forgets everything at or below a cutoff, oldest first. Re-folding an evicted
 range later reproduces its tombstones, so a path deleted above the cutoff stays deleted.
+
+## Store
+
+`IndexStore` (`store.types.ts`) keeps runs per scope (author, homeserver, group), each user's resolved
+homeserver, per-homeserver crawl state and the members of each scope. `commit` applies a whole batch
+atomically, and values are copied in and out, so callers never share objects with the store.
+`createMemoryStore` keeps it in memory, for tests and short-lived use. `createIdbStore` keeps it in
+IndexedDB through Dexie, one table per kind of state, each `commit` in one read-write transaction.
+Payloads and cursors are stored by structured clone, so `D` must be structured-cloneable; cursors stay
+`bigint` and are never part of a key. `store.contract.ts` is the one test suite both stores pass.
+
+## Crawler
+
+`createCrawler` walks a scope hop by hop from the seed: it resolves each user's homeserver, syncs the
+full-history groups in batches from each user's stored head, and follows the links in the scope group to
+the next hop. Windowed groups start at the homeserver's window start, the newest event older than
+`windowDays`, and grow older only through `backfill`. Records that need their file get it fetched and
+reduced; a file that is gone or fails its hash leaves the record without data until a later event. A
+failing homeserver is skipped for the rest of the sync with exponential backoff, and one whose log went
+backwards (a restore) loses everything stored for it and is synced again.
+
+Each crawl step is one `commit`. A scope that moved is written back as `compactRuns` of its stored runs
+and the new one, so it holds one run per contiguous range, usually one, however many syncs ran. A gap,
+such as stored history older than the window start, keeps its two sides as separate runs.
