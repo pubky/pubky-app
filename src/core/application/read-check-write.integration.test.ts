@@ -543,6 +543,21 @@ describe('the copy of the Locks reader files from /priv/social/ (#3206)', () => 
     expect(homeserver.writes.filter((write) => write.isLoggingOut)).toEqual([]);
   });
 
+  it('does not write an attachment again on a retry when the failed attempt landed anyway', async () => {
+    seedReplica('LOCK1');
+    // The PUT reaches the homeserver but the answer is a 503: the retry finds the file and leaves it.
+    homeserver.putBytes.mockImplementationOnce(async (path, bytes) => {
+      homeserver.files.set(path, new TextDecoder().decode(bytes));
+      throw sdkError(503);
+    });
+
+    await expect(LocksApplication.copySocialReaderFiles({ readerPubky: USER })).resolves.toBe(true);
+
+    expect(homeserver.writes.filter((write) => write.path === `${NEW}unlocked/LOCK1/img1`)).toHaveLength(1);
+    expect(homeserver.files.get(`${NEW}unlocked/LOCK1/img1`)).toBe('image bytes');
+    expect(homeserver.files.has(`${NEW}unlocked/LOCK1/post.json`)).toBe(true);
+  });
+
   it('records the copy per browser: a second browser lists the social roots once, writes nothing, records it', async () => {
     const granted = session();
     useAuthStore.setState({

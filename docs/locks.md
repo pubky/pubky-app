@@ -155,7 +155,8 @@ The copy is permanent code; a reader who comes back at any time is copied the fi
    `/priv/social/` and writes the app's namespace (a refused listing would be reported on every page load with a
    lock). No sign-in or restore starts it, so an account that sees no locked post sends no request for it. Each
    reader and session gets one run per page load, which every lock on screen joins, finished or not. It lists both
-   social roots and, when they hold anything, both new roots, and copies only what the new root lacks: purchase files
+   social roots and, when they hold anything, both new roots, and copies only what the new root lacks (an attachment
+   a stopped run already copied included, and a retry checks again first): purchase files
    (a legacy `<lockId>.json` becomes `<lockId>/<bundleId>.json`), then each completed replica, attachments first and
    the marker last, its attachment URLs pointing at the copies, and the cached row replaced with it. The copied
    marker carries `unlocked_at`, the source marker's write time (0 when it has none), so the Unlocked screen keeps
@@ -177,7 +178,8 @@ The copy is permanent code; a reader who comes back at any time is copied the fi
 3. **Reads.** Without the record, one replica is read from the new root, then from the social root only when the
    new one has no marker, and the Unlocked screen reads both roots, the new one winning. With it, they read only
    the new root. The controller reads the record before the read starts, so a copy that finishes during that read
-   leaves the replica in the answer of at least one root. A replica that a build before #3206 completes under the
+   leaves the replica in the answer of at least one root. A read of the social root that ends after the copy
+   replaced the cached row does not put the old URLs back. A replica that a build before #3206 completes under the
    social root after the run listed it stays hidden in this browser until the version is raised; purchase recovery
    finds its completed payment and downloads the content again, as for any listed purchase without a replica. Purchase
    files are read from both roots, with or without the record: one lock's on every payment (`fetchResolvedPurchase`)

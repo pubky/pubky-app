@@ -139,6 +139,19 @@ export class GuardedContentParser {
     return uri.replace(/^pubky:\/\/[^/]+/, '');
   }
 
+  /**
+   * The root a replica's attachments are under: `social` for one read from a build before #3206, `app` for one in the
+   * app's namespace, `null` when it has no attachment under either.
+   */
+  static replicaRoot(post: ReplicatedPost): 'app' | 'social' | null {
+    for (const { url } of post.attachments ?? []) {
+      const path = this.attachmentUriToPath(url);
+      if (path.startsWith(UNLOCKED_PREFIX)) return 'app';
+      if (path.startsWith(SOCIAL_UNLOCKED_PREFIX)) return 'social';
+    }
+    return null;
+  }
+
   /** Keep only attachment references in IndexedDB; media bytes stay on the homeserver. */
   static toCachedPost(post: GuardedPost, resources?: Record<string, { content_type: string }>): ReplicatedPost | null {
     const refs: NonNullable<ReplicatedPost['attachments']> = [];

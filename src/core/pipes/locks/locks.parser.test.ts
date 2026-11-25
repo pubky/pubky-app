@@ -327,6 +327,26 @@ describe('GuardedContentParser', () => {
     });
   });
 
+  describe('replicaRoot', () => {
+    const withAttachment = (path: string): ReplicatedPost => ({
+      content: 'x',
+      kind: 'image',
+      attachments: [{ url: `pubky://readerpubky${path}`, content_type: 'image/png' }],
+    });
+
+    it.each([
+      ['the app namespace', '/priv/app.pubky/v1/locks/unlocked/LOCK1/img1', 'app'],
+      ['the social root of builds before #3206', '/priv/social/unlocked/LOCK1/img1', 'social'],
+      ['neither root', '/priv/app.locks/content/img1', null],
+    ])('names %s', (_label, path, root) => {
+      expect(GuardedContentParser.replicaRoot(withAttachment(path))).toBe(root);
+    });
+
+    it('is null without attachments', () => {
+      expect(GuardedContentParser.replicaRoot({ content: 'x', kind: 'short', attachments: null })).toBeNull();
+    });
+  });
+
   describe('unlockedRootUrl', () => {
     it('builds the directory the unlocked list enumerates', () => {
       expect(GuardedContentParser.unlockedRootUrl('readerpubky')).toBe(

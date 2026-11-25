@@ -38,6 +38,7 @@ const mocks = vi.hoisted(() => ({
   getBytes: vi.fn(),
   getBytesIfExists: vi.fn(),
   listAll: vi.fn(),
+  exists: vi.fn(),
   // The social roots of builds before #3206 get their own mocks, so the queued answers of a test
   // about the new root are not taken by those reads.
   socialGetBytesIfExists: vi.fn(),
@@ -70,6 +71,7 @@ vi.mock('@/services/homeserver/homeserver', () => ({
     createWriteFence: () => ({ enter: () => {}, assertCurrent: () => {} }),
     putBlob: mocks.putBlob,
     getBytes: mocks.getBytes,
+    exists: mocks.exists,
     getBytesIfExists: (url: string) =>
       (url.includes('/priv/social/') ? mocks.socialGetBytesIfExists : mocks.getBytesIfExists)(url),
     listAll: (params: { baseDirectory: string }) =>
@@ -2387,7 +2389,12 @@ describe('LocksApplication.copySocialReaderFiles', () => {
 
     await expect(LocksApplication.copySocialReaderFiles({ readerPubky: reader })).resolves.toBe(true);
 
-    expect(written()).toEqual([url(NEW, 'unlocked/LOCK1/img1'), url(NEW, 'unlocked/LOCK1/post.json')]);
+    // The attachment the stopped run already copied is neither read nor written again.
+    expect(written()).toEqual([url(NEW, 'unlocked/LOCK1/post.json')]);
+    expect(mocks.socialGetBytesIfExists).not.toHaveBeenCalledWith(url(SOCIAL, 'unlocked/LOCK1/img1'));
+    expect(writtenJson(url(NEW, 'unlocked/LOCK1/post.json')).attachments).toEqual([
+      { url: url(NEW, 'unlocked/LOCK1/img1'), content_type: 'image/png' },
+    ]);
   });
 
   it('skips a replica the new root already has, a corrupt one, and a partial one', async () => {
@@ -2502,6 +2509,62 @@ describe('LocksApplication.copySocialReaderFiles', () => {
     await expect(LocksApplication.copySocialReaderFiles({ readerPubky: reader, isCurrent })).resolves.toBe(false);
 
     expect(written()).toEqual([url(NEW, 'unlocked/LOCK1/img1')]);
+  });
+
+  it.each([
+    ['read', () => mocks.cacheGet.mockRejectedValue(new Error('IndexedDB unavailable'))],
+    ['write', () => mocks.cachePost.mockRejectedValue(new Error('aborted'))],
+  ])('reports the run not done when the cache %s fails while replacing a row', async (_label, fail) => {
+    roots(
+      { unlocked: [url(SOCIAL, 'unlocked/LOCK1/post.json')] },
+      { unlocked: [url(NEW, 'unlocked/LOCK1/post.json')] },
+    );
+    const attachment = (root: string) => [{ url: url(root, 'unlocked/LOCK1/img1'), content_type: 'image/png' }];
+    mocks.cacheGet.mockResolvedValue({
+      id: 'LOCK1',
+      post: { content: 'x', kind: 'image', attachments: attachment(SOCIAL) },
+    });
+    mocks.getBytesIfExists.mockResolvedValue(bytes({ content: 'x', kind: 'image', attachments: attachment(NEW) }));
+    fail();
+
+    // Not recorded, so the next page load replaces the row: a recorded run would never look at it again.
+    await expect(LocksApplication.copySocialReaderFiles({ readerPubky: reader })).resolves.toBe(false);
+  });
+
+  it('replaces a cached row on the social copies when another browser writes the marker during the copy', async () => {
+    roots({ unlocked: [url(SOCIAL, 'unlocked/LOCK1/img1'), url(SOCIAL, 'unlocked/LOCK1/post.json')] });
+    const attachment = (root: string) => [{ url: url(root, 'unlocked/LOCK1/img1'), content_type: 'image/png' }];
+    mocks.socialGetBytesIfExists.mockImplementation(async (target: string) =>
+      target.endsWith('post.json')
+        ? bytes({ content: 'secret', kind: 'image', attachments: attachment(SOCIAL) })
+        : { bytes: new Uint8Array([1]), modifiedAt: 1 },
+    );
+    // The listing saw no marker at the new root; the other browser's marker is there by the time this run checks.
+    const winner = { content: 'secret', kind: 'image', attachments: attachment(NEW), unlocked_at: 1700 };
+    mocks.getBytesIfExists.mockResolvedValue(bytes(winner));
+    mocks.cacheGet.mockResolvedValue({
+      id: 'LOCK1',
+      post: { content: 'secret', kind: 'image', attachments: attachment(SOCIAL) },
+      unlockedAt: 1700,
+    });
+
+    await expect(LocksApplication.copySocialReaderFiles({ readerPubky: reader })).resolves.toBe(true);
+
+    expect(written()).toEqual([url(NEW, 'unlocked/LOCK1/img1')]);
+    expect(mocks.cachePost).toHaveBeenCalledExactlyOnceWith({
+      lockId: 'LOCK1',
+      post: expect.objectContaining({ attachments: attachment(NEW) }),
+      unlockedAt: 1700,
+    });
+  });
+
+  it('reports the run not done when the cache write fails after a replica is copied', async () => {
+    oneReplica(1700);
+    mocks.cachePost.mockRejectedValue(new Error('aborted'));
+
+    await expect(LocksApplication.copySocialReaderFiles({ readerPubky: reader })).resolves.toBe(false);
+
+    expect(written()).toEqual([url(NEW, 'unlocked/LOCK1/post.json')]);
   });
 
   it('reads nothing more for a cached row already on the new copies', async () => {

@@ -812,11 +812,12 @@ export class LocksApplication {
   ): Promise<boolean> {
     let copied = true;
     const done = new Set(GuardedContentParser.completedLockIds(files));
+    const existing = new Set(files);
     for (const lockId of GuardedContentParser.completedLockIds(socialFiles)) {
       if (isCurrent?.() === false) return false;
       try {
         if (done.has(lockId)) await this.refreshCopiedReplicaRow(readerPubky, lockId, isCurrent);
-        else await this.copySocialReplica(readerPubky, lockId, fence, isCurrent);
+        else await this.copySocialReplica(readerPubky, lockId, existing, fence, isCurrent);
       } catch {
         // Reported where it was made; the next run copies this replica again.
         copied = false;
@@ -827,7 +828,8 @@ export class LocksApplication {
 
   /**
    * Another browser copied this replica, but the cached row here may still point at the social copies, which
-   * #3207 deletes: it is replaced from the new marker. A row already on the new copies costs no request.
+   * #3207 deletes: it is replaced from the new marker. A row already on the new copies costs no request. A cache
+   * failure throws, so the run is not recorded and the next page load tries again.
    */
   private static async refreshCopiedReplicaRow(
     readerPubky: string,
@@ -835,7 +837,7 @@ export class LocksApplication {
     isCurrent: TViewerScope['isCurrent'],
   ): Promise<void> {
     const socialRoot = GuardedContentParser.socialUnlockedRootUrl(readerPubky);
-    const row = await LocalLocksService.get(lockId).catch(() => null);
+    const row = await LocalLocksService.get(lockId);
     if (!row?.post?.attachments?.some(({ url }) => url.startsWith(socialRoot))) return;
     const marker = await HomeserverService.getBytesIfExists(GuardedContentParser.unlockedPostUrl(readerPubky, lockId));
     const post = marker ? GuardedContentParser.parseReplicatedPost(marker.bytes) : null;
@@ -844,13 +846,17 @@ export class LocksApplication {
       lockId,
       post,
       unlockedAt: post.unlocked_at ?? marker.modifiedAt ?? undefined,
-    }).catch(() => undefined);
+    });
   }
 
-  /** One replica: attachments first, the marker last, as on unlock; then the cached row. */
+  /**
+   * One replica: attachments first, the marker last, as on unlock; then the cached row. An attachment the new root
+   * already holds (a run that stopped midway) is not copied again. A cache failure throws, so the run is not recorded.
+   */
   private static async copySocialReplica(
     readerPubky: string,
     lockId: string,
+    existing: Set<string>,
     fence: THomeserverWriteFence,
     isCurrent: TViewerScope['isCurrent'],
   ): Promise<void> {
@@ -864,9 +870,12 @@ export class LocksApplication {
     const unlockedAt = post.unlocked_at ?? source.modifiedAt ?? 0;
     const copy = GuardedContentParser.toCopiedReplica(post, readerPubky, lockId, unlockedAt);
     for (const { from, to } of copy.files) {
+      if (existing.has(to)) continue;
       // An attachment can take long, so a run that should stop does so between files, not between replicas.
       if (isCurrent?.() === false) return;
-      await retryHomeserverWriteAfterReread(fence, async () => {
+      await retryHomeserverWriteAfterReread(fence, async (pass) => {
+        // A failed attempt may still have landed: a retry does not write it again.
+        if (pass > 0 && (await HomeserverService.exists(to))) return;
         const file = await HomeserverService.getBytesIfExists(from);
         if (file) await HomeserverService.putBlob({ url: to, blob: file.bytes, fence });
       });
@@ -879,8 +888,10 @@ export class LocksApplication {
       await HomeserverService.putBlob({ url: markerUrl, blob: marker, fence });
       return true;
     });
-    if (!wrote || isCurrent?.() === false) return;
-    await LocalLocksService.upsertPost({ lockId, post: copy.post, unlockedAt }).catch(() => undefined);
+    if (isCurrent?.() === false) return;
+    // Another browser wrote the marker after this run listed the root: the row here may still be on the social copies.
+    if (!wrote) return this.refreshCopiedReplicaRow(readerPubky, lockId, isCurrent);
+    await LocalLocksService.upsertPost({ lockId, post: copy.post, unlockedAt });
   }
 
   /**
