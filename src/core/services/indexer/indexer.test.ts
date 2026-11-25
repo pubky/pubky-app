@@ -18,6 +18,7 @@ const fakes = vi.hoisted(() => ({
     refresh: ReturnType<typeof vi.fn>;
     setExcluded: ReturnType<typeof vi.fn>;
     change: (change: SocialChange) => void;
+    report: (status: { state: string }) => void;
   }>,
   writeListeners: new Set<(path: string) => void>(),
   stores: [] as Array<{ name: string; close: ReturnType<typeof vi.fn>; destroy: ReturnType<typeof vi.fn> }>,
@@ -33,6 +34,7 @@ vi.mock('@/libs/indexer/idbStore', () => ({
 vi.mock('@/libs/indexer/social/socialIndexer', () => ({
   createSocialIndexer: vi.fn(() => {
     const listeners = new Set<(change: SocialChange) => void>();
+    const statusListeners = new Set<(status: { state: string }) => void>();
     const indexer = {
       start: vi.fn(),
       stop: vi.fn(),
@@ -46,6 +48,14 @@ vi.mock('@/libs/indexer/social/socialIndexer', () => ({
       },
       change: (change: SocialChange) => {
         for (const listener of listeners) listener(change);
+      },
+      status: () => ({ state: 'idle' }),
+      onStatus: (listener: (status: { state: string }) => void) => {
+        statusListeners.add(listener);
+        return () => statusListeners.delete(listener);
+      },
+      report: (status: { state: string }) => {
+        for (const listener of statusListeners) listener(status);
       },
     };
     fakes.indexers.push(indexer);
@@ -228,6 +238,36 @@ describe('IndexerService', () => {
 
     expect(close).toHaveBeenCalledOnce();
     expect(fakes.indexers[0].stop.mock.invocationCallOrder[0]).toBeLessThan(close.mock.invocationCallOrder[0]);
+  });
+
+  it('reports the running index’s status, the same object until it changes, and none once it stops', () => {
+    const listener = vi.fn();
+    const unsubscribe = IndexerService.subscribeStatus(listener);
+    expect(IndexerService.status()).toBeNull();
+
+    IndexerService.start(ALICE);
+    expect(IndexerService.status()).toEqual({ state: 'idle' });
+    expect(IndexerService.status()).toBe(IndexerService.status());
+
+    const syncing = { state: 'syncing' };
+    fakes.indexers[0].report(syncing);
+    expect(IndexerService.status()).toBe(syncing);
+
+    IndexerService.stop();
+    expect(IndexerService.status()).toBeNull();
+    fakes.indexers[0].report({ state: 'idle' });
+    expect(IndexerService.status()).toBeNull();
+    expect(listener).toHaveBeenCalledTimes(3);
+    unsubscribe();
+  });
+
+  it('syncs the running index’s scope on refresh, and does nothing without one', async () => {
+    await IndexerService.refresh();
+    IndexerService.start(ALICE);
+
+    await IndexerService.refresh();
+
+    expect(fakes.indexers[0].refresh).toHaveBeenCalledExactlyOnceWith();
   });
 
   it('keeps the database on stop and runs nothing afterwards', () => {

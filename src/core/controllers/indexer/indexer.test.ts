@@ -4,7 +4,7 @@ import type { Pubky } from '@/models/models.types';
 import { IndexerController } from './indexer';
 
 vi.mock('@/application/indexer/indexer', () => ({
-  IndexerApplication: { clear: vi.fn() },
+  IndexerApplication: { clear: vi.fn(), refresh: vi.fn() },
 }));
 
 const ALICE = 'alice-pubky' as Pubky;
@@ -23,5 +23,16 @@ describe('IndexerController.discardLocalIndex', () => {
     await Promise.resolve();
 
     expect(IndexerApplication.clear).toHaveBeenCalledExactlyOnceWith(ALICE);
+  });
+});
+
+describe('IndexerController.syncLocalIndexNow', () => {
+  it('syncs without waiting, and swallows a failure', async () => {
+    vi.mocked(IndexerApplication.refresh).mockRejectedValueOnce(new DOMException('aborted', 'AbortError'));
+
+    expect(IndexerController.syncLocalIndexNow()).toBeUndefined();
+    await Promise.resolve();
+
+    expect(IndexerApplication.refresh).toHaveBeenCalledOnce();
   });
 });

@@ -1,3 +1,4 @@
+import type { RuntimeStatus } from '@/libs/indexer/runtime.types';
 import type { Pubky } from '@/models/models.types';
 import { IndexerService } from '@/services/indexer/indexer';
 
@@ -20,6 +21,18 @@ export class IndexerApplication {
 
   static resume(): void {
     IndexerService.resume();
+  }
+
+  static getStatus(): RuntimeStatus | null {
+    return IndexerService.status();
+  }
+
+  static subscribeStatus(listener: () => void): () => void {
+    return IndexerService.subscribeStatus(listener);
+  }
+
+  static async refresh(): Promise<void> {
+    await IndexerService.refresh();
   }
 
   /** Deletes the account's index database, or a visitor's for `null`, as sign-out deletes the app's own. */

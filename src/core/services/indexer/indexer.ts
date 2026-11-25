@@ -2,6 +2,7 @@ import { liveQuery } from 'dexie';
 import { INDEXER_DATABASE_PREFIX, INDEXER_VISITOR_DATABASE } from '@/config/indexer';
 import { browserApis, type BrowserCoordination, createBrowserCoordination } from '@/libs/indexer/browserCoordination';
 import { createIdbStore, type IdbIndexStore } from '@/libs/indexer/idbStore';
+import type { RuntimeStatus } from '@/libs/indexer/runtime.types';
 import type { SocialData } from '@/libs/indexer/social/social.types';
 import { createSocialIndexer, type SocialChange, type SocialIndexer } from '@/libs/indexer/social/socialIndexer';
 import { Logger } from '@/libs/logger/logger';
@@ -64,6 +65,16 @@ export class IndexerService {
 
   private static running: RunningIndex | null = null;
 
+  /** The running index's last status, kept so readers get the same object until it changes. */
+  private static latestStatus: RuntimeStatus | null = null;
+
+  private static readonly statusListeners = new Set<() => void>();
+
+  private static publishStatus(status: RuntimeStatus | null): void {
+    this.latestStatus = status;
+    for (const listener of this.statusListeners) listener();
+  }
+
   /**
    * Starts `owner`'s index, or a visitor's for `null`, keeping it when it already runs; another index stops first. A
    * visitor's index that gives way to an account's is deleted: what it loaded is no use to the account.
@@ -107,6 +118,7 @@ export class IndexerService {
       ensureProfile: (user) => indexer.ensureProfile(user),
       readFile: (uri) => HomeserverService.getPublicFileBytes({ url: uri }),
     });
+    const stopReporting = indexer.onStatus((status) => this.publishStatus(status));
     indexer.start(owner);
     this.running = {
       owner,
@@ -118,8 +130,10 @@ export class IndexerService {
         stopInvalidating();
         stopExcluding();
         stopServingMedia();
+        stopReporting();
       },
     };
+    this.publishStatus(indexer.status());
   }
 
   /** Stops the running index and closes its database and tab channel; what it stored stays for the next start. */
@@ -132,6 +146,25 @@ export class IndexerService {
     // The indexer never closes the coordination it was given.
     running.coordination?.close();
     running.store.close();
+    this.publishStatus(null);
+  }
+
+  /** The running index's status, the same object until it changes; `null` when this tab runs none. */
+  static status(): RuntimeStatus | null {
+    return this.latestStatus;
+  }
+
+  /** Calls `listener` after each status change of the running index, and when an index starts or stops. */
+  static subscribeStatus(listener: () => void): () => void {
+    this.statusListeners.add(listener);
+    return () => {
+      this.statusListeners.delete(listener);
+    };
+  }
+
+  /** Syncs the running index's whole scope now; settles at once when none runs. */
+  static async refresh(): Promise<void> {
+    await this.running?.indexer.refresh();
   }
 
   /** Lets the running crawl finish and starts no other until `resume`; with other tabs open, one of them crawls. */
