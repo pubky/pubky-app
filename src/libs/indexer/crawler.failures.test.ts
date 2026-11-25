@@ -159,20 +159,18 @@ describe('backfill', () => {
     const once = await crawler.backfill('alice', ACTIVITY, 1);
 
     expect(once).toEqual({ tail: old[7] - BigInt(1), pages: 1 });
-    // Each page joins the top range, so it merges into the one stored run.
-    expect(await store.readRuns(scope)).toHaveLength(1);
+    // Each page joins the top range, so the coverage stays one range.
+    expect(await store.readCoverage(scope)).toHaveLength(1);
     expect(await served(store, 'alice', 'hs1', ACTIVITY)).toEqual(network.liveOf('alice', [POSTS], old[7] - BigInt(1)));
 
     expect(await crawler.backfill('alice', ACTIVITY, 10)).toEqual({ tail: CURSOR_ZERO, pages: 2 });
     expect(await served(store, 'alice', 'hs1', ACTIVITY)).toEqual(network.liveOf('alice', [POSTS]));
-    expect((await store.readRuns(scope)).map(({ tail, head }) => [tail, head])).toEqual([
-      [CURSOR_ZERO, network.headOf('hs1')],
-    ]);
+    expect(await store.readCoverage(scope)).toEqual([{ tail: CURSOR_ZERO, head: network.headOf('hs1') }]);
   });
 });
 
 describe('abort', () => {
-  it('leaves only valid runs behind, and a later sync completes', async () => {
+  it('leaves only valid scopes behind, and a later sync completes', async () => {
     const { network, store, crawlerOf } = harness({ batchSize: 2, pageLimit: 3 });
     network.addHomeserver('hs1').addUser('alice', 'hs1');
     const users = ['u0', 'u1', 'u2', 'u3', 'u4', 'u5'];
@@ -202,9 +200,9 @@ describe('abort', () => {
     const scopes = await store.listScopes();
     expect(scopes.length).toBeGreaterThan(0);
     for (const scope of scopes) {
-      const runs = await store.readRuns(scope);
+      const runs = await store.exportRuns(scope);
       expect(runs.flatMap(validateRun)).toEqual([]);
-      expect(() => mergeRuns(runs)).not.toThrow();
+      expect(await store.readScope(scope)).toEqual(mergeRuns(runs));
     }
 
     const { members } = await crawlerOf(network).syncScope('alice');

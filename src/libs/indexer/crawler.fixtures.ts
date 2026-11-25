@@ -4,7 +4,6 @@ import type { Domain } from './domain.types';
 import { contentHash, FakeNetwork } from './fakeNetwork';
 import type { Cursor } from './indexer.types';
 import { createMemoryStore } from './memoryStore';
-import { mergeRuns } from './merge';
 import type { IndexStore } from './store.types';
 import type { IndexerTransport } from './transport.types';
 
@@ -79,7 +78,7 @@ export async function served(
   homeserver: string,
   group: string,
 ): Promise<Map<string, Cursor>> {
-  const { live } = mergeRuns(await store.readRuns({ author, homeserver, group }));
+  const { live } = await store.readScope({ author, homeserver, group });
   return new Map([...live].map(([path, record]): [string, Cursor] => [path, record.cursor]));
 }
 
@@ -90,6 +89,6 @@ export async function servedData(
   homeserver: string,
   group: string,
 ): Promise<Map<string, Post | undefined>> {
-  const { live } = mergeRuns(await store.readRuns({ author, homeserver, group }));
+  const { live } = await store.readScope({ author, homeserver, group });
   return new Map([...live].map(([path, record]): [string, Post | undefined] => [path, record.data]));
 }

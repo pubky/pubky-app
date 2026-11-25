@@ -227,8 +227,8 @@ describe('syncScope window', () => {
   });
 });
 
-describe('syncScope compaction', () => {
-  it('keeps one run per scope over syncs where only one user of the batch writes', async () => {
+describe('syncScope coverage', () => {
+  it('keeps one range per scope over syncs where only one user of the batch writes', async () => {
     const { network, store, crawler } = harness();
     network.addHomeserver('hs1');
     chain(network, ['alice', 'bob']);
@@ -245,16 +245,16 @@ describe('syncScope compaction', () => {
     }
     await crawler.syncScope('alice');
 
-    // carol never wrote: each sync only moved her ranges up behind bob's events, one run more without compaction.
-    expect(await store.readRuns({ author: 'carol', homeserver: 'hs1', group: GRAPH })).toEqual([
-      { author: 'carol', homeserver: 'hs1', group: GRAPH, tail: CURSOR_ZERO, head: lastFollow, entries: [] },
-    ]);
-    expect(await store.readRuns({ author: 'carol', homeserver: 'hs1', group: ACTIVITY })).toEqual([
-      { author: 'carol', homeserver: 'hs1', group: ACTIVITY, tail: CURSOR_ZERO, head: lastPost, entries: [] },
+    // carol never wrote: each sync only moved her ranges up behind bob's events, and they stay joined.
+    const carolGraph = { author: 'carol', homeserver: 'hs1', group: GRAPH };
+    expect(await store.readCoverage(carolGraph)).toEqual([{ tail: CURSOR_ZERO, head: lastFollow }]);
+    expect((await store.readScope(carolGraph)).entries).toEqual(new Map());
+    expect(await store.readCoverage({ author: 'carol', homeserver: 'hs1', group: ACTIVITY })).toEqual([
+      { tail: CURSOR_ZERO, head: lastPost },
     ]);
     const scopes = await store.listScopes();
     expect(scopes).toHaveLength(5);
-    for (const scope of scopes) expect(await store.readRuns(scope)).toHaveLength(1);
+    for (const scope of scopes) expect(await store.readCoverage(scope)).toHaveLength(1);
     expect(await served(store, 'bob', 'hs1', GRAPH)).toEqual(network.liveOf('bob', [FOLLOWS]));
     expect(await served(store, 'bob', 'hs1', ACTIVITY)).toEqual(network.liveOf('bob', [POSTS]));
   });
@@ -267,7 +267,7 @@ describe('syncScope compaction', () => {
     const windowStart = network.putJson('alice', postPath(35 * DAY_MS), { text: 'old' });
     const recent = network.putJson('alice', postPath(DAY_MS), { text: 'recent' });
     const scope = { author: 'alice', homeserver: 'hs1', group: ACTIVITY };
-    await store.appendRuns([
+    await store.applyRuns([
       {
         ...scope,
         tail: CURSOR_ZERO,
@@ -280,9 +280,9 @@ describe('syncScope compaction', () => {
     await crawler.syncScope('alice');
 
     // A delete inside (ancientCursor, windowStart] would be missed, so the two ranges must not join.
-    expect((await store.readRuns(scope)).map(({ tail, head }) => [tail, head])).toEqual([
-      [CURSOR_ZERO, ancientCursor],
-      [windowStart, recent],
+    expect(await store.readCoverage(scope)).toEqual([
+      { tail: CURSOR_ZERO, head: ancientCursor },
+      { tail: windowStart, head: recent },
     ]);
     expect(await served(store, 'alice', 'hs1', ACTIVITY)).toEqual(network.liveOf('alice', [POSTS], windowStart));
   });
