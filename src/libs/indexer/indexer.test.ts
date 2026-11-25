@@ -9,6 +9,7 @@ import { createTabs, fakeTime, settle, tracked, type TrackedRead } from './runti
 import type { Coordination } from './runtime.types';
 import { scopeId } from './store.helpers';
 import type { ScopeKey } from './store.types';
+import type { ReadEventsRequest } from './transport.types';
 
 const INTERVAL = 60 * 1000;
 const DEBOUNCE = 250;
@@ -16,8 +17,8 @@ const TTL = 5 * 60 * 1000;
 const OUTSIDERS = ['carol', 'dave'];
 
 /** alice follows bob; carol and dave are outside her scope. Everyone but alice posted once. */
-function world() {
-  const network = new FakeNetwork().addHomeserver('hs1');
+function world(network: FakeNetwork = new FakeNetwork()) {
+  network.addHomeserver('hs1');
   for (const user of ['alice', 'bob', 'carol', 'dave']) network.addUser(user, 'hs1');
   network.put('alice', `${FOLLOWS}bob`);
   for (const user of ['bob', 'carol', 'dave']) network.putJson(user, postPath(DAY_MS), { text: user });
@@ -55,6 +56,51 @@ function crawlOrder(reads: readonly TrackedRead[]): string[] {
 }
 
 const idsOf = (scopes: readonly ScopeKey[]) => scopes.map(scopeId).sort();
+
+/** Holds the next stream read naming a user until it is let through, or until its signal fires, as a fetch does. */
+class GatedNetwork extends FakeNetwork {
+  private held: string | null = null;
+  private release: (() => void) | null = null;
+
+  hold(user: string): void {
+    this.held = user;
+  }
+
+  get holding(): boolean {
+    return this.release !== null;
+  }
+
+  letThrough(): void {
+    const release = this.release;
+    this.release = null;
+    release?.();
+  }
+
+  override async readEvents(request: ReadEventsRequest) {
+    if (this.held !== null && request.users.some(({ user }) => user === this.held)) {
+      this.held = null;
+      await new Promise<void>((resolve, reject) => {
+        this.release = resolve;
+        request.signal?.addEventListener(
+          'abort',
+          () => {
+            this.release = null;
+            reject(new Error('read aborted'));
+          },
+          { once: true },
+        );
+      });
+    }
+    return super.readEvents(request);
+  }
+}
+
+/** Everything the store serves for the seed: its members and every scope it holds, as merged. */
+async function servedBy({ store }: World, seed: string) {
+  const scopes = [...(await store.listScopes())].sort((a, b) => (scopeId(a) < scopeId(b) ? -1 : 1));
+  const merged = await Promise.all(scopes.map((scope) => store.readScope(scope)));
+  return { members: await store.readScopeMembers(seed), scopes: scopes.map(scopeId), merged };
+}
 
 describe('createIndexerRuntime loop', () => {
   it('syncs on start, then every interval, and not after stop', async () => {
@@ -100,7 +146,7 @@ describe('createIndexerRuntime loop', () => {
 });
 
 describe('createIndexerRuntime queue', () => {
-  it('runs requests after the running crawl and before the periodic sync, one crawl at a time', async () => {
+  it('runs requests ahead of the scope sync and of the periodic sync, one crawl at a time', async () => {
     const w = world();
     const { runtime, state } = runtimeOf(w);
 
@@ -109,7 +155,9 @@ describe('createIndexerRuntime queue', () => {
     expect(runtime.ensureUser('carol')).toBe(carol);
     await settle();
     await carol;
-    expect(crawlOrder(state.reads)).toEqual(['scope', 'carol']);
+    // The first sync yields before its first read and resumes after carol.
+    expect(crawlOrder(state.reads)).toEqual(['carol', 'scope']);
+    expect(runtime.status().lastSyncAt).toBe(NOW);
 
     const mark = state.reads.length;
     const dave = runtime.ensureUser('dave');
@@ -127,6 +175,62 @@ describe('createIndexerRuntime queue', () => {
     const later = state.reads.length;
     await runtime.ensureUser('carol');
     expect(crawlOrder(state.reads.slice(later))).toEqual(['carol']);
+    expect(state.peak).toBe(1);
+  });
+
+  it('lets a request pre-empt a scope sync, which resumes after it and ends as an undisturbed sync', async () => {
+    const network = new GatedNetwork();
+    const w = world(network);
+    const { runtime, state } = runtimeOf(w);
+    network.hold('bob');
+    runtime.start('alice');
+    await settle();
+    expect(network.holding).toBe(true);
+
+    const carol = runtime.ensureUser('carol').then(() => runtime.status().lastSyncAt);
+    expect(await carol).toBeNull();
+    await settle();
+
+    expect(network.holding).toBe(false);
+    expect(runtime.status()).toMatchObject({ state: 'idle', lastSyncAt: NOW, lastError: null });
+    expect(crawlOrder(state.reads)).toEqual(['scope', 'carol', 'scope']);
+    expect(state.peak).toBe(1);
+
+    const undisturbed = world();
+    const quiet = runtimeOf(undisturbed);
+    quiet.runtime.start('alice');
+    await settle();
+    await quiet.runtime.ensureUser('carol');
+    expect(await servedBy(w, 'alice')).toEqual(await servedBy(undisturbed, 'alice'));
+  });
+
+  it('runs a scope sync pre-empted three times in a row to its end before the next request', async () => {
+    const network = new GatedNetwork();
+    const w = world(network);
+    const { runtime, state } = runtimeOf(w);
+    network.hold('bob');
+    runtime.start('alice');
+    await settle();
+    for (let i = 0; i < 3; i += 1) {
+      network.hold('bob');
+      await runtime.refresh(['carol']);
+      await settle();
+      expect(network.holding).toBe(true);
+    }
+
+    let fourthDone = false;
+    const fourth = runtime.refresh(['carol']).then(() => {
+      fourthDone = true;
+    });
+    await settle();
+    expect(fourthDone).toBe(false);
+    expect(runtime.status().lastSyncAt).toBeNull();
+
+    network.letThrough();
+    await settle();
+    await fourth;
+    expect(runtime.status().lastSyncAt).toBe(NOW);
+    expect(crawlOrder(state.reads)).toEqual(['scope', 'carol', 'scope', 'carol', 'scope', 'carol', 'scope', 'carol']);
     expect(state.peak).toBe(1);
   });
 

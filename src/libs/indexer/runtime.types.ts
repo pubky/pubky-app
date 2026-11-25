@@ -76,8 +76,9 @@ export interface RuntimeParams<D> {
 
 /**
  * Keeps a seed's scope synced into the store. Every crawl goes through one queue, so crawler operations never
- * overlap, and requests run before the periodic sync. With coordination only the tab holding the lock crawls;
- * the others send it their requests and report the changes it announces.
+ * overlap. Requests run before a scope sync and pre-empt a running one, which resumes after them from what it
+ * committed; a scope sync pre-empted three times in a row runs its next pass to the end first. With coordination
+ * only the tab holding the lock crawls; the others send it their requests and report the changes it announces.
  */
 export interface IndexerRuntime {
   /** Syncs the scope now and then every interval. Starting with another seed stops the current one first. */
