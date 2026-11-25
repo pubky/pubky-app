@@ -188,6 +188,34 @@ describe('queryNexus routing by indexer sources', () => {
       expect(indexer.backfill).toHaveBeenCalledExactlyOnceWith('alice', 'activity', 1);
     });
 
+    it('loads the posts a by_ids read lacks, once, and asks once more', async () => {
+      const indexer = fakeIndexer(
+        answer([], [{ kind: 'post', author: 'olga', postId: '0033' }]),
+        answer([{ id: 'olga:0033' }]),
+      );
+      const body = JSON.stringify({ post_ids: ['olga:0033'] });
+
+      await expect(
+        queryNexus({ url: uniqueUrl('stream/posts/by_ids'), method: HttpMethod.POST, body }),
+      ).resolves.toEqual([{ id: 'olga:0033' }]);
+
+      expect(indexer.ensurePost).toHaveBeenCalledExactlyOnceWith('olga', '0033');
+      expect(indexer.request).toHaveBeenCalledTimes(2);
+    });
+
+    it('loads the author of a stream the index has not loaded, and asks once more', async () => {
+      const indexer = fakeIndexer(
+        answer({ post_keys: [] }, [{ kind: 'user', user: 'olga' }]),
+        answer({ post_keys: ['olga:1'] }),
+      );
+
+      await expect(queryNexus({ url: uniqueUrl('stream/posts/keys?source=author&author_id=olga') })).resolves.toEqual({
+        post_keys: ['olga:1'],
+      });
+
+      expect(indexer.ensureUser).toHaveBeenCalledExactlyOnceWith('olga');
+    });
+
     it('returns a stream page as it is, leaving older history to pagination', async () => {
       const indexer = fakeIndexer(answer({ post_keys: [] }, [{ kind: 'backfill', author: 'alice' }]));
 

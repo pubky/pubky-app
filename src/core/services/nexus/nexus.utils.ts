@@ -254,10 +254,21 @@ function loadHint(indexer: SocialIndexer, hint: MoreHint): Promise<void> {
 }
 
 /**
- * Answers a Nexus read from the local index. When the answer names what could be loaded to improve it, and it is a
- * 404 the index cannot vouch for or the read is about one post or user, that is loaded once and the read asked once
- * more. A route the index cannot serve (global search and rankings, and for a signed-out visitor's index every
- * feed, ranking and search over a scope it does not have) is `unavailable`.
+ * The hints worth one load before asking again. A user or post the answer lacks is always loaded: the app reads one
+ * post or user through `by_ids` and a profile's posts through its author stream, and each answers without it rather
+ * than with a 404. Older history only for a 404 the index cannot vouch for or a read about one post or user; a
+ * stream page leaves it to pagination.
+ */
+function hintsToLoad(more: readonly MoreHint[], url: string, unproven: boolean): MoreHint[] {
+  const extendsHistory = unproven || isOneEntityRead(url);
+  return more.filter((hint) => hint.kind !== 'backfill' || extendsHistory);
+}
+
+/**
+ * Answers a Nexus read from the local index. When the answer names what could be loaded to improve it
+ * (`hintsToLoad`), that is loaded once and the read asked once more. A route the index cannot serve (global search
+ * and rankings, and for a signed-out visitor's index every feed, ranking and search over a scope it does not have)
+ * is `unavailable`.
  */
 async function askLocalIndex({
   url,
@@ -271,11 +282,11 @@ async function askLocalIndex({
   const request: NexusRequest = { url, method: routedMethod, body: body ?? undefined };
   try {
     let response = await indexer.request(request);
-    const more = response.more ?? [];
     const unproven = response.status === 404 && response.coverage.kind !== 'exact';
-    if (more.length > 0 && (unproven || isOneEntityRead(url))) {
+    const hints = hintsToLoad(response.more ?? [], url, unproven);
+    if (hints.length > 0) {
       // A hint that fails to load leaves the second answer as it was.
-      await Promise.allSettled(more.map((hint) => loadHint(indexer, hint)));
+      await Promise.allSettled(hints.map((hint) => loadHint(indexer, hint)));
       response = await indexer.request(request);
     }
     if (response.status === 200) return { kind: 'answer', json: response.json };

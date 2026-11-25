@@ -37,8 +37,10 @@ default, today's behavior), `local`, or `local,nexus`. Without `nexus` the Nexus
   earlier `local` deploy left for an account that signs in.
 - **Routing.** `queryNexus` asks the local index first when `local` is a source. A 200 returns its JSON; a 404 raises
   the error a Nexus 404 raises, without the Nexus 404 retry budget; an unavailable read raises a non-retryable 422.
-  Both misses are expected outcomes and stay out of Sentry. A 404 the index cannot vouch for, or an answer about one
-  post or user, that names something to load gets one load and one more ask. With `local,nexus`, an unavailable read
+  Both misses are expected outcomes and stay out of Sentry. An answer that lacks a post or user it names (a `by_ids`
+  read, the stream of an author not loaded, an unproven 404) gets one load of it and one more ask; older history is
+  loaded that way only for a 404 the index cannot vouch for or an answer about one post or user. With
+  `local,nexus`, an unavailable read
   or an unproven 404 goes on to Nexus. Local answers bypass the Nexus transport cache and carry no response start
   stamp: they reflect the index's last sync, not the time of the call.
 - **Media.** Without `nexus` there is no CDN. The two media URL builders (`filesApi.getAvatarUrl`,
