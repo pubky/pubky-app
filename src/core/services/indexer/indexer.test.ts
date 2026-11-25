@@ -90,6 +90,37 @@ describe('IndexerService', () => {
     expect(IndexerService.current()).toBe(fakes.indexers[0]);
   });
 
+  it('runs a visitor’s index in its own database, with no tab coordination and no write refresh', () => {
+    IndexerService.start(null);
+    IndexerService.start(null);
+
+    expect(createSocialIndexer).toHaveBeenCalledOnce();
+    expect(createIdbStore).toHaveBeenCalledWith('pubky-index-visitor');
+    expect(createBrowserCoordination).not.toHaveBeenCalled();
+    expect(HomeserverService.subscribeOwnedWrites).not.toHaveBeenCalled();
+    expect(fakes.indexers[0].start).toHaveBeenCalledExactlyOnceWith(null);
+    expect(IndexerService.current()).toBe(fakes.indexers[0]);
+  });
+
+  it('stops the visitor’s index and deletes its database when an account starts', () => {
+    IndexerService.start(null);
+    IndexerService.start(ALICE);
+
+    expect(fakes.indexers[0].stop).toHaveBeenCalledOnce();
+    const visitorStores = fakes.stores.filter((store) => store.name === 'pubky-index-visitor');
+    expect(visitorStores.some((store) => store.destroy.mock.calls.length === 1)).toBe(true);
+    expect(fakes.indexers[1].start).toHaveBeenCalledExactlyOnceWith(ALICE);
+  });
+
+  it('keeps the account’s database when a visitor’s index follows it', () => {
+    IndexerService.start(ALICE);
+    IndexerService.start(null);
+
+    expect(fakes.indexers[0].stop).toHaveBeenCalledOnce();
+    expect(fakes.stores.every((store) => store.destroy.mock.calls.length === 0)).toBe(true);
+    expect(fakes.indexers[1].start).toHaveBeenCalledExactlyOnceWith(null);
+  });
+
   it('refreshes the account after each of its public writes, until it stops', () => {
     IndexerService.start(ALICE);
 

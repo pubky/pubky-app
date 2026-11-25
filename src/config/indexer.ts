@@ -20,5 +20,11 @@ export const INDEXER_READ_TIMEOUT_MS = 20_000;
 /** Each account keeps its index in its own IndexedDB database, named by this prefix and its public key. */
 export const INDEXER_DATABASE_PREFIX = 'pubky-index-';
 
+/**
+ * The database of a signed-out visitor's index, which holds only the posts and profiles opened. `v` is no z-base-32
+ * letter, so the name never collides with an account's.
+ */
+export const INDEXER_VISITOR_DATABASE = `${INDEXER_DATABASE_PREFIX}visitor`;
+
 /** Pages of an author's older activity loaded when a local answer asks for more. */
 export const INDEXER_HINT_BACKFILL_PAGES = 1;

@@ -5,21 +5,24 @@ import type { Pubky } from '@/models/models.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
 /**
- * Runs the local index for the signed-in account while `PUBKY_RUNTIME_INDEXER_SOURCES` includes `local`.
+ * Runs the local index for the signed-in account while `PUBKY_RUNTIME_INDEXER_SOURCES` includes `local`, and a
+ * visitor's index, with no scope, while no session is in the auth store.
  *
- * - Starts it the moment a session enters the auth store, which happens after the social v1 migration gate and
- *   before the profile bootstrap, so the bootstrap read already finds it; stops it when the session leaves.
+ * - Starts the account's index the moment a session enters the auth store, which happens after the social v1
+ *   migration gate and before the profile bootstrap, so the bootstrap read already finds it. Without a session it
+ *   runs the visitor's, so shared posts and profiles render signed out; the switch to an account deletes it.
  * - Pauses it while the tab is hidden, under the same visibility setting as the stream poller, and resumes it when
  *   the tab comes back. Its own loop syncs every minute, so there is no interval here.
  * - Sign-out deletes the index database (`AuthController`); a stop keeps it for the next session.
- * - Without `local` among the sources, it only deletes the database an earlier `local` deploy left for each account
- *   that signs in, best effort and without waiting.
+ * - Without `local` among the sources, it only deletes the database an earlier `local` deploy left for the visitor
+ *   and for each account that signs in, best effort and without waiting.
  */
 export class IndexerCoordinator {
   private static instance: IndexerCoordinator | null = null;
 
   private unsubscribe: (() => void) | null = null;
-  private owner: Pubky | null = null;
+  /** The index this coordinator runs: an account's, a visitor's (`null`), or none yet (`undefined`). */
+  private owner: Pubky | null | undefined = undefined;
 
   static getInstance(): IndexerCoordinator {
     return (this.instance ??= new IndexerCoordinator());
@@ -47,7 +50,7 @@ export class IndexerCoordinator {
     this.unsubscribe();
     this.unsubscribe = null;
     document.removeEventListener('visibilitychange', this.applyVisibility);
-    this.owner = null;
+    this.owner = undefined;
     IndexerController.stopLocalIndex();
   }
 
@@ -60,23 +63,19 @@ export class IndexerCoordinator {
     const owner = this.signedInOwner();
     if (owner === this.owner) return;
     this.owner = owner;
-    if (owner !== null) IndexerController.discardLocalIndex(owner);
+    IndexerController.discardLocalIndex(owner);
   };
 
   private follow = () => {
     const owner = this.signedInOwner();
     if (owner === this.owner) return;
     this.owner = owner;
-    if (owner === null) {
-      IndexerController.stopLocalIndex();
-      return;
-    }
     IndexerController.startLocalIndex(owner);
     this.applyVisibility();
   };
 
   private applyVisibility = () => {
-    if (this.owner === null || !getStreamRespectPageVisibility()) return;
+    if (this.owner === undefined || !getStreamRespectPageVisibility()) return;
     if (document.visibilityState === 'hidden') IndexerController.pauseLocalIndex();
     else IndexerController.resumeLocalIndex();
   };

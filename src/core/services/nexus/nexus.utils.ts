@@ -256,7 +256,8 @@ function loadHint(indexer: SocialIndexer, hint: MoreHint): Promise<void> {
 /**
  * Answers a Nexus read from the local index. When the answer names what could be loaded to improve it, and it is a
  * 404 the index cannot vouch for or the read is about one post or user, that is loaded once and the read asked once
- * more. A route the index cannot serve (global search and rankings) is `unavailable`.
+ * more. A route the index cannot serve (global search and rankings, and for a signed-out visitor's index every
+ * feed, ranking and search over a scope it does not have) is `unavailable`.
  */
 async function askLocalIndex({
   url,
@@ -265,7 +266,7 @@ async function askLocalIndex({
 }: TQueryNexusParams): Promise<LocalIndexAnswer> {
   const indexer = IndexerService.current();
   const routedMethod = LOCAL_INDEX_METHODS[method];
-  if (!indexer) return { kind: 'unavailable', reason: 'no local index runs without a signed-in account' };
+  if (!indexer) return { kind: 'unavailable', reason: 'no local index runs here' };
   if (!routedMethod) return { kind: 'unavailable', reason: `${method} is not a read` };
   const request: NexusRequest = { url, method: routedMethod, body: body ?? undefined };
   try {

@@ -139,5 +139,17 @@ describe('createIndexerTransport', () => {
       );
       expect(HomeserverService.putBlob).not.toHaveBeenCalled();
     });
+
+    it('has none for a visitor, who has no storage', async () => {
+      const visitor = createIndexerTransport(null);
+
+      await expect(visitor.listIndexFiles()).resolves.toEqual([]);
+      await expect(visitor.readIndexFile('a.bin')).resolves.toBeNull();
+      await expect(visitor.writeIndexFile('a.bin', new Uint8Array([2]))).rejects.toBeInstanceOf(InvalidIndexInputError);
+      await expect(visitor.deleteIndexFile('a.bin')).rejects.toBeInstanceOf(InvalidIndexInputError);
+      expect(HomeserverService.listAll).not.toHaveBeenCalled();
+      expect(HomeserverService.putBlob).not.toHaveBeenCalled();
+      expect(HomeserverService.deleteIdempotent).not.toHaveBeenCalled();
+    });
   });
 });

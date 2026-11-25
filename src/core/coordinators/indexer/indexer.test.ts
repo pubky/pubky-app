@@ -64,18 +64,19 @@ describe('IndexerCoordinator', () => {
     expect(IndexerController.pauseLocalIndex).not.toHaveBeenCalled();
   });
 
-  it('deletes the index an earlier local deploy left, once per account that signs in, without the source', () => {
+  it('deletes the index an earlier local deploy left, the visitor’s and once per account that signs in, without the source', () => {
     config.local = false;
     coordinator.start();
-    expect(IndexerController.discardLocalIndex).not.toHaveBeenCalled();
+    expect(IndexerController.discardLocalIndex).toHaveBeenCalledExactlyOnceWith(null);
 
     useAuthStore.setState({ session: mockSession(), currentUserPubky: ALICE });
     useAuthStore.setState({ hasProfile: true });
-    expect(IndexerController.discardLocalIndex).toHaveBeenCalledExactlyOnceWith(ALICE);
+    expect(IndexerController.discardLocalIndex).toHaveBeenLastCalledWith(ALICE);
+    expect(IndexerController.discardLocalIndex).toHaveBeenCalledTimes(2);
 
     useAuthStore.setState({ session: mockSession(), currentUserPubky: BOB });
     expect(IndexerController.discardLocalIndex).toHaveBeenLastCalledWith(BOB);
-    expect(IndexerController.discardLocalIndex).toHaveBeenCalledTimes(2);
+    expect(IndexerController.discardLocalIndex).toHaveBeenCalledTimes(3);
   });
 
   it('never deletes the index while it is a source', () => {
@@ -86,21 +87,23 @@ describe('IndexerCoordinator', () => {
     expect(IndexerController.discardLocalIndex).not.toHaveBeenCalled();
   });
 
-  it('starts the index when a session enters the store, once per account, and stops it when it leaves', () => {
+  it('runs the visitor’s index without a session, and the account’s once per account while a session is in', () => {
     coordinator.start();
-    expect(IndexerController.startLocalIndex).not.toHaveBeenCalled();
+    expect(IndexerController.startLocalIndex).toHaveBeenCalledExactlyOnceWith(null);
 
     useAuthStore.setState({ currentUserPubky: ALICE });
-    expect(IndexerController.startLocalIndex).not.toHaveBeenCalled();
+    expect(IndexerController.startLocalIndex).toHaveBeenCalledOnce();
     useAuthStore.setState({ session: mockSession() });
     useAuthStore.setState({ hasProfile: true });
-    expect(IndexerController.startLocalIndex).toHaveBeenCalledExactlyOnceWith(ALICE);
+    expect(IndexerController.startLocalIndex).toHaveBeenLastCalledWith(ALICE);
+    expect(IndexerController.startLocalIndex).toHaveBeenCalledTimes(2);
 
     useAuthStore.setState({ session: mockSession(), currentUserPubky: BOB });
     expect(IndexerController.startLocalIndex).toHaveBeenLastCalledWith(BOB);
 
     useAuthStore.setState({ session: null });
-    expect(IndexerController.stopLocalIndex).toHaveBeenCalledOnce();
+    expect(IndexerController.startLocalIndex).toHaveBeenLastCalledWith(null);
+    expect(IndexerController.stopLocalIndex).not.toHaveBeenCalled();
   });
 
   it('starts for a session already in the store, and stops the index with the coordinator', () => {

@@ -32,12 +32,49 @@ function indexFileUrl(owner: Pubky, name: string): string {
   return `pubky://${owner}${INDEXER_FILES_PATH}${name}`;
 }
 
+type IndexFiles = Pick<IndexerTransport, 'listIndexFiles' | 'readIndexFile' | 'writeIndexFile' | 'deleteIndexFile'>;
+
+/** The index's own files in `owner`'s private tree, written with the session. */
+function accountIndexFiles(owner: Pubky): IndexFiles {
+  return {
+    async listIndexFiles() {
+      const urls = await HomeserverService.listAll({ baseDirectory: `pubky://${owner}${INDEXER_FILES_PATH}` });
+      // A subdirectory ends in `/` and names nothing here.
+      const names = urls.map((url) => url.slice(url.lastIndexOf('/') + 1));
+      return names.filter((name) => INDEXER_FILE_NAME_PATTERN.test(name));
+    },
+    async readIndexFile(name) {
+      const file = await HomeserverService.getBytesIfExists(indexFileUrl(owner, name));
+      return file?.bytes ?? null;
+    },
+    async writeIndexFile(name, bytes) {
+      await HomeserverService.putBlob({ url: indexFileUrl(owner, name), blob: bytes });
+    },
+    async deleteIndexFile(name) {
+      await HomeserverService.deleteIdempotent(indexFileUrl(owner, name));
+    },
+  };
+}
+
+const noStorage = (): never => {
+  throw new InvalidIndexInputError('a visitor has no storage for index files');
+};
+
+/** A visitor has no storage: nothing to list or read, and the indexer saves no index for one. */
+const VISITOR_INDEX_FILES: IndexFiles = {
+  listIndexFiles: async () => [],
+  readIndexFile: async () => null,
+  writeIndexFile: async () => noStorage(),
+  deleteIndexFile: async () => noStorage(),
+};
+
 /**
  * The local index's way out: anonymous public reads of any homeserver, and the index's own files in `owner`'s
- * private tree, written with the session. Every request goes through `HomeserverService`.
+ * private tree, none for a visitor (`null`). Every request goes through `HomeserverService`.
  */
-export function createIndexerTransport(owner: Pubky): IndexerTransport {
+export function createIndexerTransport(owner: Pubky | null): IndexerTransport {
   return {
+    ...(owner === null ? VISITOR_INDEX_FILES : accountIndexFiles(owner)),
     async resolveHomeserver(user) {
       try {
         return await HomeserverService.resolveIndexedUserHomeserver(user);
@@ -75,22 +112,6 @@ export function createIndexerTransport(owner: Pubky): IndexerTransport {
         // The transport is not told the author's homeserver; the author names the failing one well enough.
         throw toIndexerError(author, error);
       }
-    },
-    async listIndexFiles() {
-      const urls = await HomeserverService.listAll({ baseDirectory: `pubky://${owner}${INDEXER_FILES_PATH}` });
-      // A subdirectory ends in `/` and names nothing here.
-      const names = urls.map((url) => url.slice(url.lastIndexOf('/') + 1));
-      return names.filter((name) => INDEXER_FILE_NAME_PATTERN.test(name));
-    },
-    async readIndexFile(name) {
-      const file = await HomeserverService.getBytesIfExists(indexFileUrl(owner, name));
-      return file?.bytes ?? null;
-    },
-    async writeIndexFile(name, bytes) {
-      await HomeserverService.putBlob({ url: indexFileUrl(owner, name), blob: bytes });
-    },
-    async deleteIndexFile(name) {
-      await HomeserverService.deleteIdempotent(indexFileUrl(owner, name));
     },
   };
 }
