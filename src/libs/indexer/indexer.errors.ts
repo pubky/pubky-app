@@ -37,3 +37,11 @@ export class RateLimitedError extends IndexerError {
     this.retryAfterMs = retryAfterMs;
   }
 }
+
+/** The caller's `AbortSignal` fired. Everything committed before it stays valid. */
+export class IndexerAbortedError extends IndexerError {
+  constructor(options?: ErrorOptions) {
+    super('indexer operation aborted', options);
+    this.name = 'IndexerAbortedError';
+  }
+}
