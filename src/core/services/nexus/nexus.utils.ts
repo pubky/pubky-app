@@ -321,7 +321,9 @@ function localIndexMissError(miss: Exclude<LocalIndexAnswer, { kind: 'answer' }>
  * - `nexus`: Nexus, through {@link queryRemoteNexus}.
  * - `local`: the local index alone. Its answer has no transport cache, retries or start stamp: it is read from the
  *   index's current view, which reflects homeserver state as of its last sync, not as of this call, so it carries
- *   no proof of freshness for the tag guards (`getNexusResponseStartedAt` reads `undefined`).
+ *   no proof of freshness for the tag guards (`getNexusResponseStartedAt` reads `undefined`). The answer's `asOf`
+ *   is no such proof either: it is when the last scope sync ended, while a homeserver that failed or backed off in
+ *   it, and anything loaded on demand, can be older.
  * - `local,nexus`: the local index, then Nexus for a read the index cannot serve or a 404 it cannot vouch for.
  *
  * Body must be a string (typically JSON.stringify'd) to ensure proper cache key serialization.
