@@ -91,7 +91,7 @@ for (const [name, Field] of [
     describe.each(['bg-background', 'bg-card'])('on %s', (surface) => {
       it.each(['default', 'error', 'success'] as const)('shows keyboard focus for the %s state', async (status) => {
         const screen = await renderForVRT(
-          <main className={surface}>
+          <main className={`p-4 ${surface}`}>
             <button type="button">Previous field</button>
             <Field
               value="Example"
