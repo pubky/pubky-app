@@ -28,9 +28,8 @@ export const FORM_LABEL_CLASSES = 'text-xs font-medium tracking-wide text-muted-
 /** The wrapper draws the focus ring around the input and any attached icons. */
 export const FIELD_STATUS_CLASSES = {
   default: 'focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50',
-  success: 'border-brand text-brand focus-within:ring-[3px] focus-within:ring-ring/50',
-  error:
-    'border-destructive text-error-foreground focus-within:ring-[3px] focus-within:ring-destructive/40 light:focus-within:ring-destructive/20',
+  success: 'border-brand text-brand focus-within:ring-[3px] focus-within:ring-ring',
+  error: 'border-destructive text-error-foreground focus-within:ring-[3px] focus-within:ring-ring',
 } as const;
 
 export const FIELD_MESSAGE_CLASSES = {
