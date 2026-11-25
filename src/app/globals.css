@@ -478,7 +478,7 @@ body:has([data-slot='shop-route']) {
   --destructive-button: var(--color-red-700);
   --destructive-button-hover: var(--color-red-800);
   --error-foreground: var(--color-red-700);
-  --border: #babac1;
+  --border: #d4d4db;
   --input: #babac1;
   --ring: #89898f;
   --sidebar-background: #eeeef6;
@@ -488,7 +488,7 @@ body:has([data-slot='shop-route']) {
   --sidebar-primary-foreground: #303034;
   --sidebar-accent: #d4d4db;
   --sidebar-accent-foreground: #303034;
-  --sidebar-border: #babac1;
+  --sidebar-border: #d4d4db;
   --sidebar-ring: #89898f;
   --brand: #88ad00;
   --brand-foreground: var(--foreground);

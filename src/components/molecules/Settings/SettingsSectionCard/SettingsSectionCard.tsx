@@ -20,7 +20,10 @@ export function SettingsSectionCard({
   return (
     <Container
       overrideDefaults
-      className={cn('flex w-full flex-col items-start gap-8 rounded-md bg-card px-6 py-8 shadow-lg md:p-12', className)}
+      className={cn(
+        'flex w-full flex-col items-start gap-8 rounded-md bg-card px-6 py-8 shadow-lg md:p-12 light:shadow-none',
+        className,
+      )}
     >
       {(hasHeader || description) && (
         <Container overrideDefaults className="flex w-full flex-col items-start gap-6">
@@ -47,7 +50,7 @@ export function SettingsSectionCard({
       {wrapChildren ? (
         <Container
           overrideDefaults
-          className="flex w-full flex-col items-start gap-8 rounded-md border border-border bg-card p-6 shadow-lg md:gap-6"
+          className="flex w-full flex-col items-start gap-8 rounded-md border border-border bg-card p-6 shadow-lg md:gap-6 light:shadow-none"
         >
           {children}
         </Container>

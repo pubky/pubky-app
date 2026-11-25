@@ -20,7 +20,7 @@ export function HotTagsCardsSectionSkeleton({ maxAvatars = MAX_AVATARS_DEFAULT }
         <Container
           key={`hot-tags-cards-skeleton-${index}`}
           overrideDefaults
-          className="flex min-h-[148px] min-w-0 flex-1 flex-col gap-4 overflow-hidden rounded-md bg-card py-6 shadow-sm"
+          className="flex min-h-[148px] min-w-0 flex-1 flex-col gap-4 overflow-hidden rounded-md bg-card py-6 shadow-sm light:shadow-none"
           data-testid={`hot-tags-card-skeleton-${index}`}
         >
           <Container overrideDefaults className="flex flex-col gap-1 px-6 sm:gap-2.5">
