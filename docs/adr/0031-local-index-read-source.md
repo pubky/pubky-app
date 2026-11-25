@@ -70,7 +70,8 @@ default, today's behavior), `local`, or `local,nexus`. Without `nexus` the Nexus
   the feeds fill in through the invalidation above. An empty Home says the network is loading
   (`LocalIndexFeedEmpty`) and loads again when the first sync ends; a Home already showing posts keeps its place and
   the stream coordinator polls its head as soon as that sync ends, rather than an interval later.
-- **Visitors.** Without a session the coordinator runs a visitor index (`start(null)`) in its own database: no scope,
+- **Visitors.** Without a session the coordinator runs a visitor index (`start(null)`) in its own database (behind
+  the migration gate it runs none, since every page shows the gate): no scope,
   no saved index, no tab coordination. Shared post and profile links render from what it loads on demand, through
   the same `more` hints. A post loads with its author's profile in one batch of leaf reads, and the posts it replies
   to or quotes start loading as soon as it lands, so a shared post costs one lookup per author and the thread the

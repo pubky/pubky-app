@@ -106,7 +106,7 @@ describe('IndexerCoordinator', () => {
     expect(IndexerController.stopLocalIndex).not.toHaveBeenCalled();
   });
 
-  it('runs the account’s index while its saved session restores, and the visitor’s behind the gate or after a failed restore', () => {
+  it('runs the account’s index while its saved session restores, none behind the gate, and the visitor’s after a failed restore', () => {
     // A reload: the saved reference is in the store before the session is restored.
     useAuthStore.setState({ sessionReference: mockGrantReference(), currentUserPubky: ALICE, restoreStatus: 'idle' });
     coordinator.start();
@@ -117,14 +117,32 @@ describe('IndexerCoordinator', () => {
     expect(IndexerController.startLocalIndex).toHaveBeenCalledOnce();
 
     useAuthStore.setState({ session: null, restoreStatus: 'social-migration' });
-    expect(IndexerController.startLocalIndex).toHaveBeenLastCalledWith(null);
+    expect(IndexerController.stopLocalIndex).toHaveBeenCalledOnce();
+    expect(IndexerController.startLocalIndex).toHaveBeenCalledOnce();
 
     useAuthStore.setState({ restoreStatus: 'restoring' });
     expect(IndexerController.startLocalIndex).toHaveBeenLastCalledWith(ALICE);
 
     useAuthStore.setState({ restoreStatus: 'temporary-error' });
     expect(IndexerController.startLocalIndex).toHaveBeenLastCalledWith(null);
-    expect(IndexerController.startLocalIndex).toHaveBeenCalledTimes(4);
+    expect(IndexerController.startLocalIndex).toHaveBeenCalledTimes(3);
+  });
+
+  it('starts no visitor’s index behind the gate of a first sign-in', () => {
+    coordinator.start();
+    expect(IndexerController.startLocalIndex).toHaveBeenCalledExactlyOnceWith(null);
+
+    // A fresh grant: the identity is committed, then the gate asks before the session enters the store.
+    useAuthStore.setState({
+      sessionReference: mockGrantReference(),
+      currentUserPubky: ALICE,
+      restoreStatus: 'restoring',
+    });
+    useAuthStore.setState({ restoreStatus: 'social-migration' });
+    useAuthStore.setState({ session: mockSession(), restoreStatus: 'restoring' });
+
+    expect(vi.mocked(IndexerController.startLocalIndex).mock.calls).toEqual([[null], [ALICE], [ALICE]]);
+    expect(IndexerController.stopLocalIndex).toHaveBeenCalledOnce();
   });
 
   it('starts for a session already in the store, and stops the index with the coordinator', () => {
