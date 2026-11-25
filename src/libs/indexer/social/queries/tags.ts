@@ -15,9 +15,9 @@ export interface HotTagsParams {
 }
 
 /**
- * The labels put on posts in the scope, most taggers first, then most posts tagged, then by label. With `user_id`
- * and `reach`, only taggers within the reach count; with a `timeframe` other than `all_time`, only tags written
- * in its trailing window, a tag of unknown time in none.
+ * The labels put on posts in the scope, most posts tagged first, then by label, as the central indexer ranks them;
+ * it counts no tag on a user here either. With `user_id` and `reach`, only taggers within the reach count; with a
+ * `timeframe` other than `all_time`, only tags written in its trailing window, a tag of unknown time in none.
  */
 export function hotTags(view: SocialView, context: QueryContext, params: HotTagsParams): Answer<HotTagJson[]> {
   const query = 'tags/hot';
@@ -52,9 +52,7 @@ export function hotTags(view: SocialView, context: QueryContext, params: HotTags
       tagged_count: entry.posts.size,
       taggers_count: entry.taggers.size,
     }))
-    .sort(
-      (a, b) => b.taggers_count - a.taggers_count || b.tagged_count - a.tagged_count || compareText(a.label, b.label),
-    );
+    .sort((a, b) => b.tagged_count - a.tagged_count || compareText(a.label, b.label));
   return scoped(
     page(hot, skip, limit),
     noteOf('ranked inside the scope', frame === null ? null : 'tag times estimated from homeserver event order'),

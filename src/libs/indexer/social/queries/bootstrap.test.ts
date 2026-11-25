@@ -1,14 +1,15 @@
 // @vitest-environment node
 import type { BuiltPost } from 'pubky-social-specs';
 import { describe, expect, it } from 'vitest';
-import { ALICE, BRAN, CLEO, DION, recordsOf, socialNetwork, T0 } from '../social.fixtures';
+import { ALICE, BRAN, CLEO, DAY_MS, DION, HOUR_MS, recordsOf, socialNetwork, T0 } from '../social.fixtures';
 import { buildSocialView, type SocialView } from '../social.view';
 import { bootstrap } from './bootstrap';
 
 const network = socialNetwork();
 const { a1, b1, repost, quote, article, image, collection } = network.posts;
 const view = buildSocialView(recordsOf(network));
-const context = { seed: ALICE, now: () => T0 };
+/** An hour after the network was written: everything is inside the last day. */
+const context = { seed: ALICE, now: () => T0 + HOUR_MS };
 const key = (author: string, post: BuiltPost) => `${author}:${post.id}`;
 
 describe('bootstrap', () => {
@@ -28,12 +29,20 @@ describe('bootstrap', () => {
     expect(posts.map(({ details }) => `${details.author}:${details.id}`)).toEqual([...ids.stream, key(BRAN, b1)]);
     expect(ids.influencers).toEqual([CLEO, BRAN, ALICE]);
     expect(ids.recommended).toEqual([]);
-    expect(ids.hot_tags.map(({ label }) => label)).toEqual(['rust', 'pubky']);
+    expect(ids.hot_tags.map(({ label }) => label)).toEqual(['pubky', 'rust']);
     expect(users.map(({ details }) => details.id)).toEqual([CLEO, ALICE, BRAN]);
     expect(users[1].relationship).toEqual({ following: false, followed_by: false });
     expect(users[2].relationship).toEqual({ following: true, followed_by: true });
     expect(notifications).toHaveLength(9);
     expect(answer.coverage.kind).toBe('scope');
+  });
+
+  it('ranks influencers and hot tags over the last day only, as the central indexer does', () => {
+    const { ids } = bootstrap(view, { ...context, now: () => T0 + 2 * DAY_MS }, { user_id: ALICE }).data;
+
+    expect(ids.hot_tags).toEqual([]);
+    // Nothing happened in the last day: every score is 0, so the order falls back to the ids.
+    expect(ids.influencers).toEqual([CLEO, ALICE, BRAN]);
   });
 
   it('serves a user the scope has no profile of, with no viewer and no notifications', () => {
@@ -71,6 +80,6 @@ describe('bootstrap', () => {
     expect(ids.influencers).toEqual([]);
     expect(notifications).toEqual([]);
     expect(users).toEqual([]);
-    expect(ids.hot_tags.map(({ label }) => label)).toEqual(['rust', 'pubky']);
+    expect(ids.hot_tags.map(({ label }) => label)).toEqual(['pubky', 'rust']);
   });
 });

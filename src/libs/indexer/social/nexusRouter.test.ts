@@ -337,8 +337,8 @@ describe('nexus router: search, tags, bootstrap and ingest', () => {
 
     expectSameShape(hot.json, [LIVE.hotTag]);
     expect(hot.json).toEqual([
-      { label: 'rust', taggers_id: [CLEO, BRAN], tagged_count: 1, taggers_count: 2 },
       { label: 'pubky', taggers_id: [CLEO], tagged_count: 1, taggers_count: 1 },
+      { label: 'rust', taggers_id: [CLEO, BRAN], tagged_count: 1, taggers_count: 2 },
     ]);
   });
 
