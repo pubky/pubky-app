@@ -6,7 +6,6 @@ import { FakeNetwork } from '../fakeNetwork';
 import { createMemoryStore } from '../memoryStore';
 import { fakeTime, settle } from '../runtime.fixtures';
 import type { IndexerTransport } from '../transport.types';
-import { UnavailableQueryError } from './queries/queries.errors';
 import { ALICE, at, BRAN, CLEO, DION, MINUTE_MS, socialNetwork, T0 } from './social.fixtures';
 import type { SocialData } from './social.types';
 import { createSocialIndexer, type SocialChange } from './socialIndexer';
@@ -64,21 +63,25 @@ describe('createSocialIndexer', () => {
     });
   });
 
-  it('makes an author outside the scope answerable once ensured', async () => {
+  it('serves an author outside the scope once ensured, still outside the scope', async () => {
     const { fixture, indexerOf } = socialWorld({ hops: 1 });
     const indexer = indexerOf();
     indexer.start(ALICE);
     await indexer.ready();
 
-    await expect(indexer.request({ url: authorStream(DION), method: 'GET' })).rejects.toThrow(UnavailableQueryError);
+    const before = await indexer.request({ url: authorStream(DION), method: 'GET' });
+    expect(before).toMatchObject({ status: 200, json: { post_keys: [] }, more: [{ kind: 'user', user: DION }] });
     await indexer.ensureUser(DION);
 
     const answer = await indexer.request({ url: authorStream(DION), method: 'GET' });
     expect(answer.json).toMatchObject({ post_keys: [key(DION, fixture.posts.collection)] });
+    expect(answer.more).toBeUndefined();
     expect(indexer.view().hopOf(DION)).toBeNull();
+    expect(indexer.view().membershipOf(DION)).toBe('visited');
+    expect(indexer.view().authors).not.toContain(DION);
   });
 
-  it('loads a single post of an author outside the scope', async () => {
+  it('loads a single post of an author outside the scope without making them a member', async () => {
     const { fixture, indexerOf } = socialWorld({ hops: 1 });
     const { collection, orphan } = fixture.posts;
     const indexer = indexerOf();
@@ -88,8 +91,14 @@ describe('createSocialIndexer', () => {
 
     await indexer.ensurePost(DION, collection.id);
 
-    expect(indexer.view().post(DION, collection.id)?.data.title).toBe('Best of');
-    expect(indexer.view().post(DION, orphan.id)).toBeNull();
+    const view = indexer.view();
+    expect(view.post(DION, collection.id)?.data.title).toBe('Best of');
+    expect(view.post(DION, orphan.id)).toBeNull();
+    expect(view.membershipOf(DION)).toBe('referenced');
+    expect(view.authors).not.toContain(DION);
+    expect(view.collectionsContaining(ALICE, fixture.posts.a1.id)).toEqual([]);
+    const stream = await indexer.request({ url: authorStream(DION), method: 'GET' });
+    expect(stream).toMatchObject({ json: { post_keys: [] }, more: [{ kind: 'user', user: DION }] });
   });
 
   it('is ready from a store a previous session filled, without calling the transport', async () => {

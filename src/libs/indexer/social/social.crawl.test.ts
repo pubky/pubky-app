@@ -38,6 +38,7 @@ describe('the social domain behind the crawler', () => {
       records.push({
         author,
         homeserver,
+        membership: 'member',
         hop,
         graph: graph.live,
         activity: activity.live,

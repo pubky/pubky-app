@@ -17,6 +17,7 @@ import {
   type SocialFile,
   socialNetwork,
   T0,
+  withAuthor,
   withPartialActivity,
 } from './social.fixtures';
 import type { AuthorRecords, SocialData } from './social.types';
@@ -41,7 +42,15 @@ function recordOf(author: string, post: BuiltPost, withData = true): [string, Re
 
 /** An author with no graph records, the activity given and a whole history. */
 function authorRecords(author: string, hop: number, activity: Map<string, RecordEntry<SocialData>>): AuthorRecords {
-  return { author, homeserver: HOMESERVER, hop, graph: new Map(), activity, history: fullHistory() };
+  return {
+    author,
+    homeserver: HOMESERVER,
+    membership: 'member',
+    hop,
+    graph: new Map(),
+    activity,
+    history: fullHistory(),
+  };
 }
 
 describe('buildSocialView users', () => {
@@ -310,6 +319,58 @@ describe('buildSocialView time estimates', () => {
 
     expect(timed.profileAtMs(ALICE)).toBe(minute(20));
     expect(timed.followedAtMs(ALICE, BRAN)).toBe(minute(30));
+  });
+});
+
+describe('buildSocialView membership', () => {
+  it('serves a visited author their own records, while only members make edges and counts', () => {
+    const visited = buildSocialView(withAuthor(recordsOf(network), DION, { membership: 'visited' }));
+
+    expect(visited.authors).toEqual([ALICE, BRAN, CLEO]);
+    expect(visited.membershipOf(DION)).toBe('visited');
+    expect(visited.membershipOf(ALICE)).toBe('member');
+    expect(visited.membershipOf('stranger')).toBeNull();
+    expect(ids(visited.postsBy(DION))).toEqual([id(DION, collection), id(DION, orphan)]);
+    expect(visited.tagsBy(DION).map(({ label }) => label)).toEqual(['dev', 'rust']);
+    expect(visited.historyOf(DION)).toEqual({ complete: true, sinceMs: null });
+    expect(visited.followers(DION)).toEqual([CLEO]);
+    expect(visited.tagsOnPost(ALICE, a1.id)).toEqual([
+      { label: 'rust', taggers: [CLEO, BRAN] },
+      { label: 'pubky', taggers: [CLEO] },
+    ]);
+    expect(visited.collectionsContaining(ALICE, a1.id)).toEqual([]);
+    expect(visited.repliesTo(ALICE, gone.id)).toEqual([]);
+  });
+
+  it('keeps of a referenced author only the profile and the posts loaded alone, which make no edge', () => {
+    const records = recordsOf(network);
+    const cleo = records.find(({ author }) => author === CLEO);
+    const referenced = buildSocialView(
+      withAuthor(records, CLEO, { membership: 'referenced', hop: null, loose: cleo?.activity }),
+    );
+
+    expect(referenced.authors).toEqual([ALICE, BRAN, DION]);
+    expect(referenced.profile(CLEO)?.name).toBe('Cleo');
+    expect(referenced.following(CLEO)).toEqual([]);
+    expect(referenced.followers(DION)).toEqual([]);
+    expect(referenced.post(CLEO, c1.id)?.data.content).toBe('Thanks both');
+    expect(referenced.postsBy(CLEO)).toEqual([]);
+    expect(referenced.timeline([CLEO], { includeReplies: true })).toEqual([]);
+    expect(referenced.repliesTo(BRAN, b1.id)).toEqual([]);
+    expect(referenced.tagsBy(CLEO)).toEqual([]);
+    expect(referenced.historyOf(CLEO)).toEqual({ complete: false, sinceMs: null });
+  });
+
+  it('resolves a member post loaded alone by key without adding it to the stream', () => {
+    const records = recordsOf(network);
+    const alice = records.find(({ author }) => author === ALICE);
+    const partial = withPartialActivity(records, ALICE, BigInt(11));
+    const loaded = buildSocialView(withAuthor(partial, ALICE, { loose: alice?.activity }));
+
+    expect(loaded.post(ALICE, a1.id)?.postId).toBe(a1.id);
+    expect(ids(loaded.postsBy(ALICE))).toEqual([id(ALICE, article)]);
+    expect(loaded.post(ALICE, article.id)?.editId).toBe(articleEdit.editId);
+    expect(ids(loaded.repliesTo(ALICE, a1.id))).toEqual([id(BRAN, b1)]);
   });
 });
 

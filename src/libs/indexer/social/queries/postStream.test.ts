@@ -10,6 +10,7 @@ import {
   recordsOf,
   socialNetwork,
   T0,
+  withAuthor,
   withPartialActivity,
 } from '../social.fixtures';
 import { buildSocialView } from '../social.view';
@@ -189,8 +190,35 @@ describe('postStreamKeys parameters', () => {
       UnavailableQueryError,
     );
     expect(unavailable({ source: 'following', observer_id: 'stranger' })).toThrow(UnavailableQueryError);
-    expect(unavailable({ source: 'author', author_id: 'stranger' })).toThrow(UnavailableQueryError);
     expect(unavailable({ source: 'collection', author_id: DION, post_id: a1.id })).toThrow(NotFoundQueryError);
+  });
+});
+
+describe('postStreamKeys by membership', () => {
+  it('answers the stream of an author whose own records are not loaded as unknown, asking for the user', () => {
+    const referenced = buildSocialView(withAuthor(recordsOf(network), DION, { membership: 'referenced' }));
+
+    for (const author of ['stranger', DION]) {
+      const answer = postStreamKeys(referenced, { source: 'author', author_id: author });
+      expect(answer.data).toEqual({ post_keys: [], last_post_score: null });
+      expect(answer.coverage.kind).toBe('scope');
+      expect(answer.more).toEqual([{ kind: 'user', user: author }]);
+    }
+    expect(postStreamKeys(referenced, { source: 'author_replies', author_id: DION }).more).toEqual([
+      { kind: 'user', user: DION },
+    ]);
+  });
+
+  it('streams a visited author alone and leaves them out of the network stream', () => {
+    const visited = buildSocialView(withAuthor(recordsOf(network), DION, { membership: 'visited' }));
+
+    expect(postStreamKeys(visited, { source: 'author', author_id: DION })).toEqual({
+      data: { post_keys: [key(DION, collection)], last_post_score: minute(12) },
+      coverage: { kind: 'exact' },
+    });
+    expect(postStreamKeys(visited, { source: 'all', limit: 50 }).data.post_keys).toEqual(
+      ALL.filter((entry) => entry !== key(DION, collection)),
+    );
   });
 });
 

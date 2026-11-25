@@ -12,6 +12,7 @@ import {
   recordsOf,
   socialNetwork,
   T0,
+  withAuthor,
   withPartialActivity,
   withProfile,
 } from '../social.fixtures';
@@ -189,6 +190,16 @@ describe('userStreamIds', () => {
     expect(today.coverage.note).toBe('ranked inside the scope; tag and follow times estimated');
     expect(ids({ source: 'influencers', timeframe: 'this_week' }, view, later)).toEqual([CLEO, BRAN, ALICE]);
     expect(userStreamIds(view, later, { source: 'influencers' }).coverage.note).toBe('ranked inside the scope');
+  });
+
+  it('ranks and recommends members only, and serves a visited user their own counts', () => {
+    const visited = buildSocialView(withAuthor(withProfile(records, DION, 'Dion'), DION, { membership: 'visited' }));
+
+    expect(ids({ source: 'most_followed' }, visited)).toEqual([CLEO, ALICE, BRAN]);
+    expect(ids({ source: 'influencers', preview: true }, visited)).toEqual([CLEO, BRAN, ALICE]);
+    expect(ids({ source: 'recommended', user_id: ALICE }, visited)).toEqual([]);
+    expect(userCounts(visited, { user_id: DION }).data).toMatchObject({ posts: 2, collections: 1, followers: 1 });
+    expect(ingest(visited, { user_id: DION }).data).toEqual({ in_scope: false });
   });
 
   it('recommends the users the user’s followees follow', () => {

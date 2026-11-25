@@ -82,10 +82,18 @@ indexer.start(mySigningKey); // syncs now, then every minute
 const res = await indexer.request({ url, method: 'GET' }); // a nexus /v1 request, answered locally
 indexer.onChange(({ authors }) => invalidate(authors));
 await indexer.refresh([mySigningKey]); // right after the app writes
-await indexer.ensureUser(profileKey); // a profile outside the scope
-await indexer.ensurePost(author, postId); // the parent of a reply, a reposted post
+await indexer.ensureUser(profileKey); // a profile outside the scope, with its own stream
+await indexer.ensurePost(author, postId); // the parent of a reply, a reposted post, resolvable by key
 document.addEventListener('visibilitychange', () => (document.hidden ? indexer.pause() : indexer.resume()));
 ```
 
-`createIndexerRuntime` (`indexer.ts`) is that loop for any domain: one queue for every crawl, requests ahead
-of the periodic sync, and with coordination only the tab holding the lock crawls.
+Each author in the view has a membership. Members are the seed's scope, and only their records make reverse
+edges, counts, rankings, hot tags, searches and the network streams, so loading something on demand changes no
+answer about the scope. A visited user (`ensureUser`) is served with their own profile, stream and counts. A
+referenced author is known only through posts loaded alone (`ensurePost`), which resolve by key, and their stored
+profile; their stream answers empty with a `more` hint to load the user.
+
+`createIndexerRuntime` (`indexer.ts`) is that loop for any domain: one queue for every crawl, and with
+coordination only the tab holding the lock crawls. Requests never overlap and go ahead of the scope sync: one
+arriving during a scope sync aborts it at its next safe point, and the sync resumes after it from what it
+committed. A scope sync pre-empted three times in a row runs its next pass to the end before yielding again.

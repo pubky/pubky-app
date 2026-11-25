@@ -1,5 +1,5 @@
 import type { SocialView } from '../social.view';
-import { inScope, REACHES, reachOf } from './graph';
+import { inScope, isCrawled, REACHES, reachOf } from './graph';
 import {
   compareText,
   foldLabel,
@@ -90,7 +90,7 @@ export function userDetails(view: SocialView, { user_id }: UserRef): Answer<User
  * tags received are what the scope saw.
  */
 export function userCounts(view: SocialView, { user_id }: UserRef): Answer<UserCountsJson> {
-  if (!inScope(view, user_id)) throw new UnavailableQueryError('user/counts', `${user_id} is not in the scope`);
+  if (!isCrawled(view, user_id)) throw new UnavailableQueryError('user/counts', `${user_id} is not loaded`);
   const activity = view.historyOf(user_id);
   const graph = view.historyOf(user_id, 'graph');
   const note = noteOf(
@@ -141,15 +141,15 @@ const USER_STREAM_SOURCES = [
   'post_replies',
 ] as const;
 
-/** The users with a profile in the scope, most followers in the scope first, then by id. */
+/** The members with a profile, most followers in the scope first, then by id. */
 function byFollowers(view: SocialView, users: Iterable<string>): string[] {
   return [...new Set(users)]
-    .filter((user) => view.profile(user) !== null)
+    .filter((user) => inScope(view, user) && view.profile(user) !== null)
     .sort((a, b) => view.followers(b).length - view.followers(a).length || compareText(a, b));
 }
 
 /**
- * Users with a profile by `(tags given + posts) * sqrt(followers)`, highest first, then by id, as the central
+ * Members with a profile by `(tags given + posts) * sqrt(followers)`, highest first, then by id, as the central
  * indexer scores influence. Inside a window only tags on posts count and, without a reach, only follows made in it.
  */
 function byInfluence(view: SocialView, users: Iterable<string>, frame: TimeWindow | null, reached: boolean): string[] {
@@ -167,13 +167,13 @@ function byInfluence(view: SocialView, users: Iterable<string>, frame: TimeWindo
     return (tags + posts) * Math.sqrt(followers.length);
   };
   return [...new Set(users)]
-    .filter((user) => view.profile(user) !== null)
+    .filter((user) => inScope(view, user) && view.profile(user) !== null)
     .map((user) => ({ user, score: scoreOf(user) }))
     .sort((a, b) => b.score - a.score || compareText(a.user, b.user))
     .map(({ user }) => user);
 }
 
-/** Users with a profile whom the user's followees follow and the user does not, most such followees first, then by id. */
+/** Members with a profile whom the user's followees follow and the user does not, most such followees first, then by id. */
 function recommendedFor(view: SocialView, user: string): string[] {
   const followed = new Set(view.following(user));
   const votes = new Map<string, number>();
@@ -184,13 +184,13 @@ function recommendedFor(view: SocialView, user: string): string[] {
     }
   }
   return [...votes]
-    .filter(([candidate]) => view.profile(candidate) !== null)
+    .filter(([candidate]) => inScope(view, candidate) && view.profile(candidate) !== null)
     .sort(([a, x], [b, y]) => y - x || compareText(a, b))
     .map(([candidate]) => candidate);
 }
 
 /**
- * `GET /v1/stream/users/ids`. Rankings run inside the scope over users with a profile: `most_followed` by followers
+ * `GET /v1/stream/users/ids`. Rankings run over the scope's members with a profile: `most_followed` by followers
  * in the scope, `influencers` by activity in the timeframe and followers, `recommended` by how many of the user's
  * followees follow the candidate.
  */
@@ -207,7 +207,7 @@ export function userStreamIds(view: SocialView, context: QueryContext, params: U
   };
   const anchored = (): string => {
     const user = userOf();
-    if (!inScope(view, user)) throw new UnavailableQueryError(query, `source=${source} for a user outside the scope`);
+    if (!isCrawled(view, user)) throw new UnavailableQueryError(query, `source=${source} for a user not loaded`);
     return user;
   };
 

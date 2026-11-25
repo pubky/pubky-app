@@ -1,7 +1,7 @@
 import { idMicros, type KnownPostKind } from 'pubky-social-specs';
 import type { Cursor, RecordEntry } from '../indexer.types';
 import { followeeOfPath, locate, PROFILE_PATH } from './social.domain';
-import type { AuthorRecords, PostData, SocialData, SocialTarget, TagData, UserData } from './social.types';
+import type { AuthorRecords, Membership, PostData, SocialData, SocialTarget, TagData, UserData } from './social.types';
 import { buildTimeTable, estimateMs, type TimeSample } from './timeTable';
 
 /** A logical post: its newest live version. */
@@ -61,16 +61,20 @@ export interface TimelineOptions {
 }
 
 /**
- * What the records of the authors in scope say, with every reverse edge resolved. Counts are scope counts:
- * only what these authors wrote is known. Lists of posts are newest first.
+ * What the records in view say. Reverse edges and the counts built on them come from members' records alone, so
+ * loading a user or a post on demand changes no answer about the scope; a visited author serves their own
+ * records, a post loaded alone is resolvable by key. Lists of posts are newest first.
  */
 export interface SocialView {
+  /** The scope's members: the users every network-wide answer ranges over. */
   readonly authors: readonly string[];
+  /** `null` for a user nothing is loaded of. */
+  membershipOf(user: string): Membership | null;
   hopOf(user: string): number | null;
   profile(user: string): UserData | null;
   /** Every user the user follows, in scope or not. */
   following(user: string): readonly string[];
-  /** The authors in scope who follow the user. */
+  /** The members who follow the user. */
   followers(user: string): readonly string[];
   /** Users followed back. */
   friends(user: string): readonly string[];
@@ -95,7 +99,7 @@ export interface SocialView {
    * homeserver has no post. The same records give the same estimate on any device.
    */
   timeOf(author: string, cursor: Cursor): number | null;
-  /** Unknown for an author not in scope. */
+  /** Unknown for an author whose own records are not loaded. */
   historyOf(author: string, group?: 'graph' | 'activity'): History;
   /** The estimated time of the profile's last write. */
   profileAtMs(user: string): number | null;
@@ -104,6 +108,7 @@ export interface SocialView {
 }
 
 const NONE: readonly never[] = Object.freeze([]);
+const NO_RECORDS: ReadonlyMap<string, RecordEntry<SocialData>> = new Map();
 const postKey = (author: string, postId: string) => `${author}/${postId}`;
 const followKey = (follower: string, followee: string) => `${follower}/${followee}`;
 const userKey = (user: string) => `user/${user}`;
@@ -130,9 +135,9 @@ function push<V>(map: Map<string, V[]>, key: string, value: V): void {
 }
 
 /** The newest live version of each post of the author, skipped when that version has no data. */
-function postsOf({ author, activity }: AuthorRecords): SocialPost[] {
+function postsOf(author: string, records: ReadonlyMap<string, RecordEntry<SocialData>>): SocialPost[] {
   const newest = new Map<string, { editId: string; record: RecordEntry<SocialData> }>();
-  for (const [path, record] of activity) {
+  for (const [path, record] of records) {
     const at = locate(author, path);
     if (at === null || at.kind !== 'post' || at.editId === undefined) continue;
     const current = newest.get(at.id);
@@ -151,8 +156,9 @@ function postsOf({ author, activity }: AuthorRecords): SocialPost[] {
 /** Every post version is a sample: its edit id holds the time it was written. */
 function timeTablesOf(records: readonly AuthorRecords[]): Map<string, TimeSample[]> {
   const samples = new Map<string, TimeSample[]>();
-  for (const { author, homeserver, activity } of records) {
-    for (const [path, record] of activity) {
+  for (const { author, homeserver, membership, activity, loose } of records) {
+    const own: [string, RecordEntry<SocialData>][] = membership === 'referenced' ? [] : [...activity];
+    for (const [path, record] of [...own, ...(loose ?? NO_RECORDS)]) {
       const at = locate(author, path);
       if (at === null || at.kind !== 'post' || at.editId === undefined) continue;
       push(samples, homeserver, { cursor: record.cursor, ms: msOf(at.editId) });
@@ -180,6 +186,7 @@ export function buildSocialView(records: Iterable<AuthorRecords>): SocialView {
     const table = homeserver === undefined ? undefined : tables.get(homeserver);
     return table === undefined ? null : estimateMs(table, cursor);
   };
+  const memberships = new Map<string, Membership>();
   const histories = new Map<string, AuthorRecords['history']>();
   const profileCursors = new Map<string, Cursor>();
   const followCursors = new Map<string, Cursor>();
@@ -196,29 +203,38 @@ export function buildSocialView(records: Iterable<AuthorRecords>): SocialView {
   const given = new Map<string, SocialTag[]>();
   const tagsOn = new Map<string, Map<string, Set<string>>>();
 
+  const loosePosts: SocialPost[] = [];
+
   for (const entry of entries) {
-    const { author } = entry;
+    const { author, membership } = entry;
+    memberships.set(author, membership);
     hops.set(author, entry.hop);
+    loosePosts.push(...postsOf(author, entry.loose ?? NO_RECORDS));
+    const profile = entry.graph.get(PROFILE_PATH);
+    if (profile?.data?.type === 'user') {
+      profiles.set(author, profile.data);
+      profileCursors.set(author, profile.cursor);
+    }
+    if (membership === 'referenced') continue;
+
+    const member = membership === 'member';
     histories.set(author, entry.history);
     const following: string[] = [];
     for (const [path, record] of entry.graph) {
-      if (path === PROFILE_PATH && record.data?.type === 'user') {
-        profiles.set(author, record.data);
-        profileCursors.set(author, record.cursor);
-      }
       const followee = followeeOfPath(path);
       if (followee === null) continue;
       following.push(followee);
       followCursors.set(followKey(author, followee), record.cursor);
     }
     followingOf.set(author, following.sort(compareText));
-    for (const followee of following) push(followersOf, followee, author);
+    if (member) for (const followee of following) push(followersOf, followee, author);
 
-    postsByAuthor.set(author, postsOf(entry));
+    postsByAuthor.set(author, postsOf(author, entry.activity));
 
     for (const record of entry.activity.values()) {
       if (record.data?.type !== 'tag') continue;
       push(given, author, { ...record.data, atMs: timeOf(author, record.cursor) });
+      if (!member) continue;
       const key = targetKey(record.data.target);
       if (key === null) continue;
       const byLabel = tagsOn.get(key) ?? new Map<string, Set<string>>();
@@ -228,9 +244,14 @@ export function buildSocialView(records: Iterable<AuthorRecords>): SocialView {
     }
   }
 
-  const allPosts = [...postsByAuthor.values()].flatMap((list) => list).sort(compareNewest);
-  for (const post of allPosts) {
-    posts.set(postKey(post.author, post.postId), post);
+  // A post in an author's stream wins over the same post loaded alone.
+  for (const post of loosePosts) posts.set(postKey(post.author, post.postId), post);
+  const memberPosts: SocialPost[] = [];
+  for (const [author, list] of postsByAuthor) {
+    for (const post of list) posts.set(postKey(post.author, post.postId), post);
+    if (memberships.get(author) === 'member') memberPosts.push(...list);
+  }
+  for (const post of memberPosts.sort(compareNewest)) {
     const { parent, embed, items } = post.data;
     const parentKey = parent === null ? null : targetKey(parent);
     if (parentKey !== null) push(replies, parentKey, post);
@@ -243,7 +264,9 @@ export function buildSocialView(records: Iterable<AuthorRecords>): SocialView {
   for (const followers of followersOf.values()) followers.sort(compareText);
   for (const tags of given.values()) tags.sort((a, b) => compareText(a.label, b.label) || compareText(a.uri, b.uri));
 
-  const authors = Object.freeze([...hops.keys()]);
+  const authors = Object.freeze(
+    entries.filter(({ membership }) => membership === 'member').map(({ author }) => author),
+  );
   const following = (user: string): readonly string[] => followingOf.get(user) ?? NONE;
   const followers = (user: string): readonly string[] => followersOf.get(user) ?? NONE;
   const friends = (user: string): string[] => {
@@ -258,6 +281,7 @@ export function buildSocialView(records: Iterable<AuthorRecords>): SocialView {
 
   return {
     authors,
+    membershipOf: (user) => memberships.get(user) ?? null,
     hopOf: (user) => hops.get(user) ?? null,
     profile: (user) => profiles.get(user) ?? null,
     following,

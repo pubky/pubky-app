@@ -1,5 +1,5 @@
 import type { SocialView } from '../social.view';
-import { REACHES, reachOf } from './graph';
+import { inScope, REACHES, reachOf } from './graph';
 import { compareText, inWindow, limitOf, oneOf, page, skipOf, TIMEFRAMES, windowOf } from './params';
 import { InvalidQueryError } from './queries.errors';
 import { type Answer, type HotTagJson, noteOf, type QueryContext, scoped } from './queries.types';
@@ -36,7 +36,7 @@ export function hotTags(view: SocialView, context: QueryContext, params: HotTags
   const taggers = reach === null || params.user_id === undefined ? view.authors : reachOf(view, params.user_id, reach);
 
   const byLabel = new Map<string, { taggers: Set<string>; posts: Set<string> }>();
-  for (const tagger of new Set(taggers)) {
+  for (const tagger of new Set(taggers.filter((user) => inScope(view, user)))) {
     for (const { target, label, uri, atMs } of view.tagsBy(tagger)) {
       if (target.kind !== 'post' || !inWindow(frame, atMs)) continue;
       const entry = byLabel.get(label) ?? { taggers: new Set<string>(), posts: new Set<string>() };

@@ -1,7 +1,7 @@
 import { idMicros } from 'pubky-social-specs';
 import type { UserData } from '../social.types';
 import type { SocialPost, SocialView } from '../social.view';
-import { inScope } from './graph';
+import { isCrawled } from './graph';
 import { NotFoundQueryError } from './queries.errors';
 import type { MoreHint } from './queries.types';
 import { postKeyOf } from './wire';
@@ -23,14 +23,14 @@ function createdAtMs(postId: string): number | null {
 export function postKnownAbsent(view: SocialView, author: string, postId: string): boolean {
   const created = createdAtMs(postId);
   if (created === null) return true;
-  if (!inScope(view, author)) return false;
+  if (!isCrawled(view, author)) return false;
   const { complete, sinceMs } = view.historyOf(author);
   return complete || (sinceMs !== null && created >= sinceMs);
 }
 
 /** The view proves a user has no profile when the user's graph group is loaded from the start. */
 export function userKnownAbsent(view: SocialView, user: string): boolean {
-  return inScope(view, user) && view.historyOf(user, 'graph').complete;
+  return isCrawled(view, user) && view.historyOf(user, 'graph').complete;
 }
 
 /** The hint that would load a post the view lacks, `null` when it is known absent. */

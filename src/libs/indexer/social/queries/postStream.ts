@@ -1,6 +1,6 @@
 import { postKinds } from 'pubky-social-specs';
 import type { SocialPost, SocialView } from '../social.view';
-import { inScope, webOfTrust } from './graph';
+import { isCrawled, webOfTrust } from './graph';
 import { compareText, labelsOf, limitOf, oneOf, page, skipOf } from './params';
 import { postOrNotFound } from './presence';
 import { InvalidQueryError, UnavailableQueryError } from './queries.errors';
@@ -86,8 +86,8 @@ function required(value: string | undefined, name: string, source: string): stri
   return value;
 }
 
-function requireInScope(view: SocialView, user: string, source: string): void {
-  if (!inScope(view, user)) throw new UnavailableQueryError(QUERY, `source=${source} for a user outside the scope`);
+function requireCrawled(view: SocialView, user: string, source: string): void {
+  if (!isCrawled(view, user)) throw new UnavailableQueryError(QUERY, `source=${source} for a user not loaded`);
 }
 
 const isRoot = (post: SocialPost) => post.data.parent === null;
@@ -115,12 +115,12 @@ function candidatesOf(
       return { posts: rootPostsBy(view, view.authors), exact: false, streamed: [] };
     case 'following': {
       const observer = required(params.observer_id, 'observer_id', source);
-      requireInScope(view, observer, source);
+      requireCrawled(view, observer, source);
       const followees = view.following(observer);
       return {
         posts: rootPostsBy(view, followees, observer),
-        exact: followees.every((followee) => inScope(view, followee)),
-        streamed: followees.filter((followee) => followee !== observer && inScope(view, followee)),
+        exact: followees.every((followee) => isCrawled(view, followee)),
+        streamed: followees.filter((followee) => followee !== observer && isCrawled(view, followee)),
       };
     }
     case 'followers': {
@@ -129,17 +129,15 @@ function candidatesOf(
     }
     case 'friends': {
       const observer = required(params.observer_id, 'observer_id', source);
-      requireInScope(view, observer, source);
+      requireCrawled(view, observer, source);
       return { posts: rootPostsBy(view, view.friends(observer), observer), exact: false, streamed: [] };
     }
     case 'author': {
       const author = required(params.author_id, 'author_id', source);
-      requireInScope(view, author, source);
       return { posts: [...view.rootPostsBy(author)], exact: true, streamed: [author] };
     }
     case 'author_replies': {
       const author = required(params.author_id, 'author_id', source);
-      requireInScope(view, author, source);
       return { posts: [...view.repliesBy(author)], exact: true, streamed: [author] };
     }
     case 'post_replies': {
@@ -159,7 +157,7 @@ function candidatesOf(
         throw new InvalidQueryError(QUERY, 'depth', 'must be 1 to 3');
       }
       if (depth === 3) throw new UnavailableQueryError(QUERY, 'source=wot at depth 3 reaches past the crawled hops');
-      requireInScope(view, observer, source);
+      requireCrawled(view, observer, source);
       return { posts: rootPostsBy(view, webOfTrust(view, observer, depth), observer), exact: false, streamed: [] };
     }
     case 'wot_domain':
@@ -191,7 +189,7 @@ function collectionKeys(
  * replies, reposts and tags summed for `total_engagement`. `start` and `end` bound the score inclusively, `start`
  * from above and `end` from below whatever the order; equal scores order by key, as one sorted set does.
  * A stream of authors is exact only over their whole histories; when a page reaches past an author's loaded
- * window, `more` asks for that author's backfill.
+ * window, `more` asks for that author's backfill, and for an author whose own records are not loaded, for the user.
  */
 export function postStreamKeys(view: SocialView, params: PostStreamParams): Answer<PostKeyStreamJson> {
   const source = oneOf(QUERY, 'source', POST_STREAM_SOURCES, params.source, 'all');
@@ -211,6 +209,15 @@ export function postStreamKeys(view: SocialView, params: PostStreamParams): Answ
     throw new InvalidQueryError(QUERY, 'exclude_kinds', 'takes at least one kind');
   }
 
+  if (source === 'author' || source === 'author_replies') {
+    const author = required(params.author_id, 'author_id', source);
+    // A post loaded alone says nothing of the rest of its author's stream.
+    if (!isCrawled(view, author)) {
+      return withMore(scoped({ post_keys: [], last_post_score: null }, `the posts of ${author} are not loaded`), [
+        { kind: 'user', user: author },
+      ]);
+    }
+  }
   const candidates = candidatesOf(view, source, params);
   const tagged = (post: SocialPost) =>
     tags === null || view.tagsOnPost(post.author, post.postId).some(({ label }) => tags.includes(label));

@@ -173,9 +173,10 @@ export function recordsFrom(
     if (data !== null) record.data = data;
     scope(author, group.id).set(path, record);
   });
-  return [...hops].map(([author, hop]) => ({
+  return [...hops].map(([author, hop]): AuthorRecords => ({
     author,
     homeserver: HOMESERVER,
+    membership: 'member',
     hop,
     graph: scope(author, SOCIAL_GRAPH),
     activity: scope(author, SOCIAL_ACTIVITY),
@@ -190,6 +191,15 @@ export function withPartialActivity(records: readonly AuthorRecords[], author: s
     const activity = new Map([...entry.activity].filter(([, record]) => record.cursor > tail));
     return { ...entry, activity, history: { ...entry.history, activity: { complete: false, tail } } };
   });
+}
+
+/** The records with some fields of one author's replaced. */
+export function withAuthor(
+  records: readonly AuthorRecords[],
+  author: string,
+  change: Partial<AuthorRecords>,
+): AuthorRecords[] {
+  return records.map((entry) => (entry.author === author ? { ...entry, ...change } : entry));
 }
 
 /** The records with a bare profile served for `author`, for a test that needs one more user with a profile. */

@@ -75,14 +75,26 @@ export interface GroupHistory {
   tail: Cursor | null;
 }
 
-/** One author's served records: the `live` maps of the merged runs of its two scopes. */
+/**
+ * How an author entered the view. `member`: in the seed's scope; only members' records make reverse edges, counts
+ * and network-wide answers. `visited`: loaded one by one, served with their own records and history, outside the
+ * scope. `referenced`: known only through posts loaded one at a time, and their profile when it is stored.
+ */
+export type Membership = 'member' | 'visited' | 'referenced';
+
+/** One author's served records: the `live` maps of the merged runs of its scopes. */
 export interface AuthorRecords {
   author: string;
   /** The homeserver the records were read from: it scopes their cursors. */
   homeserver: string;
+  membership: Membership;
   /** Link distance from the seed, `null` when unknown. */
   hop: number | null;
+  /** Only the profile counts for a `referenced` author. */
   graph: ReadonlyMap<string, RecordEntry<SocialData>>;
+  /** Ignored for a `referenced` author. */
   activity: ReadonlyMap<string, RecordEntry<SocialData>>;
+  /** Versions of posts loaded one at a time: resolvable by key, never in the author's stream nor in any edge. */
+  loose?: ReadonlyMap<string, RecordEntry<SocialData>>;
   history: { graph: GroupHistory; activity: GroupHistory };
 }

@@ -10,7 +10,7 @@ import type { IndexerTransport } from '../transport.types';
 import { createNexusRouter, type NexusRequest, type NexusResponse, type NexusRouter } from './nexusRouter';
 import { createSocialQueries } from './queries/socialQueries';
 import { createSocialDomain, POSTS_PREFIX, SOCIAL_ACTIVITY, SOCIAL_GRAPH } from './social.domain';
-import type { AuthorRecords, GroupHistory, SocialData } from './social.types';
+import type { AuthorRecords, GroupHistory, Membership, SocialData } from './social.types';
 import { buildSocialView, type SocialView } from './social.view';
 
 const POST_GROUP_PREFIX = 'post:';
@@ -26,7 +26,7 @@ export interface SocialIndexerParams {
 }
 
 export interface SocialChange {
-  /** Authors whose records changed, or who entered or left the view. */
+  /** Authors whose records or membership changed, or who entered or left the view. */
   authors: string[];
 }
 
@@ -38,9 +38,15 @@ export interface SocialIndexer {
   resume(): void;
   /** Resolves once committed; the view follows with the next change. */
   refresh(users?: readonly string[]): Promise<void>;
-  /** Loads a user outside the scope and keeps them in the view. Resolves once the view holds what was loaded. */
+  /**
+   * Loads a user outside the scope and keeps them in the view with their own records, outside the scope's answers.
+   * Resolves once the view holds what was loaded.
+   */
   ensureUser(user: string): Promise<void>;
-  /** Loads one post with its whole history and keeps it in the view, for a post the scope does not hold. */
+  /**
+   * Loads one post with its whole history and keeps it resolvable by key, for a post the scope does not hold. Its
+   * author joins no stream, ranking or count.
+   */
   ensurePost(author: string, postId: string): Promise<void>;
   backfill(author: string, group: string, pages: number): Promise<void>;
   /** An empty view until the first build. */
@@ -76,23 +82,38 @@ const historyOf = ({ trusted }: MergedRuns<SocialData>): GroupHistory => ({
 /** What the store holds for one author of the view. */
 interface Loaded {
   homeserver: string;
+  membership: Membership;
   hop: number | null;
   graph: MergedRuns<SocialData>;
   activity: MergedRuns<SocialData>;
-  /** Records of ensured posts the activity scope does not know at a higher cursor. */
-  leaves: Map<string, RecordEntry<SocialData>>;
+  /** The leaf scopes of the author's ensured posts. */
+  leaves: MergedRuns<SocialData>[];
 }
 
-function authorRecords(author: string, { homeserver, hop, graph, activity, leaves }: Loaded): AuthorRecords {
+function authorRecords(author: string, loaded: Loaded): AuthorRecords {
+  const { homeserver, membership, hop, graph, activity, leaves } = loaded;
+  const loose = new Map<string, RecordEntry<SocialData>>();
+  for (const leaf of leaves) {
+    for (const [path, record] of leaf.live) {
+      const stored = activity.entries.get(path);
+      if (stored === undefined || record.cursor > stored.cursor) loose.set(path, record);
+    }
+  }
   return {
     author,
     homeserver,
+    membership,
     hop,
     graph: graph.live,
-    activity: leaves.size === 0 ? activity.live : new Map([...activity.live, ...leaves]),
+    activity: activity.live,
+    loose,
     history: { graph: historyOf(graph), activity: historyOf(activity) },
   };
 }
+
+/** Each user's membership, so that a change of it alone counts as a change of the user. */
+const membershipsOf = (loaded: ReadonlyMap<string, Loaded>) =>
+  new Map([...loaded].map(([author, { membership }]): [string, Membership] => [author, membership]));
 
 export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer {
   const { store, now } = params;
@@ -101,6 +122,7 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
 
   let seed: string | null = null;
   let current = empty;
+  let currentMemberships = new Map<string, Membership>();
   let routed: { view: SocialView; router: NexusRouter } | null = null;
   let viewError: Error | null = null;
   let firstSyncSettled = false;
@@ -135,41 +157,43 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
     return (await store.readUserHomeserver(user))?.homeserver ?? null;
   }
 
-  /** Merges each ensured post into its author, who joins the view without a hop when not in it yet. */
+  /** A referenced author brings only their graph, for the profile. */
+  async function load(loaded: Map<string, Loaded>, author: string, membership: Membership, hop: number | null) {
+    if (loaded.has(author)) return;
+    const homeserver = await homeserverOf(author);
+    if (homeserver === null) return;
+    const graph = await served({ author, homeserver, group: SOCIAL_GRAPH });
+    const activity =
+      membership === 'referenced' ? NOTHING : await served({ author, homeserver, group: SOCIAL_ACTIVITY });
+    loaded.set(author, { homeserver, membership, hop, graph, activity, leaves: [] });
+  }
+
+  /** Adds each ensured post's leaf scope to its author, who is referenced when not loaded otherwise. */
   async function addLeaves(loaded: Map<string, Loaded>): Promise<void> {
     for (const leaf of ensuredPosts.values()) {
       const homeserver = await homeserverOf(leaf.author);
       if (homeserver === null) continue;
-      const { live } = await served({ author: leaf.author, homeserver, group: leaf.group });
-      if (live.size === 0) continue;
-      const known = loaded.get(leaf.author);
+      const scope = await served({ author: leaf.author, homeserver, group: leaf.group });
+      if (scope.entries.size === 0) continue;
+      await load(loaded, leaf.author, 'referenced', null);
+      const target = loaded.get(leaf.author);
       // Cursors of two homeservers never compare.
-      if (known !== undefined && known.homeserver !== homeserver) continue;
-      const target: Loaded = known ?? { homeserver, hop: null, graph: NOTHING, activity: NOTHING, leaves: new Map() };
-      loaded.set(leaf.author, target);
-      for (const [path, record] of live) {
-        const stored = target.activity.entries.get(path);
-        if (stored === undefined || record.cursor > stored.cursor) target.leaves.set(path, record);
-      }
+      if (target !== undefined && target.homeserver === homeserver) target.leaves.push(scope);
     }
   }
 
-  async function buildOnce(forSeed: string): Promise<{ view: SocialView; hasScope: boolean }> {
+  async function buildOnce(
+    forSeed: string,
+  ): Promise<{ view: SocialView; memberships: Map<string, Membership>; hasScope: boolean }> {
     const members = await store.readScopeMembers(forSeed);
-    const hops = new Map<string, number | null>(members);
+    const hops = new Map<string, number>(members);
     if (!hops.has(forSeed)) hops.set(forSeed, 0);
-    for (const user of ensuredUsers) if (!hops.has(user)) hops.set(user, null);
     const loaded = new Map<string, Loaded>();
-    for (const [author, hop] of hops) {
-      const homeserver = await homeserverOf(author);
-      if (homeserver === null) continue;
-      const graph = await served({ author, homeserver, group: SOCIAL_GRAPH });
-      const activity = await served({ author, homeserver, group: SOCIAL_ACTIVITY });
-      loaded.set(author, { homeserver, hop, graph, activity, leaves: new Map() });
-    }
+    for (const [author, hop] of hops) await load(loaded, author, 'member', hop);
+    for (const user of ensuredUsers) if (!hops.has(user)) await load(loaded, user, 'visited', null);
     await addLeaves(loaded);
     const records = [...loaded].map(([author, entry]) => authorRecords(author, entry));
-    return { view: buildSocialView(records), hasScope: members.size > 0 };
+    return { view: buildSocialView(records), memberships: membershipsOf(loaded), hasScope: members.size > 0 };
   }
 
   async function runRebuilds(): Promise<void> {
@@ -180,13 +204,15 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
       const changed = pendingAuthors;
       pendingAuthors = new Set();
       try {
-        const { view, hasScope } = await buildOnce(forSeed);
+        const { view, memberships, hasScope } = await buildOnce(forSeed);
         // Started with another seed meanwhile: its own rebuild follows.
         if (seed !== forSeed) continue;
-        const left = new Set(current.authors);
-        for (const author of view.authors) if (!left.delete(author)) changed.add(author);
-        for (const author of left) changed.add(author);
+        for (const [author, membership] of memberships) {
+          if (currentMemberships.get(author) !== membership) changed.add(author);
+        }
+        for (const author of currentMemberships.keys()) if (!memberships.has(author)) changed.add(author);
         current = view;
+        currentMemberships = memberships;
         viewError = null;
         if (hasScope || firstSyncSettled) markReady();
         if (changed.size > 0) {
@@ -231,6 +257,7 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
     start(next) {
       if (seed !== null && seed !== next) {
         current = empty;
+        currentMemberships = new Map();
         routed = null;
         ensuredUsers.clear();
         ensuredPosts.clear();

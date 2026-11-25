@@ -1,7 +1,13 @@
 import type { SocialView } from '../social.view';
 
-/** Whether the scope crawled the user's own records. */
-export const inScope = (view: SocialView, user: string): boolean => view.authors.includes(user);
+/** Whether the user is a member of the seed's scope, one of the users network-wide answers range over. */
+export const inScope = (view: SocialView, user: string): boolean => view.membershipOf(user) === 'member';
+
+/** Whether the user's own records and history are loaded: a member, or a user visited one by one. */
+export function isCrawled(view: SocialView, user: string): boolean {
+  const membership = view.membershipOf(user);
+  return membership === 'member' || membership === 'visited';
+}
 
 /** The users within `depth` follow links of `user`, nearest first, the user left out even through a cycle. */
 export function webOfTrust(view: SocialView, user: string, depth: number): string[] {
