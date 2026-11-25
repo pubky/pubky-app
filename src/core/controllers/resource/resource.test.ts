@@ -73,6 +73,35 @@ describe('ResourceController.fetchSearchPage', () => {
     expect(mocks.stream).not.toHaveBeenCalled();
   });
 
+  it('lists a catalogue card row (`refs: []`) by its own link and passes Pinakes’ tag facet, labels counted, through', async () => {
+    // Pinakes' search row for a catalogue card: no refs, its catalogue's labels; `facet=tags` counts them as tags
+    const catalogueCard = {
+      ...card('https://en.wikipedia.org/wiki/Douglas_Adams'),
+      refs: [],
+      labels: ['science-fiction', 'humourist'],
+    };
+    mocks.search.mockResolvedValue({
+      items: [catalogueCard],
+      cursor: null,
+      reach_truncated: false,
+      facets: {
+        tags: [
+          { label: 'science-fiction', count: 1 },
+          { label: 'humourist', count: 1 },
+        ],
+      },
+    });
+
+    const page = await ResourceController.fetchSearchPage({
+      query: recentTags({ sort: 'activity' }),
+      limit: 10,
+      facets: true,
+    });
+
+    expect(page.uris).toEqual(['https://en.wikipedia.org/wiki/Douglas_Adams']);
+    expect(page.relatedTags).toEqual(['science-fiction', 'humourist']);
+  });
+
   it('gives the rows’ own cards when asked, every one of a page: a calendar’s occurrences share one link', async () => {
     const occurrence = (uid: string) => ({
       ...card('https://example.com/feed.ics'),

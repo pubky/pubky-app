@@ -7,8 +7,11 @@ export interface PostTagProps extends Omit<ButtonHTMLAttributes<HTMLButtonElemen
   count?: number;
   /** A wider count, shown muted after `count` ("5 (10)": people across an external resource's services) */
   total?: number;
-  /** `secondary`: a faint tint of the tag colour and a dashed edge (`SECONDARY_TAG_STYLE`), for a tag not here yet */
-  variant?: 'default' | 'secondary';
+  /**
+   * `secondary`: a faint tint of the tag colour and a dashed edge (`SECONDARY_TAG_STYLE`), for a tag not here yet;
+   * `suggested`: a dashed edge and no fill (`SUGGESTED_TAG_STYLE`), for a label offered to add
+   */
+  variant?: 'default' | 'secondary' | 'suggested';
   /** Show the close/remove button */
   showClose?: boolean;
   /** Selected state */

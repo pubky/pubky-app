@@ -278,6 +278,12 @@ export interface TPinakesCard {
   occurrence?: TPinakesOccurrenceKey | null;
   /** On a `related` search row only (absent elsewhere and on older instances): why it is listed. */
   because?: TPinakesBecause | null;
+  /**
+   * The labels the card's catalogue gives it, valid tag labels kept apart from people's tags (a
+   * catalogue card nobody shared, a link built from one; `[]` on other search rows): offered as
+   * suggested tags. Absent on other cards and from an older Pinakes.
+   */
+  labels?: string[] | null;
   /** The referenced links that resolve to this card, most referenced first (at most 5). */
   refs: string[];
   /** How many public collection posts hold the card's link. */

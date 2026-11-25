@@ -90,6 +90,8 @@ interface ResourceActionsProps {
   isOnScreen?: boolean;
   /** The resource page's tags on the same thing's other links (`mergeOtherLinkTags`), in the tag list. */
   otherTagList?: readonly TMergedTag[];
+  /** Whether `otherTagList` is still being read (the page's group, then its links' tags). */
+  isOtherTagListLoading?: boolean;
   /**
    * The Pinakes card a post's (or a collection's) card is closed by: the tags on its other links join
    * the tag list as on the resource page (`getOtherLinks`: its tagged Also on entries, and the members'
@@ -98,6 +100,11 @@ interface ResourceActionsProps {
    * event's group is read (shared with its card's "Other dates", `useEventFeed`) to find its feed.
    */
   card?: (TPinakesCard & Partial<Pick<TPinakesResourceDetail, 'aliases'>>) | null;
+  /**
+   * The labels a catalogue gives the resource (Pinakes `labels`, on a card built from a catalogue):
+   * the tag bar offers them as suggested tags. Defaults to `card`'s.
+   */
+  labels?: readonly string[] | null;
   /**
    * The calendar feed a series date is part of, found by the page (`useEventFeed`); a card's footer
    * finds its `card`'s itself. With one, the tag bar switches between this date and all dates.
@@ -153,7 +160,9 @@ export function ResourceActions({
   extraMenuContent,
   isOnScreen = true,
   otherTagList,
+  isOtherTagListLoading = false,
   card,
+  labels = card?.labels,
   eventFeed,
   playOn,
   size = 'default',
@@ -262,6 +271,9 @@ export function ResourceActions({
               : undefined
           }
           control={feed ? <ResourceTagScope scope={tagScope} onScopeChange={setTagScope} /> : undefined}
+          // The labels are the resource's: not offered on a series date, whose tag bar may write on its feed,
+          // nor while the other links' tags are read (they would take the suggestions' places under a tap)
+          suggestedLabels={feed || isOtherTagListLoading || otherLinkTags.isLoading ? undefined : labels}
         />
         {/*
           The post's action row (`PostActionsBar`'s classes). Beside the tags (from md) it keeps its

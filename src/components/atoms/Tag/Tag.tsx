@@ -20,6 +20,16 @@ export const SECONDARY_TAG_STYLE = {
   '--tag-day-count': 'color-mix(in oklab, var(--foreground) 60%, transparent)',
 } as React.CSSProperties;
 
+/**
+ * The suggested look of a tag chip (`PostTag`'s `variant="suggested"`): a label nobody put here yet that
+ * the app offers to add (an external resource's catalogue labels). The design team's suggested-tag look:
+ * the secondary look's dashed edge in the tag colour, with no fill.
+ */
+export const SUGGESTED_TAG_STYLE = {
+  ...SECONDARY_TAG_STYLE,
+  backgroundColor: 'transparent',
+} as React.CSSProperties;
+
 export const Tag = ({
   name,
   count,

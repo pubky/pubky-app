@@ -224,7 +224,8 @@ function ResourceKnown({
   const { data: group, isLoading: isGroupLoading } = usePinakesGroup(card.group?.id);
   const otherLinks =
     card.group && isGroupLoading ? [] : getOtherLinks(card, group?.members, getOwnLinkUris(card, uri, actionUri));
-  const otherTags = mergeOtherLinkTags(useOtherLinkTags(otherLinks).reads);
+  const otherLinkTags = useOtherLinkTags(otherLinks);
+  const otherTags = mergeOtherLinkTags(otherLinkTags.reads);
   // A series date's feed (its group, read above): the footer's tags switch between this date and all dates
   const { feed } = useEventFeed(getResourceFamily(card) === ResourceFamily.EVENT ? card : null);
   // An X post shows X's own embed as the card's body, as in a post (`usePostEmbed`).
@@ -250,6 +251,8 @@ function ResourceKnown({
       linkUrl={getResourceLinks(card, writtenUri).linkUrl}
       title={card.name || null}
       otherTagList={otherTags}
+      isOtherTagListLoading={(Boolean(card.group) && isGroupLoading) || otherLinkTags.isLoading}
+      labels={card.labels}
       eventFeed={feed}
       playOn={postEmbed?.showPost}
       size="large"

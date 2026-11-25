@@ -28,6 +28,8 @@ const mocks = vi.hoisted(() => ({
   configured: true,
   replyCount: 2 as number | undefined,
   otherLinks: null as { uri: string; name: string }[] | null,
+  // Whether the other links' tags (`useOtherLinkTags`) are still read
+  otherLoading: false,
   // A series date's feed (`useEventFeed`), and the card it was asked for
   feed: null as null | { id: string; uri: string },
   feedAsked: [] as unknown[],
@@ -44,7 +46,7 @@ vi.mock('@/hooks/useEventFeed/useEventFeed', () => ({
 vi.mock('@/hooks/useOtherLinkTags/useOtherLinkTags', () => ({
   useOtherLinkTags: (links: { uri: string; name: string }[]) => {
     mocks.otherLinks = links;
-    return { reads: [], isLoading: false };
+    return { reads: [], isLoading: mocks.otherLoading };
   },
 }));
 
@@ -77,6 +79,8 @@ vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
     title,
     extraMenuContent,
     otherTagList,
+    labels,
+    isOtherTagListLoading,
     eventFeed,
     playOn,
     size,
@@ -94,6 +98,8 @@ vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
     title?: string | null;
     extraMenuContent?: unknown;
     otherTagList?: readonly { label: string }[];
+    labels?: readonly string[] | null;
+    isOtherTagListLoading?: boolean;
     eventFeed?: { uri: string } | null;
     playOn?: React.ReactNode;
     size?: string;
@@ -115,6 +121,8 @@ vi.mock('@/organisms/ResourceActions/ResourceActions', () => ({
       data-extra-menu={extraMenuContent ? 'yes' : 'no'}
       data-size={size}
       data-event-feed={eventFeed === undefined ? 'none' : (eventFeed?.uri ?? 'null')}
+      data-labels={labels?.join(',') ?? 'none'}
+      data-other-tags-loading={String(Boolean(isOtherTagListLoading))}
     >
       {playOn}
       <div data-testid="resource-other-tag-list" data-labels={otherTagList?.map((tag) => tag.label).join(',')} />
@@ -252,6 +260,7 @@ describe('ResourceDetails', () => {
 
   beforeEach(() => {
     mocks.otherLinks = null;
+    mocks.otherLoading = false;
     mocks.feed = null;
     mocks.feedAsked = [];
     vi.clearAllMocks();
@@ -273,6 +282,47 @@ describe('ResourceDetails', () => {
 
       expect(mocks.feedAsked).toContain(date);
       expect(screen.getByTestId('resource-actions')).toHaveAttribute('data-event-feed', feed.uri);
+    });
+
+    it('opens a catalogue card nobody shared like any card, its labels handed to the footer as suggested tags', () => {
+      // by-uri's answer for a catalogue card's link: no refs, no group, no Also on, its catalogue's labels
+      const catalogueCard: TPinakesResourceDetail = {
+        ...VIDEO,
+        uri: 'https://en.wikipedia.org/wiki/Douglas_Adams',
+        refs: [],
+        also_on: [],
+        group: null,
+        collections: 0,
+        labels: ['science-fiction', 'humourist'],
+      };
+      read = settled(catalogueCard);
+      renderDetails(catalogueCard.uri);
+
+      const actions = within(screen.getByTestId('resource-card')).getByTestId('resource-actions');
+      expect(actions).toHaveAttribute('data-uri', catalogueCard.uri);
+      expect(actions).toHaveAttribute('data-post-uri', catalogueCard.uri);
+      expect(actions).toHaveAttribute('data-collections', '0');
+      expect(actions).toHaveAttribute('data-labels', 'science-fiction,humourist');
+      expect(actions).toHaveAttribute('data-other-tags-loading', 'false');
+    });
+
+    it('tells the footer while the group’s links, then their tags, are still read', () => {
+      expect(VIDEO.group).not.toBeNull();
+      mockGroup.mockReturnValue(LOADING);
+      const { unmount } = renderDetails(VIDEO.uri);
+      expect(screen.getByTestId('resource-actions')).toHaveAttribute('data-other-tags-loading', 'true');
+      unmount();
+
+      // The group read: its links' tags are read next
+      mockGroup.mockReturnValue(settled(GROUP));
+      mocks.otherLoading = true;
+      const second = renderDetails(VIDEO.uri);
+      expect(screen.getByTestId('resource-actions')).toHaveAttribute('data-other-tags-loading', 'true');
+      second.unmount();
+
+      mocks.otherLoading = false;
+      renderDetails(VIDEO.uri);
+      expect(screen.getByTestId('resource-actions')).toHaveAttribute('data-other-tags-loading', 'false');
     });
 
     it('looks for no feed for a card that is no event', () => {

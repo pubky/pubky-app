@@ -142,6 +142,19 @@ describe('PostTag', () => {
     expect(screen.getByTestId('tag-total')).toHaveTextContent('(10)');
   });
 
+  it('draws the suggested variant dashed with no fill and no count, still a button', () => {
+    const onClick = vi.fn();
+    render(<PostTag label="writer" variant="suggested" onClick={onClick} />);
+    const tag = screen.getByRole('button');
+    expect(tag).toHaveAttribute('data-variant', 'suggested');
+    expect(tag.style.backgroundImage).toBe('none');
+    expect(tag.style.backgroundColor).toBe('transparent');
+    expect(tag.style.border).toBe('1px dashed var(--tag-edge)');
+    expect(tag.textContent).toBe('writer');
+    fireEvent.click(tag);
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
   it('draws the secondary variant without the fill, still a toggle', () => {
     const onClick = vi.fn();
     render(<PostTag label="dance" count={2} variant="secondary" onClick={onClick} />);
