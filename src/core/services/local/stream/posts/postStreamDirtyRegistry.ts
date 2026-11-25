@@ -1,8 +1,16 @@
 import { getStreamDependencyScopes, type StreamDependencyScope } from '@/models/stream/post/postStream.types';
 
 /**
+ * The stream's classified scopes plus `local_index`: every cached page was read from the configured sources, and
+ * the local index can add or drop posts anywhere in any stream when it syncs or loads older history.
+ */
+const dependencyScopes = (streamId: string): ReadonlySet<StreamDependencyScope> =>
+  new Set<StreamDependencyScope>([...getStreamDependencyScopes(streamId), 'local_index']);
+
+/**
  * In-memory registry of post-stream dependency scopes invalidated by local
- * mutations (follow/unfollow, friendship transitions, profile-tag writes).
+ * mutations (follow/unfollow, friendship transitions, profile-tag writes) and
+ * by changes of the local index.
  *
  * Deliberately NOT a Dexie table or a Zustand store: mutations only mark a
  * scope dirty here, and each stream reconciles lazily on its next initial load
@@ -20,6 +28,7 @@ export class PostStreamDirtyRegistry {
     follow_graph: 0,
     friends: 0,
     profile_tag: 0,
+    local_index: 0,
   };
 
   private reconciledRevisions = new Map<string, Partial<Record<StreamDependencyScope, number>>>();
@@ -31,11 +40,7 @@ export class PostStreamDirtyRegistry {
 
   /** True when any of the stream's dependency scopes changed since it was last reconciled. */
   isDirty(streamId: string): boolean {
-    const scopes = getStreamDependencyScopes(streamId);
-    if (scopes.size === 0) {
-      return false;
-    }
-
+    const scopes = dependencyScopes(streamId);
     const reconciled = this.reconciledRevisions.get(streamId);
     for (const scope of scopes) {
       if (this.scopeRevisions[scope] > (reconciled?.[scope] ?? 0)) {
@@ -47,11 +52,7 @@ export class PostStreamDirtyRegistry {
 
   /** Records that the stream's cache was rebuilt against the current scope revisions. */
   markReconciled(streamId: string): void {
-    const scopes = getStreamDependencyScopes(streamId);
-    if (scopes.size === 0) {
-      return;
-    }
-
+    const scopes = dependencyScopes(streamId);
     const snapshot: Partial<Record<StreamDependencyScope, number>> = {
       ...this.reconciledRevisions.get(streamId),
     };
@@ -63,7 +64,7 @@ export class PostStreamDirtyRegistry {
 
   /** Test-only: restores the pristine state. */
   reset(): void {
-    this.scopeRevisions = { follow_graph: 0, friends: 0, profile_tag: 0 };
+    this.scopeRevisions = { follow_graph: 0, friends: 0, profile_tag: 0, local_index: 0 };
     this.reconciledRevisions.clear();
   }
 }

@@ -6,6 +6,7 @@ import { createSocialIndexer, type SocialIndexer } from '@/libs/indexer/social/s
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
+import { postStreamDirtyRegistry } from '@/services/local/stream/posts/postStreamDirtyRegistry';
 import { createIndexerTransport } from './indexer.transport';
 
 const databaseName = (owner: Pubky) => `${INDEXER_DATABASE_PREFIX}${owner}`;
@@ -41,12 +42,23 @@ export class IndexerService {
       coordination: createBrowserCoordination(),
     });
     // Every app write lands through HomeserverService; a refresh of the account makes it part of the answers.
-    const unsubscribe = HomeserverService.subscribeOwnedWrites((path) => {
+    const stopRefreshing = HomeserverService.subscribeOwnedWrites((path) => {
       if (!path.startsWith(PUBLIC_PATH_PREFIX)) return;
       void indexer.refresh([owner]).catch((error: unknown) => Logger.debug('Local index refresh ended', { error }));
     });
+    // A sync or older history can place posts anywhere in a cached stream page: each stream rebuilds on its next
+    // initial load, and mounted feeds keep their position.
+    const stopInvalidating = indexer.onChange(() => postStreamDirtyRegistry.markDirty('local_index'));
     indexer.start(owner);
-    this.running = { owner, indexer, store, unsubscribe };
+    this.running = {
+      owner,
+      indexer,
+      store,
+      unsubscribe: () => {
+        stopRefreshing();
+        stopInvalidating();
+      },
+    };
   }
 
   /** Stops the running index and closes its database; what it stored stays for the next start. */

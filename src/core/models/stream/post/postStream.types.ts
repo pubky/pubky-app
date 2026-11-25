@@ -113,7 +113,8 @@ export type AuthorStreamCompositeId = `${StreamSource.AUTHOR}:${string}`;
 export type AuthorRepliesStreamCompositeId = `${StreamSource.AUTHOR_REPLIES}:${string}`;
 export type PostStreamKindSegment = 'all' | 'locked' | StreamKind;
 export type WotDomainDepth = 0 | 1 | 2;
-export type StreamDependencyScope = 'follow_graph' | 'friends' | 'profile_tag';
+/** `local_index` is no classification of a stream id: the dirty registry makes every post stream depend on it. */
+export type StreamDependencyScope = 'follow_graph' | 'friends' | 'profile_tag' | 'local_index';
 export type WotStreamId =
   | `${StreamSorting}:${StreamSource.WOT}:${PostStreamKindSegment}`
   | `${StreamSorting}:${StreamSource.WOT}:${PostStreamKindSegment}:${string}`;

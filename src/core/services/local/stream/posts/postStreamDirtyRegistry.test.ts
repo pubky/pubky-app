@@ -50,6 +50,17 @@ describe('PostStreamDirtyRegistry', () => {
     expect(registry.isDirty('author:some-pubky')).toBe(false);
   });
 
+  it('marks every stream, scoped or not, when the local index changed', () => {
+    registry.markDirty('local_index');
+
+    for (const streamId of [followingAll, friendsAll, depthZeroDomain, globalAll, 'author:some-pubky']) {
+      expect(registry.isDirty(streamId)).toBe(true);
+    }
+    registry.markReconciled(globalAll);
+    expect(registry.isDirty(globalAll)).toBe(false);
+    expect(registry.isDirty(followingAll)).toBe(true);
+  });
+
   it('clears dirtiness only for the reconciled stream', () => {
     registry.markDirty('follow_graph');
     registry.markReconciled(followingAll);

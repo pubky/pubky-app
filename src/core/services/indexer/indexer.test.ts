@@ -3,6 +3,7 @@ import { createIdbStore } from '@/libs/indexer/idbStore';
 import { createSocialIndexer } from '@/libs/indexer/social/socialIndexer';
 import type { Pubky } from '@/models/models.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
+import { postStreamDirtyRegistry } from '@/services/local/stream/posts/postStreamDirtyRegistry';
 import { IndexerService } from './indexer';
 
 const fakes = vi.hoisted(() => ({
@@ -10,6 +11,7 @@ const fakes = vi.hoisted(() => ({
     start: ReturnType<typeof vi.fn>;
     stop: ReturnType<typeof vi.fn>;
     refresh: ReturnType<typeof vi.fn>;
+    change: () => void;
   }>,
   writeListeners: new Set<(path: string) => void>(),
   stores: [] as Array<{ name: string; close: ReturnType<typeof vi.fn>; destroy: ReturnType<typeof vi.fn> }>,
@@ -24,12 +26,20 @@ vi.mock('@/libs/indexer/idbStore', () => ({
 }));
 vi.mock('@/libs/indexer/social/socialIndexer', () => ({
   createSocialIndexer: vi.fn(() => {
+    const listeners = new Set<() => void>();
     const indexer = {
       start: vi.fn(),
       stop: vi.fn(),
       pause: vi.fn(),
       resume: vi.fn(),
       refresh: vi.fn().mockResolvedValue(undefined),
+      onChange: (listener: () => void) => {
+        listeners.add(listener);
+        return () => listeners.delete(listener);
+      },
+      change: () => {
+        for (const listener of listeners) listener();
+      },
     };
     fakes.indexers.push(indexer);
     return indexer;
@@ -85,6 +95,21 @@ describe('IndexerService', () => {
 
     expect(HomeserverService.subscribeOwnedWrites).toHaveBeenCalledOnce();
     expect(fakes.indexers[0].refresh).toHaveBeenCalledExactlyOnceWith([ALICE]);
+  });
+
+  it('marks every cached post stream dirty when the index changes, until it stops', () => {
+    postStreamDirtyRegistry.reset();
+    IndexerService.start(ALICE);
+    expect(postStreamDirtyRegistry.isDirty('timeline:all:all')).toBe(false);
+
+    fakes.indexers[0].change();
+    expect(postStreamDirtyRegistry.isDirty('timeline:all:all')).toBe(true);
+
+    postStreamDirtyRegistry.markReconciled('timeline:all:all');
+    IndexerService.stop();
+    fakes.indexers[0].change();
+    expect(postStreamDirtyRegistry.isDirty('timeline:all:all')).toBe(false);
+    postStreamDirtyRegistry.reset();
   });
 
   it('stops the previous account’s index before starting another', () => {
