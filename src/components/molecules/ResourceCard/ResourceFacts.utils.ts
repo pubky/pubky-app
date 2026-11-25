@@ -1,5 +1,5 @@
 import type { TPinakesAddress, TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
-import { getHttpUrl, getNearestTypes } from './ResourceCard.utils';
+import { getHttpUrl, getNearestTypes, getShapeWord } from './ResourceCard.utils';
 
 /**
  * What a card says about itself beyond its name and description, from the resource read's `facts`
@@ -587,7 +587,7 @@ const FACT_FORMATS: Readonly<Record<string, { label?: string; format?: FactForma
 
 /**
  * Facts that are identifiers or links the card already uses (its page, its MusicBrainz or
- * Wikidata ID, a feed's GUID, the stream it plays): not shown as rows.
+ * Wikidata ID, a feed's GUID, the stream it plays), or that the card says in words: not shown as rows.
  */
 const HIDDEN_FACTS: ReadonlySet<string> = new Set([
   'page_url',
@@ -610,6 +610,8 @@ const HIDDEN_FACTS: ReadonlySet<string> = new Set([
   'nostr',
   'uuid',
   'guid',
+  // A site that refused Pinakes' read: said in words instead (`getBlockedNote`).
+  'blocked',
 ]);
 
 /** Acronyms in fact keys, kept upper case in their label (`isrc` is in `FACT_FORMATS`). */
@@ -691,6 +693,31 @@ export function getResourceFactRows(
     if (!value || value.toLowerCase() === name) return [];
     return [{ key, label: getFactLabel(key), value: formatFactValue(key, value, locale), href: getHttpUrl(value) }];
   });
+}
+
+/**
+ * Whether the link's site refused Pinakes' read (`facts.blocked`, a sign-in wall or a refusal): the
+ * card is the link's shape alone ("Post on instagram.com"), and the page behind the link says no
+ * more to the app's own read of it. Only `"true"` (any case) counts, the value Pinakes sends.
+ */
+export function isBlockedCard(card: Pick<TResourceFactsCard, 'facts'>): boolean {
+  return getFact(card, 'blocked')?.toLowerCase() === 'true';
+}
+
+/**
+ * The resource page's one line for a card whose site refused Pinakes' read (`isBlockedCard`), in
+ * place of a raw `blocked` row: `instagram.com didn't share this post's details.` `null` for any
+ * other card.
+ *
+ * @param siteName - The card's site as its header names it (`getResourceLinks`)
+ */
+export function getBlockedNote(
+  card: Pick<TResourceFactsCard, 'type' | 'type_path' | 'facts'>,
+  siteName: string | null,
+): string | null {
+  if (!isBlockedCard(card)) return null;
+  const shape = getShapeWord(card) ?? 'page';
+  return `${siteName?.trim() || 'The site'} didn't share this ${shape}'s details.`;
 }
 
 /** OpenStreetMap at a point, zoomed to a street. */

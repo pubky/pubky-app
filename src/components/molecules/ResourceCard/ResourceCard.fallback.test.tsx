@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useOgMetadata } from '@/hooks/useOgMetadata/useOgMetadata';
 import { usePinakesGroup } from '@/hooks/usePinakesGroup/usePinakesGroup';
+import instagramBlockedFixture from '@/services/pinakes/fixtures/by-uri.instagram-blocked.json';
 import mbArtistSparseFixture from '@/services/pinakes/fixtures/by-uri.mb-artist-sparse.json';
 import mbGroupEnrichedFixture from '@/services/pinakes/fixtures/by-uri.mb-group.enriched.json';
 import musicRecordingFixture from '@/services/pinakes/fixtures/by-uri.music-recording.json';
@@ -94,6 +95,23 @@ describe('ResourceCard: a sparse card borrows from its group', () => {
     rerender(<ResourceCard card={SPARSE} />);
     expect(cardImage()).toHaveAttribute('src', COMMONS_IMAGE);
     expect(mockOg).not.toHaveBeenCalledWith(expect.any(String));
+  });
+
+  it('never reads the preview of a link whose site refused Pinakes’ read: it shows the card without an image', () => {
+    // As the hook does: a preview only for a link it is asked to read.
+    mockOg.mockImplementation((url) => ({
+      metadata: url ? { url, title: 'Instagram', image: OG_IMAGE, type: 'website' } : null,
+      isLoading: false,
+      error: null,
+    }));
+    const { unmount } = render(<ResourceCard card={instagramBlockedFixture} />);
+    unmount();
+    render(<ResourceCard card={instagramBlockedFixture} size="large" />);
+
+    expect(mockOg).not.toHaveBeenCalledWith(expect.any(String));
+    expect(screen.queryByTestId('resource-card-image')).not.toBeInTheDocument();
+    expect(screen.getByTestId('resource-card-type-tile')).toBeInTheDocument();
+    expect(screen.getByTestId('resource-card-title')).toHaveTextContent('Post on instagram.com');
   });
 
   it('shows the type icon when the OG image fails to load', () => {

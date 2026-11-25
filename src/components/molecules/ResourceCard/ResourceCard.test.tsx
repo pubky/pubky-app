@@ -5,6 +5,7 @@ import { PostPreviewNavigableProvider } from '@/molecules/PostPreviewCard/PostPr
 import articleFixture from '@/services/pinakes/fixtures/by-uri.article.json';
 import bookFixture from '@/services/pinakes/fixtures/by-uri.book.json';
 import eventFixture from '@/services/pinakes/fixtures/by-uri.event.json';
+import instagramBlockedFixture from '@/services/pinakes/fixtures/by-uri.instagram-blocked.json';
 import mbArtistSparseEnrichedFixture from '@/services/pinakes/fixtures/by-uri.mb-artist-sparse.enriched.json';
 import mbArtistSparseFixture from '@/services/pinakes/fixtures/by-uri.mb-artist-sparse.json';
 import mbGroupEnrichedFixture from '@/services/pinakes/fixtures/by-uri.mb-group.enriched.json';
@@ -1204,6 +1205,38 @@ describe('ResourceCard', () => {
         'ISRCUSQX91300108',
         'Some new factvalue',
       ]);
+    });
+
+    it('says in one plain line under “Details” that the site shared nothing, in place of a raw `blocked` row', () => {
+      render(<ResourceCard card={instagramBlockedFixture} size="large" />);
+
+      const details = screen.getByRole('region', { name: 'Details' });
+      expect(within(details).getByTestId('resource-facts-note')).toHaveTextContent(
+        "instagram.com didn't share this post's details.",
+      );
+      expect(screen.queryAllByTestId('resource-fact')).toHaveLength(0);
+      expect(details.textContent).not.toMatch(/blocked|true/i);
+      // Its title as Pinakes names it; Pinakes' "Blocked by the site." is not shown as a description: the
+      // line in Details says it.
+      expect(title()).toHaveTextContent('Post on instagram.com');
+      expect(screen.queryByTestId('resource-card-description')).not.toBeInTheDocument();
+      expect(screen.getByTestId('resource-card').textContent).not.toContain('Blocked by the site.');
+    });
+
+    it('keeps the line beside the other facts, and lists a card that was read as before', () => {
+      const { unmount } = render(
+        <ResourceCard
+          card={{ ...instagramBlockedFixture, facts: { blocked: 'true', handle: 'someone' } }}
+          size="large"
+        />,
+      );
+      expect(screen.getByTestId('resource-facts-note')).toBeInTheDocument();
+      expect(screen.getAllByTestId('resource-fact').map((row) => row.textContent)).toEqual(['Handlesomeone']);
+      unmount();
+
+      render(<ResourceCard card={{ ...instagramBlockedFixture, facts: { handle: 'someone' } }} size="large" />);
+      expect(screen.queryByTestId('resource-facts-note')).not.toBeInTheDocument();
+      expect(screen.getAllByTestId('resource-fact').map((row) => row.textContent)).toEqual(['Handlesomeone']);
     });
 
     it('titles a card without a web link as text', () => {

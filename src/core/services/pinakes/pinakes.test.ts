@@ -10,6 +10,7 @@ import { asOpaque } from '@/test-utils/type-assertions';
 import articleFixture from './fixtures/by-uri.article.json';
 import bookFixture from './fixtures/by-uri.book.json';
 import eventFixture from './fixtures/by-uri.event.json';
+import instagramBlockedFixture from './fixtures/by-uri.instagram-blocked.json';
 import mbArtistSparseEnrichedFixture from './fixtures/by-uri.mb-artist-sparse.enriched.json';
 import mbArtistSparseFixture from './fixtures/by-uri.mb-artist-sparse.json';
 import mbGroupEnrichedFixture from './fixtures/by-uri.mb-group.enriched.json';
@@ -78,6 +79,7 @@ const RESOURCE_FIXTURES: Record<string, TPinakesResourceDetail> = {
   'mb-artist-sparse': mbArtistSparseFixture,
   'mb-recording': mbRecordingFixture,
   'mb-group': mbGroupFixture,
+  'instagram-blocked': instagramBlockedFixture,
 };
 // Stable captures with only the enrichment fields of the Pinakes contract added (fixtures README).
 const ENRICHED_FIXTURES: Record<string, TPinakesResourceDetail> = {

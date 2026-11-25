@@ -14,6 +14,7 @@ import { ResourceSurfaceProvider } from '@/molecules/ResourceCard/ResourceSurfac
 import type { ResourceExtraMenuContent } from '@/organisms/ResourceActions/ResourceMoreMenu';
 import articleFixture from '@/services/pinakes/fixtures/by-uri.article.json';
 import eventFixture from '@/services/pinakes/fixtures/by-uri.event.json';
+import instagramBlockedFixture from '@/services/pinakes/fixtures/by-uri.instagram-blocked.json';
 import mbGroupEnrichedFixture from '@/services/pinakes/fixtures/by-uri.mb-group.enriched.json';
 import missingFixture from '@/services/pinakes/fixtures/by-uri.missing.json';
 import musicFixture from '@/services/pinakes/fixtures/by-uri.music-recording.json';
@@ -1045,6 +1046,70 @@ describe('GenericResourcePreview', () => {
       } finally {
         vi.useRealTimers();
       }
+    });
+  });
+
+  describe('a post whose site refused Pinakes’ read, with the embed Pinakes names for it', () => {
+    /** The capture with the post frame Pinakes builds from the link alone (`embed`, kind `post`). */
+    const BLOCKED_POST = {
+      ...instagramBlockedFixture,
+      embed: {
+        provider: 'instagram',
+        kind: 'post',
+        src: 'https://www.instagram.com/p/DgB34vHhlaT/embed/captioned/',
+        height: null,
+        aspect: null,
+        allow: [],
+        autoplay_param: null,
+      },
+    };
+
+    /** What the link's own preview gives behind Instagram's sign-in wall: Instagram's logo. */
+    const WALL_LOGO = 'https://static.cdninstagram.com/rsrc.php/v4/yI/r/VsNE-OHk_8a.png';
+    // On screen, where a card reads what it lacks; a preview read would answer with the wall's logo.
+    beforeEach(() => {
+      useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
+      viewport.isVisible = true;
+      mockUseOgMetadata.mockImplementation((url) => ({
+        metadata: url ? { url, title: 'Instagram', image: WALL_LOGO, type: 'website' } : null,
+        isLoading: false,
+        error: null,
+      }));
+    });
+    afterEach(() => {
+      useSettingsStore.setState({ media: upFrontMedia });
+      viewport.isVisible = false;
+    });
+
+    /** Nothing in the page loads from another origin: no frame, no media, every `[src]` the app's own. */
+    const expectNothingThirdParty = () => {
+      expect(document.querySelectorAll('iframe, script, audio, video')).toHaveLength(0);
+      for (const node of document.querySelectorAll('[src]')) {
+        const { origin, href } = new globalThis.URL(node.getAttribute('src') ?? '', window.location.href);
+        expect(origin).toBe(window.location.origin);
+        expect(href).not.toMatch(/^https?:\/\/([^/]*\.)?(instagram|cdninstagram)\.com\//);
+        // Nor the wall's logo, also not through an app route.
+        expect(decodeURIComponent(href)).not.toContain('cdninstagram.com');
+      }
+    };
+
+    it('shows the card as captured (no embed), without reading the preview of its page', () => {
+      mockUsePinakesCard.mockReturnValue({ data: instagramBlockedFixture, isLoading: false, isError: false });
+      render(<GenericResourcePreview url={instagramBlockedFixture.uri} />);
+
+      expect(screen.getByTestId('resource-card-title')).toHaveTextContent('Post on instagram.com');
+      // Its title alone: Pinakes' "Blocked by the site." is no description of the post.
+      expect(screen.queryByTestId('resource-card-description')).not.toBeInTheDocument();
+      expect(mockUseOgMetadata).not.toHaveBeenCalledWith(expect.any(String));
+      expectNothingThirdParty();
+    });
+
+    it('loads nothing from the site for its post frame before a press, and reads no preview of its page', () => {
+      mockUsePinakesCard.mockReturnValue({ data: BLOCKED_POST, isLoading: false, isError: false });
+      render(<GenericResourcePreview url={BLOCKED_POST.uri} />);
+
+      expect(mockUseOgMetadata).not.toHaveBeenCalledWith(expect.any(String));
+      expectNothingThirdParty();
     });
   });
 });
