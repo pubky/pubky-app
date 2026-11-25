@@ -29,7 +29,7 @@ describe('foldEvents', () => {
     ]);
   });
 
-  it('turns a last DEL into a tombstone inside a range that starts after the stream start', () => {
+  it('turns a last DEL into a tombstone', () => {
     const run = foldEvents(META, c(2), c(10), [put('a', 3), del('a', 6), del('b', 4)]);
 
     expect(run).toEqual({
@@ -43,10 +43,13 @@ describe('foldEvents', () => {
     });
   });
 
-  it('drops tombstones from a range that starts at the stream start', () => {
+  it('keeps tombstones in a range that starts at the stream start', () => {
     const run = foldEvents(META, c(0), c(10), [put('a', 3), del('a', 6), put('b', 4)]);
 
-    expect(run.entries).toEqual([{ kind: 'record', path: 'b', cursor: c(4), hash: 'h4' }]);
+    expect(run.entries).toEqual([
+      { kind: 'tombstone', path: 'a', cursor: c(6) },
+      { kind: 'record', path: 'b', cursor: c(4), hash: 'h4' },
+    ]);
   });
 
   it('keeps a PUT after a DEL as a record', () => {
@@ -68,7 +71,10 @@ describe('foldEvents', () => {
 
     const run = foldEvents(META, c(0), c(10), [put('ab', 2), put('ab', 5), put('c', 1), del('c', 3)], dataOf);
 
-    expect(run.entries).toEqual([{ kind: 'record', path: 'ab', cursor: c(5), hash: 'h5', data: { size: 2 } }]);
+    expect(run.entries).toEqual([
+      { kind: 'record', path: 'ab', cursor: c(5), hash: 'h5', data: { size: 2 } },
+      { kind: 'tombstone', path: 'c', cursor: c(3) },
+    ]);
     expect(dataOf).toHaveBeenCalledTimes(1);
   });
 

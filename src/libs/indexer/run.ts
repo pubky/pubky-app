@@ -1,4 +1,4 @@
-import { assertRange, CURSOR_ZERO, isValidCursor } from './cursor';
+import { assertRange, isValidCursor } from './cursor';
 import { InvalidIndexInputError } from './indexer.errors';
 import type { Cursor, Entry, RecordEntry, Run, RunMeta, StreamEvent } from './indexer.types';
 
@@ -40,8 +40,8 @@ function toRecord<D>(event: StreamEvent, data: D | undefined): RecordEntry<D> {
 
 /**
  * Folds the events of one scope in `(tail, head]`, in any order, into a run: per path the event with the
- * highest cursor, a PUT as a record and a DEL as a tombstone. A range that starts at the stream start drops
- * its tombstones, because nothing older exists for them to hide.
+ * highest cursor, a PUT as a record and a DEL as a tombstone. Tombstones are kept whatever the tail, so a
+ * run merged later with a re-fold of an older range still hides what was deleted.
  */
 export function foldEvents<D = unknown>(
   meta: RunMeta,
@@ -67,7 +67,7 @@ export function foldEvents<D = unknown>(
   for (const event of last.values()) {
     if (event.type === 'PUT') {
       entries.push(toRecord(event, dataOf?.(event)));
-    } else if (tail !== CURSOR_ZERO) {
+    } else {
       entries.push({ kind: 'tombstone', path: event.path, cursor: event.cursor });
     }
   }

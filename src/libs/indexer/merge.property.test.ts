@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { coverageOfRuns, covers, gaps } from './coverage';
-import type { Entry, MergedRuns, Range, Run, RunMeta, StreamEvent } from './indexer.types';
+import type { Cursor, MergedRuns, Range, Run, RunMeta, StreamEvent } from './indexer.types';
 import { compactRuns, evictBelow, mergeRuns } from './merge';
 import { foldEvents, validateRun } from './run';
 
@@ -58,41 +58,29 @@ function randomHistory(rng: Rng, minLength = 1): History {
   return { n, events };
 }
 
-/** Appends a delete of one live path, so at least one path ends deleted. */
-function withFinalDelete(rng: Rng, history: History): History {
-  const lastOf = lastEvents(history);
-  const live = [...lastOf.values()].filter((event) => event.type === 'PUT');
-  if (live.length === 0) return history;
-  const n = history.n + 1;
-  const { path } = live[int(rng, 0, live.length - 1)];
-  return { n, events: [...history.events, { type: 'DEL', path, cursor: BigInt(n) }] };
-}
-
-/** The last event of every path, by replaying the whole history. */
-function lastEvents(history: History): Map<string, StreamEvent> {
+/** The last event of every path at or below `upTo`, by replaying the history. */
+function lastEvents(history: History, upTo: Cursor): Map<string, StreamEvent> {
   const last = new Map<string, StreamEvent>();
-  for (const event of history.events) last.set(event.path, event);
+  for (const event of history.events) if (event.cursor <= upTo) last.set(event.path, event);
   return last;
 }
 
-/** Path to winning cursor of the paths live at the end of the history and above `floor`. */
-function truth(history: History, floor = 0): Record<string, string> {
+/**
+ * What any set of runs must serve: per path, its last event at or below the trusted head, live when it is a
+ * PUT above the trusted tail.
+ */
+function expectedLive(history: History, trusted: Range | null): Record<string, string> {
   const out: Record<string, string> = {};
-  for (const [path, event] of lastEvents(history)) {
-    if (event.type === 'PUT' && event.cursor > BigInt(floor)) out[path] = event.cursor.toString();
+  if (trusted === null) return out;
+  for (const [path, event] of lastEvents(history, trusted.head)) {
+    if (event.type === 'PUT' && event.cursor > trusted.tail) out[path] = `${event.cursor}:${event.hash}`;
   }
   return out;
 }
 
 function liveOf(merged: MergedRuns): Record<string, string> {
   const out: Record<string, string> = {};
-  for (const [path, entry] of merged.live) out[path] = entry.cursor.toString();
-  return out;
-}
-
-function entriesOf(entries: Map<string, Entry>): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const [path, entry] of entries) out[path] = `${entry.kind}@${entry.cursor}`;
+  for (const [path, entry] of merged.live) out[path] = `${entry.cursor}:${entry.hash}`;
   return out;
 }
 
@@ -117,20 +105,20 @@ function randomRange(rng: Rng, n: number): Range {
   return range(tail, int(rng, tail + 1, n));
 }
 
-/** Ranges whose union is `(0, n]`, overlapping each other, some of them twice. */
-function overlappingRanges(rng: Rng, n: number): Range[] {
-  const widen = ({ tail, head }: Range) => {
-    return range(Math.max(0, Number(tail) - int(rng, 0, 3)), Math.min(n, Number(head) + int(rng, 0, 3)));
-  };
-  const widened = partition(rng, n).map(widen);
-  const extra = Array.from({ length: int(rng, 0, 3) }, () => randomRange(rng, n));
-  const duplicated = Array.from({ length: int(rng, 0, 2) }, () => widened[int(rng, 0, widened.length - 1)]);
-  return [...widened, ...extra, ...duplicated];
+/** A non-empty random subset of a split of `(0, n]`, with some ranges twice and some overlapping extras. */
+function randomSubset(rng: Rng, n: number): Range[] {
+  const parts = partition(rng, n);
+  const kept = parts.filter(() => rng() < 0.5);
+  if (kept.length === 0) kept.push(parts[int(rng, 0, parts.length - 1)]);
+  const duplicated = Array.from({ length: int(rng, 0, 2) }, () => kept[int(rng, 0, kept.length - 1)]);
+  const extra = Array.from({ length: int(rng, 0, 2) }, () => randomRange(rng, n));
+  return [...kept, ...duplicated, ...extra];
 }
 
-/** Any ranges inside `(0, n]`, gaps allowed. */
-function scatteredRanges(rng: Rng, n: number): Range[] {
-  return Array.from({ length: int(rng, 1, 6) }, () => randomRange(rng, n));
+/** A random history and the folds of a random subset of its ranges. */
+function randomCase(rng: Rng): { history: History; runs: Run[] } {
+  const history = randomHistory(rng);
+  return { history, runs: randomSubset(rng, history.n).map((r) => fold(history, r)) };
 }
 
 function forEachSeed(check: (rng: Rng, seed: number) => void): void {
@@ -138,103 +126,91 @@ function forEachSeed(check: (rng: Rng, seed: number) => void): void {
 }
 
 describe('merging folds of a random history', () => {
-  it('rebuilds the live set from contiguous runs, merged in any order', () => {
+  it('serves exactly the paths whose last event up to the trusted head is a PUT above its tail', () => {
     forEachSeed((rng, seed) => {
-      const history = randomHistory(rng);
-      const runs = partition(rng, history.n).map((r) => fold(history, r));
+      const { history, runs } = randomCase(rng);
+      const merged = mergeRuns(runs);
+      const coverage = coverageOfRuns(runs);
+      const highestHead = runs.reduce((head, run) => (run.head > head ? run.head : head), BigInt(0));
 
       expect(runs.flatMap(validateRun), `seed ${seed}`).toEqual([]);
+      expect(merged.trusted, `seed ${seed}`).toEqual(coverage[coverage.length - 1]);
+      expect(merged.trusted?.head, `seed ${seed}`).toBe(highestHead);
+      expect(liveOf(merged), `seed ${seed}`).toEqual(expectedLive(history, merged.trusted));
+    });
+  });
+
+  it('gives the same result in any order', () => {
+    forEachSeed((rng, seed) => {
+      const { runs } = randomCase(rng);
+      const merged = mergeRuns(runs);
+
       for (let i = 0; i < 3; i++) {
-        expect(liveOf(mergeRuns(shuffled(rng, runs))), `seed ${seed}`).toEqual(truth(history));
+        expect(mergeRuns(shuffled(rng, runs)), `seed ${seed}`).toEqual(merged);
       }
     });
   });
 
-  it('rebuilds the live set from overlapping and duplicated runs', () => {
+  it('never serves a path whose last event up to the trusted head is a DEL', () => {
     forEachSeed((rng, seed) => {
-      const history = randomHistory(rng);
-      const runs = overlappingRanges(rng, history.n).map((r) => fold(history, r));
+      const { history, runs } = randomCase(rng);
+      const merged = mergeRuns(runs);
+      const trustedHead = merged.trusted?.head ?? BigInt(0);
+      const deleted = [...lastEvents(history, trustedHead)].filter(([, event]) => event.type === 'DEL');
 
-      for (let i = 0; i < 3; i++) {
-        expect(liveOf(mergeRuns(shuffled(rng, runs))), `seed ${seed}`).toEqual(truth(history));
-      }
-    });
-  });
-
-  it('keeps exactly the paths whose last event is a write inside the kept newest runs', () => {
-    forEachSeed((rng, seed) => {
-      const history = randomHistory(rng);
-      const ranges = partition(rng, history.n);
-      const kept = ranges.slice(int(rng, ranges.length > 1 ? 1 : 0, ranges.length - 1));
-      const live = liveOf(mergeRuns(shuffled(rng, kept.map((r) => fold(history, r)))));
-      const deleted = [...lastEvents(history)].filter(([, event]) => event.type === 'DEL').map(([path]) => path);
-
-      expect(live, `seed ${seed}`).toEqual(truth(history, Number(kept[0].tail)));
-      expect(deleted.filter((path) => path in live), `seed ${seed}`).toEqual([]);
-    });
-  });
-
-  it('never brings back a deleted path once any run covers its delete', () => {
-    forEachSeed((rng, seed) => {
-      const history = withFinalDelete(rng, randomHistory(rng));
-      for (const [path, event] of lastEvents(history)) {
-        if (event.type !== 'DEL') continue;
-        const d = Number(event.cursor);
-        const tail = int(rng, 0, d - 1);
-        const ranges = [...scatteredRanges(rng, history.n), range(tail, int(rng, d, history.n))];
-        const merged = mergeRuns(shuffled(rng, ranges).map((r) => fold(history, r)));
-
-        expect(merged.live.has(path), `seed ${seed}, ${path} deleted at ${d}`).toBe(false);
-      }
+      expect(deleted.filter(([path]) => merged.live.has(path)).map(([path]) => path), `seed ${seed}`).toEqual([]);
     });
   });
 });
 
 describe('compacting and evicting folds of a random history', () => {
-  it('compacts into valid runs that merge to the same live set and coverage', () => {
+  it('compacts into valid runs that merge to the same result, and compacting again changes nothing', () => {
     forEachSeed((rng, seed) => {
-      const history = randomHistory(rng);
-      const runs = scatteredRanges(rng, history.n).map((r) => fold(history, r));
-      const merged = mergeRuns(runs);
+      const { runs } = randomCase(rng);
       const compacted = compactRuns(runs);
-      const recompacted = mergeRuns(compacted);
 
       expect(compacted.flatMap(validateRun), `seed ${seed}`).toEqual([]);
-      expect(coverageOfRuns(compacted), `seed ${seed}`).toEqual(merged.coverage);
-      expect(compacted, `seed ${seed}`).toHaveLength(merged.coverage.length);
-      expect(liveOf(recompacted), `seed ${seed}`).toEqual(liveOf(merged));
-      expect(recompacted.coverage, `seed ${seed}`).toEqual(merged.coverage);
+      expect(mergeRuns(compacted), `seed ${seed}`).toEqual(mergeRuns(runs));
+      expect(compactRuns(compacted), `seed ${seed}`).toEqual(compacted);
     });
   });
 
-  it('never changes the winner of a path whose winning cursor is above the cutoff', () => {
+  it('serves the remaining coverage after eviction, and re-folding the evicted ranges restores all', () => {
     forEachSeed((rng, seed) => {
-      const history = randomHistory(rng);
-      const runs = scatteredRanges(rng, history.n).map((r) => fold(history, r));
+      const { history, runs } = randomCase(rng);
       const cutoff = BigInt(int(rng, 0, history.n));
       const evicted = evictBelow(runs, cutoff);
-      const expected = new Map([...mergeRuns(runs).entries].filter(([, entry]) => entry.cursor > cutoff));
+      const afterEviction = mergeRuns(evicted);
+      const refolded = runs
+        .filter((run) => run.tail < cutoff)
+        .map((run) => fold(history, { tail: run.tail, head: run.head < cutoff ? run.head : cutoff }));
 
       expect(evicted.flatMap(validateRun), `seed ${seed}`).toEqual([]);
-      expect(evicted.filter((run) => run.tail < cutoff), `seed ${seed}`).toEqual([]);
-      expect(entriesOf(mergeRuns(evicted).entries), `seed ${seed}`).toEqual(entriesOf(expected));
+      expect(liveOf(afterEviction), `seed ${seed}`).toEqual(expectedLive(history, afterEviction.trusted));
+      expect(mergeRuns(shuffled(rng, [...evicted, ...refolded])), `seed ${seed}`).toEqual(mergeRuns(runs));
     });
   });
 
-  it('reports the gap between two runs that do not touch', () => {
+  it('reports the gap between two runs, trusts the upper one and keeps the lower one in entries', () => {
     forEachSeed((rng, seed) => {
       const history = randomHistory(rng, 3);
       const tail1 = int(rng, 0, history.n - 3);
       const head1 = int(rng, tail1 + 1, history.n - 2);
       const tail2 = int(rng, head1 + 1, history.n - 1);
       const head2 = int(rng, tail2 + 1, history.n);
-      const runs = shuffled(rng, [fold(history, range(tail1, head1)), fold(history, range(tail2, head2))]);
-      const coverage = mergeRuns(runs).coverage;
+      const lower = fold(history, range(tail1, head1));
+      const upper = fold(history, range(tail2, head2));
+      const merged = mergeRuns(shuffled(rng, [lower, upper]));
+      const upperPaths = new Set(upper.entries.map((entry) => entry.path));
 
-      expect(coverage, `seed ${seed}`).toEqual([range(tail1, head1), range(tail2, head2)]);
-      expect(gaps(coverage), `seed ${seed}`).toEqual([range(head1, tail2)]);
-      expect(covers(coverage, BigInt(head1 + 1)), `seed ${seed}`).toBe(false);
-      expect(covers(coverage, BigInt(tail2)), `seed ${seed}`).toBe(false);
+      expect(merged.coverage, `seed ${seed}`).toEqual([range(tail1, head1), range(tail2, head2)]);
+      expect(gaps(merged.coverage), `seed ${seed}`).toEqual([range(head1, tail2)]);
+      expect(covers(merged.coverage, BigInt(tail2)), `seed ${seed}`).toBe(false);
+      expect(merged.trusted, `seed ${seed}`).toEqual(range(tail2, head2));
+      for (const entry of lower.entries.filter((e) => !upperPaths.has(e.path))) {
+        expect(merged.entries.get(entry.path), `seed ${seed}`).toEqual(entry);
+        expect(merged.live.has(entry.path), `seed ${seed}`).toBe(false);
+      }
     });
   });
 });
