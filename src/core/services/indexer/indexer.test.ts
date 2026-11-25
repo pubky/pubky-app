@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { type BrowserCoordination, createBrowserCoordination } from '@/libs/indexer/browserCoordination';
 import { createIdbStore } from '@/libs/indexer/idbStore';
-import { createSocialIndexer } from '@/libs/indexer/social/socialIndexer';
+import { createSocialIndexer, type SocialChange } from '@/libs/indexer/social/socialIndexer';
 import type { Pubky } from '@/models/models.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { postStreamDirtyRegistry } from '@/services/local/stream/posts/postStreamDirtyRegistry';
@@ -13,7 +13,7 @@ const fakes = vi.hoisted(() => ({
     start: ReturnType<typeof vi.fn>;
     stop: ReturnType<typeof vi.fn>;
     refresh: ReturnType<typeof vi.fn>;
-    change: () => void;
+    change: (change: SocialChange) => void;
   }>,
   writeListeners: new Set<(path: string) => void>(),
   stores: [] as Array<{ name: string; close: ReturnType<typeof vi.fn>; destroy: ReturnType<typeof vi.fn> }>,
@@ -28,19 +28,19 @@ vi.mock('@/libs/indexer/idbStore', () => ({
 }));
 vi.mock('@/libs/indexer/social/socialIndexer', () => ({
   createSocialIndexer: vi.fn(() => {
-    const listeners = new Set<() => void>();
+    const listeners = new Set<(change: SocialChange) => void>();
     const indexer = {
       start: vi.fn(),
       stop: vi.fn(),
       pause: vi.fn(),
       resume: vi.fn(),
       refresh: vi.fn().mockResolvedValue(undefined),
-      onChange: (listener: () => void) => {
+      onChange: (listener: (change: SocialChange) => void) => {
         listeners.add(listener);
         return () => listeners.delete(listener);
       },
-      change: () => {
-        for (const listener of listeners) listener();
+      change: (change: SocialChange) => {
+        for (const listener of listeners) listener(change);
       },
     };
     fakes.indexers.push(indexer);
@@ -134,19 +134,52 @@ describe('IndexerService', () => {
     expect(fakes.indexers[0].refresh).toHaveBeenCalledExactlyOnceWith([ALICE]);
   });
 
-  it('marks every cached post stream dirty when the index changes, until it stops', () => {
-    postStreamDirtyRegistry.reset();
-    IndexerService.start(ALICE);
-    expect(postStreamDirtyRegistry.isDirty('timeline:all:all')).toBe(false);
+  describe('post stream invalidation', () => {
+    const ALL = 'timeline:all:all';
+    const FOLLOWING = 'timeline:following:all';
+    const FRIENDS = 'timeline:friends:all';
+    const change = (...kinds: SocialChange['kinds']): SocialChange => ({
+      authors: [BOB],
+      membersChanged: false,
+      kinds,
+    });
 
-    fakes.indexers[0].change();
-    expect(postStreamDirtyRegistry.isDirty('timeline:all:all')).toBe(true);
+    beforeEach(() => {
+      postStreamDirtyRegistry.reset();
+      IndexerService.start(ALICE);
+    });
 
-    postStreamDirtyRegistry.markReconciled('timeline:all:all');
-    IndexerService.stop();
-    fakes.indexers[0].change();
-    expect(postStreamDirtyRegistry.isDirty('timeline:all:all')).toBe(false);
-    postStreamDirtyRegistry.reset();
+    afterEach(() => {
+      postStreamDirtyRegistry.reset();
+    });
+
+    it('marks every cached post stream dirty when posts or tags change, until it stops', () => {
+      expect(postStreamDirtyRegistry.isDirty(ALL)).toBe(false);
+
+      fakes.indexers[0].change(change('activity'));
+      expect(postStreamDirtyRegistry.isDirty(ALL)).toBe(true);
+      expect(postStreamDirtyRegistry.isDirty(FOLLOWING)).toBe(true);
+
+      postStreamDirtyRegistry.markReconciled(ALL);
+      IndexerService.stop();
+      fakes.indexers[0].change(change('activity'));
+      expect(postStreamDirtyRegistry.isDirty(ALL)).toBe(false);
+    });
+
+    it('marks only the streams that follow the graph when only follows change', () => {
+      fakes.indexers[0].change(change('graph'));
+
+      expect(postStreamDirtyRegistry.isDirty(FOLLOWING)).toBe(true);
+      expect(postStreamDirtyRegistry.isDirty(FRIENDS)).toBe(true);
+      expect(postStreamDirtyRegistry.isDirty(ALL)).toBe(false);
+    });
+
+    it('marks no post stream when only a profile changes', () => {
+      fakes.indexers[0].change(change('profile'));
+
+      expect(postStreamDirtyRegistry.isDirty(ALL)).toBe(false);
+      expect(postStreamDirtyRegistry.isDirty(FOLLOWING)).toBe(false);
+    });
   });
 
   it('stops the previous account’s index before starting another', () => {

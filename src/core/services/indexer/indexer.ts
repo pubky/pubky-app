@@ -2,7 +2,7 @@ import { INDEXER_DATABASE_PREFIX, INDEXER_VISITOR_DATABASE } from '@/config/inde
 import { browserApis, type BrowserCoordination, createBrowserCoordination } from '@/libs/indexer/browserCoordination';
 import { createIdbStore, type IdbIndexStore } from '@/libs/indexer/idbStore';
 import type { SocialData } from '@/libs/indexer/social/social.types';
-import { createSocialIndexer, type SocialIndexer } from '@/libs/indexer/social/socialIndexer';
+import { createSocialIndexer, type SocialChange, type SocialIndexer } from '@/libs/indexer/social/socialIndexer';
 import { Logger } from '@/libs/logger/logger';
 import type { Pubky } from '@/models/models.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
@@ -23,6 +23,20 @@ type RunningIndex = {
   coordination: BrowserCoordination | null;
   unsubscribe: () => void;
 };
+
+/**
+ * Marks dirty the cached post streams a change of the index can reach; each rebuilds on its next initial load and
+ * mounted feeds keep their position. Posts and tags can land anywhere in any stream. Follows alone reach only the
+ * streams whose membership follows the graph. A profile reaches no post stream. A change of members brings both.
+ */
+function invalidatePostStreams({ kinds }: SocialChange): void {
+  if (kinds.includes('activity')) {
+    postStreamDirtyRegistry.markDirty('local_index');
+  } else if (kinds.includes('graph')) {
+    postStreamDirtyRegistry.markDirty('follow_graph');
+    postStreamDirtyRegistry.markDirty('friends');
+  }
+}
 
 /**
  * The local index of the signed-in account: one `SocialIndexer` per tab, crawling the account's social scope from
@@ -68,9 +82,7 @@ export class IndexerService {
               .refresh([owner])
               .catch((error: unknown) => Logger.debug('Local index refresh ended', { error }));
           });
-    // A sync or older history can place posts anywhere in a cached stream page: each stream rebuilds on its next
-    // initial load, and mounted feeds keep their position.
-    const stopInvalidating = indexer.onChange(() => postStreamDirtyRegistry.markDirty('local_index'));
+    const stopInvalidating = indexer.onChange(invalidatePostStreams);
     // Without Nexus, avatars and attachments are same-origin paths the service worker asks this page to fill.
     const stopServingMedia = serveLocalMedia({
       profile: (user) => indexer.view().profile(user),
