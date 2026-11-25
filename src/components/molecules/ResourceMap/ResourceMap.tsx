@@ -292,8 +292,13 @@ export function ResourceMap({
         data-testid="resource-map"
         data-status={status}
         // `isolate`: the library's own overlays (its gesture hint has a z-index far above the app's
-        // scale) stay inside the map's box, under the app's menus and bars
-        className={cn('relative isolate w-full cursor-auto overflow-hidden rounded-md bg-muted', SIZE_CLASSES[size])}
+        // scale) stay inside the map's box, under the app's menus and bars. A 1px border (`border-input`:
+        // `border-border` is the card's own colour in the dark theme) sets the box off from the card in
+        // every state: loading, drawn and unavailable.
+        className={cn(
+          'relative isolate w-full cursor-auto overflow-hidden rounded-md border border-input bg-muted',
+          SIZE_CLASSES[size],
+        )}
       >
         <Container
           overrideDefaults
