@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useOgMetadata } from '@/hooks/useOgMetadata/useOgMetadata';
 import { usePinakesGroup } from '@/hooks/usePinakesGroup/usePinakesGroup';
@@ -11,6 +11,9 @@ import { ResourceCard } from './ResourceCard';
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock('@/hooks/usePinakesGroup/usePinakesGroup', () => ({ usePinakesGroup: vi.fn() }));
 vi.mock('@/hooks/useOgMetadata/useOgMetadata', () => ({ useOgMetadata: vi.fn() }));
+
+/** The card's image, inside its slot: small beside the text, or under it for an embed's image. */
+const cardImage = () => within(screen.getByTestId('resource-card-image')).getByRole('img');
 
 const GROUP_ID = 'g1';
 const SPARSE: TPinakesResourceDetail = { ...mbArtistSparseFixture, group: { id: GROUP_ID, size: 3 } };
@@ -65,7 +68,7 @@ describe('ResourceCard: a sparse card borrows from its group', () => {
     render(<ResourceCard card={{ ...SPARSE, group: null, name: null }} />);
 
     expect(mockOg).toHaveBeenCalledWith(SPARSE.uri);
-    expect(screen.getByTestId('resource-card-image')).toHaveAttribute('src', 'https://example.org/og.png');
+    expect(cardImage()).toHaveAttribute('src', 'https://example.org/og.png');
     expect(screen.getByTestId('resource-card-title')).toHaveTextContent('Sefa - MusicBrainz');
   });
 
@@ -89,7 +92,7 @@ describe('ResourceCard: a sparse card borrows from its group', () => {
       isError: false,
     });
     rerender(<ResourceCard card={SPARSE} />);
-    expect(screen.getByTestId('resource-card-image')).toHaveAttribute('src', COMMONS_IMAGE);
+    expect(cardImage()).toHaveAttribute('src', COMMONS_IMAGE);
     expect(mockOg).not.toHaveBeenCalledWith(expect.any(String));
   });
 
@@ -97,7 +100,7 @@ describe('ResourceCard: a sparse card borrows from its group', () => {
     withOg();
     render(<ResourceCard card={{ ...SPARSE, group: null }} />);
 
-    fireEvent.error(screen.getByTestId('resource-card-image'));
+    fireEvent.error(cardImage());
 
     expect(screen.queryByTestId('resource-card-image')).not.toBeInTheDocument();
     expect(screen.getByTestId('resource-card-type-tile')).toBeInTheDocument();
@@ -107,7 +110,7 @@ describe('ResourceCard: a sparse card borrows from its group', () => {
     withOg();
     render(<ResourceCard card={{ ...SPARSE, group: null, credits: [] }} />);
 
-    expect(screen.getByTestId('resource-card-image')).toHaveAttribute('src', OG_IMAGE);
+    expect(cardImage()).toHaveAttribute('src', OG_IMAGE);
     expect(screen.queryByTestId('resource-credits')).not.toBeInTheDocument();
   });
 
@@ -125,7 +128,7 @@ describe('ResourceCard: a sparse card borrows from its group', () => {
     withOg(null);
     render(<ResourceCard card={{ ...SPARSE, group: null, image, credits: [] }} />);
 
-    expect(screen.getByTestId('resource-card-image')).toHaveAttribute('src', image);
+    expect(cardImage()).toHaveAttribute('src', image);
     expect(mockOg).toHaveBeenLastCalledWith(null);
   });
 
@@ -152,7 +155,7 @@ describe('ResourceCard: a sparse card borrows from its group', () => {
       render(<ResourceCard card={SPARSE} size={size} />);
 
       expect(mockGroup).toHaveBeenCalledWith(GROUP_ID);
-      expect(screen.getByTestId('resource-card-image')).toHaveAttribute('src', COMMONS_IMAGE);
+      expect(cardImage()).toHaveAttribute('src', COMMONS_IMAGE);
       expect(screen.getByTestId('resource-card-description')).toHaveTextContent('Dutch DJ.');
       expect(screen.getByTestId('resource-card-description')).toHaveAttribute('data-borrowed', 'true');
       expect(screen.queryByTestId('resource-credits')).not.toBeInTheDocument();
@@ -172,7 +175,7 @@ describe('ResourceCard: a sparse card borrows from its group', () => {
     });
     render(<ResourceCard card={SPARSE} size={size} />);
 
-    expect(screen.getByTestId('resource-card-image')).toHaveAttribute('src', COMMONS_IMAGE);
+    expect(cardImage()).toHaveAttribute('src', COMMONS_IMAGE);
     expect(screen.getByTestId('resource-credits')).toHaveTextContent('Wikimedia Commons');
     expect(screen.getByTestId('resource-credits')).not.toHaveTextContent('Wikidata');
   });
@@ -195,7 +198,7 @@ describe('ResourceCard: a sparse card borrows from its group', () => {
     });
     render(<ResourceCard card={SPARSE} />);
 
-    expect(screen.getByTestId('resource-card-image')).toHaveAttribute('src', COMMONS_IMAGE);
+    expect(cardImage()).toHaveAttribute('src', COMMONS_IMAGE);
   });
 
   it('borrows a Wikimedia image without a credit too, and names no service for it', () => {
@@ -206,7 +209,7 @@ describe('ResourceCard: a sparse card borrows from its group', () => {
     });
     render(<ResourceCard card={SPARSE} />);
 
-    expect(screen.getByTestId('resource-card-image')).toHaveAttribute('src', COMMONS_IMAGE);
+    expect(cardImage()).toHaveAttribute('src', COMMONS_IMAGE);
     expect(screen.queryByTestId('resource-card-type-tile')).not.toBeInTheDocument();
     expect(screen.queryByTestId('resource-credits')).not.toBeInTheDocument();
   });
@@ -223,12 +226,12 @@ describe('ResourceCard: a sparse card borrows from its group', () => {
     const own = { ...SPARSE, image: 'https://example.org/own.jpg', description: 'Own text.' };
     render(<ResourceCard card={own} />);
 
-    expect(screen.getByTestId('resource-card-image')).toHaveAttribute('src', own.image);
-    fireEvent.error(screen.getByTestId('resource-card-image'));
-    expect(screen.getByTestId('resource-card-image')).toHaveAttribute('src', 'https://upload.wikimedia.org/one.jpg');
-    fireEvent.error(screen.getByTestId('resource-card-image'));
-    expect(screen.getByTestId('resource-card-image')).toHaveAttribute('src', 'https://upload.wikimedia.org/two.jpg');
-    fireEvent.error(screen.getByTestId('resource-card-image'));
+    expect(cardImage()).toHaveAttribute('src', own.image);
+    fireEvent.error(cardImage());
+    expect(cardImage()).toHaveAttribute('src', 'https://upload.wikimedia.org/one.jpg');
+    fireEvent.error(cardImage());
+    expect(cardImage()).toHaveAttribute('src', 'https://upload.wikimedia.org/two.jpg');
+    fireEvent.error(cardImage());
     expect(screen.getByTestId('resource-card-type-tile')).toBeInTheDocument();
   });
 
@@ -296,7 +299,7 @@ describe('ResourceCard: a sparse card borrows from its group', () => {
     });
     render(<ResourceCard card={SPARSE} />);
 
-    expect(screen.getByTestId('resource-card-image')).toHaveAttribute('src', COMMONS_IMAGE);
+    expect(cardImage()).toHaveAttribute('src', COMMONS_IMAGE);
     expect(screen.getByTestId('resource-card-description')).toHaveTextContent('Dutch DJ.');
   });
 
@@ -315,7 +318,7 @@ describe('ResourceCard: a sparse card borrows from its group', () => {
     });
     render(<ResourceCard card={SPARSE} />);
 
-    expect(screen.getByTestId('resource-card-image')).toHaveAttribute('src', COMMONS_IMAGE);
+    expect(cardImage()).toHaveAttribute('src', COMMONS_IMAGE);
   });
 
   it('does not read a group of one', () => {
@@ -345,11 +348,11 @@ describe('ResourceCard: a sparse card borrows from its group', () => {
 
     rerender(<ResourceCard card={SPARSE} isOnScreen />);
     expect(mockGroup).toHaveBeenLastCalledWith(GROUP_ID);
-    expect(screen.getByTestId('resource-card-image')).toHaveAttribute('src', COMMONS_IMAGE);
+    expect(cardImage()).toHaveAttribute('src', COMMONS_IMAGE);
 
     rerender(<ResourceCard card={SPARSE} isOnScreen={false} />);
     expect(mockGroup).toHaveBeenLastCalledWith(GROUP_ID);
-    expect(screen.getByTestId('resource-card-image')).toHaveAttribute('src', COMMONS_IMAGE);
+    expect(cardImage()).toHaveAttribute('src', COMMONS_IMAGE);
   });
 
   it('reads the group of the large card wherever it is', () => {
@@ -377,7 +380,7 @@ describe('ResourceCard: a sparse card borrows from its group', () => {
       render(<ResourceCard card={BLOCK} size="large" />);
 
       expect(mockOg).toHaveBeenCalledWith(BLOCK.refs[0]);
-      expect(screen.getByTestId('resource-card-image')).toHaveAttribute('src', OG_IMAGE);
+      expect(cardImage()).toHaveAttribute('src', OG_IMAGE);
       expect(screen.getByTestId('resource-card-source')).toHaveAttribute('href', BLOCK.refs[0]);
       expect(screen.getByTestId('resource-card-source').textContent).toBe('mempool.space');
       expect(screen.getByTestId('resource-card-source')).toHaveAccessibleName('Open in mempool.space');

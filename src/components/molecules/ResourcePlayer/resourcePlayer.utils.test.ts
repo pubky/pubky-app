@@ -18,6 +18,7 @@ import {
   PlayerCategory,
   PlayerProvider,
   PROVIDER_NAMES,
+  showsEmbedImage,
 } from './resourcePlayer.utils';
 
 const card = (uri: string, alsoOn: TPinakesAlsoOn[] = [], status = 'ok') => ({ uri, status, also_on: alsoOn });
@@ -1068,5 +1069,99 @@ describe('from Pinakes’ embed', () => {
       getEmbedTarget({ ...toot, src: 'http://mastodon.social/@a/1/embed' }, 'https://mastodon.social/@a/1'),
     ).toBeNull();
     expect(getEmbedTarget({ ...toot, src: 'javascript:alert(1)' }, 'https://mastodon.social/@a/1')).toBeNull();
+  });
+});
+
+describe('showsEmbedImage', () => {
+  const VIDEO_TYPE = { type: 'VideoObject', type_path: ['Thing', 'CreativeWork', 'MediaObject', 'VideoObject'] };
+  const youtube: TPinakesEmbed = {
+    provider: 'youtube',
+    kind: 'video',
+    src: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1&rel=0',
+    height: null,
+    aspect: 1.7778,
+    allow: ['autoplay'],
+    autoplay_param: 'autoplay=1',
+  };
+  const xPost: TPinakesEmbed = {
+    provider: 'x',
+    kind: 'post',
+    src: 'https://platform.twitter.com/embed/Tweet.html?id=20&dnt=true',
+    height: null,
+    aspect: null,
+    allow: [],
+    autoplay_param: null,
+  };
+
+  it('is true for a video with a player and for a video post, where the embed stands', () => {
+    expect(showsEmbedImage({ ...card('https://www.youtube.com/watch?v=dQw4w9WgXcQ'), ...VIDEO_TYPE })).toBe(true);
+    expect(showsEmbedImage({ ...card('https://example.org/talk'), ...VIDEO_TYPE, embed: youtube })).toBe(true);
+    expect(showsEmbedImage({ ...card('https://x.com/a/status/1'), ...VIDEO_TYPE, embed: xPost })).toBe(true);
+  });
+
+  it('is false for a video with no player, a song on a video service, and every other card', () => {
+    expect(showsEmbedImage({ ...card('https://letterboxd.com/film/the-matrix/'), ...VIDEO_TYPE, embed: null })).toBe(
+      false,
+    );
+    expect(
+      showsEmbedImage({
+        ...card('https://www.youtube.com/watch?v=bEV_7OjtFVk'),
+        type: 'MusicRecording',
+        type_path: ['Thing', 'CreativeWork', 'MusicRecording'],
+      }),
+    ).toBe(false);
+    expect(
+      showsEmbedImage({
+        ...card('https://luma.com/376whqyw'),
+        type: 'Event',
+        type_path: ['Thing', 'Event'],
+        embed: null,
+      }),
+    ).toBe(false);
+    expect(
+      showsEmbedImage({
+        ...card('https://x.com/jack/status/20'),
+        type: 'SocialMediaPosting',
+        type_path: ['Thing', 'CreativeWork', 'Article', 'SocialMediaPosting'],
+        embed: xPost,
+      }),
+    ).toBe(false);
+  });
+
+  it('reads the Video kind from the type alone: a channel, a web page or an article with a video in Also on stays small', () => {
+    expect(
+      showsEmbedImage({
+        ...card('https://www.youtube.com/channel/UCuAXFkgsw1L7xaCfnd5JJOw'),
+        type: 'WebPage',
+        type_path: [],
+      }),
+    ).toBe(false);
+    const alsoOnVideo = [{ uri: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', site: 'YouTube' }] as TPinakesAlsoOn[];
+    expect(
+      showsEmbedImage({
+        ...card('https://en.wikipedia.org/wiki/Bitcoin', alsoOnVideo),
+        type: 'Article',
+        type_path: ['Thing', 'CreativeWork', 'Article'],
+      }),
+    ).toBe(false);
+  });
+
+  it('counts an exact Also on video, never a match by metadata, a rich frame or a gone post', () => {
+    const trailer = { uri: 'https://www.youtube.com/watch?v=vKQi3bBA1y8', site: 'YouTube' } as TPinakesAlsoOn;
+    const film = { ...card('https://letterboxd.com/film/the-matrix/', [trailer]), ...VIDEO_TYPE, embed: null };
+    expect(showsEmbedImage(film)).toBe(true);
+    expect(showsEmbedImage({ ...film, also_on: [{ ...trailer, kind: 'maybe' } as TPinakesAlsoOn] })).toBe(false);
+    const slides: TPinakesEmbed = {
+      ...xPost,
+      provider: 'speaker-deck',
+      kind: 'rich',
+      src: 'https://speakerdeck.com/player/1',
+    };
+    expect(showsEmbedImage({ ...card('https://speakerdeck.com/a/b'), ...VIDEO_TYPE, embed: slides })).toBe(false);
+    const toot: TPinakesEmbed = { ...xPost, provider: 'mastodon', src: 'https://mastodon.social/@a/1/embed' };
+    expect(showsEmbedImage({ ...card('https://mastodon.social/@a/1'), ...VIDEO_TYPE, embed: toot })).toBe(true);
+    expect(
+      showsEmbedImage({ ...card('https://mastodon.social/@a/1', [], 'missing'), ...VIDEO_TYPE, embed: toot }),
+    ).toBe(false);
   });
 });

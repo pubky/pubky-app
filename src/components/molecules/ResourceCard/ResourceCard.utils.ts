@@ -72,6 +72,27 @@ export function getNearestTypes(card: Pick<TPinakesCard, 'type' | 'type_path'>):
 }
 
 /**
+ * schema.org types whose `image` is mostly a 16:9 frame (a video's still; a film's or series' image is often wide):
+ * the card's thumbnail is 16:9 before the image loads, where a square crop would cut it (and any text in it). Every
+ * other card (music, books, places, articles) starts square; the loaded image's own shape decides after that. The
+ * Video kind's types of `getPlayerCategory`, and `Clip` (kept here: the player's utils read this module).
+ */
+const WIDE_IMAGE_TYPES: ReadonlySet<string> = new Set([
+  'VideoObject',
+  'Clip',
+  'Movie',
+  'MovieSeries',
+  'TVSeries',
+  'TVSeason',
+  'TVEpisode',
+]);
+
+/** Whether the card's image is a 16:9 frame (`WIDE_IMAGE_TYPES`), from its `type` or any `type_path` entry. */
+export function hasWideImage(card: Pick<TPinakesCard, 'type' | 'type_path'>): boolean {
+  return getNearestTypes(card).some((type) => WIDE_IMAGE_TYPES.has(type));
+}
+
+/**
  * Which details a card shows, from the nearest ancestor in its `type_path` that has a family
  * (`Restaurant` → `LocalBusiness` → `Place`). Types with no such ancestor are plain web cards.
  */
@@ -107,26 +128,6 @@ export function getHttpUrl(value: string | null | undefined): string | null {
 /** A link without its scheme and `www.`, for a card that has no name: `https://www.x.com/a` → `x.com/a`. */
 export function getDisplayLink(value: string): string {
   return value.replace(/^[a-z][a-z0-9+.-]*:(\/\/)?/i, '').replace(/^www\./i, '');
-}
-
-/**
- * schema.org types whose `image` is a 16:9 frame (a video still, a movie's or series' backdrop):
- * the card shows it as a 16:9 thumbnail, where a square crop would cut it (and any text in it).
- * Every other card (music, books, places, articles) keeps the square.
- */
-const WIDE_IMAGE_TYPES: ReadonlySet<string> = new Set([
-  'VideoObject',
-  'Clip',
-  'Movie',
-  'MovieSeries',
-  'TVSeries',
-  'TVSeason',
-  'TVEpisode',
-]);
-
-/** Whether the card's image is a 16:9 frame, from its `type` or any `type_path` entry. */
-export function hasWideImage(card: Pick<TPinakesCard, 'type' | 'type_path'>): boolean {
-  return (card.type ? [card.type, ...card.type_path] : card.type_path).some((type) => WIDE_IMAGE_TYPES.has(type));
 }
 
 /**

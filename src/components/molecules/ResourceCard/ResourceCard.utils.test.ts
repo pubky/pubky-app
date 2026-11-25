@@ -412,7 +412,9 @@ describe('hasWideImage', () => {
   });
 
   it('reads a wide type from the type_path of a narrower type it has never seen', () => {
-    expect(hasWideImage({ type: 'MusicVideoObject', type_path: ['Thing', 'MediaObject', 'VideoObject'] })).toBe(true);
+    expect(
+      hasWideImage({ type: 'LectureRecording', type_path: ['Thing', 'CreativeWork', 'MediaObject', 'VideoObject'] }),
+    ).toBe(true);
   });
 
   it.each([
