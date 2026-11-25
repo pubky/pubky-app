@@ -74,6 +74,40 @@ describe('syncScope scope', () => {
     expect(listener).toHaveBeenLastCalledWith(crawler.stats());
   });
 
+  it("looks up the next hop's users while the current hop's activity is read", async () => {
+    const { network, crawlerOf } = harness();
+    network.addHomeserver('hs1');
+    chain(network, ['alice', 'bob']);
+    network.putJson('alice', postPath(DAY_MS), { text: 'hello' });
+    let bobLookedUp = false;
+    let bobLookedUpByAliceActivity: boolean | null = null;
+    const watching: IndexerTransport = {
+      resolveHomeserver: (user) => {
+        if (user === 'bob') bobLookedUp = true;
+        return network.resolveHomeserver(user);
+      },
+      readEvents: async (request) => {
+        const aliceActivity = !request.reverse && request.paths.includes(POSTS) && request.users[0].user === 'alice';
+        if (aliceActivity && bobLookedUpByAliceActivity === null) {
+          for (let turn = 0; turn < 20 && !bobLookedUp; turn += 1)
+            await new Promise((resolve) => setTimeout(resolve, 0));
+          bobLookedUpByAliceActivity = bobLookedUp;
+        }
+        return network.readEvents(request);
+      },
+      getPublic: (request) => network.getPublic(request),
+      listIndexFiles: () => network.listIndexFiles(),
+      readIndexFile: (name) => network.readIndexFile(name),
+      writeIndexFile: (name, bytes) => network.writeIndexFile(name, bytes),
+      deleteIndexFile: (name) => network.deleteIndexFile(name),
+    };
+
+    const { members } = await crawlerOf(watching).syncScope('alice');
+
+    expect(bobLookedUpByAliceActivity).toBe(true);
+    expect(members.get('bob')).toBe(1);
+  });
+
   it('leaves out excluded users and whoever is reached only through them', async () => {
     const { network, crawler } = harness({ excluded: new Set(['erin']) });
     network.addHomeserver('hs1');

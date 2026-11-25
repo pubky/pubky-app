@@ -448,14 +448,19 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     const skipped = excluded;
     const members = new Map([[seed, 0]]);
     let frontier = [seed];
+    let resolving = resolveAll(ctx, frontier);
     for (let hop = 0; frontier.length > 0; hop += 1) {
       counters.usersPerHop.push(frontier.length);
       changed();
-      const { homeserverOf, byHomeserver } = await resolveAll(ctx, frontier);
+      const { homeserverOf, byHomeserver } = await resolving;
       await eachHomeserver(byHomeserver, (homeserver, users) => syncFull(ctx, homeserver, users));
       // The seed's profile and follows are enough for a first answer: it is a member before its activity is read.
       if (hop === 0) await publish(new Map([...before, ...members]), false);
       const next = hop < options.hops ? await nextHop(frontier, homeserverOf, members, hop + 1, skipped) : [];
+      // Lookups go to the resolvers, not the homeservers: the next hop's run while this hop's activity is read.
+      resolving = resolveAll(ctx, next);
+      // Awaited at the next hop; when this one throws first, its rejection is dropped here.
+      resolving.catch(() => undefined);
       await eachHomeserver(byHomeserver, (homeserver, users) => syncWindow(ctx, homeserver, users));
       if (hop === 0) {
         const homeserver = homeserverOf.get(seed) ?? null;
