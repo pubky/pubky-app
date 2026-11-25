@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { buildFollow, buildPost, buildUri, buildUser, type BuiltPost } from 'pubky-social-specs';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import type { CrawlerOptions } from '../crawler.types';
 import { FakeNetwork } from '../fakeNetwork';
 import { IndexerNotStartedError } from '../indexer.errors';
@@ -14,7 +14,8 @@ import { UnavailableQueryError } from './queries/queries.errors';
 import { SOCIAL_ACTIVITY, SOCIAL_GRAPH } from './social.domain';
 import { ALICE, at, BRAN, CLEO, DION, MINUTE_MS, socialNetwork, T0 } from './social.fixtures';
 import type { SocialData } from './social.types';
-import { createSocialIndexer, type SocialChange, type SocialLimits } from './socialIndexer';
+import { ViewMismatchError } from './social.verify';
+import { createSocialIndexer, type SocialChange, type SocialIndexer, type SocialLimits } from './socialIndexer';
 
 const DAY_MS = 24 * 60 * MINUTE_MS;
 const DEBOUNCE = 250;
@@ -77,6 +78,13 @@ function holding(network: FakeNetwork, users: readonly string[]) {
   return { transport, state };
 }
 
+/** Every indexer a test made: each one checks its updated views against full builds. */
+const made: SocialIndexer[] = [];
+
+afterEach(() => {
+  for (const indexer of made.splice(0)) expect(indexer.status().lastError).not.toBeInstanceOf(ViewMismatchError);
+});
+
 /** The fixture network on two homeservers, a shared store, and an indexer over any transport and store. */
 function socialWorld(crawler: Partial<CrawlerOptions> = {}, runtime: Partial<RuntimeOptions & SocialLimits> = {}) {
   const fixture = socialNetwork();
@@ -86,14 +94,17 @@ function socialWorld(crawler: Partial<CrawlerOptions> = {}, runtime: Partial<Run
   for (const { author, path } of fixture.deletes) network.del(author, path);
   const store = createMemoryStore<SocialData>();
   const time = fakeTime(T0 + DAY_MS);
-  const indexerOf = (transport: IndexerTransport = network, on: IndexStore<SocialData> = store) =>
-    createSocialIndexer({
+  const indexerOf = (transport: IndexerTransport = network, on: IndexStore<SocialData> = store) => {
+    const indexer = createSocialIndexer({
       transport,
       store: on,
       now: () => time.clock.now,
       schedule: time.schedule,
-      options: { ...runtime, crawler },
+      options: { ...runtime, crawler, verifyView: true },
     });
+    made.push(indexer);
+    return indexer;
+  };
   return { fixture, network, time, indexerOf, store };
 }
 
