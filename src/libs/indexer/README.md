@@ -114,7 +114,10 @@ the newest sync time known: this run's, the previous session's kept in the store
 `createIndexerRuntime` (`indexer.ts`) is that loop for any domain: one queue for every crawl, and with
 coordination only the tab holding the lock crawls. Requests never overlap and go ahead of the scope sync: one
 arriving during a scope sync aborts it at its next safe point, and the sync resumes after it from what it
-committed. A scope sync pre-empted three times in a row runs its next pass to the end before yielding again.
+committed. Leaf requests are the exception: the ones waiting, or asked in the same turn, run together as one crawl
+(`syncLeaves`), which resolves each author once and checks each homeserver once. A lookup already in flight for a
+user is shared by every operation that needs it. A scope sync pre-empted three times in a row runs its next pass to
+the end before yielding again.
 
 ## Saved index
 

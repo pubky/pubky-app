@@ -112,6 +112,35 @@ describe('syncLeaf', () => {
   });
 });
 
+describe('syncLeaves', () => {
+  it('resolves an author once, checks the homeserver once and refuses an invalid leaf alone', async () => {
+    const { network, store, crawler } = twoCircles();
+    const first = postPath(40 * DAY_MS);
+    const second = postPath(41 * DAY_MS);
+    network.putJson('carol', first, { text: 'first' });
+    network.putJson('carol', second, { text: 'second' });
+    const leaves = [
+      { author: 'carol', group: 'post:first', paths: [first] },
+      { author: 'carol', group: 'post:second', paths: [second] },
+      { author: 'carol', group: GRAPH, paths: [POSTS] },
+    ];
+
+    const outcome = await crawler.syncLeaves(leaves);
+
+    expect(crawler.stats().lookups).toBe(1);
+    expect(outcome.failedHomeservers).toEqual([]);
+    expect(outcome.refused.map((error) => error instanceof InvalidIndexInputError)).toEqual([false, false, true]);
+    expect(await servedData(store, 'carol', 'hs1', 'post:first')).toEqual(new Map([[first, { text: 'first' }]]));
+    expect(await servedData(store, 'carol', 'hs1', 'post:second')).toEqual(new Map([[second, { text: 'second' }]]));
+
+    const mark = network.reads.length;
+    await crawler.syncLeaves(leaves.slice(0, 2));
+
+    // The restore check is the one backward read, made once for the homeserver of both leaves.
+    expect(network.reads.slice(mark).filter((read) => read.reverse)).toHaveLength(1);
+  });
+});
+
 describe('onCommit', () => {
   it('reports the scopes and members a sync changed, and nothing on a sync that found nothing', async () => {
     const { network, crawler } = twoCircles();

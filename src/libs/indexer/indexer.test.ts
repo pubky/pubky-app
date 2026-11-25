@@ -291,6 +291,39 @@ describe('createIndexerRuntime backfill', () => {
   });
 });
 
+describe('createIndexerRuntime leaves', () => {
+  it('runs the leaves asked in one turn as one crawl, reading them at once', async () => {
+    const w = world();
+    const { runtime, state } = runtimeOf(w);
+    runtime.start(null);
+    await settle();
+
+    await Promise.all([
+      runtime.ensureLeaf({ author: 'carol', group: 'post', paths: [POSTS] }),
+      runtime.ensureLeaf({ author: 'dave', group: 'post', paths: [POSTS] }),
+    ]);
+
+    expect(state.reads.filter((read) => !read.reverse).map((read) => read.users)).toEqual([['carol'], ['dave']]);
+    expect(state.peak).toBe(2);
+    expect(await w.store.readCoverage({ author: 'dave', homeserver: 'hs1', group: 'post' })).toHaveLength(1);
+  });
+
+  it('refuses an invalid leaf of a batch alone', async () => {
+    const w = world();
+    const { runtime } = runtimeOf(w);
+    runtime.start(null);
+    await settle();
+
+    const [bad, good] = await Promise.allSettled([
+      runtime.ensureLeaf({ author: 'carol', group: GRAPH, paths: [POSTS] }),
+      runtime.ensureLeaf({ author: 'dave', group: 'post', paths: [POSTS] }),
+    ]);
+
+    expect(bad.status).toBe('rejected');
+    expect(good.status).toBe('fulfilled');
+  });
+});
+
 describe('createIndexerRuntime forget', () => {
   it('deletes a visited user and a leaf, keeps members, and loads them again on the next ensure', async () => {
     const w = world();

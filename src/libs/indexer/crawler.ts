@@ -6,6 +6,7 @@ import {
   DEFAULT_CRAWLER_OPTIONS,
   type HydrateResult,
   type LeafRequest,
+  type LeavesOutcome,
   type StoreChange,
   type SyncOutcome,
   type SyncResult,
@@ -90,6 +91,8 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
   let excluded: ReadonlySet<string> = new Set(options.excluded);
   const seen = new Set<string>();
   const failed = new Set<string>();
+  /** Lookups in flight by user, so operations running together resolve a user once. */
+  const lookups = new Map<string, Promise<string | null>>();
   /** Records `hydrate` fetched once, by scope, path and cursor. */
   const hydrated = new Set<string>();
   const listeners = new Set<(stats: CrawlerStats) => void>();
@@ -257,13 +260,14 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
       runs.push(foldEvents<D>({ author, homeserver, group: group.id }, tail, head, events.get(author) ?? []));
     }
     await attachBodies(ctx, runs);
+    // Taken and set with no await between, so batches read together never write an older mark over a newer one.
     const highWater = newestOf(ctx.highWater.get(homeserver) ?? null, newest);
+    ctx.highWater.set(homeserver, highWater);
     const scopes = runs.filter((run) => changesServed(run, stored.get(run.author) ?? null)).map(scopeOf);
     await commit(
       { applyRuns: runs, homeserverStates: [{ homeserver, patch: { highWater, failure: null } }] },
       { scopes, seeds: [] },
     );
-    ctx.highWater.set(homeserver, highWater);
   }
 
   /**
@@ -332,6 +336,17 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
   /** The user's homeserver from the store while fresh, else from the transport; a failed lookup keeps the old. */
   async function resolve(ctx: OperationContext, user: string): Promise<string | null> {
     throwIfAborted(ctx.signal);
+    let pending = lookups.get(user);
+    if (pending === undefined) {
+      pending = lookUp(user).finally(() => lookups.delete(user));
+      lookups.set(user, pending);
+    }
+    const homeserver = await pending;
+    throwIfAborted(ctx.signal);
+    return homeserver;
+  }
+
+  async function lookUp(user: string): Promise<string | null> {
     const cached = await store.readUserHomeserver(user);
     if (cached !== null && now() - cached.resolvedAt < options.homeserverTtlMs) return cached.homeserver;
     count('lookups');
@@ -339,7 +354,6 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     try {
       homeserver = await transport.resolveHomeserver(user);
     } catch (error) {
-      throwIfAborted(ctx.signal);
       if (!(error instanceof IndexerError)) throw error;
       return cached?.homeserver ?? null;
     }
@@ -438,23 +452,42 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     return { failedHomeservers: [...ctx.failed] };
   }
 
-  async function syncLeaf({ author, group, paths }: LeafRequest, signal?: AbortSignal): Promise<SyncOutcome> {
+  function leafError({ group, paths }: LeafRequest): InvalidIndexInputError | null {
     if (domain.groups.some(({ id }) => id === group)) {
-      throw new InvalidIndexInputError(`leaf group ${group} is one of the domain's groups`);
+      return new InvalidIndexInputError(`leaf group ${group} is one of the domain's groups`);
     }
     // The restore check re-reads an author's newest event over the domain's paths, so a leaf stays inside them.
     if (paths.length === 0 || !paths.every((path) => allPaths.some((prefix) => path.startsWith(prefix)))) {
-      throw new InvalidIndexInputError(`leaf paths of ${group} must lie inside the domain's paths`);
+      return new InvalidIndexInputError(`leaf paths of ${group} must lie inside the domain's paths`);
     }
+    return null;
+  }
+
+  async function syncLeaves(leaves: readonly LeafRequest[], signal?: AbortSignal): Promise<LeavesOutcome> {
+    const refused = leaves.map(leafError);
+    const valid = leaves.filter((_, i) => refused[i] === null);
     const ctx = contextOf(signal);
-    const { byHomeserver } = await resolveAll(ctx, [author]);
-    const leaf: PathGroup = { id: group, paths: [...paths], history: 'full' };
-    for (const [homeserver, users] of byHomeserver) {
-      if (!(await ready(ctx, homeserver))) continue;
-      await guard(ctx, homeserver, () => syncGroup(ctx, homeserver, leaf, users, fromHead));
-    }
+    const { homeserverOf, byHomeserver } = await resolveAll(ctx, [...new Set(valid.map(({ author }) => author))]);
+    // One restore check per homeserver, before any leaf of it is read.
+    const readable = new Set<string>();
+    for (const homeserver of byHomeserver.keys()) if (await ready(ctx, homeserver)) readable.add(homeserver);
+    await Promise.all(
+      valid.map(async ({ author, group, paths }) => {
+        const homeserver = homeserverOf.get(author) ?? null;
+        if (homeserver === null || !readable.has(homeserver)) return;
+        const leaf: PathGroup = { id: group, paths: [...paths], history: 'full' };
+        await guard(ctx, homeserver, () => syncGroup(ctx, homeserver, leaf, [author], fromHead));
+      }),
+    );
     throwIfAborted(signal);
-    return { failedHomeservers: [...ctx.failed] };
+    return { failedHomeservers: [...ctx.failed], refused };
+  }
+
+  async function syncLeaf(leaf: LeafRequest, signal?: AbortSignal): Promise<SyncOutcome> {
+    const error = leafError(leaf);
+    if (error !== null) throw error;
+    const { failedHomeservers } = await syncLeaves([leaf], signal);
+    return { failedHomeservers };
   }
 
   async function backfill(author: string, groupId: string, pages: number, signal?: AbortSignal) {
@@ -546,6 +579,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     backfill,
     syncUsers,
     syncLeaf,
+    syncLeaves,
     hydrate,
     setExcluded(users) {
       excluded = new Set(users);

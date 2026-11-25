@@ -278,6 +278,29 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     }
   }
 
+  /** Runs leaf requests together as one crawl, each settled with its own outcome. Never rejects. */
+  async function executeLeaves(tasks: Task[], signal: AbortSignal): Promise<void> {
+    const leaves = tasks.flatMap(({ request }) => (request.kind === 'leaf' ? [request.leaf] : []));
+    try {
+      const { refused } = await crawler.syncLeaves(leaves, signal);
+      tasks.forEach((task, i) => {
+        const error = refused[i];
+        if (error === null) task.resolve();
+        else task.reject(error);
+      });
+    } catch (error) {
+      if (!signal.aborted) lastError = asError(error);
+      for (const task of tasks) task.reject(error);
+    }
+  }
+
+  /** The queued leaf requests after `first`, taken out of the queue to run with it. */
+  function takeLeaves(first: Task): Task[] {
+    const leaves = [first, ...queue.filter(({ request }) => request.kind === 'leaf')];
+    queue = queue.filter(({ request }) => request.kind !== 'leaf');
+    return leaves;
+  }
+
   function enqueue(task: Task) {
     if (task.request.kind === 'scope') scopeDue.push(task);
     else queue.push(task);
@@ -364,8 +387,11 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
       work = loadIndex(current);
     } else {
       const task = forced ? undefined : queue.shift();
-      if (task !== undefined && aheadOfForced > 0) aheadOfForced -= 1;
-      if (task !== undefined) work = execute(task, current, controller.signal);
+      // Leaves are small and independent: the ones waiting run together, so a page's post and profiles load at once.
+      const batch = task?.request.kind === 'leaf' ? takeLeaves(task) : null;
+      if (task !== undefined && aheadOfForced > 0) aheadOfForced = Math.max(0, aheadOfForced - (batch?.length ?? 1));
+      if (batch !== null) work = executeLeaves(batch, controller.signal);
+      else if (task !== undefined) work = execute(task, current, controller.signal);
       else if (scopeWanted && current !== null) work = startScopeSync(current);
       else return;
     }
@@ -505,7 +531,9 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
       const task: Task = { request, resolve, reject, remote: false };
       if (shared === null || leading) {
         enqueue(task);
-        pump();
+        // A leaf waits one microtask, so the leaves asked in the same turn run as one batch.
+        if (request.kind === 'leaf') queueMicrotask(pump);
+        else pump();
       } else {
         forward(task);
       }

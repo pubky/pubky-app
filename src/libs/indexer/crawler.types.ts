@@ -68,6 +68,11 @@ export interface SyncOutcome {
   failedHomeservers: string[];
 }
 
+export interface LeavesOutcome extends SyncOutcome {
+  /** Per leaf, in the order given: the error that refused it, `null` for one that was synced. */
+  refused: (Error | null)[];
+}
+
 export interface SyncResult extends SyncOutcome {
   /** Every user in scope, with its hop. */
   members: Map<string, number>;
@@ -119,6 +124,11 @@ export interface Crawler {
   syncUsers(users: readonly string[], signal?: AbortSignal): Promise<SyncOutcome>;
   /** Syncs a leaf scope from its stored head, or from the stream start. */
   syncLeaf(leaf: LeafRequest, signal?: AbortSignal): Promise<SyncOutcome>;
+  /**
+   * Syncs several leaf scopes as one operation: each author is resolved once, each homeserver checked once, and the
+   * leaves are read concurrently. A leaf with invalid paths is refused alone.
+   */
+  syncLeaves(leaves: readonly LeafRequest[], signal?: AbortSignal): Promise<LeavesOutcome>;
   /**
    * Fetches the files of served records that need one and have no data, such as records read from a saved index,
    * in the domain's groups of the seed's scope members, newest cursor first, at most `limit`. A record is tried
