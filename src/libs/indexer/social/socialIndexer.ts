@@ -11,7 +11,8 @@ import { createNexusRouter, type NexusRequest, type NexusResponse, type NexusRou
 import { createSocialQueries } from './queries/socialQueries';
 import { createSocialDomain, locate, POSTS_PREFIX, PROFILE_PATH, SOCIAL_ACTIVITY, SOCIAL_GRAPH } from './social.domain';
 import type { AuthorRecords, GroupHistory, Membership, SocialData } from './social.types';
-import { buildSocialView, type SocialView } from './social.view';
+import { findViewMismatch, ViewMismatchError } from './social.verify';
+import { buildSocialState, buildSocialView, type SocialState, type SocialView, updateSocialState } from './social.view';
 
 const POST_GROUP_PREFIX = 'post:';
 const PROFILE_GROUP = 'profile';
@@ -35,6 +36,14 @@ export const DEFAULT_SOCIAL_LIMITS: Readonly<SocialLimits> = Object.freeze({
   maxProfiles: 500,
 });
 
+export interface SocialViewOptions {
+  /**
+   * Also builds the view from scratch after each update and fails with `ViewMismatchError` on any difference, for
+   * tests: it costs a full build per change. The error stays in `status()` and rejects requests from then on.
+   */
+  verifyView: boolean;
+}
+
 export interface SocialIndexerParams {
   transport: IndexerTransport;
   store: IndexStore<SocialData>;
@@ -43,7 +52,7 @@ export interface SocialIndexerParams {
   schedule?: Schedule;
   /** Its owner closes it: the indexer never does. */
   coordination?: Coordination | null;
-  options?: Partial<RuntimeOptions & SocialLimits>;
+  options?: Partial<RuntimeOptions & SocialLimits & SocialViewOptions>;
 }
 
 /** What changed, for narrow invalidation: follows, posts and tags, or profiles. */
@@ -187,6 +196,19 @@ interface Loaded {
   leaves: MergedRuns<SocialData>[];
 }
 
+/** What an author's records are made of: the same inputs make the same records. */
+const inputsOf = ({ homeserver, membership, hop, graph, activity, leaves }: Loaded): readonly unknown[] => [
+  homeserver,
+  membership,
+  hop,
+  graph,
+  activity,
+  ...leaves,
+];
+
+const sameInputs = (a: readonly unknown[], b: readonly unknown[]) =>
+  a.length === b.length && a.every((input, i) => input === b[i]);
+
 function authorRecords(author: string, loaded: Loaded): AuthorRecords {
   const { homeserver, membership, hop, graph, activity, leaves } = loaded;
   const loose = new Map<string, RecordEntry<SocialData>>();
@@ -241,13 +263,23 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
   const limits: SocialLimits = { ...DEFAULT_SOCIAL_LIMITS, ...params.options };
   const domain = createSocialDomain();
   const runtime = createIndexerRuntime({ ...params, domain });
-  const empty = buildSocialView([]);
+  const verifyView = params.options?.verifyView ?? false;
+  const emptyState = buildSocialState([]);
+  const empty = emptyState.view;
 
   let seed: string | null = null;
   let started = false;
   /** Bumped by each start, so a rebuild begun for an earlier one is dropped. */
   let generation = 0;
+  let state = emptyState;
   let current = empty;
+  /**
+   * Each author's records with what they were made of. Reused while the inputs are the same objects, which lets the
+   * view update only the authors whose records changed.
+   */
+  const built = new Map<string, { inputs: readonly unknown[]; records: AuthorRecords }>();
+  /** A failed verification is a bug: it is never cleared. */
+  let mismatch: ViewMismatchError | null = null;
   let currentMemberships = new Map<string, Membership>();
   let routed: { view: SocialView; syncing: boolean; router: NexusRouter } | null = null;
   let viewError: Error | null = null;
@@ -380,9 +412,29 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
     }
   }
 
+  /** The author's records, the same object as last time when made of the same inputs. */
+  function recordsOf(author: string, loaded: Loaded): AuthorRecords {
+    const inputs = inputsOf(loaded);
+    const known = built.get(author);
+    if (known !== undefined && sameInputs(known.inputs, inputs)) return known.records;
+    const records = authorRecords(author, loaded);
+    built.set(author, { inputs, records });
+    return records;
+  }
+
+  /** The view of the records, updated from the current state for the authors whose records changed. */
+  function viewOf(records: readonly AuthorRecords[]): SocialState {
+    const next = updateSocialState(state, records);
+    if (verifyView) {
+      const difference = findViewMismatch(buildSocialView(records), next.view, records);
+      if (difference !== null) throw new ViewMismatchError(difference);
+    }
+    return next;
+  }
+
   async function buildOnce(
     forSeed: string | null,
-  ): Promise<{ view: SocialView; memberships: Map<string, Membership>; hasScope: boolean }> {
+  ): Promise<{ next: SocialState; memberships: Map<string, Membership>; hasScope: boolean }> {
     const members = forSeed === null ? new Map<string, number>() : await store.readScopeMembers(forSeed);
     const hops = new Map<string, number>(members);
     if (forSeed !== null && !hops.has(forSeed)) hops.set(forSeed, 0);
@@ -393,8 +445,9 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
     for (const user of ensuredUsers.keys()) if (!loaded.has(user)) await load(loaded, user, 'visited', null);
     await addLeaves(loaded);
     await addProfiles(loaded);
-    const records = [...loaded].map(([author, entry]) => authorRecords(author, entry));
-    return { view: buildSocialView(records), memberships: membershipsOf(loaded), hasScope: members.size > 0 };
+    for (const author of built.keys()) if (!loaded.has(author)) built.delete(author);
+    const records = [...loaded].map(([author, entry]) => recordsOf(author, entry));
+    return { next: viewOf(records), memberships: membershipsOf(loaded), hasScope: members.size > 0 };
   }
 
   async function runRebuilds(): Promise<void> {
@@ -409,7 +462,8 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
       pendingAuthors = new Set();
       pendingActivity = false;
       try {
-        const { view, memberships, hasScope } = await buildOnce(forSeed);
+        const { next, memberships, hasScope } = await buildOnce(forSeed);
+        const { view } = next;
         // Started again meanwhile: its own rebuild follows.
         if (generation !== run) continue;
         let membersChanged = false;
@@ -424,6 +478,7 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
           membersChanged = membersChanged || membership === 'member';
         }
         const kinds = kindsOf(current, view, changed, activity || membersChanged, membersChanged);
+        state = next;
         current = view;
         currentMemberships = memberships;
         viewError = null;
@@ -436,6 +491,7 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
       } catch (error) {
         pendingActivity = pendingActivity || activity;
         viewError = asError(error);
+        if (error instanceof ViewMismatchError) mismatch = error;
       }
     } while (again);
     rebuilding = null;
@@ -485,13 +541,15 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
 
   const status = (): RuntimeStatus => {
     const base = runtime.status();
-    return viewError === null || base.state === 'stopped' ? base : { ...base, state: 'error', lastError: viewError };
+    const error = mismatch ?? (base.state === 'stopped' ? null : viewError);
+    return error === null ? base : { ...base, state: 'error', lastError: error };
   };
 
   return {
     start(next) {
       if (started && seed === next) return;
       if (generation > 0 && seed !== next) {
+        state = emptyState;
         current = empty;
         currentMemberships = new Map();
         routed = null;
@@ -500,6 +558,7 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
         ensuredProfiles.clear();
         pendingForgotten = [];
         cache.clear();
+        built.clear();
         readyPromise = new Promise<void>((resolve) => {
           markReady = resolve;
         });
@@ -547,6 +606,7 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
       if (!started) throw new IndexerNotStartedError();
       await readyPromise;
       if (!started) throw new IndexerNotStartedError();
+      if (mismatch !== null) throw mismatch;
       const syncing = !firstSyncSettled;
       if (routed === null || routed.view !== current || routed.syncing !== syncing) {
         const queries = createSocialQueries(current, { seed, now, syncing });
