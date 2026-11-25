@@ -76,7 +76,7 @@ export interface TimelineOptions {
  * records, a post loaded alone is resolvable by key. Lists of posts are newest first.
  */
 export interface SocialView {
-  /** The scope's members: the users every network-wide answer ranges over. */
+  /** The scope's members, in the order of the records: the users every network-wide answer ranges over. */
   readonly authors: readonly string[];
   /** `null` for a user nothing is loaded of. */
   membershipOf(user: string): Membership | null;

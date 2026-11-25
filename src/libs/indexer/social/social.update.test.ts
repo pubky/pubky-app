@@ -192,7 +192,11 @@ function world(seed: number) {
 /** Requests answered through the router: feeds, counts, hot tags, notifications and bootstrap. */
 async function answers(view: SocialView, users: readonly string[]): Promise<unknown[]> {
   const router = createNexusRouter(createSocialQueries(view, { seed: ALICE, now: () => T0 + 2000 * MINUTE_MS }));
-  const get = (path: string) => router.route({ url: `https://nexus.example/v1/${path}`, method: 'GET' });
+  // A query the view cannot answer throws: both views must throw the same error.
+  const get = (path: string) =>
+    router
+      .route({ url: `https://nexus.example/v1/${path}`, method: 'GET' })
+      .catch((error: unknown) => (error instanceof Error ? { thrown: error.name, message: error.message } : error));
   const paths = [
     'stream/posts/keys?source=all&limit=50',
     `stream/posts/keys?source=following&observer_id=${ALICE}&limit=50`,
@@ -261,13 +265,14 @@ describe('updateSocialState', () => {
     const before = [...records];
     while (records.length === before.length && records.every((entry, i) => entry === before[i])) change();
     const patched = updateSocialState(state, records);
+    const patchedRecords = [...records];
     for (let step = 0; step < 30; step += 1) change();
     const combined = updateSocialState(patched, records);
 
     expect(patched.combined).not.toBe(state.combined);
     const kept = [...patched.parts].filter(([author, part]) => state.parts.get(author) === part);
     expect(kept.length).toBeGreaterThanOrEqual(patched.parts.size - 1);
-    expect(findViewMismatch(buildSocialView(records), patched.view, records)).toBeNull();
+    expect(findViewMismatch(buildSocialView(patchedRecords), patched.view, patchedRecords)).toBeNull();
     expect(findViewMismatch(buildSocialView(records), combined.view, records)).toBeNull();
   });
 });
