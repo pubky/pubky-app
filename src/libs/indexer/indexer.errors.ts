@@ -45,3 +45,11 @@ export class IndexerAbortedError extends IndexerError {
     this.name = 'IndexerAbortedError';
   }
 }
+
+/** A call that needs a running indexer, made before `start` or after `stop`. */
+export class IndexerNotStartedError extends IndexerError {
+  constructor(options?: ErrorOptions) {
+    super('the indexer is not started', options);
+    this.name = 'IndexerNotStartedError';
+  }
+}

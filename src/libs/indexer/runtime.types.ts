@@ -53,7 +53,9 @@ export type CoordinationMessage =
   | { type: 'leader'; seed: string }
   /** Asks the crawling tab of the seed to run a crawl and answer with `settled`. */
   | { type: 'request'; seed: string; id: string; request: CrawlRequest }
-  | { type: 'settled'; id: string; error: string | null };
+  | { type: 'settled'; id: string; error: string | null }
+  /** The sender finished a scope sync of the seed at `at` (ms). */
+  | { type: 'synced'; seed: string; at: number };
 
 /** How runtimes in several tabs share one store: one crawls, the others listen. */
 export interface Coordination {
@@ -85,6 +87,12 @@ export interface RuntimeStatus {
   /** The last failed crawl's error, cleared by a successful scope sync. */
   lastError: Error | null;
   stats: CrawlerStats;
+  /**
+   * True from `start` until the first scope sync of this run settles, failed included, in this tab or in the
+   * crawling one: answers until then come from a partial scope. A tab that never crawls learns it from the crawling
+   * tab's next sync.
+   */
+  firstSyncPending: boolean;
   /** Present while `savedIndex` is on. */
   savedIndex?: SavedIndexStatus;
 }

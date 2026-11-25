@@ -3,7 +3,7 @@ import type { Coordination, CoordinationMessage } from './runtime.types';
 // The one file that touches browser APIs, so the rest of the library runs anywhere.
 
 const DEFAULT_NAME = 'pubky-indexer';
-const MESSAGE_TYPES = new Set(['changed', 'leader', 'request', 'settled']);
+const MESSAGE_TYPES = new Set(['changed', 'leader', 'request', 'settled', 'synced']);
 
 /** The two browser capabilities coordination needs, injected in tests. */
 export interface BrowserApis {

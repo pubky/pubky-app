@@ -28,15 +28,16 @@ function attempt<T>(part: () => T, empty: T): T {
 
 /**
  * The sign-in page: the newest root posts in scope with up to three replies each, today's top influencers, the
- * user's recommendations, today's hot tags, every user those name, and the user's notifications.
+ * user's recommendations, today's hot tags, every user those name, and the user's notifications. `indexed` is false
+ * until the user's profile is in the view and the first scope sync has finished.
  */
 export function bootstrap(
   view: SocialView,
   context: QueryContext,
   { user_id }: { user_id: string },
 ): Answer<BootstrapJson> {
-  const indexed = attempt(() => view.profile(user_id) !== null, false);
-  const viewer = indexed ? user_id : undefined;
+  const known = attempt(() => view.profile(user_id) !== null, false);
+  const viewer = known ? user_id : undefined;
   const stream = attempt(() => postStreamKeys(view, { source: 'all', limit: STREAM_LIMIT }).data.post_keys, []);
   const posted = stream.flatMap((key) => {
     const ref = parsePostKey(key);
@@ -49,7 +50,7 @@ export function bootstrap(
     () => userStreamIds(view, context, { source: 'influencers', timeframe: TIMEFRAME, preview: true }).data,
     [],
   );
-  const recommended = indexed
+  const recommended = known
     ? attempt(() => userStreamIds(view, context, { source: 'recommended', user_id, limit: RECOMMENDED_LIMIT }).data, [])
     : [];
   const hot = attempt(
@@ -58,7 +59,7 @@ export function bootstrap(
     [],
   );
   const named = new Set<string>([
-    ...(indexed ? [user_id] : []),
+    ...(known ? [user_id] : []),
     ...[...posted, ...replies].map(({ author }) => author),
     ...influencers,
     ...recommended,
@@ -68,9 +69,11 @@ export function bootstrap(
     .sort(compareText)
     .flatMap((user) => attempt(() => userViewJson(view, user, viewer) ?? [], []));
   const notified =
-    indexed && user_id === context.seed && inScope(view, user_id)
+    known && user_id === context.seed && inScope(view, user_id)
       ? attempt(() => notifications(view, context, { user_id, limit: NOTIFICATIONS_LIMIT }).data, [])
       : [];
+  // The app asks again later for a user not indexed, so a bootstrap of a partial scope gets refreshed.
+  const indexed = known && context.syncing !== true;
   return scoped(
     { users, posts, ids: { stream, influencers, recommended, hot_tags: hot }, indexed, notifications: notified },
     'notification and indexed_at times estimated from homeserver event order',

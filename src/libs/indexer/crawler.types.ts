@@ -56,6 +56,11 @@ export interface CrawlerStats {
   streamRequests: number;
   bodyRequests: number;
   events: number;
+  /**
+   * The seed's homeserver as the last scope sync reached it, absent until that sync is past the seed: `null` when it
+   * did not resolve, and `failed` when it could not be read.
+   */
+  seed?: { homeserver: string | null; failed: boolean };
 }
 
 export interface SyncOutcome {

@@ -1,7 +1,7 @@
 import type { LeafRequest } from '../crawler.types';
 import { CURSOR_ZERO } from '../cursor';
 import { createIndexerRuntime } from '../indexer';
-import { IndexerError } from '../indexer.errors';
+import { IndexerNotStartedError } from '../indexer.errors';
 import type { Coverage, Cursor, Entry, MergedRuns, RecordEntry } from '../indexer.types';
 import type { Coordination, RuntimeOptions, RuntimeStatus, Schedule } from '../runtime.types';
 import { scopeId } from '../store.helpers';
@@ -51,8 +51,15 @@ export interface SocialIndexer {
   backfill(author: string, group: string, pages: number): Promise<void>;
   /** An empty view until the first build. */
   view(): SocialView;
-  /** Resolves once a view was built from a stored scope, or from the store after the first sync. */
+  /**
+   * Resolves once a view holds the seed's own scopes: from the store, from a loaded index file, or after the first
+   * sync committed the seed's hop, whichever comes first. A seed whose homeserver does not resolve or cannot be read
+   * makes it resolve once that attempt is over, with `status().stats.seed` saying which.
+   */
   ready(): Promise<void>;
+  /** Resolves once the first scope sync of this run has settled, failed included, and the view holds what it committed. */
+  whenSynced(): Promise<void>;
+  /** Answers once `ready`; rejects with `IndexerNotStartedError` before `start` or after `stop`. */
   request(request: NexusRequest): Promise<NexusResponse>;
   /** Called after each view rebuild that changed something. */
   onChange(listener: (change: SocialChange) => void): () => void;
@@ -151,9 +158,12 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
   const empty = buildSocialView([]);
 
   let seed: string | null = null;
+  let started = false;
+  /** Bumped by each start, so a rebuild begun for an earlier one is dropped. */
+  let generation = 0;
   let current = empty;
   let currentMemberships = new Map<string, Membership>();
-  let routed: { view: SocialView; router: NexusRouter } | null = null;
+  let routed: { view: SocialView; syncing: boolean; router: NexusRouter } | null = null;
   let viewError: Error | null = null;
   let firstSyncSettled = false;
   const ensuredUsers = new Set<string>();
@@ -170,6 +180,10 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
   let markReady: () => void = () => undefined;
   let readyPromise = new Promise<void>((resolve) => {
     markReady = resolve;
+  });
+  let markSynced: () => void = () => undefined;
+  let syncedPromise = new Promise<void>((resolve) => {
+    markSynced = resolve;
   });
 
   /**
@@ -239,14 +253,16 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
   async function runRebuilds(): Promise<void> {
     do {
       again = false;
+      const run = generation;
       const forSeed = seed;
-      if (forSeed === null) break;
+      if (forSeed === null || !started) break;
+      const settled = firstSyncSettled;
       const changed = pendingAuthors;
       pendingAuthors = new Set();
       try {
         const { view, memberships, hasScope } = await buildOnce(forSeed);
-        // Started with another seed meanwhile: its own rebuild follows.
-        if (seed !== forSeed) continue;
+        // Started again meanwhile: its own rebuild follows.
+        if (generation !== run) continue;
         for (const [author, membership] of memberships) {
           if (currentMemberships.get(author) !== membership) changed.add(author);
         }
@@ -254,7 +270,8 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
         current = view;
         currentMemberships = memberships;
         viewError = null;
-        if (hasScope || firstSyncSettled) markReady();
+        if (hasScope || settled) markReady();
+        if (settled) markSynced();
         if (changed.size > 0) {
           const change = { authors: [...changed] };
           for (const listener of listeners) listener(change);
@@ -287,7 +304,7 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
 
   // A first sync that failed still makes the view ready, empty or not, rather than leaving requests waiting.
   runtime.onStatus((status) => {
-    if (firstSyncSettled || status.seed !== seed || (status.lastSyncAt === null && status.lastError === null)) return;
+    if (firstSyncSettled || status.state === 'stopped' || status.seed !== seed || status.firstSyncPending) return;
     firstSyncSettled = true;
     void requestRebuild([]);
   });
@@ -299,6 +316,7 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
 
   return {
     start(next) {
+      if (started && seed === next) return;
       if (seed !== null && seed !== next) {
         current = empty;
         currentMemberships = new Map();
@@ -310,13 +328,21 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
           markReady = resolve;
         });
       }
-      if (seed !== next) firstSyncSettled = false;
+      firstSyncSettled = false;
+      syncedPromise = new Promise<void>((resolve) => {
+        markSynced = resolve;
+      });
+      generation += 1;
       seed = next;
+      started = true;
       runtime.start(next);
       // The store may hold a previous session's scope, served before any network.
       void requestRebuild([]);
     },
-    stop: () => runtime.stop(),
+    stop() {
+      started = false;
+      runtime.stop();
+    },
     pause: () => runtime.pause(),
     resume: () => runtime.resume(),
     refresh: (users) => runtime.refresh(users),
@@ -339,14 +365,18 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
     backfill: (author, group, pages) => runtime.backfill(author, group, pages),
     view: () => current,
     ready: () => readyPromise,
+    whenSynced: () => syncedPromise,
     async request(request) {
+      if (!started) throw new IndexerNotStartedError();
       await readyPromise;
       const forSeed = seed;
-      if (forSeed === null) throw new IndexerError('the indexer is not started');
-      if (routed === null || routed.view !== current) {
-        routed = { view: current, router: createNexusRouter(createSocialQueries(current, { seed: forSeed, now })) };
+      if (forSeed === null || !started) throw new IndexerNotStartedError();
+      const syncing = !firstSyncSettled;
+      if (routed === null || routed.view !== current || routed.syncing !== syncing) {
+        const queries = createSocialQueries(current, { seed: forSeed, now, syncing });
+        routed = { view: current, syncing, router: createNexusRouter(queries) };
       }
-      return routed.router.route(request);
+      return { ...(await routed.router.route(request)), syncing };
     },
     onChange(listener) {
       listeners.add(listener);

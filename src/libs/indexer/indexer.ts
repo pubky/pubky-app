@@ -1,6 +1,6 @@
 import { createCrawler } from './crawler';
 import { DEFAULT_CRAWLER_OPTIONS, type StoreChange } from './crawler.types';
-import { IndexerAbortedError, IndexerError } from './indexer.errors';
+import { IndexerAbortedError, IndexerError, IndexerNotStartedError } from './indexer.errors';
 import {
   type CoordinationMessage,
   type CrawlRequest,
@@ -84,6 +84,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
   let cancelFlush: (() => void) | null = null;
   let lastSyncAt: number | null = null;
   let lastError: Error | null = null;
+  let firstSyncPending = false;
   /** The saved index is read before the first crawl after a start. */
   let loadDue = false;
   /** Records read from saved files may still miss their data. */
@@ -107,6 +108,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     lastSyncAt,
     lastError,
     stats: crawler.stats(),
+    firstSyncPending,
     ...(options.savedIndex ? { savedIndex: { ...saved } } : {}),
   });
   const emitStatus = () => {
@@ -281,6 +283,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
         return;
       }
       if (!signal.aborted) lastError = asError(error);
+      if (!outer.aborted) firstSyncPending = false;
       preempted = 0;
       for (const task of waiters) task.reject(error);
       // A failed sync keeps the interval too.
@@ -289,6 +292,8 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     }
     lastSyncAt = now();
     lastError = null;
+    firstSyncPending = false;
+    coordination?.post({ type: 'synced', seed: current, at: lastSyncAt });
     preempted = 0;
     for (const task of waiters) task.resolve();
     scheduleSync(options.syncIntervalMs);
@@ -441,6 +446,11 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
         enqueue(remoteTask(message.id, message.request));
         pump();
         return;
+      case 'synced':
+        if (message.seed !== seed || !firstSyncPending) return;
+        firstSyncPending = false;
+        emitStatus();
+        return;
       case 'settled': {
         const task = forwarded.get(message.id);
         if (task === undefined) return;
@@ -453,7 +463,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
   }
 
   function submit(request: CrawlRequest): Promise<void> {
-    if (!started) return Promise.reject(new IndexerError('the indexer is not started'));
+    if (!started) return Promise.reject(new IndexerNotStartedError());
     return new Promise<void>((resolve, reject) => {
       const task: Task = { request, resolve, reject, remote: false };
       if (coordination === null || leading) {
@@ -512,6 +522,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
       controller = new AbortController();
       lastSyncAt = null;
       lastError = null;
+      firstSyncPending = true;
       preempted = 0;
       aheadOfForced = 0;
       loadDue = options.savedIndex;

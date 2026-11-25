@@ -94,6 +94,12 @@ referenced author is known only through posts loaded alone (`ensurePost`), which
 profile; their stream answers empty with a `more` hint to load the user. A post whose every version, or a profile
 whose file, has a tombstone inside a trusted range is a definite not-found, whatever the window.
 
+A scope sync commits each hop's members as it reaches them, so `ready()` resolves as soon as the view holds the seed's
+own scopes: from the store, a loaded file, or the first sync's seed hop; a seed that does not resolve or whose
+homeserver fails resolves it too, `status().stats.seed` saying which. `whenSynced()` waits for the run's first scope
+sync. Until then answers say `syncing: true` and the bootstrap `indexed: false`, which makes the app ask again later.
+`request` before `start` or after `stop` rejects with `IndexerNotStartedError`.
+
 `createIndexerRuntime` (`indexer.ts`) is that loop for any domain: one queue for every crawl, and with
 coordination only the tab holding the lock crawls. Requests never overlap and go ahead of the scope sync: one
 arriving during a scope sync aborts it at its next safe point, and the sync resumes after it from what it

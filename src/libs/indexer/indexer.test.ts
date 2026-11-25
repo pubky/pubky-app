@@ -108,11 +108,17 @@ describe('createIndexerRuntime loop', () => {
     const { runtime, state } = runtimeOf(w);
 
     runtime.start('alice');
-    expect(runtime.status().state).toBe('syncing');
+    expect(runtime.status()).toMatchObject({ state: 'syncing', firstSyncPending: true });
     await settle();
 
     expect(scopeSyncs(state.reads)).toBe(1);
-    expect(runtime.status()).toMatchObject({ state: 'idle', seed: 'alice', lastSyncAt: NOW, lastError: null });
+    expect(runtime.status()).toMatchObject({
+      state: 'idle',
+      seed: 'alice',
+      lastSyncAt: NOW,
+      lastError: null,
+      firstSyncPending: false,
+    });
     await w.time.advance(INTERVAL - 1);
     expect(scopeSyncs(state.reads)).toBe(1);
     await w.time.advance(1);
@@ -323,7 +329,7 @@ describe('createIndexerRuntime coordination', () => {
     await settle();
     expect(scopeSyncs(first.state.reads)).toBe(1);
     expect(second.state.reads).toEqual([]);
-    expect(second.runtime.status().state).toBe('idle');
+    expect(second.runtime.status()).toMatchObject({ state: 'idle', firstSyncPending: false, lastSyncAt: null });
 
     await w.time.advance(DEBOUNCE);
     expect(heard).toHaveLength(1);

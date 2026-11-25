@@ -63,6 +63,9 @@ const headOf = (coverage: Coverage): Cursor | null =>
 const changesServed = (run: Run<unknown>, storedHead: Cursor | null): boolean =>
   run.entries.length > 0 || (storedHead !== null && run.tail !== storedHead);
 
+const sameMembers = (a: ReadonlyMap<string, number>, b: ReadonlyMap<string, number>): boolean =>
+  a.size === b.size && [...b].every(([user, hop]) => a.get(user) === hop);
+
 const newestOf = (current: HighWater | null, event: AuthoredStreamEvent | null): HighWater | null =>
   event !== null && (current === null || event.cursor > current.cursor)
     ? { cursor: event.cursor, author: event.author }
@@ -83,6 +86,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
   const windowPaths = windowGroups.flatMap((group) => group.paths);
 
   const counters = { usersPerHop: [] as number[], lookups: 0, streamRequests: 0, bodyRequests: 0, events: 0 };
+  let seedReach: CrawlerStats['seed'];
   const seen = new Set<string>();
   const failed = new Set<string>();
   /** Records `hydrate` fetched once, by scope, path and cursor. */
@@ -98,6 +102,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     streamRequests: counters.streamRequests,
     bodyRequests: counters.bodyRequests,
     events: counters.events,
+    ...(seedReach === undefined ? {} : { seed: { ...seedReach } }),
   });
   const changed = () => {
     const snapshot = stats();
@@ -380,9 +385,20 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
   async function syncScope(seed: string, signal?: AbortSignal): Promise<SyncResult> {
     const ctx = contextOf(signal);
     Object.assign(counters, { usersPerHop: [], lookups: 0, streamRequests: 0, bodyRequests: 0, events: 0 });
+    seedReach = undefined;
     seen.clear();
     failed.clear();
     changed();
+
+    const before = await store.readScopeMembers(seed);
+    let written: ReadonlyMap<string, number> = before;
+    /** Commits the members when they differ from the stored ones, or always when `always`. */
+    const publish = async (next: ReadonlyMap<string, number>, always: boolean) => {
+      const same = sameMembers(written, next);
+      if (same && !always) return;
+      await commit({ scopeMembers: [{ seed, members: next }] }, { scopes: [], seeds: same ? [] : [seed] });
+      written = next;
+    };
 
     const members = new Map([[seed, 0]]);
     let frontier = [seed];
@@ -393,12 +409,19 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
       for (const [homeserver, users] of byHomeserver) await syncFull(ctx, homeserver, users);
       const next = hop < options.hops ? await nextHop(frontier, homeserverOf, members, hop + 1) : [];
       for (const [homeserver, users] of byHomeserver) await syncWindow(ctx, homeserver, users);
+      if (hop === 0) {
+        const homeserver = homeserverOf.get(seed) ?? null;
+        seedReach = { homeserver, failed: homeserver !== null && ctx.failed.has(homeserver) };
+        changed();
+      }
+      throwIfAborted(signal);
+      // Each hop's members join the stored ones at once, so answers grow during a first sync; none leaves before
+      // the sync ends.
+      await publish(new Map([...before, ...members]), false);
       frontier = next;
     }
     throwIfAborted(signal);
-    const before = await store.readScopeMembers(seed);
-    const same = before.size === members.size && [...members].every(([user, hop]) => before.get(user) === hop);
-    await commit({ scopeMembers: [{ seed, members }] }, { scopes: [], seeds: same ? [] : [seed] });
+    await publish(members, true);
     return { members, failedHomeservers: [...ctx.failed] };
   }
 

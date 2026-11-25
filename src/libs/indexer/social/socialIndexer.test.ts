@@ -3,6 +3,7 @@ import { buildPost, type BuiltPost } from 'pubky-social-specs';
 import { describe, expect, it } from 'vitest';
 import type { CrawlerOptions } from '../crawler.types';
 import { FakeNetwork } from '../fakeNetwork';
+import { IndexerNotStartedError } from '../indexer.errors';
 import { decodeIndexFile } from '../indexFile';
 import { createMemoryStore } from '../memoryStore';
 import { fakeTime, settle } from '../runtime.fixtures';
@@ -48,6 +49,33 @@ function countingWrites(network: FakeNetwork) {
   return { transport, state };
 }
 
+/** The network as a transport that holds every stream read naming one of `users` until `release` runs. */
+function holding(network: FakeNetwork, users: readonly string[]) {
+  const state = { held: 0, open: false, release: (): void => undefined };
+  const opened = new Promise<void>((resolve) => {
+    state.release = () => {
+      state.open = true;
+      resolve();
+    };
+  });
+  const transport: IndexerTransport = {
+    resolveHomeserver: (user) => network.resolveHomeserver(user),
+    readEvents: async (request) => {
+      if (!state.open && request.users.some(({ user }) => users.includes(user))) {
+        state.held += 1;
+        await opened;
+      }
+      return network.readEvents(request);
+    },
+    getPublic: (request) => network.getPublic(request),
+    listIndexFiles: () => network.listIndexFiles(),
+    readIndexFile: (name) => network.readIndexFile(name),
+    writeIndexFile: (name, bytes) => network.writeIndexFile(name, bytes),
+    deleteIndexFile: (name) => network.deleteIndexFile(name),
+  };
+  return { transport, state };
+}
+
 /** The fixture network on two homeservers, a shared store, and an indexer over any transport and store. */
 function socialWorld(crawler: Partial<CrawlerOptions> = {}, runtime: Partial<RuntimeOptions> = {}) {
   const fixture = socialNetwork();
@@ -75,6 +103,7 @@ describe('createSocialIndexer', () => {
     const indexer = indexerOf();
 
     indexer.start(ALICE);
+    await indexer.whenSynced();
     const first = await indexer.request({ url: FOLLOWING, method: 'GET' });
 
     expect(first.json).toMatchObject({ post_keys: [key(BRAN, image), key(CLEO, quote), key(BRAN, repost)] });
@@ -159,7 +188,7 @@ describe('createSocialIndexer', () => {
     const { image, quote, repost } = fixture.posts;
     const previous = indexerOf();
     previous.start(ALICE);
-    await previous.ready();
+    await previous.whenSynced();
     previous.stop();
     let calls = 0;
     const silent = <T>(): Promise<T> => {
@@ -193,12 +222,12 @@ describe('createSocialIndexer', () => {
     const { image, quote, repost } = fixture.posts;
     const first = indexerOf();
     first.start(ALICE);
-    await first.ready();
+    await first.whenSynced();
     await until(async () => (await network.listIndexFiles()).length === 1, 'the first save');
 
     const second = indexerOf(network, createMemoryStore<SocialData>());
     second.start(ALICE);
-    await second.ready();
+    await second.whenSynced();
     const answer = await second.request({ url: FOLLOWING, method: 'GET' });
 
     expect(second.status().savedIndex).toMatchObject({ loadedFiles: 1, error: null });
@@ -210,7 +239,7 @@ describe('createSocialIndexer', () => {
     const { transport, state } = countingWrites(network);
     const indexer = indexerOf(transport);
     indexer.start(ALICE);
-    await indexer.ready();
+    await indexer.whenSynced();
     await until(() => state.writes === 1, 'the first save');
 
     await indexer.ensureUser(DION);
@@ -224,5 +253,67 @@ describe('createSocialIndexer', () => {
     expect(file.runs.length).toBeGreaterThan(0);
     expect(file.runs.map(({ author }) => author)).not.toContain(DION);
     expect(file.runs.every(({ group }) => group === SOCIAL_GRAPH || group === SOCIAL_ACTIVITY)).toBe(true);
+  });
+
+  it('is ready once the seed’s hop is committed and answers, marked syncing, while the first sync runs', async () => {
+    const { fixture, network, time, indexerOf } = socialWorld();
+    const { transport, state } = holding(network, [BRAN, CLEO]);
+    const indexer = indexerOf(transport);
+    let ready = false;
+    indexer.start(ALICE);
+    void indexer.ready().then(() => {
+      ready = true;
+    });
+
+    await time.advance(DEBOUNCE);
+    await settle();
+
+    expect(ready).toBe(true);
+    expect(state.held).toBeGreaterThan(0);
+    const own = await indexer.request({ url: authorStream(ALICE), method: 'GET' });
+    expect(own).toMatchObject({ status: 200, syncing: true });
+    expect(own.json).toMatchObject({ post_keys: expect.arrayContaining([key(ALICE, fixture.posts.a1)]) });
+    const early = await indexer.request({ url: `/v1/bootstrap/${ALICE}`, method: 'GET' });
+    expect(early.json).toMatchObject({ indexed: false });
+
+    state.release();
+    await indexer.whenSynced();
+    const following = await indexer.request({ url: FOLLOWING, method: 'GET' });
+    expect(following).toMatchObject({ syncing: false });
+    expect(following.json).toMatchObject({ post_keys: expect.arrayContaining([key(BRAN, fixture.posts.image)]) });
+    const late = await indexer.request({ url: `/v1/bootstrap/${ALICE}`, method: 'GET' });
+    expect(late.json).toMatchObject({ indexed: true });
+  });
+
+  it('is ready with an empty view when the seed’s homeserver does not resolve, and says so', async () => {
+    const { network, indexerOf } = socialWorld();
+    const unresolved: IndexerTransport = {
+      resolveHomeserver: async (user) => (user === ALICE ? null : network.resolveHomeserver(user)),
+      readEvents: (request) => network.readEvents(request),
+      getPublic: (request) => network.getPublic(request),
+      listIndexFiles: () => network.listIndexFiles(),
+      readIndexFile: (name) => network.readIndexFile(name),
+      writeIndexFile: (name, bytes) => network.writeIndexFile(name, bytes),
+      deleteIndexFile: (name) => network.deleteIndexFile(name),
+    };
+    const indexer = indexerOf(unresolved);
+
+    indexer.start(ALICE);
+    await indexer.ready();
+
+    expect(indexer.status().stats.seed).toEqual({ homeserver: null, failed: false });
+    const own = await indexer.request({ url: authorStream(ALICE), method: 'GET' });
+    expect(own.json).toMatchObject({ post_keys: [] });
+  });
+
+  it('rejects a request before start and after stop with a typed error', async () => {
+    const { indexerOf } = socialWorld();
+    const indexer = indexerOf();
+
+    await expect(indexer.request({ url: FOLLOWING, method: 'GET' })).rejects.toBeInstanceOf(IndexerNotStartedError);
+    indexer.start(ALICE);
+    await indexer.ready();
+    indexer.stop();
+    await expect(indexer.request({ url: FOLLOWING, method: 'GET' })).rejects.toBeInstanceOf(IndexerNotStartedError);
   });
 });

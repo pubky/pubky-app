@@ -10,13 +10,23 @@ export interface NexusRequest {
   body?: unknown;
 }
 
+/** How fresh the view behind an answer is. `SocialIndexer.request` always sets both; a bare router sets neither. */
+export interface AnswerFreshness {
+  /** The first scope sync of this run has not finished: the scope may still be partial. */
+  syncing?: boolean;
+  /** When the last scope sync behind the view completed (ms), `null` when unknown. */
+  asOf?: number | null;
+}
+
 /**
  * An answer, or the central indexer's 404 for a post or user the view does not hold. A 404 is `exact` when the
  * view proves the absence; otherwise `more` names what to load before asking again.
  */
-export type NexusResponse =
-  | { status: 200; json: unknown; coverage: Coverage; more?: MoreHint[] }
-  | { status: 404; json: { error: string }; coverage: Coverage; more?: MoreHint[] };
+export type NexusResponse = AnswerFreshness &
+  (
+    | { status: 200; json: unknown; coverage: Coverage; more?: MoreHint[] }
+    | { status: 404; json: { error: string }; coverage: Coverage; more?: MoreHint[] }
+  );
 
 export interface NexusRouter {
   /** Rejects with `UnavailableQueryError` for what the local index cannot answer, `InvalidQueryError` for a bad parameter. */

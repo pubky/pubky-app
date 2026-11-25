@@ -27,6 +27,8 @@ export interface QueryContext {
   /** The signed-in user the scope was crawled from. */
   seed: string;
   now: () => number;
+  /** The first scope sync of this run is still running. */
+  syncing?: boolean;
 }
 
 export const exact = <T>(data: T, note?: string): Answer<T> => ({

@@ -20,6 +20,7 @@ import type { Domain } from './domain.types';
 import type { FakeNetwork } from './fakeNetwork';
 import { InvalidIndexInputError } from './indexer.errors';
 import { createMemoryStore } from './memoryStore';
+import type { IndexerTransport } from './transport.types';
 
 const MINUTE_MS = 60 * 1000;
 
@@ -114,6 +115,51 @@ describe('syncScope scope', () => {
 
     expect(members.get('ghost')).toBe(1);
     expect(network.reads.every((read) => !read.users.includes('ghost'))).toBe(true);
+  });
+
+  it('commits each hop’s members before reading the next hop, and says how it reached the seed', async () => {
+    const { network, store, crawlerOf } = harness();
+    network.addHomeserver('hs1');
+    chain(network, ['alice', 'bob', 'carol']);
+    const membersAtBob: Array<Map<string, number>> = [];
+    const transport: IndexerTransport = {
+      resolveHomeserver: (user) => network.resolveHomeserver(user),
+      readEvents: async (request) => {
+        if (membersAtBob.length === 0 && request.users.some(({ user }) => user === 'bob')) {
+          membersAtBob.push(await store.readScopeMembers('alice'));
+        }
+        return network.readEvents(request);
+      },
+      getPublic: (request) => network.getPublic(request),
+      listIndexFiles: () => network.listIndexFiles(),
+      readIndexFile: (name) => network.readIndexFile(name),
+      writeIndexFile: (name, bytes) => network.writeIndexFile(name, bytes),
+      deleteIndexFile: (name) => network.deleteIndexFile(name),
+    };
+    const crawler = crawlerOf(transport);
+
+    await crawler.syncScope('alice');
+
+    expect(membersAtBob).toEqual([
+      new Map([
+        ['alice', 0],
+        ['bob', 1],
+      ]),
+    ]);
+    expect(crawler.stats().seed).toEqual({ homeserver: 'hs1', failed: false });
+  });
+
+  it('says when the seed did not resolve or its homeserver failed', async () => {
+    const unresolved = harness();
+    unresolved.network.addHomeserver('hs1');
+    await unresolved.crawler.syncScope('alice');
+    expect(unresolved.crawler.stats().seed).toEqual({ homeserver: null, failed: false });
+
+    const down = harness();
+    down.network.addHomeserver('hs1').addUser('alice', 'hs1');
+    down.network.setDown('hs1', true);
+    await down.crawler.syncScope('alice');
+    expect(down.crawler.stats().seed).toEqual({ homeserver: 'hs1', failed: true });
   });
 });
 
