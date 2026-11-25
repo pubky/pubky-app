@@ -989,19 +989,20 @@ export function getPlayerTargets(
 
 /**
  * Whether a card's image stands in for an embed: it then shows large under the card's text, where that embed stands,
- * as a post shows its image (`ResourceCardMedia`). It does for a post shown from its card (`isPost`), whose photo keeps
- * a post's size, and for a card whose type is of the Video kind (`getPlayerCategory` by type alone, so a channel or an
- * article with a video in Also on is not) that offers a video player of an exact link (`getPlayerTargets`, metadata
- * matches left out: YouTube, Vimeo) or is a video post (its `embed` a post's frame: an X or Mastodon video; not once
- * the post is `missing`). The viewer's Players are not read, so the layout never depends on settings. Every other
- * card's image (an event's, an article's, a link's preview, a song's or album's cover, an artist's photo) is a small
- * thumbnail left of the text (`ResourceCardCover`).
+ * as a post shows its image (`ResourceCardMedia`). It does for a post shown from its card that carries a video
+ * (`isPostVideo`: the video's still stands where the video loads on the press), and for a card whose type is of the
+ * Video kind (`getPlayerCategory` by type alone, so a channel or an article with a video in Also on is not) that
+ * offers a video player of an exact link (`getPlayerTargets`, metadata matches left out: YouTube, Vimeo) or is a video
+ * post (its `embed` a post's frame: an X or Mastodon video; not once the post is `missing`). The viewer's Players are
+ * not read, so the layout never depends on settings. Every other card's image (a post's photo, an event's, an
+ * article's, a link's preview, a song's or album's cover, an artist's photo) is a small thumbnail left of the text
+ * (`ResourceCardCover`).
  */
 export function showsEmbedImage(
   card: Parameters<typeof getPlayerTargets>[0] & Pick<TPinakesCard, 'type' | 'type_path'>,
-  { href, isPost = false }: { href?: string | null; isPost?: boolean } = {},
+  { href, isPostVideo = false }: { href?: string | null; isPostVideo?: boolean } = {},
 ): boolean {
-  if (isPost) return true;
+  if (isPostVideo) return true;
   if (getPlayerCategory(card) !== PlayerCategory.VIDEO) return false;
   if (card.status !== 'missing' && card.embed?.kind === 'post') return true;
   return getPlayerTargets(card, { href }).some(

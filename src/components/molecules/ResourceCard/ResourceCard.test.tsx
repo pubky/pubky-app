@@ -516,7 +516,7 @@ describe('ResourceCard', () => {
       expect(screen.queryByTestId('resource-card-image')).not.toBeInTheDocument();
     });
 
-    it('keeps a post’s photo at a post’s size in the post shown from its card, small otherwise', () => {
+    it('shows a post’s photo small beside its text, as every card’s image; the still of its video large', () => {
       const post: TPinakesResourceDetail = {
         ...ARTICLE,
         uri: 'https://x.com/jack/status/20',
@@ -526,13 +526,24 @@ describe('ResourceCard', () => {
         description: 'just setting up my twttr',
         facts: { author: 'jack', author_name: 'jack', published: '2006-03-21' },
       };
-      const { unmount } = render(<ResourceCard card={post} href={post.uri} asPost />);
-      expect(screen.getByTestId('resource-card-image-fit')).toBeInTheDocument();
-      unmount();
+      for (const asPost of [true, false]) {
+        const { unmount } = render(<ResourceCard card={post} href={post.uri} asPost={asPost} />);
+        expect(screen.getByTestId('resource-card-image')).toHaveAttribute('data-shape', 'square');
+        expect(screen.queryByTestId('resource-card-image-fit')).not.toBeInTheDocument();
+        // Beside the text, before the post's own lines.
+        expect(screen.getByTestId('resource-card-image').compareDocumentPosition(title())).toBe(
+          Node.DOCUMENT_POSITION_FOLLOWING,
+        );
+        unmount();
+      }
 
-      render(<ResourceCard card={post} href={post.uri} />);
-      expect(screen.getByTestId('resource-card-image')).toHaveAttribute('data-shape', 'square');
-      expect(screen.queryByTestId('resource-card-image-fit')).not.toBeInTheDocument();
+      const videoPost: TPinakesResourceDetail = {
+        ...post,
+        stream: { url: 'https://video.twimg.com/a.mp4', type: 'video/mp4', preview: false },
+      };
+      render(<ResourceCard card={videoPost} href={videoPost.uri} asPost />);
+      expect(screen.getByTestId('resource-card-image-fit')).toBeInTheDocument();
+      expect(screen.getByTestId('resource-card-image')).not.toHaveAttribute('data-shape');
     });
 
     it('keeps a YouTube thumbnail 16:9 on a card that is no song, album or playlist', () => {

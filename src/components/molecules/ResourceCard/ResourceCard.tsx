@@ -63,10 +63,11 @@ import {
   getResourceSummary,
   isBlockedCard,
 } from './ResourceFacts.utils';
-import { getResourcePost, RESOURCE_POST_FACTS, ResourcePost } from './ResourcePost';
+import { getResourcePost, hasPostVideo, RESOURCE_POST_FACTS, ResourcePost } from './ResourcePost';
 import { useResourceSurface } from './ResourceSurfaceContext';
 import { getResourceTypeIcon } from './ResourceTypeIcon';
 import { useCardImage } from './useCardImage';
+import { usePostPreviewImage } from './usePostPreviewImage';
 
 /** What a card that is not `ok` says about itself. Only `missing` has a documented meaning (`/llms.txt`). */
 const STATUS_NOTES: Readonly<
@@ -94,7 +95,7 @@ const DETAIL_ICON_SIZE = 14;
  * and source on top, then the title with the card's image as a small thumbnail left of it
  * (`ResourceCardCover`; the type's icon when there is no image), a summary line of the type's facts
  * (`getResourceSummary`) and the description. An image that stands in for an embed
- * (`showsEmbedImage`: a video's, a post's) shows under them instead, as a post shows one
+ * (`showsEmbedImage`: a video's, the still of a post's video) shows under them instead, as a post shows one
  * (`ResourceCardMedia`). An event leads with its dates, venue,
  * organizer and attendance; a card with an audio `stream` (an episode, or a recording's preview)
  * plays it, and a show its latest episodes (`ResourceEpisodes`). A sparse card fills a missing
@@ -107,8 +108,8 @@ const DETAIL_ICON_SIZE = 14;
  * post's lightbox. The header's source is the one link out (none on a `missing` card). A player or
  * embed in the body (`isBodyReplaced`) is its own set of controls, as the episode's audio is, and
  * takes the image's place too. An embed loaded inside the card (`player`: an X post's, platform embeds
- * up front off) sits under the text instead of a video's or a post's image under it, and the card stays. The `large` card heads
- * the resource page, lists every fact under "Details" (not while an X post's embed is its body,
+ * up front off) sits under the text instead of a video's image under it, and the card stays. The `large`
+ * card heads the resource page, lists every fact under "Details" (not while an X post's embed is its body,
  * `isBodyReplaced`), with one plain line in place of a refused read's `blocked` fact (`getBlockedNote`),
  * and is no click-through.
  * Only `http(s)` values become links, images or audio.
@@ -166,9 +167,17 @@ export function ResourceCard({
 
   // A social post shows as a post, from its card's data alone.
   const post = asPost ? getResourcePost(card) : null;
-  // An image that stands in for an embed (a post's photo too) shows large under the text; every other
-  // one is a small thumbnail beside it.
-  const isEmbedImage = showsEmbedImage(card, { href, isPost: post !== null });
+  // An image that stands in for an embed (a video's, the still of a post's video) shows large under the
+  // text; every other one, a post's photo too, is a small thumbnail beside it. A post's video is told as its
+  // card's callers tell it (`hasPostVideo` with its link preview's image, read only for a card with no image of
+  // its own): the preview the card read for its image or title (`og`), or, for a card that read none (it shows
+  // a group member's image under its own title), its own read of it.
+  const readsNoOg = usableCardImage !== null && Boolean(card.name?.trim());
+  const postPreview = usePostPreviewImage(card, post !== null && canFillIn && readsNoOg);
+  const isEmbedImage = showsEmbedImage(card, {
+    href,
+    isPostVideo: post !== null && hasPostVideo(card, getHttpUrl(card.image) ? null : (postPreview.image ?? og?.image)),
+  });
 
   // A Bitcoin or Lightning card shows its lines, with links to what it names, instead of a summary.
   const chain = getChainView(card);

@@ -452,3 +452,56 @@ describe('ResourceCard: a sparse card borrows from its group', () => {
     });
   });
 });
+
+describe('ResourceCard: a post shown from its card with a group member’s image', () => {
+  const POST_LINK = 'https://x.com/a/status/1';
+  const POST: TPinakesResourceDetail = {
+    ...mbArtistSparseFixture,
+    uri: POST_LINK,
+    type: 'SocialMediaPosting',
+    type_path: ['Thing', 'CreativeWork', 'Article', 'SocialMediaPosting'],
+    name: 'A post',
+    description: 'A post with a video',
+    image: null,
+    site: 'x.com',
+    facts: { author: 'a', author_name: 'A', published: '2026-11-20' },
+    group: { id: GROUP_ID, size: 2 },
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(usePinakesGroup).mockReturnValue({
+      data: {
+        id: GROUP_ID,
+        curated: false,
+        keys: [],
+        members: [POST, member({ ...WIKIDATA, id: 'b', image: COMMONS_IMAGE })],
+      },
+      isLoading: false,
+      isError: false,
+    });
+  });
+
+  const previewIs = (image: string) =>
+    vi.mocked(useOgMetadata).mockImplementation((url) => ({
+      metadata: url === POST_LINK ? { url: POST_LINK, title: 'A post', image, type: 'website' } : null,
+      isLoading: false,
+      error: null,
+    }));
+
+  it('reads its link’s preview for its video as the post’s callers do: a video’s still stands large under the text', () => {
+    previewIs('https://pbs.twimg.com/ext_tw_video_thumb/1/pu/img/still.jpg');
+    render(<ResourceCard card={POST} href={POST_LINK} asPost />);
+
+    expect(useOgMetadata).toHaveBeenCalledWith(POST_LINK);
+    expect(screen.getByTestId('resource-card-image-fit')).toBeInTheDocument();
+  });
+
+  it('shows the borrowed image small beside the text when the preview names no video', () => {
+    previewIs('https://pbs.twimg.com/media/photo.jpg');
+    render(<ResourceCard card={POST} href={POST_LINK} asPost />);
+
+    expect(screen.getByTestId('resource-card-image')).toHaveAttribute('data-shape');
+    expect(screen.queryByTestId('resource-card-image-fit')).not.toBeInTheDocument();
+  });
+});

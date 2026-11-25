@@ -358,10 +358,14 @@ describe('NativeEmbedResource', () => {
         render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
 
         expect(screen.getByTestId('resource-card-post')).toHaveTextContent('BREAKING: a post');
+        // The video's still stands large under the text, where the video loads on the press.
+        expect(screen.getByTestId('resource-card-image-fit')).toBeInTheDocument();
         expect(embed).not.toHaveBeenCalled();
         expectNoThirdPartyLoads();
         fireEvent.click(screen.getByRole('button', { name: 'Play on x.com' }));
         expect(within(screen.getByTestId('resource-card-player')).getByTestId('platform-embed')).toBeInTheDocument();
+        // The player takes the still's place: no second image beside the text.
+        expect(screen.queryByTestId('resource-card-image')).not.toBeInTheDocument();
       },
     );
 

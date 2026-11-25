@@ -2,6 +2,7 @@
 
 import { useOgMetadata } from '@/hooks/useOgMetadata/useOgMetadata';
 import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
+import type { ResourceCardProps } from './ResourceCard.types';
 import { getHttpUrl, getResourceLinks } from './ResourceCard.utils';
 import { isBlockedCard } from './ResourceFacts.utils';
 import { getResourcePost } from './ResourcePost';
@@ -20,7 +21,10 @@ export interface TPostPreviewImage {
  * (`hasPostVideo`). `null` otherwise, and while it is read (`pending`); nothing is read unless `enabled`,
  * nor for a card whose site refused Pinakes' read (`isBlockedCard`: its page is a sign-in wall).
  */
-export function usePostPreviewImage(card: TPinakesResourceDetail | null, enabled: boolean): TPostPreviewImage {
+export function usePostPreviewImage(
+  card: TPinakesResourceDetail | ResourceCardProps['card'] | null,
+  enabled: boolean,
+): TPostPreviewImage {
   const link =
     enabled && card && getResourcePost(card) !== null && !isBlockedCard(card) && !getHttpUrl(card.image)
       ? getResourceLinks(card).linkUrl
