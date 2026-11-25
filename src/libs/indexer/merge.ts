@@ -1,5 +1,6 @@
 import { coverageOfRuns } from './coverage';
 import { isValidCursor } from './cursor';
+import { shortHash } from './hash';
 import { InvalidIndexInputError } from './indexer.errors';
 import type { Cursor, Entry, MergedRuns, RecordEntry, Run } from './indexer.types';
 import { assertValidRun, comparePaths } from './run';
@@ -14,9 +15,21 @@ function assertOneScope<D>(runs: readonly Run<D>[]): void {
   }
 }
 
+/** Two entries of one path at one cursor. A hash cut to its prefix, as a saved index keeps it, matches the full one. */
 export function sameEvent<D>(a: Entry<D>, b: Entry<D>): boolean {
   if (a.kind !== 'record' || b.kind !== 'record') return a.kind === b.kind;
-  return a.hash === undefined || b.hash === undefined || a.hash === b.hash;
+  return a.hash === undefined || b.hash === undefined || shortHash(a.hash) === shortHash(b.hash);
+}
+
+const hasData = <D>(entry: Entry<D>): boolean => entry.kind === 'record' && entry.data !== undefined;
+
+/**
+ * Whether `incoming` replaces `current` for their path. The higher cursor wins. At one cursor both are the same
+ * event: a copy with data fills one without, and a copy without data never erases what is there.
+ */
+export function replaces<D>(current: Entry<D> | undefined, incoming: Entry<D>): boolean {
+  if (current === undefined || incoming.cursor > current.cursor) return true;
+  return incoming.cursor === current.cursor && hasData(incoming) && !hasData(current);
 }
 
 /** Entries at the same path and cursor are the same event, so they must agree. */
@@ -35,9 +48,9 @@ function assertConsistentEvents<D>(runs: readonly Run<D>[]): void {
 }
 
 /**
- * Merges runs of one scope, in any order: per path the entry with the highest cursor wins. Only winners
- * inside the top contiguous range of the coverage are served as live, because a gap below it may hide a
- * delete of anything older.
+ * Merges runs of one scope, in any order: per path the entry with the highest cursor wins, one with data over one
+ * without at the same cursor. Only winners inside the top contiguous range of the coverage are served as live,
+ * because a gap below it may hide a delete of anything older.
  */
 export function mergeRuns<D = unknown>(runs: readonly Run<D>[]): MergedRuns<D> {
   assertOneScope(runs);
@@ -46,8 +59,7 @@ export function mergeRuns<D = unknown>(runs: readonly Run<D>[]): MergedRuns<D> {
   const winners = new Map<string, Entry<D>>();
   for (const run of runs) {
     for (const entry of run.entries) {
-      const current = winners.get(entry.path);
-      if (current === undefined || entry.cursor > current.cursor) winners.set(entry.path, entry);
+      if (replaces(winners.get(entry.path), entry)) winners.set(entry.path, entry);
     }
   }
 

@@ -91,4 +91,8 @@ export interface IndexStore<D> {
   readScopeMembers(seed: string): Promise<Map<string, number>>;
   writeScopeMembers(seed: string, members: ReadonlyMap<string, number>): Promise<void>;
   commit(batch: StoreBatch<D>): Promise<void>;
+  /** A value the indexer keeps for itself, such as its writer id; `null` when never written. */
+  readMeta?(key: string): Promise<string | null>;
+  /** Optional with `readMeta`: a store without both keeps no saved index. */
+  writeMeta?(key: string, value: string): Promise<void>;
 }

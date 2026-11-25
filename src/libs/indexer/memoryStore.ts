@@ -53,6 +53,7 @@ export function createMemoryStore<D>(): IndexStore<D> {
   const userHomeservers = new Map<string, UserHomeserver>();
   const homeserverStates = new Map<string, HomeserverState>();
   const scopeMembers = new Map<string, Map<string, number>>();
+  const meta = new Map<string, string>();
 
   async function commit(batch: StoreBatch<D>): Promise<void> {
     const copy = structuredClone(batch);
@@ -122,5 +123,9 @@ export function createMemoryStore<D>(): IndexStore<D> {
     patchHomeserverState: (homeserver, patch) => commit({ homeserverStates: [{ homeserver, patch }] }),
     readScopeMembers: async (seed) => new Map(scopeMembers.get(seed) ?? []),
     writeScopeMembers: (seed, members) => commit({ scopeMembers: [{ seed, members }] }),
+    readMeta: async (key) => meta.get(key) ?? null,
+    writeMeta: async (key, value) => {
+      meta.set(key, value);
+    },
   };
 }

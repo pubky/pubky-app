@@ -2,7 +2,7 @@ import { addRange } from './coverage';
 import { isValidCursor } from './cursor';
 import { InvalidIndexInputError } from './indexer.errors';
 import type { Coverage, Cursor, Entry, MergedRuns, Range, RecordEntry, Run } from './indexer.types';
-import { sameEvent } from './merge';
+import { replaces, sameEvent } from './merge';
 import { assertValidRun, comparePaths } from './run';
 import type { HomeserverState, ScopeKey, StoreBatch } from './store.types';
 
@@ -28,7 +28,8 @@ export interface AppliedRun<D> {
 
 /**
  * What merging `run` into its scope changes, given the scope's stored entry of a path and its coverage. Per path
- * the higher cursor wins; at an equal cursor the stored entry stays, as the first run does in `mergeRuns`.
+ * the higher cursor wins. At an equal cursor the stored entry stays, unless it has no data and the run's copy has:
+ * a run read from a saved index, which holds no data, never erases a stored body. `mergeRuns` picks the same way.
  */
 export function applyRun<D>(
   run: Run<D>,
@@ -38,10 +39,10 @@ export function applyRun<D>(
   const changed: Entry<D>[] = [];
   for (const entry of run.entries) {
     const current = stored(entry.path);
-    if (current === undefined || entry.cursor > current.cursor) changed.push(entry);
-    else if (entry.cursor === current.cursor && !sameEvent(current, entry)) {
+    if (current !== undefined && entry.cursor === current.cursor && !sameEvent(current, entry)) {
       throw new InvalidIndexInputError(`runs disagree about ${entry.path} at cursor ${entry.cursor}`);
     }
+    if (replaces(current, entry)) changed.push(entry);
   }
   return { changed, coverage: addRange(coverage, run) };
 }
