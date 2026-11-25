@@ -108,7 +108,7 @@ export interface SocialIndexer {
   view(): SocialView;
   /**
    * Resolves once a view holds the seed's own scopes: from the store, from a loaded index file, or after the first
-   * sync committed the seed's hop, whichever comes first. A seed whose homeserver does not resolve or cannot be read
+   * sync committed the seed's graph (its activity follows, answers saying `syncing`), whichever comes first. A seed whose homeserver does not resolve or cannot be read
    * makes it resolve once that attempt is over, with `status().stats.seed` saying which.
    */
   ready(): Promise<void>;

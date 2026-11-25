@@ -149,6 +149,32 @@ describe('syncScope scope', () => {
     expect(crawler.stats().seed).toEqual({ homeserver: 'hs1', failed: false });
   });
 
+  it('makes the seed a member once its graph is in, before its activity is read', async () => {
+    const { network, store, crawlerOf } = harness();
+    network.addHomeserver('hs1');
+    chain(network, ['alice', 'bob']);
+    const membersAtActivity: Array<Map<string, number>> = [];
+    const transport: IndexerTransport = {
+      resolveHomeserver: (user) => network.resolveHomeserver(user),
+      readEvents: async (request) => {
+        const ofAlice = request.users.some(({ user }) => user === 'alice');
+        if (membersAtActivity.length === 0 && ofAlice && request.paths.includes(POSTS)) {
+          membersAtActivity.push(await store.readScopeMembers('alice'));
+        }
+        return network.readEvents(request);
+      },
+      getPublic: (request) => network.getPublic(request),
+      listIndexFiles: () => network.listIndexFiles(),
+      readIndexFile: (name) => network.readIndexFile(name),
+      writeIndexFile: (name, bytes) => network.writeIndexFile(name, bytes),
+      deleteIndexFile: (name) => network.deleteIndexFile(name),
+    };
+
+    await crawlerOf(transport).syncScope('alice');
+
+    expect(membersAtActivity).toEqual([new Map([['alice', 0]])]);
+  });
+
   it('says when the seed did not resolve or its homeserver failed', async () => {
     const unresolved = harness();
     unresolved.network.addHomeserver('hs1');

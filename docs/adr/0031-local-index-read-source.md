@@ -64,7 +64,8 @@ default, today's behavior), `local`, or `local,nexus`. Without `nexus` the Nexus
   keep their position: posts or tags mark every stream (scope `local_index`), follows alone mark the graph-shaped
   ones (`follow_graph`, `friends`), a profile alone marks none. Cached user lists have no dirty registry and refresh
   on their own TTL as before.
-- **First answer.** The index answers once the seed's own data is loaded, before its first full sync; nothing in
+- **First answer.** The index answers once the seed's profile and follows are loaded, before its own posts and
+  before its first full sync; nothing in
   sign-in or bootstrap waits for that sync. During it the bootstrap says `indexed: false`, which with the `local`
   source means the index is still syncing: the bootstrap neither tells Nexus to ingest nor schedules its retry, and
   the feeds fill in through the invalidation above. An empty Home says the network is loading

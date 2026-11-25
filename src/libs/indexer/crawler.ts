@@ -425,6 +425,8 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
       changed();
       const { homeserverOf, byHomeserver } = await resolveAll(ctx, frontier);
       for (const [homeserver, users] of byHomeserver) await syncFull(ctx, homeserver, users);
+      // The seed's profile and follows are enough for a first answer: it is a member before its activity is read.
+      if (hop === 0) await publish(new Map([...before, ...members]), false);
       const next = hop < options.hops ? await nextHop(frontier, homeserverOf, members, hop + 1, skipped) : [];
       for (const [homeserver, users] of byHomeserver) await syncWindow(ctx, homeserver, users);
       if (hop === 0) {
