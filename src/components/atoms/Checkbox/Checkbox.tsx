@@ -23,6 +23,7 @@ const Checkbox = React.forwardRef<React.ComponentRef<typeof CheckboxPrimitive.Ro
           'transition-colors',
           'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none',
           'disabled:cursor-not-allowed disabled:opacity-50',
+          'data-[state=unchecked]:border-ring',
           'data-[state=checked]:border-brand data-[state=checked]:bg-brand',
           className,
         )}

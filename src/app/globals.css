@@ -174,7 +174,7 @@ body:has([data-slot='shop-route']) {
   --brand-foreground: var(--primary-foreground);
   /**
    * Translucent chrome fill for outline-style controls (nav buttons, FAB,
-   * sidebar "See all", unchecked radio wells). Mirrors the Figma variable
+   * sidebar "See all"). Mirrors the Figma variable
    * `custom/background dark:input\30`: a faint white wash in dark mode and
    * the opaque card surface in light mode, so these controls read lighter
    * than the grey light page. Hover follows `custom/accent dark:input\50`.
@@ -183,7 +183,7 @@ body:has([data-slot='shop-route']) {
   --glass-hover: rgb(255 255 255 / 0.1);
   --glass-strong: rgb(255 255 255 / 0.12);
   /**
-   * Surface of the `outline` Button variant. Dark controls use the Figma outline fill at 4.5%.
+   * Surface of outline buttons and checkbox/radio wells. Dark controls use the Figma outline fill at 4.5%.
    * Light mode uses the card surface, so these buttons read lighter than the page.
    */
   --button-outline: color-mix(in oklab, var(--foreground) 4.5%, transparent);
@@ -493,7 +493,7 @@ body:has([data-slot='shop-route']) {
   --sidebar-border: #babac1;
   --sidebar-ring: oklch(0.55 0.008 274.863);
   --brand: #88ad00;
-  --brand-foreground: var(--foreground);
+  --brand-foreground: #1d1d20;
   --glass: var(--card);
   --glass-hover: var(--accent);
   --glass-strong: var(--card);

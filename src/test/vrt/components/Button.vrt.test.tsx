@@ -51,7 +51,7 @@ it.each(['light', 'dark'] as const)('uses the same readable ink on solid brand f
     getComputedStyle(checkbox.querySelector('svg')!).color,
   ];
   const ink = paintedHex(status.color);
-  expect(ink).toBe(paintedHex(status.getPropertyValue(theme === 'dark' ? '--primary-foreground' : '--foreground')));
+  expect(ink).toBe(theme === 'dark' ? paintedHex(status.getPropertyValue('--primary-foreground')) : '#1d1d20');
   for (const color of colors) expect(paintedHex(color)).toBe(ink);
   expect(contrastRatio(ink, paintedHex(status.backgroundColor))).toBeGreaterThanOrEqual(4.5);
 });

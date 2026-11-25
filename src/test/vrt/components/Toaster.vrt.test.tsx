@@ -64,6 +64,7 @@ it.each(['dark', 'light'] as const)('shows keyboard focus on OK against the %s s
   try {
     const ok = screen.getByRole('button', { name: 'OK' });
     await expect.element(ok).toBeVisible();
+    await screen.getByText('Saved', { exact: true }).click();
     await userEvent.keyboard('{F8}');
     await userEvent.tab();
     await userEvent.tab();
@@ -78,4 +79,41 @@ it.each(['dark', 'light'] as const)('shows keyboard focus on OK against the %s s
   } finally {
     handle.dismiss();
   }
+});
+
+describe.each([
+  ['default', 'Undo'],
+  ['error', 'Retry'],
+] as const)('%s toast action', (variant, label) => {
+  it.each(['dark', 'light'] as const)('shows keyboard focus on a neutral button in %s mode', async (theme) => {
+    const screen = await renderForVRT(
+      <main className="fixed inset-0" style={{ backgroundColor: '#606060' }}>
+        <Toaster />
+      </main>,
+      { viewport: { width: 800, height: 600 }, theme },
+    );
+    const handle = toast({
+      title: 'Item updated',
+      variant,
+      persistent: true,
+      action: { label, altText: label, onClick: () => {} },
+    });
+    try {
+      const action = screen.getByRole('button', { name: label });
+      await expect.element(action).toBeVisible();
+      await screen.getByText('Item updated', { exact: true }).click();
+      await userEvent.keyboard('{F8}');
+      await userEvent.tab();
+      await userEvent.tab();
+      await expect.element(action).toHaveFocus();
+      const style = getComputedStyle(action.element());
+      expect(style.outlineStyle).toBe('solid');
+      expect(style.outlineWidth).toBe('2px');
+      expect(style.outlineOffset).toBe('-2px');
+      const fill = paintedHex(style.backgroundColor);
+      expect(contrastRatio(paintedHex(fill, style.outlineColor), fill)).toBeGreaterThanOrEqual(3);
+    } finally {
+      handle.dismiss();
+    }
+  });
 });
