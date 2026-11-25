@@ -202,6 +202,17 @@ describe('ResourceMap', () => {
       // The library's gesture hint has a z-index far above the app's scale
       expect(screen.getByTestId('resource-map')).toHaveClass('isolate');
     });
+
+    it('draws a 1px border around the map’s box while it loads and once it is drawn', async () => {
+      mocks.state.isVisible = true;
+      renderMap();
+      expect(screen.getByTestId('resource-map')).toHaveAttribute('data-status', 'loading');
+      expect(screen.getByTestId('resource-map')).toHaveClass('border', 'border-input', 'rounded-md');
+      const map = await madeMap();
+      act(() => map.fire('load'));
+      expect(screen.getByTestId('resource-map')).toHaveAttribute('data-status', 'ready');
+      expect(screen.getByTestId('resource-map')).toHaveClass('border', 'border-input', 'rounded-md');
+    });
   });
 
   describe('what the tile host gets', () => {
@@ -389,6 +400,7 @@ describe('ResourceMap', () => {
       expect(screen.getByRole('button', { name: 'Open in Maps' })).toBeInTheDocument();
       expect(screen.queryByTestId('resource-map-attribution')).toBeNull();
       expect(screen.getByTestId('resource-map')).toHaveAttribute('data-status', 'failed');
+      expect(screen.getByTestId('resource-map')).toHaveClass('border', 'border-input', 'rounded-md');
       // What the library left in the container before it failed is gone
       expect(screen.getByTestId('resource-map-canvas')).toBeEmptyDOMElement();
       expect(screen.getByTestId('resource-map-canvas')).not.toHaveClass('maplibregl-map');
