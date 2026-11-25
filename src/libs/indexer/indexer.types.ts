@@ -48,8 +48,8 @@ export interface RunMeta {
 }
 
 /**
- * The fold of every event of one scope in `(tail, head]`: per path, the last event in the range. A run speaks
- * for its whole range, so a path with no entry had no live write and no delete in the range as of `head`.
+ * The fold of every event of one scope in `(tail, head]`: per path, the last event in the range, deletes
+ * included as tombstones. A path with no entry had no event in the range.
  * Invariants (see `validateRun`): `tail < head`, every entry cursor in `(tail, head]`, at most one entry per
  * path, entries sorted by path in code-unit order.
  */
@@ -58,9 +58,14 @@ export interface Run<D = unknown> extends RunMeta, Range {
 }
 
 export interface MergedRuns<D = unknown> {
-  /** The winning entry of every path whose winner is a record, keyed by path. */
-  live: Map<string, RecordEntry<D>>;
-  /** The winning entry of every path, record or tombstone, keyed by path. */
+  /** The highest-cursor entry of every path over all runs, record or tombstone, keyed by path. */
   entries: Map<string, Entry<D>>;
+  /** The winners that are records inside `trusted`, keyed by path: the only ones served. */
+  live: Map<string, RecordEntry<D>>;
   coverage: Coverage;
+  /**
+   * The contiguous range of `coverage` holding the highest head, `null` without runs. Below a gap a delete may
+   * hide in the gap, so older winners are not served.
+   */
+  trusted: Range | null;
 }

@@ -16,27 +16,21 @@ classes (`indexer.errors.ts`) for the same reason; the app maps them at the boun
   the wire). Cursors of two homeservers never compare.
 - A **run** is the fold of one author's events on one homeserver, for one group of paths, in the
   cursor range `(tail, head]`: per path, the last event in the range, a PUT as a record and a DEL as a
-  tombstone. A run that starts at the stream start (`tail = 0`) drops its tombstones, since nothing
-  older can exist for them to hide.
-- A run speaks for its whole range. A path missing from it had no live write and no delete inside that
-  range, as of the run's head.
+  tombstone. A path missing from a run had no event in its range.
 - **Coverage** is the union of run ranges, kept sorted, disjoint and merged.
 
 ## Merge rule
 
 Runs of one scope merge in any order to the same result.
 
-1. An entry for path `p` at cursor `c` is dead when some run covers `c` (its tail is below `c` and its
-   head at or above it) and holds no entry for `p` at `c` or later. A correct fold of a range containing
-   `c` would keep `p`'s last event in that range, which is at `c` or later. Its absence means `p` was
-   deleted in that range by a run starting at the stream start.
-2. Among the entries of a path that are not dead, the highest cursor wins.
-3. Two entries for one path at one cursor are the same event. If they disagree, the input is corrupt and
-   the merge throws.
+1. Tombstones are always kept, also in a run that starts at the stream start. A run evicted today and
+   folded again tomorrow must still hide what was deleted after it.
+2. Per path, the entry with the highest cursor wins, record or tombstone. Two entries for one path at
+   one cursor are the same event; if they disagree the input is corrupt and the merge throws.
+3. Only the top contiguous range of the coverage, the one holding the highest head, is trusted. A
+   record that won below a coverage gap may have been deleted inside the gap, so it stays among the
+   merged entries but is not served as live.
 
-`compactRuns` rewrites a set of runs as one run per contiguous range of their coverage, and
-`evictBelow` forgets everything at or below a cutoff, oldest first.
-
-Caveat: a run from the stream start has no tombstones, so after `evictBelow` trims one, the trimmed run
-no longer speaks for deletes in its range. Do not merge it with a later re-fold of the evicted range,
-or a path deleted above the cutoff can come back.
+`compactRuns` rewrites a set of runs as one run per contiguous range of their coverage, tombstones
+included, and `evictBelow` forgets everything at or below a cutoff, oldest first. Re-folding an evicted
+range later reproduces its tombstones, so a path deleted above the cutoff stays deleted.

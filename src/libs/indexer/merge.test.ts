@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { InvalidIndexInputError } from './indexer.errors';
-import type { Entry, MergedRuns, RecordEntry, Run, RunMeta, TombstoneEntry } from './indexer.types';
+import type { Entry, MergedRuns, Range, RecordEntry, Run, RunMeta, TombstoneEntry } from './indexer.types';
 import { compactRuns, evictBelow, mergeRuns } from './merge';
 import { validateRun } from './run';
 
@@ -13,10 +13,10 @@ const rec = (path: string, cursor: number): RecordEntry => ({
   hash: `h${cursor}`,
 });
 const tomb = (path: string, cursor: number): TombstoneEntry => ({ kind: 'tombstone', path, cursor: c(cursor) });
+const range = (tail: number, head: number): Range => ({ tail: c(tail), head: c(head) });
 const runOf = (tail: number, head: number, entries: Entry[], meta: RunMeta = META): Run => ({
   ...meta,
-  tail: c(tail),
-  head: c(head),
+  ...range(tail, head),
   entries,
 });
 
@@ -38,8 +38,8 @@ function permutations<T>(items: readonly T[]): T[][] {
 }
 
 describe('mergeRuns', () => {
-  it('merges no runs into nothing', () => {
-    expect(mergeRuns([])).toEqual({ live: new Map(), entries: new Map(), coverage: [] });
+  it('merges no runs into nothing, with no trusted range', () => {
+    expect(mergeRuns([])).toEqual({ entries: new Map(), live: new Map(), coverage: [], trusted: null });
   });
 
   it.each(['author', 'homeserver', 'group'] as const)('throws on runs of different %s', (field) => {
@@ -65,26 +65,18 @@ describe('mergeRuns', () => {
     expect(winners(merged)).toEqual({ a: 'tombstone@12', b: 'record@5' });
   });
 
-  it('kills a record covered by a run from the stream start that has nothing for its path', () => {
-    // a was put at 3 and deleted at 6; the run (0, 8] dropped that tombstone.
-    const merged = mergeRuns([runOf(0, 4, [rec('a', 3)]), runOf(0, 8, [])]);
+  it('lets a tombstone from a range at the stream start hide an older record', () => {
+    // a was put at 3 and deleted at 6.
+    const merged = mergeRuns([runOf(0, 4, [rec('a', 3)]), runOf(0, 8, [tomb('a', 6)])]);
 
-    expect(winners(merged)).toEqual({});
+    expect(winners(merged)).toEqual({ a: 'tombstone@6' });
+    expect(merged.live.size).toBe(0);
   });
 
-  it('kills an entry through a covering run with a lower head', () => {
-    // a was put at 1 and deleted at 7.
-    const runs = [runOf(2, 20, [tomb('a', 7)]), runOf(0, 10, []), runOf(0, 1, [rec('a', 1)])];
-
-    for (const order of permutations(runs)) {
-      expect(winners(mergeRuns(order))).toEqual({});
-    }
-  });
-
-  it('keeps an entry that no run without it covers', () => {
+  it('keeps a record that no later entry supersedes', () => {
     const merged = mergeRuns([runOf(0, 10, [rec('a', 4)]), runOf(10, 20, [])]);
 
-    expect(winners(merged)).toEqual({ a: 'record@4' });
+    expect([...merged.live.keys()]).toEqual(['a']);
   });
 
   it('agrees with itself over overlapping and duplicated runs', () => {
@@ -92,6 +84,14 @@ describe('mergeRuns', () => {
     const b = runOf(5, 15, [rec('b', 9), rec('c', 12)]);
 
     expect(winners(mergeRuns([a, b, a, b]))).toEqual({ a: 'record@4', b: 'record@9', c: 'record@12' });
+  });
+
+  it('serves only winners inside the top contiguous range, keeping older ones among the entries', () => {
+    const merged = mergeRuns([runOf(0, 5, [rec('a', 2), rec('b', 4)]), runOf(8, 12, [rec('b', 10), rec('c', 9)])]);
+
+    expect(merged.trusted).toEqual(range(8, 12));
+    expect([...merged.live.keys()]).toEqual(['b', 'c']);
+    expect(winners(merged)).toEqual({ a: 'record@2', b: 'record@10', c: 'record@9' });
   });
 
   it('throws when runs disagree about the kind of one event, in every order', () => {
@@ -115,24 +115,21 @@ describe('mergeRuns', () => {
       runOf(12, 20, [rec('a', 14)]),
       runOf(0, 9, [rec('a', 2), rec('b', 6), rec('d', 8)]),
     ];
-    const expected = { a: 'record@14', b: 'record@6', c: 'tombstone@11', d: 'record@8' };
+    const expected = mergeRuns(runs);
 
+    expect(winners(expected)).toEqual({ a: 'record@14', b: 'record@6', c: 'tombstone@11', d: 'record@8' });
+    expect([...expected.live.keys()]).toEqual(['a', 'b', 'd']);
+    expect(expected.trusted).toEqual(range(0, 20));
     for (const order of permutations(runs)) {
-      const merged = mergeRuns(order);
-
-      expect(winners(merged)).toEqual(expected);
-      expect([...merged.live.keys()]).toEqual(['a', 'b', 'd']);
-      expect(merged.coverage).toEqual([{ tail: c(0), head: c(20) }]);
+      expect(mergeRuns(order)).toEqual(expected);
     }
   });
 
   it('reports the coverage of the runs, gaps included', () => {
     const merged = mergeRuns([runOf(0, 5, []), runOf(8, 9, []), runOf(5, 6, [])]);
 
-    expect(merged.coverage).toEqual([
-      { tail: c(0), head: c(6) },
-      { tail: c(8), head: c(9) },
-    ]);
+    expect(merged.coverage).toEqual([range(0, 6), range(8, 9)]);
+    expect(merged.trusted).toEqual(range(8, 9));
   });
 });
 
@@ -154,20 +151,18 @@ describe('compactRuns', () => {
     ]);
   });
 
-  it('drops tombstones from a range that starts at the stream start and keeps them elsewhere', () => {
+  it('keeps tombstones, also in a range that starts at the stream start', () => {
     const deleted = runOf(5, 10, [tomb('a', 7)]);
 
-    expect(compactRuns([runOf(0, 5, [rec('a', 2)]), deleted])).toEqual([runOf(0, 10, [])]);
-    expect(compactRuns([runOf(3, 5, [rec('a', 4)]), deleted])).toEqual([runOf(3, 10, [tomb('a', 7)])]);
+    expect(compactRuns([runOf(0, 5, [rec('a', 2)]), deleted])).toEqual([runOf(0, 10, [tomb('a', 7)])]);
   });
 
-  it('builds valid runs that merge to the same live set and coverage', () => {
+  it('builds valid runs that merge to the same result', () => {
     const runs = [runOf(0, 6, [rec('a', 6), rec('z', 3)]), runOf(6, 12, [tomb('z', 9)]), runOf(15, 18, [])];
     const compacted = compactRuns(runs);
 
     expect(compacted.flatMap(validateRun)).toEqual([]);
-    expect(mergeRuns(compacted).live).toEqual(mergeRuns(runs).live);
-    expect(mergeRuns(compacted).coverage).toEqual(mergeRuns(runs).coverage);
+    expect(mergeRuns(compacted)).toEqual(mergeRuns(runs));
   });
 });
 
@@ -183,6 +178,13 @@ describe('evictBelow', () => {
 
     expect(evictBelow([above], c(6))).toEqual([above]);
     expect(evictBelow([above], c(0))).toEqual([above]);
+  });
+
+  it('keeps a delete above the cutoff in force when the evicted range is folded again', () => {
+    // a was put at 2 and deleted at 7.
+    const evicted = evictBelow([runOf(0, 10, [tomb('a', 7)])], c(4));
+
+    expect(mergeRuns([...evicted, runOf(0, 4, [rec('a', 2)])]).live.size).toBe(0);
   });
 
   it('throws on runs of different scopes and on an out of range cutoff', () => {

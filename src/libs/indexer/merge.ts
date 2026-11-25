@@ -1,5 +1,5 @@
 import { coverageOfRuns } from './coverage';
-import { CURSOR_ZERO, isValidCursor } from './cursor';
+import { isValidCursor } from './cursor';
 import { InvalidIndexInputError } from './indexer.errors';
 import type { Cursor, Entry, MergedRuns, RecordEntry, Run } from './indexer.types';
 import { assertValidRun, comparePaths } from './run';
@@ -35,46 +35,34 @@ function assertConsistentEvents<D>(runs: readonly Run<D>[]): void {
 }
 
 /**
- * Merges runs of one scope, in any order. An entry at cursor `c` is dead when some run covers `c` and holds
- * no entry for its path at `c` or later: a fold of a range containing `c` keeps the path's last event in that
- * range, so its absence means the path was deleted there by a run starting at the stream start, which drops
- * tombstones. Among the entries of a path that are not dead, the highest cursor wins.
+ * Merges runs of one scope, in any order: per path the entry with the highest cursor wins. Only winners
+ * inside the top contiguous range of the coverage are served as live, because a gap below it may hide a
+ * delete of anything older.
  */
 export function mergeRuns<D = unknown>(runs: readonly Run<D>[]): MergedRuns<D> {
   assertOneScope(runs);
   assertConsistentEvents(runs);
 
-  const byPath = runs.map((run) => new Map(run.entries.map((entry) => [entry.path, entry] as const)));
-  function isDead(entry: Entry<D>): boolean {
-    return runs.some((run, i) => {
-      if (entry.cursor <= run.tail || entry.cursor > run.head) return false;
-      const own = byPath[i].get(entry.path);
-      return own === undefined || own.cursor < entry.cursor;
-    });
-  }
-
   const winners = new Map<string, Entry<D>>();
   for (const run of runs) {
     for (const entry of run.entries) {
       const current = winners.get(entry.path);
-      if (current !== undefined && current.cursor >= entry.cursor) continue;
-      if (!isDead(entry)) winners.set(entry.path, entry);
+      if (current === undefined || entry.cursor > current.cursor) winners.set(entry.path, entry);
     }
   }
 
+  const coverage = coverageOfRuns(runs);
+  const trusted = coverage.length === 0 ? null : { ...coverage[coverage.length - 1] };
   const entries = new Map<string, Entry<D>>();
   const live = new Map<string, RecordEntry<D>>();
   for (const [path, entry] of [...winners].sort(([a], [b]) => comparePaths(a, b))) {
     entries.set(path, entry);
-    if (entry.kind === 'record') live.set(path, entry);
+    if (entry.kind === 'record' && trusted !== null && entry.cursor > trusted.tail) live.set(path, entry);
   }
-  return { live, entries, coverage: coverageOfRuns(runs) };
+  return { entries, live, coverage, trusted };
 }
 
-/**
- * The merge of `runs` re-expressed as one run per contiguous range of its coverage, each winning entry in
- * the range holding its cursor. A range starting at the stream start drops its tombstones.
- */
+/** The merge of `runs` re-expressed as one run per contiguous range of its coverage, tombstones included. */
 export function compactRuns<D = unknown>(runs: readonly Run<D>[]): Run<D>[] {
   if (runs.length === 0) return [];
   const { entries, coverage } = mergeRuns(runs);
@@ -82,14 +70,14 @@ export function compactRuns<D = unknown>(runs: readonly Run<D>[]): Run<D>[] {
   const winners = [...entries.values()];
   return coverage.map(({ tail, head }) => {
     const inRange = (entry: Entry<D>) => entry.cursor > tail && entry.cursor <= head;
-    const kept = (entry: Entry<D>) => inRange(entry) && !(entry.kind === 'tombstone' && tail === CURSOR_ZERO);
-    return { author, homeserver, group, tail, head, entries: winners.filter(kept) };
+    return { author, homeserver, group, tail, head, entries: winners.filter(inRange) };
   });
 }
 
 /**
  * Forgets everything at or below `cutoff`: runs ending there go, runs spanning it start at `cutoff` and lose
- * their older entries. Eviction is oldest first only, hence one cutoff for the whole set.
+ * their older entries. Eviction is oldest first only, hence one cutoff for the whole set. Re-folding an
+ * evicted range later brings its tombstones back with it.
  */
 export function evictBelow<D = unknown>(runs: readonly Run<D>[], cutoff: Cursor): Run<D>[] {
   if (!isValidCursor(cutoff)) throw new InvalidIndexInputError(`cutoff ${cutoff} is out of range`);
