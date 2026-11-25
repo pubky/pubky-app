@@ -55,7 +55,10 @@ export function ProfilePageLinks({ links, isOwnProfile = false }: ProfilePageLin
                 className="flex cursor-pointer items-center gap-2.5 py-1"
               >
                 <Icon size={16} className="shrink-0 text-foreground" />
-                <Typography as="span" className="flex-1 text-base font-medium text-secondary-foreground">
+                <Typography
+                  as="span"
+                  className="min-w-0 flex-1 text-base font-medium wrap-anywhere text-secondary-foreground"
+                >
                   {link.label}
                 </Typography>
               </a>

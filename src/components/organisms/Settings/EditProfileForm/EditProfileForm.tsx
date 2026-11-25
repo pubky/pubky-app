@@ -126,7 +126,7 @@ export const EditProfileForm = () => {
             <Container className="gap-6">
               {state.links.map((link, index) => (
                 <Container className="gap-2" key={`${link.label}-${index}`}>
-                  <Label className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                  <Label className="text-xs font-medium tracking-wide wrap-anywhere text-muted-foreground uppercase">
                     {link.label}
                   </Label>
                   <InputField
