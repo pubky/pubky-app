@@ -158,7 +158,8 @@ describe('onCommit', () => {
         { ...bob, group: ACTIVITY },
       ]),
     );
-    expect(changes.flatMap((change) => change.seeds)).toEqual(['alice']);
+    // Two member sets in turn, each a change of what is stored: the seed alone once its graph is in, then with bob.
+    expect(changes.flatMap((change) => change.seeds)).toEqual(['alice', 'alice']);
 
     changes.length = 0;
     await crawler.syncScope('alice');
@@ -175,6 +176,28 @@ describe('onCommit', () => {
     network.putJson('alice', postPath(DAY_MS / 2), { text: 'unheard' });
     await crawler.syncScope('alice');
     expect(changes).toEqual([]);
+  });
+
+  it('reports the members once for the seed and once per hop that adds any, in a first sync of two hops', async () => {
+    const { network, store, crawler } = harness();
+    network.addHomeserver('hs1');
+    for (const user of ['alice', 'bob', 'carol']) network.addUser(user, 'hs1');
+    network.put('alice', `${FOLLOWS}bob`);
+    network.put('bob', `${FOLLOWS}carol`);
+    const changes: StoreChange[] = [];
+    crawler.onCommit((change) => changes.push(change));
+
+    await crawler.syncScope('alice');
+
+    // The seed alone, then with bob (hop 1), then with carol (hop 2); the end of the sync stores nothing new.
+    expect(changes.filter((change) => change.seeds.length > 0)).toHaveLength(3);
+    expect(await store.readScopeMembers('alice')).toEqual(
+      new Map([
+        ['alice', 0],
+        ['bob', 1],
+        ['carol', 2],
+      ]),
+    );
   });
 
   it('reports every scope of a restored homeserver and a backfilled scope', async () => {
