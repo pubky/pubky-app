@@ -86,11 +86,14 @@ export function stubMemoryHomeserver(owner: string) {
     .mockImplementation(async (url) => readBytes(url, 'getBytes').catch(asAppError(url, HttpMethod.GET, 'getBytes')));
 
   // Public only, as the real one: a raw fetch that carries no session.
-  const getFreshBytes = vi
-    .spyOn(HomeserverService, 'getFreshBytes')
-    .mockImplementation(async (url) =>
-      publicStorage.getBytes(url).catch(asAppError(url, HttpMethod.GET, 'getFreshBytes')),
-    );
+  const getFreshBytes = vi.spyOn(HomeserverService, 'getFreshBytes').mockImplementation(async (url, options) => {
+    try {
+      return await publicStorage.getBytes(url);
+    } catch (error) {
+      if (options?.notFoundAsNull && extractStatusCode(error) === HttpStatusCode.NOT_FOUND) return null;
+      return asAppError(url, HttpMethod.GET, 'getFreshBytes')(error);
+    }
+  });
 
   const request = vi.spyOn(HomeserverService, 'request').mockImplementation(async ({ method, url, bodyJson }) => {
     switch (method) {

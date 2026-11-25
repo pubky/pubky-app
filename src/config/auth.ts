@@ -20,6 +20,22 @@ export const SOCIAL_V1_APP_CAPABILITIES = [
   '/priv/app.pubky/v1/:rw',
 ] as const satisfies readonly Capabilities[];
 
+/** Pubchi upgrades add these namespaces to the existing App grant. */
+export const PUBCHI_CAPABILITIES = [
+  '/pub/app.pubchi/v1/:rw',
+  '/priv/app.pubchi/v1/:rw',
+] as const satisfies readonly Capabilities[];
+
+export const SOCIAL_V1_POSTS_DIRECTORY = '/pub/social/v1/posts/';
+export const SOCIAL_V1_TAGS_DIRECTORY = '/pub/social/v1/tags/';
+export const SOCIAL_V1_FEEDS_DIRECTORY = '/priv/social/v1/feeds/';
+
+/** Social writes described by the Pubchi bot contract. */
+export const PUBCHI_BOT_WRITE_CAPABILITIES = [
+  `${SOCIAL_V1_POSTS_DIRECTORY}:w`,
+  `${SOCIAL_V1_TAGS_DIRECTORY}:w`,
+] as const satisfies readonly Capabilities[];
+
 /** Additional scopes requested when Locks is used and current permissions are insufficient. */
 export const LOCKS_CAPABILITIES = [
   '/priv/social/:rw',

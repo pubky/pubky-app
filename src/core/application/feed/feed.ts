@@ -21,8 +21,9 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { isAppError, toAppError } from '@/libs/error/error.utils';
 import { Logger } from '@/libs/logger/logger';
+import { deletePubchiFeedProvenance } from '@/libs/pubchi/feed-provenance';
 import { FeedModel } from '@/models/feed/feed';
-import { buildFeedStreamId } from '@/models/feed/feed.helpers';
+import { buildFeedStreamId, feedSyncLock } from '@/models/feed/feed.helpers';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
 import type { Pubky } from '@/models/models.types';
 import { PostStreamModel } from '@/models/stream/post/tables/postStream';
@@ -45,16 +46,6 @@ import type {
   PersistAndSyncParams,
   StoredFeedWriteParams,
 } from './feed.types';
-
-/**
- * The user's feed sync lock (`withSyncLock`), one per user across every tab, always held `exclusive`:
- * writes (`persist`, `commitDelete`) run one after another, retries and their back-off included, so an
- * older write's retry never lands on top of a newer write to the same feed (a per-feed lock would not
- * order an edit that changes the id; feed writes are rare, see ADR-0028); the reconciling fetch never
- * lists while a row's PUT or DELETE is in flight, and no write lands between its listing and its local
- * write.
- */
-const feedSyncLock = (pubky: Pubky) => `pubky-feeds-sync:${pubky}`;
 
 export class FeedApplication {
   private constructor() {}
@@ -124,7 +115,7 @@ export class FeedApplication {
 
       // Best-effort cleanup of old homeserver feed. Keep local new feed as source of truth if cleanup fails.
       if (isCurrent && !isCurrent()) return null;
-      await this.deleteStoredFeed(userId, existingId).catch((cleanupError) => {
+      await this.deleteStoredFeed(userId, this.feedDeletionPaths(existingId)).catch((cleanupError) => {
         Logger.warn('Failed to cleanup old homeserver feed after successful migration to new feed ID', {
           oldFeedId: existingId,
           newFeedId: newId,
@@ -168,9 +159,11 @@ export class FeedApplication {
     // Every started delete settles before this returns and the lock is released: a homeserver DELETE
     // still retrying after a local failure would otherwise run outside the lock, and a queued write of
     // the same feed could PUT between its attempts. The first failure is rethrown as it is.
+    const paths = this.feedDeletionPaths(feedId);
     const results = await Promise.allSettled([
       LocalFeedService.delete({ feedId }),
-      this.deleteStoredFeed(userId, feedId),
+      this.deleteStoredFeed(userId, paths),
+      deletePubchiFeedProvenance(userId, feedId).catch(() => undefined),
       ...(streamId
         ? [LocalStreamPostsService.deleteById({ streamId }), LocalStreamPostsService.clearUnreadStream({ streamId })]
         : []),
@@ -409,17 +402,16 @@ export class FeedApplication {
     };
   }
 
-  /**
-   * Deletes both addresses of the feed `id`: the published copy first (this client never writes
-   * one, so a 404 is the usual answer and `deleteIdempotent` absorbs it), then the private object.
-   */
-  private static async deleteStoredFeed(userId: Pubky, id: string): Promise<void> {
-    let paths: string[];
+  private static feedDeletionPaths(id: string): string[] {
     try {
-      paths = deletionPaths({ kind: 'feed', id });
+      return deletionPaths({ kind: 'feed', id });
     } catch (error) {
       throw toSpecsValidationError(error, 'deletionPaths', { feedId: id });
     }
+  }
+
+  /** Deletes the published copy first (usually already absent), then the private object. */
+  private static async deleteStoredFeed(userId: Pubky, paths: readonly string[]): Promise<void> {
     for (const path of paths) {
       await HomeserverService.deleteIdempotent(toUrl(userId, path));
     }

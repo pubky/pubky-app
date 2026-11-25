@@ -1,6 +1,7 @@
 import { Session } from '@synonymdev/pubky';
 import type { SessionRestoreStatus } from '@/libs/auth/session.types';
 import type { Pubky } from '@/models/models.types';
+import { usePubchiStore } from '@/stores/pubchi/pubchi.store';
 import { ZustandSet } from '../stores.types';
 import { AuthActions, AuthActionTypes, authInitialState, AuthInitParams, AuthStore } from './auth.types';
 
@@ -21,6 +22,7 @@ export const createAuthActions = (set: ZustandSet<AuthStore>): AuthActions => ({
     pendingRetirements = [],
     restoreStatus = session ? 'ready' : currentUserPubky && !sessionReference ? 'reauth-required' : 'idle',
   }: AuthInitParams) => {
+    if (!session || usePubchiStore.getState().ownerPubky !== currentUserPubky) usePubchiStore.getState().clear();
     set(
       (state) => ({
         ...state,
@@ -42,6 +44,7 @@ export const createAuthActions = (set: ZustandSet<AuthStore>): AuthActions => ({
   },
   // Storage management
   reset: () => {
+    usePubchiStore.getState().clear();
     set(
       (state) => ({
         ...authInitialState,
@@ -58,10 +61,12 @@ export const createAuthActions = (set: ZustandSet<AuthStore>): AuthActions => ({
   },
   // Authentication data management
   setCurrentUserPubky: (pubky: Pubky | null) => {
+    if (usePubchiStore.getState().ownerPubky !== pubky) usePubchiStore.getState().clear();
     set({ currentUserPubky: pubky }, false, AuthActionTypes.SET_PUBKY);
   },
 
   setSession: (session: Session | null) => {
+    if (!session) usePubchiStore.getState().clear();
     set({ session }, false, AuthActionTypes.SET_SESSION);
   },
 

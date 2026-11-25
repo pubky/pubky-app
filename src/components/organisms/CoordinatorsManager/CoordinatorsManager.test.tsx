@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => {
     status: 'AUTHENTICATED' as string,
     pathname: '/home',
     notification: coordinator(),
+    pubchi: coordinator(),
     stream: coordinator(),
     ttl: coordinator(),
     muteListSync: coordinator(),
@@ -24,6 +25,7 @@ vi.mock('@/hooks/useAuthStatus/useAuthStatus', () => ({
 vi.mock('@/coordinators/notifications/notifications', () => ({
   NotificationCoordinator: { getInstance: () => mocks.notification },
 }));
+vi.mock('@/coordinators/pubchi/pubchi', () => ({ PubchiCoordinator: { getInstance: () => mocks.pubchi } }));
 vi.mock('@/coordinators/streams/stream', () => ({ StreamCoordinator: { getInstance: () => mocks.stream } }));
 vi.mock('@/coordinators/ttl/ttl', () => ({ TtlCoordinator: { getInstance: () => mocks.ttl } }));
 vi.mock('@/coordinators/mute-list-sync/mute-list-sync', () => ({
@@ -36,7 +38,14 @@ vi.mock('@/coordinators/notification-last-read-sync/notification-last-read-sync'
   NotificationLastReadSyncCoordinator: { getInstance: () => mocks.lastReadChannel },
 }));
 
-const all = () => [mocks.notification, mocks.stream, mocks.ttl, mocks.muteListSync, mocks.notificationLastReadPoll];
+const all = () => [
+  mocks.notification,
+  mocks.pubchi,
+  mocks.stream,
+  mocks.ttl,
+  mocks.muteListSync,
+  mocks.notificationLastReadPoll,
+];
 
 describe('CoordinatorsManager', () => {
   beforeEach(() => {

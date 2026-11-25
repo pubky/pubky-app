@@ -8,6 +8,14 @@ import type { ResolveAvatarFallbackInitialProps, ResolveAvatarFallbackSeedProps 
  */
 const USER_ID_PATTERN = /^[a-z0-9]{52}$/;
 
+const INITIAL_SKIP_PATTERN = /[\p{Extended_Pictographic}\p{Emoji_Modifier}\u200d\ufe0e\ufe0f]/u;
+
+export function initialFromName(name: string | undefined | null): string {
+  const codePoints = Array.from(name?.trim() ?? '');
+  const initial = codePoints.find((codePoint) => !/\s/u.test(codePoint) && !INITIAL_SKIP_PATTERN.test(codePoint));
+  return initial?.toUpperCase() ?? '';
+}
+
 /**
  * Extracts the userId from an avatar URL.
  *

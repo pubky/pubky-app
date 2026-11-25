@@ -1,0 +1,25 @@
+{
+  "input": {
+    "target": {
+      "kind": "post",
+      "uri": "pubky://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/pub/pubky.app/posts/ABC123DEF4567",
+      "author": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    "post": {
+      "details": {
+        "author": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "content": "Café / Café — שלום 👋",
+        "kind": "long"
+      }
+    },
+    "user": null
+  },
+  "projection": {
+    "kind": "post",
+    "uri": "pubky://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/pub/pubky.app/posts/ABC123DEF4567",
+    "author": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "content": "Café / Café — שלום 👋",
+    "post_kind": "long"
+  },
+  "snapshot_sha256": "16054d0f6e23ab2e375305bc8e2c2700b3c1bdef7fb9aa6257bba4bd89952518"
+}

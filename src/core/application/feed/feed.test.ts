@@ -15,6 +15,7 @@ import {
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
+import { provenanceUri } from '@/libs/pubchi/feed-provenance';
 import { FeedModel } from '@/models/feed/feed';
 import { buildFeedStreamId } from '@/models/feed/feed.helpers';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
@@ -519,7 +520,7 @@ describe('FeedApplication', () => {
   });
 
   describe('commitDelete', () => {
-    it('deletes the row, both stored paths and the stream caches', async () => {
+    it('deletes the row, stored feed and provenance, and stream caches', async () => {
       const feed = built();
       const created = await FeedApplication.persist({ userId: owner, params: { feed } });
       await homeserver.session.storage.putBytes(feedPaths(feed.id).public, feed.body);
@@ -534,6 +535,7 @@ describe('FeedApplication', () => {
       expect(await UnreadPostStreamModel.findById(streamId)).toBeNull();
       expect(homeserver.spies.deleteIdempotent.mock.calls).toEqual([
         [`pubky://${owner}${feedPaths(feed.id).public}`],
+        [provenanceUri(owner, feed.id)],
         [`pubky://${owner}${feedPaths(feed.id).private}`],
       ]);
     });
@@ -570,7 +572,7 @@ describe('FeedApplication', () => {
       await expect(FeedApplication.commitDelete({ userId: owner, params: { feedId: feed.id } })).resolves.toBe(true);
 
       expect(await FeedModel.table.get(feed.id)).toBeUndefined();
-      expect(homeserver.spies.deleteIdempotent).toHaveBeenCalledTimes(2);
+      expect(homeserver.spies.deleteIdempotent).toHaveBeenCalledTimes(3);
     });
 
     it('throws when the homeserver delete fails', async () => {
@@ -622,7 +624,10 @@ describe('FeedApplication', () => {
 
       await expect(FeedApplication.commitDelete({ userId: owner, params: { feedId: feed.id } })).rejects.toBe(failure);
 
-      expect(homeserver.spies.deleteIdempotent).toHaveBeenCalledOnce();
+      expect(homeserver.spies.deleteIdempotent.mock.calls).toEqual([
+        [`pubky://${owner}${feedPaths(feed.id).public}`],
+        [provenanceUri(owner, feed.id)],
+      ]);
     });
 
     it('refuses an id the data model cannot spell as a validation error', async () => {

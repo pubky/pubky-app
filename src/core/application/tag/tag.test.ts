@@ -13,7 +13,14 @@ import { NexusUserService } from '@/services/nexus/user/user';
 import { TagApplication } from './tag';
 import { TagKind, type TCreateTagInput, type TDeleteTagInput } from './tag.types';
 
-vi.mock('@/services/homeserver/homeserver', () => ({ HomeserverService: { request: vi.fn(), putBlob: vi.fn() } }));
+vi.mock('@/services/homeserver/homeserver', () => ({
+  HomeserverService: {
+    request: vi.fn(),
+    putBlob: vi.fn(),
+    getFreshBytes: vi.fn(),
+    createWriteFence: () => ({ enter: () => undefined, assertCurrent: () => undefined }),
+  },
+}));
 vi.mock('@/services/local/tag/post/tag.post', () => ({ LocalPostTagService: { create: vi.fn(), delete: vi.fn() } }));
 vi.mock('@/services/local/tag/user/tag.user', () => ({ LocalUserTagService: { create: vi.fn(), delete: vi.fn() } }));
 vi.mock('@/services/local/tag/tag-cache', () => ({

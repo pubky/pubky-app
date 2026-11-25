@@ -47,6 +47,14 @@ describe('getContentSearchUrl', () => {
   });
 });
 
+describe('Pubchi route', () => {
+  it('is an authenticated app route', () => {
+    expect(APP_ROUTES.PUBCHI).toBe('/pubchi');
+    expect(AUTHENTICATED_ROUTES.allowedRoutes).toContain(APP_ROUTES.PUBCHI);
+    expect(UNAUTHENTICATED_ROUTES.allowedRoutes).not.toContain(APP_ROUTES.PUBCHI);
+  });
+});
+
 describe('getOnboardingScanRoute', () => {
   it('keeps the bare scan route for Pubky Ring', () => {
     expect(getOnboardingScanRoute('ring')).toBe(ONBOARDING_ROUTES.SCAN);

@@ -16,6 +16,16 @@ import { StreamSorting } from '@/services/nexus/nexus.types';
 import { POST_STREAM_TAG_DELIMITER } from '@/services/nexus/stream/posts/postStream.constants';
 import { StreamKind, StreamSource } from '@/services/nexus/stream/posts/postStream.types';
 
+/**
+ * The user's feed sync lock (`withSyncLock`), one per user across every tab, always held `exclusive`:
+ * writes (`persist`, `commitDelete`) run one after another, retries and their back-off included, so an
+ * older write's retry never lands on top of a newer write to the same feed (a per-feed lock would not
+ * order an edit that changes the id; feed writes are rare, see ADR-0028); the reconciling fetch never
+ * lists while a row's PUT or DELETE is in flight, and no write lands between its listing and its local
+ * write.
+ */
+export const feedSyncLock = (pubky: Pubky) => `pubky-feeds-sync:${pubky}`;
+
 export function reachToStreamSource(reach: Exclude<KnownFeedReach, 'me'>): StreamSource {
   const map: Record<Exclude<KnownFeedReach, 'me'>, StreamSource> = {
     all: StreamSource.ALL,

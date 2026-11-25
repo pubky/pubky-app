@@ -6,6 +6,7 @@ import { HomeserverEventStreamCoordinator } from '@/coordinators/homeserver-even
 import { MuteListSyncCoordinator } from '@/coordinators/mute-list-sync/mute-list-sync';
 import { NotificationLastReadPollCoordinator } from '@/coordinators/notification-last-read-poll/notification-last-read-poll';
 import { NotificationCoordinator } from '@/coordinators/notifications/notifications';
+import { PubchiCoordinator } from '@/coordinators/pubchi/pubchi';
 import { StreamCoordinator } from '@/coordinators/streams/stream';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
 import { useAuthStatus } from '@/hooks/useAuthStatus/useAuthStatus';
@@ -14,6 +15,7 @@ import { AuthStatus } from '@/hooks/useAuthStatus/useAuthStatus.types';
 function getAppCoordinators() {
   return {
     notification: NotificationCoordinator.getInstance(),
+    pubchi: PubchiCoordinator.getInstance(),
     stream: StreamCoordinator.getInstance(),
     ttl: TtlCoordinator.getInstance(),
     homeserverEventStream: HomeserverEventStreamCoordinator.getInstance(),
@@ -34,6 +36,7 @@ function applyRouteToCoordinators(pathname: string): void {
 function startAppCoordinators(): void {
   const coordinators = getAppCoordinators();
   void coordinators.notification.start();
+  coordinators.pubchi.start();
   void coordinators.stream.start();
   coordinators.ttl.start();
   // The mute list and the private `last_read` poll (ADR-0014, ADR-0029), so no channel registers with the shared
@@ -48,6 +51,7 @@ function startAppCoordinators(): void {
 function stopAppCoordinators(): void {
   const coordinators = getAppCoordinators();
   coordinators.notification.stop();
+  coordinators.pubchi.stop();
   coordinators.stream.stop();
   coordinators.ttl.stop();
   coordinators.homeserverEventStream.stop();
@@ -62,7 +66,7 @@ function stopAppCoordinators(): void {
  * This component has no UI - it only manages coordinator lifecycles.
  *
  * Responsibilities:
- * - Initialize coordinators on mount (NotificationCoordinator, StreamCoordinator,
+ * - Initialize coordinators on mount (NotificationCoordinator, PubchiCoordinator, StreamCoordinator,
  *   MuteListSyncCoordinator, NotificationLastReadPollCoordinator, TtlCoordinator, HomeserverEventStreamCoordinator)
  * - Start coordination when the component is mounted, except while the account is held behind
  *   the social v1 migration gate: the stream coordinator keys on the persisted pubky and would

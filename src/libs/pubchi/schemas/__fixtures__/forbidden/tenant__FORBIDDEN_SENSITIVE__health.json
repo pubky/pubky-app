@@ -1,0 +1,28 @@
+{
+  "schema": "pubchi-tenant",
+  "version": 1,
+  "bot": "wnpkm7d4c7caym93kzhpamjkn11hu8jdz4m9o3y1x9huopniwuay",
+  "owner": "4bfmrcuwfq4ksqoupn6wcfxrh5enr1izdeyszmhfrntuf1mzoh5o",
+  "tier": "read-only",
+  "brain": {
+    "adapter": "vercel-ai",
+    "execution": "synonym-hosted",
+    "provider_id": "moonshot",
+    "model_id": "kimi-k3",
+    "endpoint": null
+  },
+  "budgets": {
+    "per_request_input_tokens": 8000,
+    "per_request_output_tokens": 2000,
+    "per_request_wall_clock_ms": 30000,
+    "per_owner_hourly_tokens": 50000,
+    "per_owner_utc_day_tokens": 200000,
+    "per_tenant_scout_queries": 20,
+    "per_tenant_scout_rows": 200,
+    "per_tenant_web_calls": 0,
+    "proactive_suggestions_per_day": 0
+  },
+  "created_at": 1788513600,
+  "updated_at": 1788600000,
+  "health": "diagnosis"
+}

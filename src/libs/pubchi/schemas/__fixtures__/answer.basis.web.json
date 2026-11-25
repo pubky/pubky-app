@@ -1,0 +1,25 @@
+{
+  "schema": "pubchi-answer",
+  "version": 1,
+  "bot": "o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo",
+  "owner": "o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo",
+  "generated_at": 1760000000,
+  "run_id": "answer-basis-web",
+  "purpose": "ask",
+  "question": "what is Pubky in the news?",
+  "summary": "Recent coverage describes Pubky as a public-key social protocol.",
+  "evidence": [],
+  "sources": [],
+  "tool_trace_summary": { "tools": [], "call_count": 0, "truncated": false },
+  "policy_version": 1,
+  "scope": { "time": null, "graph": { "kind": "none" }, "filters": [], "complete": true },
+  "basis": "web",
+  "citations": [
+    {
+      "kind": "web",
+      "title": "Pubky coverage",
+      "url": "https://example.com/pubky",
+      "snippet": "Public-key social protocol"
+    }
+  ]
+}

@@ -8,6 +8,10 @@ Updated — 2026-11-10 (the loop-breaker never fired: the unexpected-close path 
 Updated — 2026-11-11 (QA-4 A.5's verification of the reworked probe on production builds, run 2026-11-10, recorded; see _Amendment_)  
 Updated — 2026-11-18 (residual recorded: the connection recovery from #3129 reopens without the version check; see _Amendment_)
 
+The proposed [ADR 0031](0031-pubchi-assisted-integration.md) limits this policy to the
+main App cache and introduces an isolated durable Pubchi database for device keys
+and pending write records. Main-cache recreation must not erase that state.
+
 ## Context
 
 [ADR-0007](./0007-dexie-version-normalization.md) assumed normalized schema versions with migrations

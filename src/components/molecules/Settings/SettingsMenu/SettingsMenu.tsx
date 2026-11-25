@@ -10,7 +10,7 @@ import {
   FilterList,
   FilterRoot,
 } from '@/atoms/Filter/Filter';
-import { SETTINGS_MENU_ITEMS } from './SettingsMenu.constants';
+import { getSettingsMenuItems } from './SettingsMenu.constants';
 
 export function SettingsMenu() {
   const pathname = usePathname();
@@ -20,7 +20,7 @@ export function SettingsMenu() {
       <FilterHeader title={'Settings'} />
 
       <FilterList>
-        {SETTINGS_MENU_ITEMS.map((item) => {
+        {getSettingsMenuItems().map((item) => {
           const Icon = item.icon;
           const isSelected = pathname === item.path;
           return (

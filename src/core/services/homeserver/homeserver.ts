@@ -1,4 +1,4 @@
-import { Address, Client, Pubky, PublicKey, resolvePubky, Session } from '@synonymdev/pubky';
+import { Address, Client, Pubky, PublicKey, resolvePubky, Session, type SessionInfo } from '@synonymdev/pubky';
 import type { MigrationLock, MigrationReport, ProgressEvent } from 'pubky-social-migrator';
 import { getAuthClientId } from '@/config/auth';
 import {
@@ -82,6 +82,11 @@ export class HomeserverService {
   private constructor() {}
 
   private static pubkySdk: Pubky | null = null;
+
+  /** Public session metadata for application capability checks; never exposes credentials. */
+  static getCurrentSessionInfo(): SessionInfo | null {
+    return useAuthStore.getState().session?.info ?? null;
+  }
 
   private static sessionFailureListeners = new Set<(failure: ActiveSessionFailure) => void>();
 
@@ -937,6 +942,17 @@ export class HomeserverService {
     }
   }
 
+  /** Preserve the original document text so strict parsers can reject duplicate JSON keys. */
+  static async requestRawText(url: string): Promise<string> {
+    try {
+      const response = await this.get(url);
+      await assertOk({ response, url, operation: 'requestRawText' });
+      return await response.text();
+    } catch (error) {
+      return handleError({ error, additionalContext: { url, method: HttpMethod.GET, operation: 'requestRawText' } });
+    }
+  }
+
   /**
    * Read an owned resource with its server modification time. Only a 404 means absence;
    * missing authentication, insufficient permissions and transport failures reject.
@@ -998,14 +1014,17 @@ export class HomeserverService {
    * Bytes of a public resource read past the browser HTTP cache, for a read-modify-write (the
    * head version of a post, a profile edit) where a heuristically fresh cached copy would undo
    * another device's write (see `getFreshJson`). Rejects a missing resource and a failed HTTP
-   * response like `getBytes`. Public only: the raw fetch carries no session, so an owned `/priv/`
+   * response like `getBytes`. Set `notFoundAsNull` for an expected 404. Public only: the raw fetch carries no session, so an owned `/priv/`
    * path answers 401; read those through `request` (GET) or `getBytesIfExists`.
    *
    * @param url - Pubky URL to read.
    */
-  static async getFreshBytes(url: string): Promise<Uint8Array> {
+  static getFreshBytes(url: string): Promise<Uint8Array>;
+  static getFreshBytes(url: string, options: { notFoundAsNull: true }): Promise<Uint8Array | null>;
+  static async getFreshBytes(url: string, options?: { notFoundAsNull: true }): Promise<Uint8Array | null> {
     try {
       const response = await this.fetch({ url, options: { method: HttpMethod.GET, cache: 'no-store' } });
+      if (options?.notFoundAsNull && response.status === HttpStatusCode.NOT_FOUND) return null;
       await assertOk({ response, url, operation: 'getFreshBytes' });
       return new Uint8Array(await response.arrayBuffer());
     } catch (error) {

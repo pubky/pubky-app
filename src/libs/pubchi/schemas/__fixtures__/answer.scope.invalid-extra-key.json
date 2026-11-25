@@ -1,0 +1,22 @@
+{
+  "schema": "pubchi-answer",
+  "version": 1,
+  "bot": "wnpkm7d4c7caym93kzhpamjkn11hu8jdz4m9o3y1x9huopniwuay",
+  "owner": "4bfmrcuwfq4ksqoupn6wcfxrh5enr1izdeyszmhfrntuf1mzoh5o",
+  "generated_at": 1788600000,
+  "run_id": "scope-fixture",
+  "purpose": "ask",
+  "question": "what changed?",
+  "summary": "No matching evidence was found.",
+  "evidence": [],
+  "sources": [],
+  "tool_trace_summary": { "tools": [], "call_count": 0, "truncated": false },
+  "policy_version": 1,
+  "scope": {
+    "time": null,
+    "graph": { "kind": "none" },
+    "filters": [],
+    "complete": true,
+    "extra": true
+  }
+}

@@ -26,6 +26,7 @@ import { shouldDropAppErrorFromSentry } from './sentry.utils';
 const TEST_PUBKY = 'ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy';
 
 const TEST_DSN = 'https://public@example.com/1';
+const TEST_MNEMONIC = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
 
 /**
  * Inject a window runtime config (the client-side source the sentry gates read).
@@ -55,6 +56,38 @@ function runBeforeSend(event: Sentry.ErrorEvent): Sentry.ErrorEvent {
   expect(result).not.toBeNull();
   return result as Sentry.ErrorEvent;
 }
+
+describe('Pubchi custody scrubbing', () => {
+  it('redacts overlapping valid 12- and 24-word phrases without removing surrounding text', () => {
+    // Public deterministic zero-filled test entropy with a fixed first uint32.
+    const phrase =
+      'abandon abandon addict abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon boy';
+    const result = runBeforeSend({ type: undefined, message: `before ${phrase} after` });
+    expect(result.message).toBe('before [redacted: sensitive field] after');
+  });
+
+  it('scrubs mnemonic strings and custody field names from error payloads', () => {
+    const result = runBeforeSend({
+      type: undefined,
+      message: `failure ${TEST_MNEMONIC}`,
+      extra: {
+        phrase: TEST_MNEMONIC,
+        recoveryPhrase: TEST_MNEMONIC,
+        seed: 'seed-value',
+        typedWords: ['one', 'two', 'three'],
+      },
+      breadcrumbs: [{ message: TEST_MNEMONIC }],
+    });
+    expect(JSON.stringify(result)).not.toContain(TEST_MNEMONIC);
+    expect(result.message).toContain('[redacted: sensitive field]');
+    expect(result.extra).toEqual({
+      phrase: '[redacted: sensitive field]',
+      recoveryPhrase: '[redacted: sensitive field]',
+      seed: '[redacted: sensitive field]',
+      typedWords: '[redacted: sensitive field]',
+    });
+  });
+});
 
 function runBeforeSendTransaction(event: TransactionEvent): TransactionEvent {
   const beforeSendTransaction = getSentryInitBase().beforeSendTransaction;

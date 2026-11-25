@@ -4,6 +4,7 @@ import type { PersistStorage } from 'zustand/middleware';
 import { AuthApplication } from '@/application/auth/auth';
 import { BootstrapApplication, type BootstrapProgressCallback } from '@/application/bootstrap/bootstrap';
 import { NotificationApplication } from '@/application/notification/notification';
+import { PubchiApplication } from '@/application/pubchi/pubchi';
 import { SettingsApplication } from '@/application/settings/settings';
 import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
 import { UserApplication } from '@/application/user/user';
@@ -38,10 +39,13 @@ import { isAppError, isWrongEnvironmentHomeserverError, toAppError } from '@/lib
 import { Identity } from '@/libs/identity/identity';
 import { Logger } from '@/libs/logger/logger';
 import { clearNotificationLastReadSyncCursorSessionStorage } from '@/libs/notification-last-read-sync/clear-cursor-session-storage';
+import { clearLocalCursors } from '@/libs/pubchi/capabilities-v1';
+import { clearProactiveLocalState } from '@/libs/pubchi/proactive';
 import { clearAllQueryClients } from '@/libs/query-client/query-client.factory';
 import { clearThemePreference } from '@/libs/theme/clear-theme-preference';
 import { sleep } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
+import { toast } from '@/molecules/Toaster/toast';
 import { LastReadNormalizer } from '@/pipes/lastRead/lastRead.normalizer';
 import { NotificationNormalizer } from '@/pipes/notification/notification.normalizer';
 import { SettingsNormalizer } from '@/pipes/settings/settings.normalizer';
@@ -59,6 +63,7 @@ import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 import { useMigrationStore } from '@/stores/migration/migration.store';
 import { useNotificationStore } from '@/stores/notification/notification.store';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
+import { usePubchiStore } from '@/stores/pubchi/pubchi.store';
 import { useSearchStore } from '@/stores/search/search.store';
 import { useSettingsStore } from '@/stores/settings/settings.store';
 import type { SettingsState } from '@/stores/settings/settings.types';
@@ -223,7 +228,8 @@ export class AuthController {
     await wait;
   }
 
-  private static isCurrentGeneration(generation: string): boolean {
+  /** Checks the durable generation too, before a cross-tab storage event reaches this tab. */
+  static isCurrentGeneration(generation: string): boolean {
     try {
       return (
         useAuthStore.getState().generation === generation &&
@@ -448,6 +454,7 @@ export class AuthController {
         if (useAuthStore.getState().hasProfile === null || useAuthStore.getState().needsAccountSync)
           await this.bootstrapProfile(result.session, generation, true);
         if (isCurrent()) useAuthStore.getState().setRestoreStatus('ready');
+        if (isCurrent()) void this.retryPubchiRevocations(snapshot.currentUserPubky);
         return isCurrent();
       } catch (error) {
         if (isCurrent()) {
@@ -467,7 +474,9 @@ export class AuthController {
     } finally {
       if (this.restorePromise === task) this.restorePromise = null;
       // A storage event may have happened before this tab installed its listener.
-      if (useAuthStore.getState().generation === generation) {
+      // Logout owns the transition while it revokes feature devices and commits the
+      // signed-out record. A canceled restore must not adopt that intermediate record.
+      if (!useAuthStore.getState().isLoggingOut && useAuthStore.getState().generation === generation) {
         try {
           if ((AuthApplication.readPersistedAuth()?.generation ?? '') !== generation) {
             await this.syncSessionFromStorage();
@@ -550,6 +559,7 @@ export class AuthController {
     const previous = useAuthStore.getState();
     if (incoming?.generation === previous.generation) {
       await useAuthStore.persist.rehydrate();
+      if (!useAuthStore.getState().currentUserPubky) usePubchiStore.getState().clear();
       return;
     }
     this.cancelActiveAuthFlow();
@@ -570,6 +580,8 @@ export class AuthController {
       });
     }
     const current = useAuthStore.getState();
+    if (!current.currentUserPubky || previous.currentUserPubky !== current.currentUserPubky)
+      usePubchiStore.getState().clear();
     if (previous.currentUserPubky !== current.currentUserPubky) {
       clearAllQueryClients();
       postStreamQueue.clear();
@@ -779,6 +791,9 @@ export class AuthController {
         resetTabStore(useSettingsStore, true);
         resetTabStore(useNotificationStore, true);
         LocksController.clearLocalSession();
+        if (previous.currentUserPubky) {
+          await this.clearPubchiOwnerState(previous.currentUserPubky, () => this.isCurrentGeneration(generation));
+        }
       }
       if (gated) {
         // Before account preparation: a failed cleanup then retains the admitted session for its retry.
@@ -797,6 +812,7 @@ export class AuthController {
       }
       await this.prepareAccount(generation);
       if (!this.isCurrentGeneration(generation)) throw createCanceledError();
+      void this.retryPubchiRevocations(pubky);
       void this.retrySessionRetirement(previous.session);
       if (!this.isCurrentGeneration(generation)) throw createCanceledError();
       if (
@@ -1027,7 +1043,7 @@ export class AuthController {
    * and the last_read-sync `sessionStorage` cursors.
    * Used after explicit logout. Failed restoration never clears account data.
    */
-  private static async cleanupLocalState(isCurrent: () => boolean, persist = true) {
+  private static async cleanupLocalState(isCurrent: () => boolean, persist = true, pubchiOwner?: string) {
     if (!isCurrent()) return;
     this.cancelModerationFollow();
     // The last_read SSE cursor lives in sessionStorage; clear before the next account might reuse the same tab.
@@ -1059,6 +1075,8 @@ export class AuthController {
     await LocksController.logout(persist);
 
     if (!persist || !isCurrent()) return;
+    if (pubchiOwner) await this.clearPubchiOwnerState(pubchiOwner, isCurrent);
+    if (!isCurrent()) return;
     // Credential logout is already complete; cache cleanup cannot turn it into a failed sign-out.
     await this.bounded(clearDatabase(isCurrent), 'clearAccount', LOGOUT_TIMEOUT_MS, ErrorService.Local).catch(
       (error) => {
@@ -1068,6 +1086,32 @@ export class AuthController {
     if (!isCurrent()) return;
     // Skip post-migration resync — full cleanup resets all state
     useMigrationStore.getState().reset();
+  }
+
+  /** Keep failed device revocations for this account's next usable session. */
+  private static async retryPubchiRevocations(owner: string | null): Promise<void> {
+    if (!owner) return;
+    try {
+      await PubchiApplication.unpublishKnownDelegations(owner, { attemptRemote: true, includeLocalKeys: false });
+    } catch (error) {
+      if (!isAppError(error)) toAppError(error, ErrorService.Pubchi, 'retryDeviceRevocations');
+    }
+  }
+
+  private static async clearPubchiOwnerState(owner: string, isCurrent: () => boolean): Promise<void> {
+    if (!isCurrent()) return;
+    await this.bounded(
+      PubchiApplication.clearOwnerData(owner, isCurrent),
+      'clearPubchiOwner',
+      LOGOUT_TIMEOUT_MS,
+      ErrorService.Pubchi,
+    ).catch((error) => {
+      if (!isAppError(error)) toAppError(error, ErrorService.Pubchi, 'clearPubchiOwner');
+    });
+    if (isCurrent()) {
+      clearLocalCursors(owner);
+      clearProactiveLocalState(owner);
+    }
   }
 
   /**
@@ -1205,6 +1249,28 @@ export class AuthController {
     let persisted = false;
     let localGeneration = generation;
     try {
+      // Revoke browser device delegations while the outgoing session still exists.
+      // The application records pending revocations before touching the network.
+      if (snapshot.currentUserPubky) {
+        await this.bounded(
+          PubchiApplication.unpublishKnownDelegations(snapshot.currentUserPubky, { attemptRemote: true }),
+          'revokePubchiDevices',
+          LOGOUT_TIMEOUT_MS,
+          ErrorService.Pubchi,
+        )
+          .then(({ failed }) => {
+            if (failed.length)
+              toast({
+                variant: 'warning',
+                title: 'Pubchi device access could not be revoked. It will be retried the next time you sign in.',
+              });
+          })
+          .catch(() => {});
+        if (this.epoch !== epoch || useAuthStore.getState().generation !== snapshot.generation) {
+          await this.syncSessionFromStorage();
+          throw createCanceledError();
+        }
+      }
       try {
         await this.bounded(
           AuthApplication.commitPersistedAuth(
@@ -1280,7 +1346,7 @@ export class AuthController {
               Logger.warn('Local sign-out completed; remote revocation could not be confirmed.');
           })
           .catch(() => {});
-      await this.cleanupLocalState(isCurrent, persisted);
+      await this.cleanupLocalState(isCurrent, persisted, snapshot.currentUserPubky ?? undefined);
       if (!isCurrent()) {
         await this.syncSessionFromStorage();
         throw createCanceledError();

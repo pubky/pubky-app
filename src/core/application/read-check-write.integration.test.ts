@@ -9,12 +9,12 @@ import { TagKind } from '@/application/tag/tag.types';
 import { NotificationController } from '@/controllers/notification/notification';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
-import { HttpMethod } from '@/libs/http/http.types';
+import { sha256Hex } from '@/libs/pubchi/schemas/canonical';
 import type { Pubky } from '@/models/models.types';
 import { UserDetailsModel } from '@/models/user/details/userDetails';
 import { UserTtlModel } from '@/models/user/ttl/userTtl';
 import { LastReadNormalizer, type TLastRead } from '@/pipes/lastRead/lastRead.normalizer';
-import { HomeserverService } from '@/services/homeserver/homeserver';
+import { TagNormalizer } from '@/pipes/tag/tag.normalizer';
 import {
   HOMESERVER_PUBLISH_CONFLICT_MESSAGE,
   installHomeserverWriteRetryDependenciesForTests,
@@ -372,16 +372,12 @@ describe('marking notifications read never moves last_read backward', () => {
 
 describe('writes to one tag run in the order the user made them', () => {
   const POST_ID = `${USER}:0033SSE3B1FQ0` as Pubky;
-  const TAG_PATH = '/pub/pubky.app/tags/TAG0001';
   const tag = {
-    taggerId: USER,
-    taggedId: POST_ID,
-    label: 'bitcoin',
-    taggedKind: TagKind.POST,
-    tagUrl: `pubky://${USER}${TAG_PATH}`,
+    ...TagNormalizer.from({ taggerId: USER, taggedId: POST_ID, label: 'bitcoin', taggedKind: TagKind.POST }),
+    canWrite: () => true,
   };
-  const tagJson = { uri: `pubky://${USER}/pub/pubky.app/posts/0033SSE3B1FQ0`, label: 'bitcoin', created_at: 1 };
-  const tagBody = new TextEncoder().encode(JSON.stringify(tagJson));
+  const { tagBody } = tag;
+  const TAG_PATH = tag.tagUrl.slice(`pubky://${USER}`.length);
   const tagOps = () => homeserver.writes.filter(({ path }) => path === TAG_PATH).map(({ op }) => op);
 
   it('keeps a tag removed while its add was retrying removed', async () => {
@@ -393,14 +389,14 @@ describe('writes to one tag run in the order the user made them', () => {
         }),
     );
 
-    const request = vi.spyOn(HomeserverService, 'request');
-    const add = TagApplication.commitCreate({ tagList: [{ ...tag, tagBody }] });
+    const add = TagApplication.commitCreate({ tagList: [tag] });
     await vi.waitFor(() => expect(failAdd).toBeTypeOf('function'));
-    const remove = TagApplication.commitDelete({ ...tag, canWrite: () => true });
-    // The removal has reached the homeserver service before the add's first attempt fails.
-    await vi.waitFor(() =>
-      expect(request).toHaveBeenCalledWith(expect.objectContaining({ method: HttpMethod.DELETE })),
-    );
+    const remove = TagApplication.commitDelete(tag);
+    // The optimistic removal is visible while its remote write waits behind the add.
+    await vi.waitFor(async () => {
+      const mutations = await TagApplication.getViewerMutations(tag);
+      expect(mutations.get(tag.label)?.relationship).toBe(false);
+    });
     failAdd();
     await Promise.all([add, remove]);
 
@@ -409,8 +405,7 @@ describe('writes to one tag run in the order the user made them', () => {
   });
 
   it('keeps a tag added back while its removal was retrying present', async () => {
-    homeserver.files.set(TAG_PATH, JSON.stringify(tagJson));
-    await TagApplication.commitCreate({ tagList: [{ ...tag, tagBody }] });
+    await TagApplication.commitCreate({ tagList: [tag] });
     homeserver.writes = [];
     let releaseRemove!: () => void;
     homeserver.delete.mockRejectedValueOnce(sdkError(429));
@@ -419,11 +414,57 @@ describe('writes to one tag run in the order the user made them', () => {
         releaseRemove = resolve;
       });
 
-    const putBlob = vi.spyOn(HomeserverService, 'putBlob');
-    const remove = TagApplication.commitDelete({ ...tag, canWrite: () => true });
+    const remove = TagApplication.commitDelete(tag);
     await vi.waitFor(() => expect(releaseRemove).toBeTypeOf('function'));
-    const add = TagApplication.commitCreate({ tagList: [{ ...tag, tagBody }] });
-    await vi.waitFor(() => expect(putBlob).toHaveBeenCalledWith(expect.objectContaining({ url: tag.tagUrl })));
+    const add = TagApplication.commitCreate({ tagList: [tag] });
+    await vi.waitFor(async () => {
+      const mutations = await TagApplication.getViewerMutations(tag);
+      expect(mutations.get(tag.label)?.relationship).toBe(true);
+    });
+    expect(tagOps()).toEqual(['DELETE']);
+    releaseRemove();
+    await Promise.all([remove, add]);
+
+    expect(tagOps()).toEqual(['DELETE', 'DELETE', 'PUT']);
+    expect(homeserver.files.has(TAG_PATH)).toBe(true);
+  });
+
+  it('keeps an ordinary remove after a retrying assisted add, without resurrecting the tag', async () => {
+    let failAdd!: () => void;
+    homeserver.putBytes.mockImplementationOnce(
+      () =>
+        new Promise<void>((_, reject) => {
+          failAdd = () => reject(sdkError(503));
+        }),
+    );
+    const add = TagApplication.commitCreate({ tagList: [tag], preserveExisting: true });
+    await vi.waitFor(() => expect(failAdd).toBeTypeOf('function'));
+    const remove = TagApplication.commitDelete(tag);
+    await vi.waitFor(async () => {
+      expect((await TagApplication.getViewerMutations(tag)).get(tag.label)?.relationship).toBe(false);
+    });
+    failAdd();
+    await Promise.all([add, remove]);
+
+    expect(tagOps()).toEqual(['PUT', 'PUT', 'DELETE']);
+    expect(homeserver.files.has(TAG_PATH)).toBe(false);
+  });
+
+  it('keeps a manual add after a retrying assisted undo', async () => {
+    await TagApplication.commitCreate({ tagList: [tag] });
+    homeserver.writes = [];
+    let releaseRemove!: () => void;
+    homeserver.delete.mockRejectedValueOnce(sdkError(429));
+    onBackoff = () =>
+      new Promise<void>((resolve) => {
+        releaseRemove = resolve;
+      });
+    const remove = TagApplication.commitDeleteIfUnchanged(tag, await sha256Hex(tagBody));
+    await vi.waitFor(() => expect(releaseRemove).toBeTypeOf('function'));
+    const add = TagApplication.commitCreate({ tagList: [tag] });
+    await vi.waitFor(async () => {
+      expect((await TagApplication.getViewerMutations(tag)).get(tag.label)?.relationship).toBe(true);
+    });
     expect(tagOps()).toEqual(['DELETE']);
     releaseRemove();
     await Promise.all([remove, add]);

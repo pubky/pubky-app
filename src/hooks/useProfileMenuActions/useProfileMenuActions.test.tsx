@@ -4,7 +4,8 @@ import { isAppError } from '@/libs/error/error.utils';
 import { toast } from '@/molecules/Toaster/toast';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { authInitialState } from '@/stores/auth/auth.types';
-import { mockSession } from '@/test-utils/pubky';
+import { usePubchiStore } from '@/stores/pubchi/pubchi.store';
+import { mockSession, PUBKY_52_STAGING_FIXTURE } from '@/test-utils/pubky';
 import { useProfileMenuActions } from './useProfileMenuActions';
 import { PROFILE_MENU_ACTION_IDS } from './useProfileMenuActions.constants';
 
@@ -60,6 +61,11 @@ vi.mock('@/hooks/useShareUrl/useShareUrl', () => ({
   useShareUrl: mockUseShareUrl,
 }));
 
+vi.mock('@/libs/pubchi/flags', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/libs/pubchi/flags')>()),
+  isPubchiEnabled: () => true,
+}));
+
 // Mock Molecules
 vi.mock('@/molecules/Toaster/toast');
 
@@ -98,6 +104,7 @@ describe('useProfileMenuActions', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    usePubchiStore.getState().clear();
     useAuthStore.setState({
       ...authInitialState,
       currentUserPubky: 'currentUser123',
@@ -179,6 +186,24 @@ describe('useProfileMenuActions', () => {
     });
     mockUseShareUrl.mockReturnValue({
       shareUrl: defaultMocks.shareUrl,
+    });
+  });
+
+  it('opens tag suggestions for the Social v1 profile reference', async () => {
+    usePubchiStore
+      .getState()
+      .setPubchi(
+        { bot: PUBKY_52_STAGING_FIXTURE, displayName: 'Pubchi', createdAt: 1, backupConfirmedAt: 1, verified: true },
+        'currentUser123',
+      );
+    const { result } = renderHook(() => useProfileMenuActions(PUBKY_52_STAGING_FIXTURE));
+    const suggest = result.current.menuItems.find(
+      (item) => item.id === PROFILE_MENU_ACTION_IDS.SUGGEST_TAGS_WITH_PUBCHI,
+    );
+    await act(async () => suggest?.onClick());
+    expect(usePubchiStore.getState().flyout.prefill?.target).toEqual({
+      kind: 'user',
+      uri: `pubky://${PUBKY_52_STAGING_FIXTURE}/pub/social/v1/profile.json`,
     });
   });
 

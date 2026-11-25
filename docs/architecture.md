@@ -117,9 +117,10 @@ Modules are imported directly through the path aliases in `tsconfig.json`. Keep 
 
 ### Database (`src/core/database/`)
 
-- Single Dexie schema version (`DB_VERSION`), safe initialization and recovery
+- The main App cache has one Dexie schema version (`DB_VERSION`), with safe initialization and recovery
 - Bounded runtime reconnect and one replay for eligible local reads or fully aborted local transactions, preserving each caller's Dexie scope and lifecycle fences ([ADR-0030](adr/0030-bounded-indexeddb-connection-recovery.md))
-- A version mismatch deletes and recreates the database; there is no migration chain (ADR-0019, `docs/data-patterns.md` — _Schema changes_)
+- A version mismatch deletes and recreates the main cache; there is no migration chain (ADR-0019, `docs/data-patterns.md` — _Schema changes_)
+- Proposed with the Pubchi draft integration: the isolated `pubchi` database holds durable device keys and pending write records, preserves its version history, and survives main-cache recreation. Owner-scoped logout cleanup is separate; see [ADR 0031](adr/0031-pubchi-assisted-integration.md). This does not change the main `DB_VERSION` policy.
 
 ## Allowed Dependencies
 
@@ -298,7 +299,7 @@ src/core/
 ├── pipes/[domain]/        # Data transformation
 ├── models/[domain]/       # Dexie tables
 ├── stores/[domain]/       # UI state (Zustand)
-├── database/              # Dexie schema (single version, recreated on mismatch)
+├── database/              # Main-cache schema; isolated durable Pubchi state (proposed ADR-0031)
 └── utils/                 # Utility functions
 ```
 
@@ -353,6 +354,7 @@ ADRs capture the _why_ behind key architectural decisions. Stored in `docs/adr/`
 | 0028 | Private, locally owned bookmarks                                          |
 | 0029 | Cross-device notification `last_read` sync                                |
 | 0030 | Bounded IndexedDB connection recovery                                     |
+| 0031 | Pubchi assisted integration and durable local state (proposed)            |
 
 ## Quick Checklist
 

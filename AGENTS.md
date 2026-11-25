@@ -103,6 +103,7 @@ Controller naming encodes IO: `fetch*` network only, `get*` local only, `getMany
 - Dexie schema: one `DB_VERSION` (4 since the social v1 port); a mismatch recreates the database. Bumping it or
   changing an index map is a reviewed decision, never a side effect, and ships with a CI-task PR for the Docker build
   arg. `docs/data-patterns.md`, ADR-0019
+  The proposed [Pubchi exception](docs/adr/0031-pubchi-assisted-integration.md) keeps device keys and pending writes in a separate durable database.
 - Copy: inline US-English literals at the call site. i18n (`next-intl`, `messages/`, `useTranslations`) was removed in #2313
   and must not come back in any form, including a lookalike message registry.
 - `src/config/*` limits are product-wide policy: never tune one for a local fix, and never reduce visible behaviour

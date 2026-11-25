@@ -116,7 +116,7 @@
     },
     {
       "id": "dexie-schema-change",
-      "rule": "There is one Dexie schema version (4 since the social v1 port) and no migration chain: a DB_VERSION mismatch deletes and recreates the local database (ADR-0019, docs/data-patterns.md). Any change to DB_VERSION, a table's index map or the stores() definition must be called out in the PR as a deliberate data-loss decision, and a DB_VERSION change also needs the CI-task PR for the Docker build arg; flag it when it arrives as a side effect of a feature.",
+      "rule": "The main App cache has one Dexie schema version (4 since the social v1 port) and no migration chain: a DB_VERSION mismatch deletes and recreates the local database (ADR-0019, docs/data-patterns.md). Any change to DB_VERSION, a table's index map or the stores() definition must be called out in the PR as a deliberate data-loss decision, and a DB_VERSION change also needs the CI-task PR for the Docker build arg; flag it when it arrives as a side effect of a feature. ADR 0031 proposes a separate, durable Pubchi database. Preserve its version history, device keys and pending writes across main-cache resets and clean up only the outgoing owner on logout or account replacement.",
       "scope": ["src/core/database/**", "src/config/database.ts", ".env.example"],
       "severity": "high"
     },

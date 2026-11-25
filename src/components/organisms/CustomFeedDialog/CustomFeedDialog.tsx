@@ -1,6 +1,6 @@
 'use client';
 
-import { type ComponentType, type ReactNode, useEffect, useState } from 'react';
+import { type ComponentType, type ReactNode, useEffect, useRef, useState } from 'react';
 import {
   Check,
   CircleHelp,
@@ -39,6 +39,7 @@ import {
   CUSTOM_FEED_CONTENT_ALL,
   CUSTOM_FEED_FORM_FIELDS,
   type CustomFeedFormContent,
+  type CustomFeedFormData,
   type CustomFeedFormReach,
 } from '@/hooks/useCustomFeedForm/useCustomFeedForm.types';
 import { getMaxStreamTags } from '@/libs/runtime-config/runtime-config';
@@ -57,16 +58,26 @@ interface CustomFeedDialogSharedProps {
   children?: ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  onSubmitOverride?: (
+    data: import('@/hooks/useCustomFeedForm/useCustomFeedForm.types').CustomFeedFormData,
+  ) => Promise<boolean>;
+  extraContent?: ReactNode;
+  saveLabel?: string;
+  onValuesChange?: (data: CustomFeedFormData) => void;
+  canSave?: boolean;
+  surfaceId?: string;
 }
 
 type CustomFeedDialogProps =
   | (CustomFeedDialogSharedProps & {
       mode: 'create';
       feed?: never;
+      initialValues?: import('@/hooks/useCustomFeedForm/useCustomFeedForm.types').CustomFeedFormData;
     })
   | (CustomFeedDialogSharedProps & {
       mode: 'edit';
       feed: FeedModelSchema;
+      initialValues?: import('@/hooks/useCustomFeedForm/useCustomFeedForm.types').CustomFeedFormData;
     });
 
 function isVisualCustomFeedContentSupported(content?: CustomFeedFormContent): boolean {
@@ -86,6 +97,7 @@ const REACH_OPTION_VALUES: CustomFeedFormReach[] = ['wot', TAGGED_AS_FILTER_KEY,
 
 export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
   const { mode, children } = props;
+  const { onValuesChange } = props;
   const { value: open, setValue: setOpen } = useControlledState<boolean>({
     value: props.open,
     defaultValue: false,
@@ -95,10 +107,26 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
   // Read `feed` off `props` rather than destructuring it: the props union ties
   // `feed` to `mode`, and destructuring erases that link for TS.
   const { form, loading, submit, deleteFeed } = useCustomFeedForm(
-    props.mode === 'edit' ? { mode: 'edit', feed: props.feed, open } : { mode: 'create', open },
+    props.mode === 'edit'
+      ? {
+          mode: 'edit',
+          feed: props.feed,
+          open,
+          initialValues: props.initialValues,
+          onSubmitOverride: props.onSubmitOverride,
+        }
+      : { mode: 'create', open, initialValues: props.initialValues, onSubmitOverride: props.onSubmitOverride },
   );
 
   const { control } = form;
+  const values = useWatch({ control });
+  const lastValuesRef = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    const serialized = JSON.stringify(values);
+    if (serialized === lastValuesRef.current) return;
+    lastValuesRef.current = serialized;
+    onValuesChange?.(values as CustomFeedFormData);
+  }, [onValuesChange, values]);
   const layout = useWatch({ control, name: CUSTOM_FEED_FORM_FIELDS.LAYOUT });
   const content = useWatch({ control, name: CUSTOM_FEED_FORM_FIELDS.CONTENT });
   const reach = useWatch({ control, name: CUSTOM_FEED_FORM_FIELDS.REACH });
@@ -295,7 +323,8 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
         }}
         onCloseAutoFocus={(e) => e.preventDefault()}
         className="w-xl"
-        data-testid="custom-feed-dialog-content"
+        data-testid={props.surfaceId ?? 'custom-feed-dialog-content'}
+        {...(props.surfaceId ? { 'data-surface': props.surfaceId } : {})}
         data-cy="custom-feed-dialog"
       >
         <DialogHeader>
@@ -611,6 +640,8 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
           </Container>
         )}
 
+        {props.extraContent}
+
         <DialogFooter>
           {mode === 'edit' && (
             <Button
@@ -631,13 +662,13 @@ export const CustomFeedDialog = (props: CustomFeedDialogProps) => {
             variant="secondary"
             size="lg"
             onClick={handleSaveFeed}
-            disabled={loading || !form.formState.isValid}
+            disabled={loading || !form.formState.isValid || props.canSave === false}
             className="h-15 w-full"
             data-testid="save-feed-button"
             data-cy="custom-feed-save-btn"
           >
             <Check className="size-4" />
-            {'Save Feed'}
+            {props.saveLabel ?? 'Save Feed'}
           </Button>
         </DialogFooter>
       </DialogContent>

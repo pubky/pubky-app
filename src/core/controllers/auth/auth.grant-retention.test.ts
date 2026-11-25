@@ -18,6 +18,13 @@ import { asOpaque } from '@/test-utils/type-assertions';
 import { createTestWebLocks } from '@/test-utils/web-locks';
 import { AuthController } from './auth';
 
+vi.mock('@/application/pubchi/pubchi', () => ({
+  PubchiApplication: {
+    unpublishKnownDelegations: vi.fn().mockResolvedValue({ failed: [] }),
+    clearOwnerData: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+
 vi.mock('@/database/franky/franky.helpers', () => ({ clearDatabase: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('@/coordinators/notifications/notifications', () => ({ NotificationCoordinator: { resetInstance: vi.fn() } }));
 vi.mock('@/coordinators/streams/stream', () => ({ StreamCoordinator: { resetInstance: vi.fn() } }));

@@ -32,6 +32,13 @@ import { mockAuthStore, mockMigrationStore, mockNotificationStore, mockSettingsS
 import { asOpaque } from '@/test-utils/type-assertions';
 import { AuthController } from './auth';
 
+vi.mock('@/application/pubchi/pubchi', () => ({
+  PubchiApplication: {
+    unpublishKnownDelegations: vi.fn().mockResolvedValue({ failed: [] }),
+    clearOwnerData: vi.fn().mockResolvedValue(undefined),
+  },
+}));
+
 vi.mock('@/config/moderation', () => ({ getModerationId: vi.fn() }));
 
 const getModerationIdMock = vi.mocked(getModerationId);
