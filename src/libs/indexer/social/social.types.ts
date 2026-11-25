@@ -3,9 +3,7 @@ import type { RecordEntry } from '../indexer.types';
 
 /** What a reference points at: a post, a user, or anything outside the social tree, kept as written. */
 export type SocialTarget =
-  | { kind: 'post'; author: string; postId: string }
-  | { kind: 'user'; author: string }
-  | { kind: 'other'; uri: string };
+  { kind: 'post'; author: string; postId: string } | { kind: 'user'; author: string } | { kind: 'other'; uri: string };
 
 export interface UserLinkData {
   title: string;
