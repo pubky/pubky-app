@@ -82,6 +82,20 @@ describe('userDetails and userCounts', () => {
     });
   });
 
+  it('calls a profile a tombstone proves deleted not found, even for a user outside the scope', () => {
+    const referenced = withAuthor(records, BRAN, { membership: 'referenced', graph: new Map() });
+    const deleted = withAuthor(referenced, BRAN, { deleted: { posts: new Set(), profile: true } });
+
+    expect(notFound(() => userDetails(buildSocialView(deleted), { user_id: BRAN }))).toMatchObject({
+      known: true,
+      more: [],
+    });
+    expect(notFound(() => userDetails(buildSocialView(referenced), { user_id: BRAN }))).toMatchObject({
+      known: false,
+      more: [{ kind: 'user', user: BRAN }],
+    });
+  });
+
   it('counts what the user wrote and what the scope saw of them', () => {
     const answer = userCounts(view, { user_id: BRAN });
 

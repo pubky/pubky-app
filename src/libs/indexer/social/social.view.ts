@@ -101,6 +101,10 @@ export interface SocialView {
   timeOf(author: string, cursor: Cursor): number | null;
   /** Unknown for an author whose own records are not loaded. */
   historyOf(author: string, group?: 'graph' | 'activity'): History;
+  /** Whether tombstones prove every version of the post deleted. */
+  postDeleted(author: string, postId: string): boolean;
+  /** Whether a tombstone proves the profile deleted. */
+  profileDeleted(user: string): boolean;
   /** The estimated time of the profile's last write. */
   profileAtMs(user: string): number | null;
   /** The estimated time `follower` followed `followee`, `null` when unknown or not following. */
@@ -187,6 +191,8 @@ export function buildSocialView(records: Iterable<AuthorRecords>): SocialView {
     return table === undefined ? null : estimateMs(table, cursor);
   };
   const memberships = new Map<string, Membership>();
+  const deletedPosts = new Map<string, ReadonlySet<string>>();
+  const deletedProfiles = new Set<string>();
   const histories = new Map<string, AuthorRecords['history']>();
   const profileCursors = new Map<string, Cursor>();
   const followCursors = new Map<string, Cursor>();
@@ -209,6 +215,10 @@ export function buildSocialView(records: Iterable<AuthorRecords>): SocialView {
     const { author, membership } = entry;
     memberships.set(author, membership);
     hops.set(author, entry.hop);
+    if (entry.deleted !== undefined) {
+      deletedPosts.set(author, entry.deleted.posts);
+      if (entry.deleted.profile) deletedProfiles.add(author);
+    }
     loosePosts.push(...postsOf(author, entry.loose ?? NO_RECORDS));
     const profile = entry.graph.get(PROFILE_PATH);
     if (profile?.data?.type === 'user') {
@@ -334,6 +344,8 @@ export function buildSocialView(records: Iterable<AuthorRecords>): SocialView {
       const { complete, tail } = history;
       return { complete, sinceMs: complete || tail === null ? null : timeOf(author, tail) };
     },
+    postDeleted: (author, postId) => deletedPosts.get(author)?.has(postId) ?? false,
+    profileDeleted: (user) => deletedProfiles.has(user),
     profileAtMs: (user) => {
       const cursor = profileCursors.get(user);
       return cursor === undefined ? null : timeOf(user, cursor);

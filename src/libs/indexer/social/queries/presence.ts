@@ -17,20 +17,20 @@ function createdAtMs(postId: string): number | null {
 }
 
 /**
- * The view proves a post absent when its author's activity is loaded back to the time its id claims, or when
- * the id is no post id at all.
+ * The view proves a post absent when tombstones show every version deleted, when its author's activity is loaded
+ * back to the time its id claims, or when the id is no post id at all.
  */
 export function postKnownAbsent(view: SocialView, author: string, postId: string): boolean {
   const created = createdAtMs(postId);
-  if (created === null) return true;
+  if (created === null || view.postDeleted(author, postId)) return true;
   if (!isCrawled(view, author)) return false;
   const { complete, sinceMs } = view.historyOf(author);
   return complete || (sinceMs !== null && created >= sinceMs);
 }
 
-/** The view proves a user has no profile when the user's graph group is loaded from the start. */
+/** The view proves a user has no profile when a tombstone shows it deleted, or the graph is loaded from the start. */
 export function userKnownAbsent(view: SocialView, user: string): boolean {
-  return isCrawled(view, user) && view.historyOf(user, 'graph').complete;
+  return view.profileDeleted(user) || (isCrawled(view, user) && view.historyOf(user, 'graph').complete);
 }
 
 /** The hint that would load a post the view lacks, `null` when it is known absent. */

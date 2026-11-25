@@ -372,6 +372,18 @@ describe('buildSocialView membership', () => {
     expect(loaded.post(ALICE, article.id)?.editId).toBe(articleEdit.editId);
     expect(ids(loaded.repliesTo(ALICE, a1.id))).toEqual([id(BRAN, b1)]);
   });
+
+  it('says which posts and profiles tombstones prove deleted', () => {
+    const deleted = buildSocialView(
+      withAuthor(recordsOf(network), ALICE, { deleted: { posts: new Set([gone.id]), profile: true } }),
+    );
+
+    expect(deleted.postDeleted(ALICE, gone.id)).toBe(true);
+    expect(deleted.postDeleted(ALICE, a1.id)).toBe(false);
+    expect(deleted.postDeleted(BRAN, gone.id)).toBe(false);
+    expect(deleted.profileDeleted(ALICE)).toBe(true);
+    expect(deleted.profileDeleted(BRAN)).toBe(false);
+  });
 });
 
 describe('buildSocialView history', () => {

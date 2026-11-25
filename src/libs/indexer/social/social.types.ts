@@ -82,6 +82,13 @@ export interface GroupHistory {
  */
 export type Membership = 'member' | 'visited' | 'referenced';
 
+/** What tombstones inside trusted ranges prove deleted. */
+export interface Deletions {
+  /** Posts whose every version is deleted. */
+  posts: ReadonlySet<string>;
+  profile: boolean;
+}
+
 /** One author's served records: the `live` maps of the merged runs of its scopes. */
 export interface AuthorRecords {
   author: string;
@@ -96,5 +103,6 @@ export interface AuthorRecords {
   activity: ReadonlyMap<string, RecordEntry<SocialData>>;
   /** Versions of posts loaded one at a time: resolvable by key, never in the author's stream nor in any edge. */
   loose?: ReadonlyMap<string, RecordEntry<SocialData>>;
+  deleted?: Deletions;
   history: { graph: GroupHistory; activity: GroupHistory };
 }

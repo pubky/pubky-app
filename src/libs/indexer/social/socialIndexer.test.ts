@@ -101,6 +101,28 @@ describe('createSocialIndexer', () => {
     expect(stream).toMatchObject({ json: { post_keys: [] }, more: [{ kind: 'user', user: DION }] });
   });
 
+  it('proves a post deleted from the tombstones of its loaded history, outside the window', async () => {
+    const { fixture, indexerOf } = socialWorld({ hops: 1, windowDays: 0.5 });
+    const url = `/v1/post/${ALICE}/${fixture.posts.gone.id}`;
+    const indexer = indexerOf();
+    indexer.start(ALICE);
+    await indexer.ready();
+
+    const unknown = await indexer.request({ url, method: 'GET' });
+    expect(unknown).toMatchObject({
+      status: 404,
+      more: [{ kind: 'post', author: ALICE, postId: fixture.posts.gone.id }],
+    });
+    await indexer.ensurePost(ALICE, fixture.posts.gone.id);
+
+    const known = await indexer.request({ url, method: 'GET' });
+    expect(known).toMatchObject({
+      status: 404,
+      json: { error: `post: post ${ALICE}:${fixture.posts.gone.id} not found` },
+    });
+    expect(known.more).toBeUndefined();
+  });
+
   it('is ready from a store a previous session filled, without calling the transport', async () => {
     const { fixture, indexerOf } = socialWorld();
     const { image, quote, repost } = fixture.posts;

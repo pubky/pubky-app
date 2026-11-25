@@ -91,7 +91,8 @@ Each author in the view has a membership. Members are the seed's scope, and only
 edges, counts, rankings, hot tags, searches and the network streams, so loading something on demand changes no
 answer about the scope. A visited user (`ensureUser`) is served with their own profile, stream and counts. A
 referenced author is known only through posts loaded alone (`ensurePost`), which resolve by key, and their stored
-profile; their stream answers empty with a `more` hint to load the user.
+profile; their stream answers empty with a `more` hint to load the user. A post whose every version, or a profile
+whose file, has a tombstone inside a trusted range is a definite not-found, whatever the window.
 
 `createIndexerRuntime` (`indexer.ts`) is that loop for any domain: one queue for every crawl, and with
 coordination only the tab holding the lock crawls. Requests never overlap and go ahead of the scope sync: one

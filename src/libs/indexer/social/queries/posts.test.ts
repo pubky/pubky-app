@@ -10,6 +10,7 @@ import {
   recordsOf,
   socialNetwork,
   T0,
+  withAuthor,
   withPartialActivity,
 } from '../social.fixtures';
 import { buildSocialView } from '../social.view';
@@ -80,6 +81,22 @@ describe('postView', () => {
     });
     expect(notFound(() => postView(view, { author_id: ALICE, post_id: 'not-an-id' })).known).toBe(true);
     expect(() => postView(view, { author_id: ALICE, post_id: a1.id, limit_tags: 0 })).toThrow(InvalidQueryError);
+  });
+
+  it('calls a post whose every version is tombstoned not found, even by an author outside the scope', () => {
+    const referenced = withAuthor(recordsOf(network), DION, { membership: 'referenced' });
+    const deleted = buildSocialView(
+      withAuthor(referenced, DION, { deleted: { posts: new Set([orphan.id]), profile: false } }),
+    );
+
+    expect(notFound(() => postView(deleted, { author_id: DION, post_id: orphan.id }))).toMatchObject({
+      known: true,
+      more: [],
+    });
+    expect(notFound(() => postView(deleted, { author_id: DION, post_id: collection.id }))).toMatchObject({
+      known: false,
+      more: [{ kind: 'post', author: DION, postId: collection.id }],
+    });
   });
 
   it('calls a post older than its author’s loaded history unknown, and one inside it not found', () => {

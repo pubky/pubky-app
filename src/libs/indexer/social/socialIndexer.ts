@@ -2,14 +2,14 @@ import type { LeafRequest } from '../crawler.types';
 import { CURSOR_ZERO } from '../cursor';
 import { createIndexerRuntime } from '../indexer';
 import { IndexerError } from '../indexer.errors';
-import type { Coverage, MergedRuns, RecordEntry } from '../indexer.types';
+import type { Coverage, Cursor, Entry, MergedRuns, RecordEntry } from '../indexer.types';
 import type { Coordination, RuntimeOptions, RuntimeStatus, Schedule } from '../runtime.types';
 import { scopeId } from '../store.helpers';
 import type { IndexStore, ScopeKey } from '../store.types';
 import type { IndexerTransport } from '../transport.types';
 import { createNexusRouter, type NexusRequest, type NexusResponse, type NexusRouter } from './nexusRouter';
 import { createSocialQueries } from './queries/socialQueries';
-import { createSocialDomain, POSTS_PREFIX, SOCIAL_ACTIVITY, SOCIAL_GRAPH } from './social.domain';
+import { createSocialDomain, locate, POSTS_PREFIX, PROFILE_PATH, SOCIAL_ACTIVITY, SOCIAL_GRAPH } from './social.domain';
 import type { AuthorRecords, GroupHistory, Membership, SocialData } from './social.types';
 import { buildSocialView, type SocialView } from './social.view';
 
@@ -79,6 +79,31 @@ const historyOf = ({ trusted }: MergedRuns<SocialData>): GroupHistory => ({
   tail: trusted === null ? null : trusted.tail,
 });
 
+/** Whether the entry lies in the scope's trusted range, where no later event can hide in a gap. */
+const isTrusted = ({ trusted }: MergedRuns<SocialData>, { cursor }: Entry<SocialData>): boolean =>
+  trusted !== null && cursor > trusted.tail && cursor <= trusted.head;
+
+/** The posts whose every version's newest entry over these scopes of one author is a trusted tombstone. */
+function deletedPosts(author: string, scopes: readonly MergedRuns<SocialData>[]): Set<string> {
+  const newest = new Map<string, { cursor: Cursor; proof: boolean }>();
+  for (const scope of scopes) {
+    for (const [path, entry] of scope.entries) {
+      const proof = entry.kind === 'tombstone' && isTrusted(scope, entry);
+      const known = newest.get(path);
+      // One event seen by two scopes proves what the more trusted one says.
+      if (known !== undefined && known.cursor === entry.cursor) known.proof = known.proof || proof;
+      else if (known === undefined || entry.cursor > known.cursor) newest.set(path, { cursor: entry.cursor, proof });
+    }
+  }
+  const verdicts = new Map<string, boolean>();
+  for (const [path, { proof }] of newest) {
+    const at = locate(author, path);
+    if (at === null || at.kind !== 'post' || at.editId === undefined) continue;
+    verdicts.set(at.id, (verdicts.get(at.id) ?? true) && proof);
+  }
+  return new Set([...verdicts].flatMap(([postId, deleted]) => (deleted ? [postId] : [])));
+}
+
 /** What the store holds for one author of the view. */
 interface Loaded {
   homeserver: string;
@@ -99,6 +124,7 @@ function authorRecords(author: string, loaded: Loaded): AuthorRecords {
       if (stored === undefined || record.cursor > stored.cursor) loose.set(path, record);
     }
   }
+  const profile = graph.entries.get(PROFILE_PATH);
   return {
     author,
     homeserver,
@@ -107,6 +133,10 @@ function authorRecords(author: string, loaded: Loaded): AuthorRecords {
     graph: graph.live,
     activity: activity.live,
     loose,
+    deleted: {
+      posts: deletedPosts(author, [activity, ...leaves]),
+      profile: profile !== undefined && profile.kind === 'tombstone' && isTrusted(graph, profile),
+    },
     history: { graph: historyOf(graph), activity: historyOf(activity) },
   };
 }
