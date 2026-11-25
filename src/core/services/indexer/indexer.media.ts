@@ -9,8 +9,8 @@ import { FileNormalizer } from '@/pipes/file/file.normalizer';
 export interface LocalMediaSources {
   /** The profile in the local index's view, `null` while the view does not hold it. */
   profile(user: string): Pick<UserData, 'image'> | null;
-  /** Loads a user outside the scope into the view. */
-  ensureUser(user: string): Promise<void>;
+  /** Loads a user's profile alone into the view, without their posts. */
+  ensureProfile(user: string): Promise<void>;
   /** A public homeserver file's bytes, `null` when the homeserver has none. */
   readFile(uri: string): Promise<Uint8Array | null>;
 }
@@ -18,7 +18,7 @@ export interface LocalMediaSources {
 async function avatarUri(user: string, sources: LocalMediaSources): Promise<string | null> {
   let profile = sources.profile(user);
   if (profile === null) {
-    await sources.ensureUser(user);
+    await sources.ensureProfile(user);
     profile = sources.profile(user);
   }
   return profile?.image ?? null;

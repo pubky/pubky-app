@@ -72,7 +72,7 @@ export class IndexerService {
     // Without Nexus, avatars and attachments are same-origin paths the service worker asks this page to fill.
     const stopServingMedia = serveLocalMedia({
       profile: (user) => indexer.view().profile(user),
-      ensureUser: (user) => indexer.ensureUser(user),
+      ensureProfile: (user) => indexer.ensureProfile(user),
       readFile: (uri) => HomeserverService.getPublicFileBytes({ url: uri }),
     });
     indexer.start(owner);

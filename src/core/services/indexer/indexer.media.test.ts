@@ -23,7 +23,7 @@ function fakeSources({
   const loaded = new Set<string>();
   const sources = {
     profile: vi.fn((user: string) => profiles[user] ?? (loaded.has(user) ? (afterEnsure[user] ?? null) : null)),
-    ensureUser: vi.fn(async (user: string) => {
+    ensureProfile: vi.fn(async (user: string) => {
       loaded.add(user);
     }),
     readFile: vi.fn(async (uri: string) => files[uri] ?? null),
@@ -43,15 +43,15 @@ describe('answerLocalMedia', () => {
     expect(answer).toMatchObject({ status: 'found', contentType: 'image/png' });
     expect(bytesOf(answer)).toEqual([...BYTES]);
     expect(sources.readFile).toHaveBeenCalledWith(AVATAR.url);
-    expect(sources.ensureUser).not.toHaveBeenCalled();
+    expect(sources.ensureProfile).not.toHaveBeenCalled();
   });
 
-  it('loads a user the view does not hold once, then reads their avatar', async () => {
+  it('loads the profile of a user the view does not hold once, then reads their avatar', async () => {
     const sources = fakeSources({ afterEnsure: { [ALICE]: { image: AVATAR.url } }, files: { [AVATAR.url]: BYTES } });
 
     const answer = await answerLocalMedia({ kind: 'avatar', user: ALICE }, sources);
 
-    expect(sources.ensureUser).toHaveBeenCalledExactlyOnceWith(ALICE);
+    expect(sources.ensureProfile).toHaveBeenCalledExactlyOnceWith(ALICE);
     expect(bytesOf(answer)).toEqual([...BYTES]);
   });
 
