@@ -83,6 +83,7 @@ Modules are imported directly through the path aliases in `tsconfig.json`. Keep 
 - `local/` — Dexie persistence and cache integrity
 - `homeserver/` — Network writes (PUT/POST/DELETE)
 - `nexus/` — Network reads
+- `indexer/`: the local index: a read model crawled from homeservers that answers Nexus reads when configured (ADR-0031)
 - `homegate/` — Homegate API
 - `chatwoot/` — Chatwoot integration
 - `exchangerate/` — Exchange rate service
@@ -353,6 +354,7 @@ ADRs capture the _why_ behind key architectural decisions. Stored in `docs/adr/`
 | 0028 | Private, locally owned bookmarks                                          |
 | 0029 | Cross-device notification `last_read` sync                                |
 | 0030 | Bounded IndexedDB connection recovery                                     |
+| 0031 | The local index as a read source (proposed)                               |
 
 ## Quick Checklist
 
