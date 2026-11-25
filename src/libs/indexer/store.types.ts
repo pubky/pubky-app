@@ -1,6 +1,6 @@
-import type { Cursor, Run, RunMeta } from './indexer.types';
+import type { Coverage, Cursor, MergedRuns, Run, RunMeta } from './indexer.types';
 
-/** A run's scope: one author's paths of one group on one homeserver. Runs are stored per scope. */
+/** A run's scope: one author's paths of one group on one homeserver. The store keeps each scope merged. */
 export type ScopeKey = RunMeta;
 
 /** The homeserver a user publishes to, `null` when it did not resolve, as of `resolvedAt` (ms). */
@@ -43,15 +43,16 @@ export const EMPTY_HOMESERVER_STATE: Readonly<HomeserverState> = Object.freeze({
 });
 
 /**
- * Changes applied together by `commit`, in this order: homeserver deletions, run replacements, run appends,
- * then user homeservers, homeserver state patches and scope members.
+ * Changes applied together by `commit`, in this order: homeserver deletions, evictions, runs, then user
+ * homeservers, homeserver state patches and scope members.
  */
 export interface StoreBatch<D> {
-  /** Drops every run stored under these homeservers. */
+  /** Drops every scope stored under these homeservers. */
   deleteHomeservers?: string[];
-  /** Replaces all runs of each scope; an empty list removes the scope. */
-  replaceRuns?: Array<{ scope: ScopeKey; runs: Run<D>[] }>;
-  appendRuns?: Run<D>[];
+  /** Forgets each scope's entries and coverage at or below the cutoff. */
+  evictions?: Array<{ scope: ScopeKey; cutoff: Cursor }>;
+  /** Merged into their scopes, in order. */
+  applyRuns?: Run<D>[];
   userHomeservers?: Array<{ user: string; value: UserHomeserver }>;
   /** Fields left out keep their stored value. */
   homeserverStates?: Array<{ homeserver: string; patch: Partial<HomeserverState> }>;
@@ -62,13 +63,24 @@ export interface StoreBatch<D> {
 /**
  * The indexer's persistent state. Every call is atomic: a failed call changes nothing. Values are copied on the
  * way in and out, so callers never share objects with the store. Runs are validated on the way in.
+ *
+ * A scope is stored merged: per path its winning entry, and its coverage. After any runs are applied, in any
+ * order, `readScope` equals `mergeRuns` of those runs and `exportRuns` equals their `compactRuns`.
  */
 export interface IndexStore<D> {
-  readRuns(scope: ScopeKey): Promise<Run<D>[]>;
-  appendRuns(runs: Run<D>[]): Promise<void>;
-  replaceRuns(scope: ScopeKey, runs: Run<D>[]): Promise<void>;
+  /** Merges each run into its scope. Writes only the entries the run wins. */
+  applyRuns(runs: Run<D>[]): Promise<void>;
+  /** An empty scope reads as `mergeRuns([])`. */
+  readScope(scope: ScopeKey): Promise<MergedRuns<D>>;
+  /** The scope's coverage alone, without loading its entries. */
+  readCoverage(scope: ScopeKey): Promise<Coverage>;
+  /** The scope as one run per contiguous range of its coverage. */
+  exportRuns(scope: ScopeKey): Promise<Run<D>[]>;
+  /** What the pure `evictBelow` makes of the scope's exported runs. */
+  evictBelow(scope: ScopeKey, cutoff: Cursor): Promise<void>;
+  /** Every scope with coverage. */
   listScopes(): Promise<ScopeKey[]>;
-  deleteHomeserverRuns(homeserver: string): Promise<void>;
+  deleteHomeserver(homeserver: string): Promise<void>;
   /** `null` when the user was never resolved. */
   readUserHomeserver(user: string): Promise<UserHomeserver | null>;
   writeUserHomeserver(user: string, value: UserHomeserver): Promise<void>;

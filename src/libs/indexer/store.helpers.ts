@@ -1,25 +1,79 @@
+import { addRange } from './coverage';
+import { isValidCursor } from './cursor';
 import { InvalidIndexInputError } from './indexer.errors';
-import type { Run } from './indexer.types';
-import { assertValidRun } from './run';
+import type { Coverage, Cursor, Entry, MergedRuns, Range, RecordEntry, Run } from './indexer.types';
+import { sameEvent } from './merge';
+import { assertValidRun, comparePaths } from './run';
 import type { HomeserverState, ScopeKey, StoreBatch } from './store.types';
 
 // Rules every `IndexStore` applies the same way, so the stores differ only in where they keep the data.
 
 export const scopeId = ({ author, homeserver, group }: ScopeKey) => JSON.stringify([author, homeserver, group]);
 
-function assertRunsOf<D>(scope: ScopeKey, runs: readonly Run<D>[]): void {
-  for (const run of runs) {
-    assertValidRun(run);
-    if (run.author !== scope.author || run.homeserver !== scope.homeserver || run.group !== scope.group) {
-      throw new InvalidIndexInputError(`run of ${scopeId(run)} cannot be stored under ${scopeId(scope)}`);
-    }
+export const scopeOf = ({ author, homeserver, group }: ScopeKey): ScopeKey => ({ author, homeserver, group });
+
+/** Throws unless every run and cutoff of the batch is valid. */
+export function assertValidBatch<D>(batch: StoreBatch<D>): void {
+  for (const { cutoff } of batch.evictions ?? []) {
+    if (!isValidCursor(cutoff)) throw new InvalidIndexInputError(`cutoff ${cutoff} is out of range`);
   }
+  for (const run of batch.applyRuns ?? []) assertValidRun(run);
 }
 
-/** Throws unless every run of the batch is valid and belongs to the scope it is stored under. */
-export function assertValidBatch<D>(batch: StoreBatch<D>): void {
-  for (const { scope, runs } of batch.replaceRuns ?? []) assertRunsOf(scope, runs);
-  for (const run of batch.appendRuns ?? []) assertRunsOf(run, [run]);
+export interface AppliedRun<D> {
+  /** The run's entries that beat the stored entry of their path, the only rows to write. */
+  changed: Entry<D>[];
+  coverage: Coverage;
+}
+
+/**
+ * What merging `run` into its scope changes, given the scope's stored entry of a path and its coverage. Per path
+ * the higher cursor wins; at an equal cursor the stored entry stays, as the first run does in `mergeRuns`.
+ */
+export function applyRun<D>(
+  run: Run<D>,
+  stored: (path: string) => Entry<D> | undefined,
+  coverage: readonly Range[],
+): AppliedRun<D> {
+  const changed: Entry<D>[] = [];
+  for (const entry of run.entries) {
+    const current = stored(entry.path);
+    if (current === undefined || entry.cursor > current.cursor) changed.push(entry);
+    else if (entry.cursor === current.cursor && !sameEvent(current, entry)) {
+      throw new InvalidIndexInputError(`runs disagree about ${entry.path} at cursor ${entry.cursor}`);
+    }
+  }
+  return { changed, coverage: addRange(coverage, run) };
+}
+
+/** A stored scope in the shape and path order `mergeRuns` gives. */
+export function scopeState<D>(entries: Iterable<Entry<D>>, coverage: Coverage): MergedRuns<D> {
+  const trusted = coverage.length === 0 ? null : { ...coverage[coverage.length - 1] };
+  const byPath = new Map<string, Entry<D>>();
+  const live = new Map<string, RecordEntry<D>>();
+  for (const entry of [...entries].sort((a, b) => comparePaths(a.path, b.path))) {
+    byPath.set(entry.path, entry);
+    if (entry.kind === 'record' && trusted !== null && entry.cursor > trusted.tail) live.set(entry.path, entry);
+  }
+  return { entries: byPath, live, coverage, trusted };
+}
+
+/** The scope as one run per contiguous range, as `compactRuns` gives it. */
+export function runsOfScope<D>(scope: ScopeKey, { entries, coverage }: MergedRuns<D>): Run<D>[] {
+  const winners = [...entries.values()];
+  return coverage.map(({ tail, head }) => ({
+    ...scopeOf(scope),
+    tail,
+    head,
+    entries: winners.filter((entry) => entry.cursor > tail && entry.cursor <= head),
+  }));
+}
+
+/** `coverage` without anything at or below `cutoff`, as the pure `evictBelow` trims runs. */
+export function evictCoverage(coverage: readonly Range[], cutoff: Cursor): Coverage {
+  return coverage
+    .filter(({ head }) => head > cutoff)
+    .map(({ tail, head }) => ({ tail: tail >= cutoff ? tail : cutoff, head }));
 }
 
 /** `current` with the fields `patch` sets; a field left out keeps its value. */

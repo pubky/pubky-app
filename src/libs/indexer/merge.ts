@@ -14,7 +14,7 @@ function assertOneScope<D>(runs: readonly Run<D>[]): void {
   }
 }
 
-function sameEvent<D>(a: Entry<D>, b: Entry<D>): boolean {
+export function sameEvent<D>(a: Entry<D>, b: Entry<D>): boolean {
   if (a.kind !== 'record' || b.kind !== 'record') return a.kind === b.kind;
   return a.hash === undefined || b.hash === undefined || a.hash === b.hash;
 }
