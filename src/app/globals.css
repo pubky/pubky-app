@@ -78,8 +78,15 @@ body:has([data-slot='shop-route']) {
   --color-glass-hover: var(--glass-hover);
   --color-glass-strong: var(--glass-strong);
   --color-button-outline: var(--button-outline);
+  /* Default button hover layers the page surface at 10% over the 32% brand fill. */
+  --background-image-button-hover: linear-gradient(
+    color-mix(in srgb, var(--background) 10%, transparent),
+    color-mix(in srgb, var(--background) 10%, transparent)
+  );
   --color-action-pill: var(--action-pill);
   --color-embed: var(--embed);
+  /* Blend with the page color so text stays readable over photos. */
+  --color-toast-success: color-mix(in srgb, var(--brand) 25%, var(--background));
   --color-toast-action-muted: var(--toast-action-muted);
   --color-toast-action-muted-hover-border: var(--toast-action-muted-hover-border);
   --color-transparent: var(--transparent);
@@ -142,8 +149,8 @@ body:has([data-slot='shop-route']) {
    */
   --destructive-button: color-mix(in oklab, var(--destructive) 60%, transparent);
   --destructive-button-hover: color-mix(in oklab, var(--destructive) 90%, transparent);
-  /** Input and textarea validation message text. */
-  --error-foreground: var(--color-red-500);
+  /** Validation text on both page and card backgrounds. */
+  --error-foreground: var(--color-red-400);
   --border: oklch(0.311 0.007 285.98);
   --input: #525252;
   --ring: oklch(0.55 0.008 286.145);
@@ -163,11 +170,11 @@ body:has([data-slot='shop-route']) {
   --sidebar-border: oklch(0.311 0.007 285.98);
   --sidebar-ring: oklch(0.472 0.007 274.863);
   --brand: oklch(0.928 0.23 123.978);
-  /** Text and icons on a `bg-brand` fill. Dark in both themes: the light theme's page colour on its green is 2.3:1. */
-  --brand-foreground: var(--background);
+  /** Text and icons on solid brand fills. */
+  --brand-foreground: var(--primary-foreground);
   /**
    * Translucent chrome fill for outline-style controls (nav buttons, FAB,
-   * sidebar "See all", checkbox/radio wells). Mirrors the Figma variable
+   * sidebar "See all"). Mirrors the Figma variable
    * `custom/background dark:input\30`: a faint white wash in dark mode and
    * the opaque page surface in light mode. Hover follows `custom/accent dark:input\50`.
    */
@@ -175,10 +182,10 @@ body:has([data-slot='shop-route']) {
   --glass-hover: rgb(255 255 255 / 0.1);
   --glass-strong: rgb(255 255 255 / 0.12);
   /**
-   * Surface of the `outline` Button variant. Dark mode matches `bg-foreground/4`.
+   * Surface of outline buttons and checkbox/radio wells. Dark controls use the Figma outline fill at 4.5%.
    * Light mode uses the page surface (`#ffffff`).
    */
-  --button-outline: color-mix(in oklab, var(--foreground) 4%, transparent);
+  --button-outline: color-mix(in oklab, var(--foreground) 4.5%, transparent);
   /** Surface of the post action pills (tag / reply / repost / save / more): secondary in dark, page in light. */
   --action-pill: var(--secondary);
   /** Surface of a post or link embedded in a post (repost preview, link preview): muted in both themes. */
@@ -491,7 +498,7 @@ body:has([data-slot='shop-route']) {
   --sidebar-border: #d4d4db;
   --sidebar-ring: #89898f;
   --brand: #88ad00;
-  --brand-foreground: var(--foreground);
+  --brand-foreground: #1d1d20;
   --glass: var(--background);
   --glass-hover: var(--accent);
   --glass-strong: var(--background);
@@ -736,7 +743,7 @@ body:has([data-slot='shop-route']) {
   /* 4a. Primary button (Save) */
   .mdxeditor-popup-container [class*='linkDialogPopoverContent'] [class*='primaryButton'] {
     background-color: var(--brand) !important;
-    color: var(--background) !important;
+    color: var(--brand-foreground) !important;
     border: none !important;
     border-radius: var(--radius-sm) !important;
   }

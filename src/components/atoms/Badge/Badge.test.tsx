@@ -73,7 +73,7 @@ describe('Badge', () => {
   it('handles hover states correctly', () => {
     render(<Badge variant="default">Hover Badge</Badge>);
     const badge = screen.getByText('Hover Badge');
-    expect(badge).toHaveClass('[a&]:hover:bg-primary/90');
+    expect(badge).toHaveClass('[a&]:hover:bg-brand/90');
   });
 
   it('handles invalid states correctly', () => {
@@ -113,7 +113,7 @@ describe('Badge', () => {
       'px-2',
       'py-0.5',
       'text-xs',
-      'font-medium',
+      'font-semibold',
       'w-fit',
       'whitespace-nowrap',
       'shrink-0',
