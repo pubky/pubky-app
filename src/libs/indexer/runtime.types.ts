@@ -3,6 +3,15 @@ import type { Domain } from './domain.types';
 import type { IndexStore } from './store.types';
 import type { IndexerTransport } from './transport.types';
 
+/**
+ * Seals the saved index after it is compressed and before it is written, and opens it after it is read, for example
+ * with a key only the user holds. `name` is the file's name.
+ */
+export interface IndexSealer {
+  seal(bytes: Uint8Array, name: string): Promise<Uint8Array>;
+  open(bytes: Uint8Array, name: string): Promise<Uint8Array>;
+}
+
 /** Runs `callback` after `ms` and returns the function that cancels it. */
 export type Schedule = (callback: () => void, ms: number) => () => void;
 
@@ -22,8 +31,10 @@ export interface RuntimeOptions {
   saveMinIntervalMs: number;
   /** Other devices' files not written for this long are deleted at start. */
   writerExpiryMs: number;
-  /** Largest file the save aims for, trimming windowed history oldest first. */
+  /** Largest file the save aims for before sealing, trimming data first and then windowed history, oldest first. */
   fileBudgetBytes: number;
+  /** Seals the saved index; a file that does not open is ignored. */
+  sealer?: IndexSealer;
   /** Least time between two backfills of one author's group, unless forced. */
   backfillMinIntervalMs: number;
   crawler: Partial<CrawlerOptions>;
@@ -36,7 +47,7 @@ export const DEFAULT_RUNTIME_OPTIONS: Readonly<RuntimeOptions> = Object.freeze({
   savedIndex: false,
   saveMinIntervalMs: 60 * 1000,
   writerExpiryMs: 30 * 24 * 60 * 60 * 1000,
-  fileBudgetBytes: 2 * 1024 * 1024,
+  fileBudgetBytes: 200 * 1024 * 1024,
   backfillMinIntervalMs: 30 * 1000,
   crawler: {},
 });

@@ -1,20 +1,23 @@
 import { formatCursor, parseCursor } from './cursor';
 import { shortHash } from './hash';
 import { IndexerError } from './indexer.errors';
-import type { Cursor, Entry, Run } from './indexer.types';
+import type { Cursor, Entry, RecordEntry, Run } from './indexer.types';
 import { validateRun } from './run';
 import type { HighWater, UserHomeserver } from './store.types';
 
-// The saved index: one gzipped JSON file per writer, positional and compact. Layout, version 1:
+// The saved index: one gzipped JSON file per writer, positional and compact. Layout, version 2:
 // [version, writer, writtenAt, seed, hops, windowDays, keys, members, highWater, runs]
 // Every public key is written once in `keys`; everywhere else a key is its index there.
 //   members:   [user, hop] or [user, hop, homeserver | null, resolvedAt] once the user was resolved
 //   highWater: [homeserver, cursor, author]
 //   runs:      [author, homeserver, group, tail, head, prefix, entries]
-//   entries:   [path after the prefix, cursor, 0 record | 1 tombstone, hash?]
-// Cursors are decimal strings. Records carry no data, and hashes keep their first 16 bytes.
+//   entries:   [path after the prefix, cursor, 1] for a tombstone, [path, cursor, 0, hash?] for a record without data,
+//              [path, cursor, 0, hash | null, data] for one with its data
+// Cursors are decimal strings. A record without data keeps the first 16 bytes of its hash, one with data the whole
+// hash, which ties the data to its event. Version 1 is the same without data, and is still read.
 
-export const INDEX_FILE_VERSION = 1;
+export const INDEX_FILE_VERSION = 2;
+const POINTERS_ONLY_VERSION = 1;
 
 const RECORD = 0;
 const TOMBSTONE = 1;
@@ -39,7 +42,10 @@ export interface IndexFileMember {
   homeserver: UserHomeserver | null;
 }
 
-/** What a saved index holds. Read back, its runs have no data and their hashes are cut to 16 bytes. */
+/**
+ * What a saved index holds. Read back, a record keeps its data only through `ReviveData`, and a record without data has
+ * its hash cut to 16 bytes.
+ */
 export interface IndexFileModel<D = never> {
   /** The writer id, also the file's name. */
   writer: string;
@@ -53,6 +59,9 @@ export interface IndexFileModel<D = never> {
   /** Only the domain's groups of the members, never anything loaded on demand. */
   runs: Run<D>[];
 }
+
+/** Checks a stored payload on reading, `null` to refuse it: the record then loads without data. Never throws. */
+export type ReviveData<D> = (author: string, path: string, value: unknown) => D | null;
 
 /** A writer id the file format accepts, also a valid file name segment. */
 export const isWriterId = (value: string): boolean => WRITER.test(value);
@@ -124,8 +133,9 @@ export function indexFileJson<D>(model: IndexFileModel<D>): unknown[] {
   const runs = model.runs.map((run) => {
     const prefix = commonPrefix(run.entries.map(({ path }) => path));
     const entries = run.entries.map((entry) => {
-      const fields: Array<string | number> = [entry.path.slice(prefix.length), formatCursor(entry.cursor)];
+      const fields: unknown[] = [entry.path.slice(prefix.length), formatCursor(entry.cursor)];
       if (entry.kind === 'tombstone') fields.push(TOMBSTONE);
+      else if (entry.data !== undefined) fields.push(RECORD, entry.hash ?? null, entry.data);
       else {
         fields.push(RECORD);
         if (entry.hash !== undefined) fields.push(shortHash(entry.hash));
@@ -195,11 +205,12 @@ function cursor(value: unknown, what: string): Cursor {
   }
 }
 
-function parseModel(top: unknown): IndexFileModel {
+function parseModel<D>(top: unknown, revive: ReviveData<D> | undefined): IndexFileModel<D> {
   const fields = array(top, 'the file');
   if (fields.length === 0 || typeof fields[0] !== 'number') fail('the file has no version');
-  if (fields[0] !== INDEX_FILE_VERSION) {
-    throw new IndexFileError('unknown-version', `index file version ${fields[0]} is not supported`);
+  const version = fields[0];
+  if (version !== INDEX_FILE_VERSION && version !== POINTERS_ONLY_VERSION) {
+    throw new IndexFileError('unknown-version', `index file version ${version} is not supported`);
   }
   const [, rawWriter, rawWrittenAt, rawSeed, rawHops, rawWindowDays, rawKeys, rawMembers, rawHighWater, rawRuns] =
     tuple(fields, [10], 'the file');
@@ -244,24 +255,30 @@ function parseModel(top: unknown): IndexFileModel {
     };
   });
 
-  const runs = array(rawRuns, 'runs').map((value, i): Run<never> => {
+  const entryLengths = version === POINTERS_ONLY_VERSION ? [3, 4] : [3, 4, 5];
+  const runs = array(rawRuns, 'runs').map((value, i): Run<D> => {
     const what = `run ${i}`;
     const [rawAuthor, rawHomeserver, rawGroup, rawTail, rawHead, rawPrefix, rawEntries] = tuple(value, [7], what);
+    const author = key(rawAuthor, `${what} author`);
     const group = string(rawGroup, `${what} group`);
     if (group.length === 0) fail(`${what} group is empty`);
     const prefix = string(rawPrefix, `${what} prefix`);
-    const entries = array(rawEntries, `${what} entries`).map((item, j): Entry<never> => {
+    const entries = array(rawEntries, `${what} entries`).map((item, j): Entry<D> => {
       const at = `${what} entry ${j}`;
-      const entry = tuple(item, [3, 4], at);
+      const entry = tuple(item, entryLengths, at);
       const path = `${prefix}${string(entry[0], `${at} path`)}`;
       const entryCursor = cursor(entry[1], `${at} cursor`);
       if (entry[2] === TOMBSTONE && entry.length === 3) return { kind: 'tombstone', path, cursor: entryCursor };
       if (entry[2] !== RECORD) fail(`${at} has no valid kind`);
-      if (entry.length === 3) return { kind: 'record', path, cursor: entryCursor };
-      return { kind: 'record', path, cursor: entryCursor, hash: string(entry[3], `${at} hash`) };
+      const record: RecordEntry<D> = { kind: 'record', path, cursor: entryCursor };
+      if (entry.length === 3) return record;
+      if (entry.length === 4 || entry[3] !== null) record.hash = string(entry[3], `${at} hash`);
+      const data = entry.length === 5 ? reviveSafely(revive, author, path, entry[4]) : null;
+      if (data !== null) record.data = data;
+      return record;
     });
-    const run: Run<never> = {
-      author: key(rawAuthor, `${what} author`),
+    const run: Run<D> = {
+      author,
       homeserver: key(rawHomeserver, `${what} homeserver`),
       group,
       tail: cursor(rawTail, `${what} tail`),
@@ -285,11 +302,25 @@ function parseModel(top: unknown): IndexFileModel {
   };
 }
 
+/** The revived payload, `null` without a reviver or when it refuses or throws. */
+function reviveSafely<D>(revive: ReviveData<D> | undefined, author: string, path: string, value: unknown): D | null {
+  if (revive === undefined) return null;
+  try {
+    return revive(author, path, value);
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Reads a saved index, which any program may have written: everything is checked, and anything malformed throws
- * `IndexFileError` with code `malformed`, an unknown format version with code `unknown-version`.
+ * `IndexFileError` with code `malformed`, an unknown format version with code `unknown-version`. Stored payloads
+ * pass through `revive`, and without it are dropped.
  */
-export async function decodeIndexFile(bytes: Uint8Array): Promise<IndexFileModel> {
+export async function decodeIndexFile<D = never>(
+  bytes: Uint8Array,
+  revive?: ReviveData<D>,
+): Promise<IndexFileModel<D>> {
   const { gunzip } = streams();
   let top: unknown;
   try {
@@ -298,7 +329,7 @@ export async function decodeIndexFile(bytes: Uint8Array): Promise<IndexFileModel
     throw new IndexFileError('malformed', 'the index file is not gzipped UTF-8 JSON', { cause: error });
   }
   try {
-    return parseModel(top);
+    return parseModel(top, revive);
   } catch (error) {
     if (error instanceof Malformed) throw new IndexFileError('malformed', `malformed index file: ${error.message}`);
     throw error;

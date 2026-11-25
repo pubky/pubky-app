@@ -495,4 +495,49 @@ describe('createSocialIndexer', () => {
     const answer = await indexer.request({ url: FOLLOWING, method: 'GET' });
     expect(answer).toMatchObject({ syncing: false, asOf: syncedAt });
   });
+
+  it('serves the following feed from another device’s file before any stream or body answers', async () => {
+    const { fixture, network, time, indexerOf } = socialWorld({}, { savedIndex: true });
+    const { image, quote, repost } = fixture.posts;
+    const first = indexerOf();
+    first.start(ALICE);
+    await first.whenSynced();
+    await until(async () => (await network.listIndexFiles()).length === 1, 'the first save');
+    const [name] = await network.listIndexFiles();
+    const file = await decodeIndexFile((await network.readIndexFile(name)) ?? new Uint8Array());
+    first.stop();
+
+    // Nothing from a homeserver ever answers.
+    const asked = { bodies: 0 };
+    const offline: IndexerTransport = {
+      resolveHomeserver: () => new Promise<string | null>(() => undefined),
+      readEvents: () => new Promise(() => undefined),
+      getPublic: () => {
+        asked.bodies += 1;
+        return new Promise(() => undefined);
+      },
+      listIndexFiles: () => network.listIndexFiles(),
+      readIndexFile: (fileName) => network.readIndexFile(fileName),
+      writeIndexFile: (fileName, bytes) => network.writeIndexFile(fileName, bytes),
+      deleteIndexFile: (fileName) => network.deleteIndexFile(fileName),
+    };
+    const second = indexerOf(offline, createMemoryStore<SocialData>());
+    second.start(ALICE);
+    await until(() => second.status().savedIndex?.loadedFiles === 1, 'the file to load');
+    await time.advance(DEBOUNCE);
+    await second.ready();
+
+    const feed = await second.request({ url: FOLLOWING, method: 'GET' });
+    const posts = await second.request({
+      url: '/v1/stream/posts/by_ids',
+      method: 'POST',
+      body: { post_ids: [key(BRAN, image)] },
+    });
+
+    expect(feed).toMatchObject({ syncing: true, asOf: file.writtenAt });
+    expect(feed.json).toMatchObject({ post_keys: [key(BRAN, image), key(CLEO, quote), key(BRAN, repost)] });
+    expect(posts.json).toMatchObject([{ details: { id: image.id, author: BRAN } }]);
+    expect(asked.bodies).toBe(0);
+    second.stop();
+  });
 });

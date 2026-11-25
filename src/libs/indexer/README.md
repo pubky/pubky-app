@@ -83,7 +83,6 @@ const res = await indexer.request({ url, method: 'GET' }); // a nexus /v1 reques
 indexer.onChange(({ authors }) => invalidate(authors));
 await indexer.refresh([mySigningKey]); // right after the app writes
 await indexer.ensureUser(profileKey); // a profile outside the scope, with its own stream
-await indexer.ensurePost(author, postId); // the parent of a reply, a reposted post, resolvable by key
 document.addEventListener('visibilitychange', () => (document.hidden ? indexer.pause() : indexer.resume()));
 ```
 
@@ -107,12 +106,10 @@ what was loaded; feeds, rankings, searches and hot tags over the scope are unava
 `ensureProfile` loads a profile alone, for avatars. What a tab loads on demand is capped (`maxVisitedUsers`,
 `maxLoosePosts`, `maxProfiles`): past a cap the least recently ensured item leaves the view and the runtime's `forget`
 deletes its scopes, an eviction at the largest cursor, which every tab hears. A `backfill` of one author's group runs at
-most once per `backfillMinIntervalMs` unless forced.
-
-`setExcluded(users)`, for muted users, drops them and whoever is reached only through them from the view's members at
-once, and from the scope at the next sync. Answers carry `asOf`, the newest sync time known: this run's, the previous
-session's kept in the store, or a loaded file's. `onChange` gives `{ authors, membersChanged, kinds }`. A coordination
-from `createBrowserCoordination` has `close()`; its owner calls it, the runtime never closes what it was given.
+most once per `backfillMinIntervalMs` unless forced. `setExcluded(users)`, for muted users, drops them and whoever is
+reached only through them from the view's members at once, and from the scope at the next sync. Answers carry `asOf`,
+the newest sync time known: this run's, the previous session's kept in the store, or a loaded file's. `onChange` gives
+`{ authors, membersChanged, kinds }`. The owner of a `createBrowserCoordination` closes it; the runtime never does.
 
 `createIndexerRuntime` (`indexer.ts`) is that loop for any domain: one queue for every crawl, and with
 coordination only the tab holding the lock crawls. Requests never overlap and go ahead of the scope sync: one
@@ -125,14 +122,17 @@ With `savedIndex: true` each device keeps its index in one file of the user's ow
 transport's index file methods, so another device, or this one after losing its database, starts warm. A file is
 named by the writer id the store keeps (`readMeta`/`writeMeta`); a store without those keeps no saved index.
 
-The file (`indexFile.ts`) is gzipped positional JSON with the format version first: the seed and scope settings,
-a key table holding each public key once, the scope members with their homeservers, each homeserver's high-water
-mark, and the members' runs of the domain's groups. Records are saved without data and with hashes cut to 16
-bytes: the file holds pointers, and a reader fetches the bodies (`hydrate`). Visited users and leaf scopes are no
-members' domain groups, so what the user opened is never written. Decoding treats the file as untrusted input.
+The file (`indexFile.ts`, version 2) is gzipped positional JSON: the seed and scope settings, a key table holding
+each public key once, the members with their homeservers, each homeserver's high-water mark, and the members' runs
+of the domain's groups, records with their data and whole hash, so a device that loads it shows the feed with no
+body fetch. A record without data keeps 16 bytes of hash, and version 1 files, pointers only, still load. The file
+is untrusted input: the domain's `reviveData` checks each payload (the social domain wants exactly what `reduce`
+makes), and a refused one, or any without the hook, loads without data for `hydrate` to fetch. Visited users and
+leaf scopes are no members' domain groups, so what the user opened is never written. With `sealer` the gzip bytes are
+sealed before writing and opened after reading; a file that does not open is ignored.
 
 At start the crawling tab applies the files of the same seed before its first sync: the runs merge in any order,
 the homeservers spare their lookups, the high-water marks let the next sync catch a restore. A record without data
 never erases a stored body at the same cursor. Other writers' files older than `writerExpiryMs` are deleted. The
 tab saves after a scope sync that changed something, at most every `saveMinIntervalMs`, and when paused. Over
-`fileBudgetBytes` the windowed history is halved oldest first, farthest hop first; follows and profiles stay whole.
+`fileBudgetBytes` (200 MB) data goes first, then windowed history, each oldest first and farthest hop first.

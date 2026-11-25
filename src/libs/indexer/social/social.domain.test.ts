@@ -188,6 +188,60 @@ describe('reduce', () => {
   });
 });
 
+describe('reviveData', () => {
+  const reduced = (author: string, path: string) => domain.reduce(author, path, bytesAt(author, path));
+  const revive = (author: string, path: string, value: unknown) => domain.reviveData?.(author, path, value) ?? null;
+  /** What a saved index gives back for a payload: its JSON, parsed. */
+  const stored = (value: unknown): unknown => JSON.parse(JSON.stringify(value));
+
+  it('keeps exactly what reduce made for a profile, every kind of post and a tag', () => {
+    const cases: Array<[string, string]> = [
+      [ALICE, PROFILE_PATH],
+      [BRAN, PROFILE_PATH],
+      [ALICE, posts.a1.path],
+      [BRAN, posts.b1.path],
+      [BRAN, posts.image.path],
+      [ALICE, posts.articleEdit.path],
+      [DION, posts.collection.path],
+      [CLEO, tagWrite(CLEO, 0).path],
+      [ALICE, tagWrite(ALICE, 1).path],
+    ];
+    for (const [author, path] of cases) {
+      const data = reduced(author, path);
+      expect(data, path).not.toBeNull();
+      expect(revive(author, path, stored(data)), path).toEqual(data);
+    }
+  });
+
+  it.each<[string, (value: Record<string, unknown>) => void]>([
+    ['another post id', (value) => (value.postId = posts.b1.id)],
+    ['an extra field', (value) => (value.extra = 1)],
+    ['a missing field', (value) => delete value.lock],
+    ['an unknown kind', (value) => (value.kind = 'poll')],
+    ['mentions that are not the content’s', (value) => (value.mentions = [])],
+    ['a parent that is no target', (value) => (value.parent = { kind: 'post', author: 'nobody', postId: 'x' })],
+    ['content that is no string', (value) => (value.content = 7)],
+  ])('refuses a post with %s', (_name, change) => {
+    const value = stored(reduced(ALICE, posts.a1.path));
+    if (typeof value !== 'object' || value === null) throw new Error('expected an object');
+    const fields: Record<string, unknown> = { ...value };
+    change(fields);
+
+    expect(revive(ALICE, posts.a1.path, fields)).toBeNull();
+  });
+
+  it('refuses a payload of another kind than the path, a tag whose URI is not its target’s, and any follow', () => {
+    const tag = tagWrite(CLEO, 0);
+    const tagData = stored(reduced(CLEO, tag.path));
+    if (typeof tagData !== 'object' || tagData === null) throw new Error('expected an object');
+
+    expect(revive(ALICE, PROFILE_PATH, stored(reduced(ALICE, posts.a1.path)))).toBeNull();
+    expect(revive(CLEO, tag.path, { ...tagData, uri: 'https://example.com/' })).toBeNull();
+    expect(revive(ALICE, `${FOLLOWS_PREFIX}${BRAN}.json`, {})).toBeNull();
+    expect(revive(ALICE, posts.a1.path, 'text')).toBeNull();
+  });
+});
+
 describe('needsBody', () => {
   it('fetches profiles, post versions and tags only', () => {
     const media = buildFile(ALICE, { bytes: new Uint8Array([1]), type: 'image/png' });

@@ -2,8 +2,15 @@ import type { StoreChange } from './crawler.types';
 import { compareCursors } from './cursor';
 import type { Domain } from './domain.types';
 import { InvalidIndexInputError } from './indexer.errors';
-import type { Entry, Run } from './indexer.types';
-import { decodeIndexFile, encodeIndexFile, IndexFileError, type IndexFileModel, isWriterId } from './indexFile';
+import type { Cursor, Entry, Run } from './indexer.types';
+import {
+  decodeIndexFile,
+  encodeIndexFile,
+  IndexFileError,
+  type IndexFileModel,
+  isWriterId,
+  type ReviveData,
+} from './indexFile';
 import { evictBelow } from './merge';
 import { scopeId, scopeOf } from './store.helpers';
 import type { HighWater, IndexStore, ScopeKey, UserHomeserver } from './store.types';
@@ -39,8 +46,8 @@ export async function writerIdOf<D>(store: IndexStore<D>): Promise<string | null
   return writer;
 }
 
-const withoutData = <D>(entry: Entry<D>): Entry<never> => {
-  if (entry.kind === 'tombstone') return entry;
+const withoutData = <D>(entry: Entry<D>): Entry<D> => {
+  if (entry.kind === 'tombstone' || entry.data === undefined) return entry;
   return entry.hash === undefined
     ? { kind: 'record', path: entry.path, cursor: entry.cursor }
     : { kind: 'record', path: entry.path, cursor: entry.cursor, hash: entry.hash };
@@ -58,15 +65,15 @@ export interface SnapshotParams<D> {
 
 /**
  * What the file of this writer holds: the seed's scope members with their homeservers, and the domain's groups of
- * each member on its current homeserver, without data. Scopes loaded on demand are never read: a visited user is
+ * each member on its current homeserver, with their data. Scopes loaded on demand are never read: a visited user is
  * no member, and a leaf scope is no domain group.
  */
-export async function snapshotIndex<D>(params: SnapshotParams<D>): Promise<IndexFileModel> {
+export async function snapshotIndex<D>(params: SnapshotParams<D>): Promise<IndexFileModel<D>> {
   const { store, domain, seed } = params;
   const members = new Map(await store.readScopeMembers(seed));
   if (!members.has(seed)) members.set(seed, 0);
   const fileMembers: IndexFileModel['members'] = [];
-  const runs: Run<never>[] = [];
+  const runs: Run<D>[] = [];
   const homeservers = new Set<string>();
   for (const [user, hop] of members) {
     const resolved = await store.readUserHomeserver(user);
@@ -75,9 +82,7 @@ export async function snapshotIndex<D>(params: SnapshotParams<D>): Promise<Index
     if (homeserver === null) continue;
     homeservers.add(homeserver);
     for (const group of domain.groups) {
-      for (const run of await store.exportRuns({ author: user, homeserver, group: group.id })) {
-        runs.push({ ...scopeOf(run), tail: run.tail, head: run.head, entries: run.entries.map(withoutData) });
-      }
+      runs.push(...(await store.exportRuns({ author: user, homeserver, group: group.id })));
     }
   }
   // Read after the runs, so each mark is at least as new as every saved cursor of its homeserver.
@@ -98,26 +103,54 @@ export async function snapshotIndex<D>(params: SnapshotParams<D>): Promise<Index
   };
 }
 
+/** The runs grouped by scope, only those `picked` picks. */
+function byScopeOf<D>(runs: readonly Run<D>[], picked: (run: Run<D>) => boolean): Map<string, Run<D>[]> {
+  const byScope = new Map<string, Run<D>[]>();
+  for (const run of runs) {
+    if (!picked(run)) continue;
+    const id = scopeId(run);
+    byScope.set(id, [...(byScope.get(id) ?? []), run]);
+  }
+  return byScope;
+}
+
+/**
+ * Drops the data of the older half of the records with data of every scope `picked` picks, keeping the records.
+ * `null` when none of them has data left.
+ */
+function halveData<D>(runs: readonly Run<D>[], picked: (run: Run<D>) => boolean): Run<D>[] | null {
+  const cutoffs = new Map<string, Cursor>();
+  for (const [id, scopeRuns] of byScopeOf(runs, picked)) {
+    const cursors = scopeRuns
+      .flatMap((run) =>
+        run.entries.flatMap((entry) => (entry.kind === 'record' && entry.data !== undefined ? [entry.cursor] : [])),
+      )
+      .sort(compareCursors);
+    if (cursors.length > 0) cutoffs.set(id, cursors[Math.ceil(cursors.length / 2) - 1]);
+  }
+  if (cutoffs.size === 0) return null;
+  return runs.map((run) => {
+    const cutoff = cutoffs.get(scopeId(run));
+    if (cutoff === undefined) return run;
+    return { ...run, entries: run.entries.map((entry) => (entry.cursor <= cutoff ? withoutData(entry) : entry)) };
+  });
+}
+
 /**
  * Halves the history of every scope `trimmed` picks: evicts the older half of its entries, or the whole scope once
  * it has none. `null` when it picks no scope.
  */
-function halve(runs: readonly Run<never>[], trimmed: (run: Run<never>) => boolean): Run<never>[] | null {
-  const byScope = new Map<string, Run<never>[]>();
-  for (const run of runs) {
-    if (!trimmed(run)) continue;
-    const id = scopeId(run);
-    byScope.set(id, [...(byScope.get(id) ?? []), run]);
-  }
+function halve<D>(runs: readonly Run<D>[], trimmed: (run: Run<D>) => boolean): Run<D>[] | null {
+  const byScope = byScopeOf(runs, trimmed);
   if (byScope.size === 0) return null;
-  const halved = new Map<string, Run<never>[]>();
+  const halved = new Map<string, Run<D>[]>();
   for (const [id, scopeRuns] of byScope) {
     const cursors = scopeRuns.flatMap((run) => run.entries.map((entry) => entry.cursor)).sort(compareCursors);
     const top = scopeRuns.reduce((head, run) => (run.head > head ? run.head : head), scopeRuns[0].head);
     const cutoff = cursors.length === 0 ? top : cursors[Math.ceil(cursors.length / 2) - 1];
     halved.set(id, evictBelow(scopeRuns, cutoff));
   }
-  const out: Run<never>[] = [];
+  const out: Run<D>[] = [];
   const placed = new Set<string>();
   for (const run of runs) {
     const id = scopeId(run);
@@ -132,13 +165,14 @@ function halve(runs: readonly Run<never>[], trimmed: (run: Run<never>) => boolea
 }
 
 /**
- * The file's bytes, within `budget` when trimming can get there. Windowed history goes first, oldest first: the
- * farthest hop's scopes are halved until they are empty, then the next hop's, the seed's last. The full groups,
- * follows and profiles, are never trimmed, so a file over budget with only those left is written as it is. This
- * trims what is written, never the local store.
+ * The file's bytes, within `budget` when trimming can get there. Data goes first, then windowed history, each oldest
+ * first and farthest hop first, the seed's last: a hop's scopes lose the data of their older half of records until
+ * none has data, and once no hop has any, a hop's windowed scopes are halved until they are empty. The full groups'
+ * pointers, follows and profiles, are never trimmed, so a file over budget with only those left is written as it is.
+ * This trims what is written, never the local store.
  */
-export async function fitToBudget(
-  model: IndexFileModel,
+export async function fitToBudget<D>(
+  model: IndexFileModel<D>,
   budget: number,
   windowGroups: ReadonlySet<string>,
 ): Promise<Uint8Array> {
@@ -147,9 +181,15 @@ export async function fitToBudget(
   const hopOf = new Map(model.members.map(({ user, hop }): [string, number] => [user, hop]));
   const hops = [...new Set(hopOf.values())].sort((a, b) => b - a);
   let runs = model.runs;
-  for (const hop of hops) {
-    const inHop = (run: Run<never>) => hopOf.get(run.author) === hop && windowGroups.has(run.group);
-    for (let next = halve(runs, inHop); next !== null; next = halve(runs, inHop)) {
+  const steps: Array<(from: readonly Run<D>[]) => Run<D>[] | null> = [
+    ...hops.map((hop) => (from: readonly Run<D>[]) => halveData(from, (run) => hopOf.get(run.author) === hop)),
+    ...hops.map(
+      (hop) => (from: readonly Run<D>[]) =>
+        halve(from, (run) => hopOf.get(run.author) === hop && windowGroups.has(run.group)),
+    ),
+  ];
+  for (const step of steps) {
+    for (let next = step(runs); next !== null; next = step(runs)) {
       runs = next;
       bytes = await encodeIndexFile({ ...model, runs });
       if (bytes.length <= budget) return bytes;
@@ -166,6 +206,10 @@ export interface LoadParams<D> {
   now: number;
   /** Other writers' files older than this are deleted after loading. */
   expiryMs: number;
+  /** Checks each stored payload; without it the records load without data. */
+  reviveData?: ReviveData<D>;
+  /** Opens a sealed file's bytes; a file it cannot open is ignored. */
+  open?: (bytes: Uint8Array, name: string) => Promise<Uint8Array>;
 }
 
 export interface LoadOutcome {
@@ -181,7 +225,7 @@ export interface LoadOutcome {
 }
 
 /** Applies one file: its runs, the homeservers the store lacks, and each high-water mark above the stored one. */
-async function applyFile<D>(store: IndexStore<D>, model: IndexFileModel): Promise<void> {
+async function applyFile<D>(store: IndexStore<D>, model: IndexFileModel<D>): Promise<void> {
   const userHomeservers: Array<{ user: string; value: UserHomeserver }> = [];
   for (const { user, homeserver } of model.members) {
     if (homeserver !== null && (await store.readUserHomeserver(user)) === null) {
@@ -215,11 +259,14 @@ export async function loadSavedIndex<D>(params: LoadParams<D>): Promise<LoadOutc
     const fileWriter = writerOfFile(name);
     const own = fileWriter === writer;
     if (fileWriter === null || (own && !empty)) continue;
-    let model: IndexFileModel;
+    let model: IndexFileModel<D>;
     try {
       const bytes = await transport.readIndexFile(name);
       if (bytes === null) continue;
-      model = await decodeIndexFile(bytes);
+      model = await decodeIndexFile(
+        params.open === undefined ? bytes : await params.open(bytes, name),
+        params.reviveData,
+      );
     } catch (error) {
       if (error instanceof IndexFileError && error.code === 'unavailable') throw error;
       ignored += 1;

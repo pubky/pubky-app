@@ -27,4 +27,9 @@ export interface Domain<D> {
    * the hash's first 16 bytes (`shortHash`), so a check must accept that form too.
    */
   matchesHash?(bytes: Uint8Array, hash: string): boolean;
+  /**
+   * Validates a payload read back from a saved index, where it is written as JSON and untrusted: the payload, or
+   * `null` to load the record without data and fetch its file later. Without it, payloads in a file are dropped.
+   */
+  reviveData?(author: string, path: string, value: unknown): D | null;
 }

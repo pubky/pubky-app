@@ -1,10 +1,12 @@
 import {
   buildUri,
   idMicros,
+  type KnownPostKind,
   type ParsedUri,
   parseOwner,
   parseUri,
   type Post,
+  postKinds,
   toUrl,
   tryDecodeContent,
   tryDecodeObject,
@@ -12,7 +14,16 @@ import {
 } from 'pubky-social-specs';
 import type { Domain } from '../domain.types';
 import { parseMentions } from './mentions';
-import type { PostData, SocialData, SocialTarget, TagData, UserData } from './social.types';
+import type {
+  AttachmentData,
+  CollectionItemData,
+  PostData,
+  SocialData,
+  SocialTarget,
+  TagData,
+  UserData,
+  UserLinkData,
+} from './social.types';
 
 export const SOCIAL_GRAPH = 'graph';
 export const SOCIAL_ACTIVITY = 'activity';
@@ -159,6 +170,137 @@ function reduce(author: string, path: string, bytes: Uint8Array): SocialData | n
   return null;
 }
 
+// A saved index is read back as untrusted JSON: a payload is kept only when it has exactly the shape `reduce` makes for
+// its path, derived fields included.
+
+type Fields = Record<string, unknown>;
+
+const isFields = (value: unknown): value is Fields =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+const hasOnly = (fields: Fields, allowed: readonly string[]) =>
+  Object.keys(fields).every((key) => allowed.includes(key));
+const isText = (value: unknown): value is string => typeof value === 'string';
+const isOptionalText = (value: unknown): value is string | null => value === null || typeof value === 'string';
+const isListOf = <T>(value: unknown, item: (entry: unknown) => entry is T): value is T[] =>
+  Array.isArray(value) && value.every((entry: unknown) => item(entry));
+const isPostKind = (value: unknown): value is KnownPostKind => postKinds.some((kind) => kind === value);
+
+function sameTarget(a: SocialTarget, b: SocialTarget): boolean {
+  if (a.kind === 'post') return b.kind === 'post' && a.author === b.author && a.postId === b.postId;
+  if (a.kind === 'user') return b.kind === 'user' && a.author === b.author;
+  return b.kind === 'other' && a.uri === b.uri;
+}
+
+/** The target the fields spell, `null` for any other shape. */
+function targetFrom(value: Fields): SocialTarget | null {
+  if (value.kind === 'post' && hasOnly(value, ['kind', 'author', 'postId'])) {
+    return isText(value.author) && isText(value.postId)
+      ? { kind: 'post', author: value.author, postId: value.postId }
+      : null;
+  }
+  if (value.kind === 'user' && hasOnly(value, ['kind', 'author'])) {
+    return isText(value.author) ? { kind: 'user', author: value.author } : null;
+  }
+  if (value.kind === 'other' && hasOnly(value, ['kind', 'uri'])) {
+    return isText(value.uri) ? { kind: 'other', uri: value.uri } : null;
+  }
+  return null;
+}
+
+/** A target as `targetOf` makes it: reading its canonical URI back gives the same target. */
+function isTarget(value: unknown): value is SocialTarget {
+  const target = isFields(value) ? targetFrom(value) : null;
+  if (target === null) return false;
+  try {
+    return sameTarget(targetOf(canonicalUri(target)), target);
+  } catch {
+    return false;
+  }
+}
+
+const isOptionalTarget = (value: unknown): value is SocialTarget | null => value === null || isTarget(value);
+
+const isLink = (value: unknown): value is UserLinkData =>
+  isFields(value) && hasOnly(value, ['title', 'url']) && isText(value.title) && isText(value.url);
+
+const isAttachment = (value: unknown): value is AttachmentData =>
+  isFields(value) && hasOnly(value, ['uri', 'name']) && isText(value.uri) && isOptionalText(value.name);
+
+const isItem = (value: unknown): value is CollectionItemData =>
+  isFields(value) && hasOnly(value, ['target', 'note']) && isTarget(value.target) && isOptionalText(value.note);
+
+const USER_FIELDS = ['type', 'name', 'bio', 'image', 'links', 'status'];
+const POST_FIELDS = [
+  'type',
+  'postId',
+  'editId',
+  'kind',
+  'content',
+  'parent',
+  'embed',
+  'mentions',
+  'attachments',
+  'lock',
+  'title',
+  'coverImage',
+  'items',
+  'layout',
+];
+const TAG_FIELDS = ['type', 'uri', 'target', 'label'];
+
+function isUserData(value: Fields): value is Fields & UserData {
+  return (
+    hasOnly(value, USER_FIELDS) &&
+    value.type === 'user' &&
+    isText(value.name) &&
+    isOptionalText(value.bio) &&
+    isOptionalText(value.image) &&
+    isListOf(value.links, isLink) &&
+    isOptionalText(value.status)
+  );
+}
+
+function isPostData(value: Fields, postId: string, editId: string): value is Fields & PostData {
+  return (
+    hasOnly(value, POST_FIELDS) &&
+    value.type === 'post' &&
+    value.postId === postId &&
+    value.editId === editId &&
+    isPostKind(value.kind) &&
+    isText(value.content) &&
+    isOptionalTarget(value.parent) &&
+    isOptionalTarget(value.embed) &&
+    isListOf(value.mentions, isText) &&
+    value.mentions.join(' ') === parseMentions(value.content).join(' ') &&
+    isListOf(value.attachments, isAttachment) &&
+    isOptionalText(value.lock) &&
+    (value.title === undefined || isText(value.title)) &&
+    (value.coverImage === undefined || isOptionalText(value.coverImage)) &&
+    (value.items === undefined || isListOf(value.items, isItem)) &&
+    (value.layout === undefined || isOptionalText(value.layout))
+  );
+}
+
+function isTagData(value: Fields): value is Fields & TagData {
+  return (
+    hasOnly(value, TAG_FIELDS) &&
+    value.type === 'tag' &&
+    isText(value.label) &&
+    isTarget(value.target) &&
+    value.uri === canonicalUri(value.target)
+  );
+}
+
+/** The payload when it is exactly what `reduce` would make for the path, else `null`. */
+function reviveData(author: string, path: string, value: unknown): SocialData | null {
+  const at = locate(author, path);
+  if (at === null || at.root !== 'public' || !isFields(value)) return null;
+  if (at.kind === 'user') return isUserData(value) ? value : null;
+  if (at.kind === 'post' && at.editId !== undefined) return isPostData(value, at.id, at.editId) ? value : null;
+  if (at.kind === 'tag') return isTagData(value) ? value : null;
+  return null;
+}
+
 /** The social v1 public tree: follows and the profile in full, posts and tags within the window. */
 export function createSocialDomain(): Domain<SocialData> {
   return {
@@ -181,5 +323,6 @@ export function createSocialDomain(): Domain<SocialData> {
       const postId = postIdOfPath(path);
       return postId === null ? null : BigInt(idMicros(postId));
     },
+    reviveData,
   };
 }

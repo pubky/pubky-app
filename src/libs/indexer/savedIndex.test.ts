@@ -4,11 +4,11 @@ import { describe, expect, it } from 'vitest';
 import { ACTIVITY, FOLLOWS, GRAPH, NOW, type Post, postPath, POSTS, served, testDomain } from './crawler.fixtures';
 import { FakeNetwork } from './fakeNetwork';
 import { createIndexerRuntime } from './indexer';
-import type { Cursor, Run } from './indexer.types';
-import { decodeIndexFile, encodeIndexFile, type IndexFileModel } from './indexFile';
+import type { Cursor, Entry, Run } from './indexer.types';
+import { decodeIndexFile, encodeIndexFile, type IndexFileModel, type ReviveData } from './indexFile';
 import { createMemoryStore } from './memoryStore';
 import { fakeTime } from './runtime.fixtures';
-import type { RuntimeOptions } from './runtime.types';
+import type { IndexSealer, RuntimeOptions } from './runtime.types';
 import { fitToBudget, snapshotIndex } from './savedIndex';
 import { scopeId } from './store.helpers';
 import type { IndexStore, ScopeKey } from './store.types';
@@ -172,7 +172,7 @@ describe('saved index', () => {
     const w = world();
     await w.network.writeIndexFile('other.idx', await encodeIndexFile(emptyModel('other', 'dave', NOW)));
     await w.network.writeIndexFile('broken.idx', new Uint8Array([1, 2, 3]));
-    await w.network.writeIndexFile('future.idx', new Uint8Array(gzipSync('[2,"future"]')));
+    await w.network.writeIndexFile('future.idx', new Uint8Array(gzipSync('[3,"future"]')));
     const a = device(w);
 
     a.runtime.start('alice');
@@ -247,10 +247,72 @@ describe('saved index', () => {
   });
 });
 
+/** A reversible toy seal that also records the names it saw; one that `breaks` cannot open anything. */
+function toySealer(breaks = false) {
+  const names: string[] = [];
+  const sealer: IndexSealer = {
+    seal: async (bytes, name) => {
+      names.push(name);
+      return Uint8Array.from([0x53, ...bytes.map((byte) => byte ^ 0x5a)]);
+    },
+    open: async (bytes) => {
+      if (breaks || bytes[0] !== 0x53) throw new Error('cannot open');
+      return bytes.slice(1).map((byte) => byte ^ 0x5a);
+    },
+  };
+  return { sealer, names };
+}
+
+describe('saved index sealing', () => {
+  it('writes a sealed file that a device with the sealer opens and one without cannot read', async () => {
+    const w = world();
+    const seal = toySealer();
+    const a = device(w, { sealer: seal.sealer });
+    a.runtime.start('alice');
+    await a.synced();
+    await until(() => a.counts.writes === 1, 'the save');
+
+    const [name] = await w.network.listIndexFiles();
+    expect(seal.names).toEqual([name]);
+    await expect(decodeIndexFile((await w.network.readIndexFile(name)) ?? new Uint8Array())).rejects.toMatchObject({
+      code: 'malformed',
+    });
+
+    const b = device(w, { sealer: toySealer().sealer });
+    b.runtime.start('alice');
+    await b.synced();
+    await until(() => b.counts.writes === 1, 'the second save');
+    expect(b.runtime.status().savedIndex).toMatchObject({ loadedFiles: 1, ignoredFiles: 0, error: null });
+
+    const c = device(w, { sealer: toySealer(true).sealer });
+    c.runtime.start('alice');
+    await c.synced();
+    expect(c.runtime.status()).toMatchObject({ lastError: null, savedIndex: { loadedFiles: 0, ignoredFiles: 2 } });
+    expect(await served(c.store, 'alice', 'hs1', GRAPH)).toEqual(w.network.liveOf('alice', [FOLLOWS]));
+  });
+});
+
+const isPost = (value: unknown): value is Post =>
+  typeof value === 'object' && value !== null && 'text' in value && typeof value.text === 'string';
+const revivePost: ReviveData<Post> = (_author, _path, value) => (isPost(value) ? value : null);
+
+/** The model with every payload left out, as a file of pointers. */
+function pointersOf(model: IndexFileModel<Post>): IndexFileModel<Post> {
+  const strip = (entry: Entry<Post>): Entry<Post> =>
+    entry.kind === 'tombstone' || entry.data === undefined ? entry : { ...entry, data: undefined };
+  return { ...model, runs: model.runs.map((run) => ({ ...run, entries: run.entries.map(strip) })) };
+}
+
 describe('saved index budget', () => {
-  const graphRuns = (runs: readonly Run<never>[]) => runs.filter(({ group }) => group === GRAPH);
-  const activityOf = (runs: readonly Run<never>[], author: string) =>
+  const graphRuns = <D>(runs: readonly Run<D>[]) => runs.filter(({ group }) => group === GRAPH);
+  const activityOf = <D>(runs: readonly Run<D>[], author: string) =>
     runs.filter((run) => run.group === ACTIVITY && run.author === author);
+  const cursorsOf = <D>(runs: readonly Run<D>[], withData: boolean) =>
+    runs.flatMap(({ entries }) =>
+      entries.flatMap((entry) =>
+        entry.kind === 'record' && (entry.data !== undefined) === withData ? [entry.cursor] : [],
+      ),
+    );
 
   async function snapshot() {
     const w = world({ alice: 5, bob: 10, carol: 60 });
@@ -268,8 +330,31 @@ describe('saved index budget', () => {
     });
   }
 
-  it('drops the oldest history of the farthest hop first and keeps the graph', async () => {
+  it('drops data before any pointer: the farthest hop’s oldest first', async () => {
     const model = await snapshot();
+    const full = (await encodeIndexFile(model)).length;
+    const carolBare = model.runs.map((run) =>
+      run.author === 'carol' ? { ...run, entries: pointersOf({ ...model, runs: [run] }).runs[0].entries } : run,
+    );
+    const budget = Math.floor((full + (await encodeIndexFile({ ...model, runs: carolBare })).length) / 2);
+
+    const bytes = await fitToBudget(model, budget, new Set([ACTIVITY]));
+    const read = await decodeIndexFile(bytes, revivePost);
+
+    expect(bytes.length).toBeLessThanOrEqual(budget);
+    expect(full).toBeGreaterThan(budget);
+    expect(read.runs.map(({ entries }) => entries.length)).toEqual(model.runs.map(({ entries }) => entries.length));
+    expect(activityOf(read.runs, 'alice')).toEqual(activityOf(model.runs, 'alice'));
+    expect(activityOf(read.runs, 'bob')).toEqual(activityOf(model.runs, 'bob'));
+    const kept = cursorsOf(activityOf(read.runs, 'carol'), true);
+    const dropped = cursorsOf(activityOf(read.runs, 'carol'), false);
+    expect(kept.length).toBeGreaterThan(0);
+    expect(dropped.length).toBeGreaterThan(0);
+    expect(dropped.every((low) => kept.every((high) => low < high))).toBe(true);
+  });
+
+  it('drops the oldest history of the farthest hop first and keeps the graph', async () => {
+    const model = pointersOf(await snapshot());
     const full = (await encodeIndexFile(model)).length;
     const runs = model.runs.filter((run) => !(run.author === 'carol' && run.group === ACTIVITY));
     const withoutCarol = (await encodeIndexFile({ ...model, runs })).length;

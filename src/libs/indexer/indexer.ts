@@ -167,6 +167,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     try {
       const writer = await writerIdOf(store);
       if (writer === null) return;
+      const { sealer } = options;
       const outcome = await loadSavedIndex({
         transport,
         store,
@@ -174,6 +175,8 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
         writer,
         now: now(),
         expiryMs: options.writerExpiryMs,
+        reviveData: domain.reviveData?.bind(domain),
+        open: sealer === undefined ? undefined : (bytes, name) => sealer.open(bytes, name),
       });
       saved = { ...saved, loadedFiles: outcome.loaded, ignoredFiles: outcome.ignored };
       if (outcome.writtenAt !== null) noteAsOf(outcome.writtenAt);
@@ -199,10 +202,9 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
       hops: crawlerOptions.hops,
       windowDays: crawlerOptions.windowDays,
     });
-    await transport.writeIndexFile(
-      indexFileName(writer),
-      await fitToBudget(model, options.fileBudgetBytes, windowGroups),
-    );
+    const name = indexFileName(writer);
+    const bytes = await fitToBudget(model, options.fileBudgetBytes, windowGroups);
+    await transport.writeIndexFile(name, options.sealer === undefined ? bytes : await options.sealer.seal(bytes, name));
   }
 
   /**
