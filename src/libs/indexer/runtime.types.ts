@@ -13,6 +13,17 @@ export interface RuntimeOptions {
   ensureTtlMs: number;
   /** Changes are reported at most once per this period, merged. */
   changeDebounceMs: number;
+  /**
+   * Keeps this device's index in a file of the user's storage and starts from the files of other devices, or from its
+   * own after losing the local store. Needs a store with meta values.
+   */
+  savedIndex: boolean;
+  /** Least time between two saves after scope syncs; the save when pausing waits for none. */
+  saveMinIntervalMs: number;
+  /** Other devices' files not written for this long are deleted at start. */
+  writerExpiryMs: number;
+  /** Largest file the save aims for, trimming windowed history oldest first. */
+  fileBudgetBytes: number;
   crawler: Partial<CrawlerOptions>;
 }
 
@@ -20,6 +31,10 @@ export const DEFAULT_RUNTIME_OPTIONS: Readonly<RuntimeOptions> = Object.freeze({
   syncIntervalMs: 60 * 1000,
   ensureTtlMs: 5 * 60 * 1000,
   changeDebounceMs: 250,
+  savedIndex: false,
+  saveMinIntervalMs: 60 * 1000,
+  writerExpiryMs: 30 * 24 * 60 * 60 * 1000,
+  fileBudgetBytes: 2 * 1024 * 1024,
   crawler: {},
 });
 
@@ -51,6 +66,17 @@ export interface Coordination {
 
 export type RuntimeState = 'idle' | 'syncing' | 'stopped' | 'error';
 
+export interface SavedIndexStatus {
+  /** Files applied at start. */
+  loadedFiles: number;
+  /** Files that did not decode, had an unknown version or another seed. */
+  ignoredFiles: number;
+  /** When this tab last wrote its file (ms). */
+  lastSavedAt: number | null;
+  /** The last failed load or save, cleared by the next save that succeeds. */
+  error: Error | null;
+}
+
 export interface RuntimeStatus {
   state: RuntimeState;
   seed: string | null;
@@ -59,6 +85,8 @@ export interface RuntimeStatus {
   /** The last failed crawl's error, cleared by a successful scope sync. */
   lastError: Error | null;
   stats: CrawlerStats;
+  /** Present while `savedIndex` is on. */
+  savedIndex?: SavedIndexStatus;
 }
 
 export interface RuntimeParams<D> {
@@ -85,7 +113,10 @@ export interface IndexerRuntime {
   start(seed: string): void;
   /** Aborts the running crawl, rejects queued requests and clears timers. Safe to call twice. */
   stop(): void;
-  /** Lets the running crawl finish and starts nothing else; with coordination it hands crawling to another tab. */
+  /**
+   * Lets the running crawl finish and starts nothing else; with coordination it hands crawling to another tab. The
+   * crawling tab saves its index file first when anything changed.
+   */
   pause(): void;
   resume(): void;
   /** Syncs the whole scope, or only these users. Resolves once committed. */

@@ -158,8 +158,10 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
   let firstSyncSettled = false;
   const ensuredUsers = new Set<string>();
   const ensuredPosts = new Map<string, LeafRequest>();
-  /** Merged scopes by scope id. */
-  const cache = new Map<string, MergedRuns<SocialData>>();
+  /** Merged scopes by scope id, with the scope's change count when read. */
+  const cache = new Map<string, { merged: MergedRuns<SocialData>; changes: number }>();
+  /** Per scope id, the changes reported for it: data filled in at a stored cursor leaves the coverage as it was. */
+  const changeCounts = new Map<string, number>();
   let pendingAuthors = new Set<string>();
   let rebuilding: Promise<void> | null = null;
   let again = false;
@@ -171,16 +173,24 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
   });
 
   /**
-   * The scope from the cache while its coverage is unchanged: every applied run adds its range to the coverage,
-   * and a run inside it can only repeat what is stored, so the same coverage means the same scope.
+   * The scope from the cache while its coverage is unchanged and no change was reported for it: every applied run
+   * adds its range to the coverage, and a run inside it can only repeat what is stored or fill in a body, which is
+   * reported as a change.
    */
   async function served(scope: ScopeKey): Promise<MergedRuns<SocialData>> {
     const id = scopeId(scope);
+    const changes = changeCounts.get(id) ?? 0;
     const known = cache.get(id);
-    if (known !== undefined && sameCoverage(known.coverage, await store.readCoverage(scope))) return known;
-    const read = await store.readScope(scope);
-    cache.set(id, read);
-    return read;
+    if (
+      known !== undefined &&
+      known.changes === changes &&
+      sameCoverage(known.merged.coverage, await store.readCoverage(scope))
+    ) {
+      return known.merged;
+    }
+    const merged = await store.readScope(scope);
+    cache.set(id, { merged, changes });
+    return merged;
   }
 
   async function homeserverOf(user: string): Promise<string | null> {
@@ -268,6 +278,10 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
   }
 
   runtime.onChange((change) => {
+    for (const scope of change.scopes) {
+      const id = scopeId(scope);
+      changeCounts.set(id, (changeCounts.get(id) ?? 0) + 1);
+    }
     void requestRebuild(change.scopes.map(({ author }) => author));
   });
 

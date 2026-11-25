@@ -1,5 +1,5 @@
 import { createCrawler } from './crawler';
-import type { StoreChange } from './crawler.types';
+import { DEFAULT_CRAWLER_OPTIONS, type StoreChange } from './crawler.types';
 import { IndexerAbortedError, IndexerError } from './indexer.errors';
 import {
   type CoordinationMessage,
@@ -8,8 +8,10 @@ import {
   type IndexerRuntime,
   type RuntimeParams,
   type RuntimeStatus,
+  type SavedIndexStatus,
   type Schedule,
 } from './runtime.types';
+import { fitToBudget, indexFileName, loadSavedIndex, snapshotIndex, writerIdOf } from './savedIndex';
 import { scopeId } from './store.helpers';
 import type { ScopeKey } from './store.types';
 
@@ -53,6 +55,8 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
   const coordination = params.coordination ?? null;
   const options = { ...DEFAULT_RUNTIME_OPTIONS, ...params.options };
   const crawler = createCrawler({ transport, store, domain, now, options: options.crawler });
+  const crawlerOptions = { ...DEFAULT_CRAWLER_OPTIONS, ...options.crawler };
+  const windowGroups = new Set(domain.groups.filter(({ history }) => history === 'window').map(({ id }) => id));
   const tab = Math.random().toString(36).slice(2);
 
   let seed: string | null = null;
@@ -80,6 +84,15 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
   let cancelFlush: (() => void) | null = null;
   let lastSyncAt: number | null = null;
   let lastError: Error | null = null;
+  /** The saved index is read before the first crawl after a start. */
+  let loadDue = false;
+  /** Records read from saved files may still miss their data. */
+  let hydrateDue = false;
+  /** Whether this tab committed anything since its last save. */
+  let dirty = false;
+  let lastSaveAt: number | null = null;
+  let saving: Promise<void> | null = null;
+  let saved: SavedIndexStatus = { loadedFiles: 0, ignoredFiles: 0, lastSavedAt: null, error: null };
   let nextId = 0;
   const waitingFor = new Set<string>();
   /** This tab's requests sent to the crawling tab, by id. */
@@ -94,6 +107,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     lastSyncAt,
     lastError,
     stats: crawler.stats(),
+    ...(options.savedIndex ? { savedIndex: { ...saved } } : {}),
   });
   const emitStatus = () => {
     const snapshot = status();
@@ -113,10 +127,84 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     if (cancelFlush === null) cancelFlush = schedule(flushChange, options.changeDebounceMs);
   }
 
-  crawler.onCommit((change) => {
+  function announce(change: StoreChange) {
     noteChange(change);
     coordination?.post({ type: 'changed', change });
+  }
+
+  crawler.onCommit((change) => {
+    dirty = true;
+    announce(change);
   });
+
+  /** Never rejects: a failure goes to the status. */
+  async function loadIndex(current: string): Promise<void> {
+    try {
+      const writer = await writerIdOf(store);
+      if (writer === null) return;
+      const outcome = await loadSavedIndex({
+        transport,
+        store,
+        seed: current,
+        writer,
+        now: now(),
+        expiryMs: options.writerExpiryMs,
+      });
+      saved = { ...saved, loadedFiles: outcome.loaded, ignoredFiles: outcome.ignored };
+      if (outcome.loaded > 0) {
+        dirty = true;
+        hydrateDue = true;
+      }
+      if (outcome.change.scopes.length > 0 || outcome.change.seeds.length > 0) announce(outcome.change);
+    } catch (error) {
+      saved = { ...saved, error: asError(error) };
+    }
+  }
+
+  async function writeIndex(current: string): Promise<void> {
+    const writer = await writerIdOf(store);
+    if (writer === null) return;
+    const model = await snapshotIndex({
+      store,
+      domain,
+      seed: current,
+      writer,
+      writtenAt: now(),
+      hops: crawlerOptions.hops,
+      windowDays: crawlerOptions.windowDays,
+    });
+    await transport.writeIndexFile(
+      indexFileName(writer),
+      await fitToBudget(model, options.fileBudgetBytes, windowGroups),
+    );
+  }
+
+  /**
+   * Writes this tab's file after `after` settles, when anything changed since the last save and, unless `force`, the
+   * last save is old enough. Never rejects, and never waits for a save already running.
+   */
+  function save(force: boolean, after: Promise<void> | null = null): void {
+    const current = seed;
+    if (!options.savedIndex || current === null || saving !== null) return;
+    if (!force && lastSaveAt !== null && now() - lastSaveAt < options.saveMinIntervalMs) return;
+    saving = (after ?? Promise.resolve())
+      .then(async () => {
+        if (!dirty) return;
+        dirty = false;
+        try {
+          await writeIndex(current);
+          lastSaveAt = now();
+          saved = { ...saved, lastSavedAt: lastSaveAt, error: null };
+        } catch (error) {
+          dirty = true;
+          saved = { ...saved, error: asError(error) };
+        }
+      })
+      .then(() => {
+        saving = null;
+        emitStatus();
+      });
+  }
 
   const canCrawl = () => started && !paused && leading;
 
@@ -180,6 +268,10 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
   async function syncScope(waiters: Task[], current: string, signal: AbortSignal, outer: AbortSignal) {
     try {
       await crawler.syncScope(current, signal);
+      if (hydrateDue) {
+        const { remaining } = await crawler.hydrate(current, undefined, signal);
+        if (remaining === 0) hydrateDue = false;
+      }
     } catch (error) {
       if (signal.aborted && !outer.aborted) {
         preempted += 1;
@@ -200,6 +292,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     preempted = 0;
     for (const task of waiters) task.resolve();
     scheduleSync(options.syncIntervalMs);
+    save(false);
   }
 
   function startScopeSync(current: string): Promise<void> {
@@ -212,9 +305,9 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
   }
 
   /**
-   * Starts the next crawl: requests first, then a scope sync, unless the scope sync was pre-empted too often: then
-   * only the requests that pre-empted it go first. A request arriving during a scope sync that may yield aborts it at
-   * its next safe point.
+   * Starts the next crawl: after a start the saved index first, then requests, then a scope sync, unless the scope
+   * sync was pre-empted too often: then only the requests that pre-empted it go first. A request arriving during a
+   * scope sync that may yield aborts it at its next safe point.
    */
   function pump() {
     const current = seed;
@@ -225,12 +318,17 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     }
     const scopeWanted = periodicDue || scopeDue.length > 0;
     const forced = scopeWanted && preempted >= MAX_PREEMPTIONS && aheadOfForced === 0;
-    const task = forced ? undefined : queue.shift();
-    if (task !== undefined && aheadOfForced > 0) aheadOfForced -= 1;
     let work: Promise<void>;
-    if (task !== undefined) work = execute(task, current, controller.signal);
-    else if (scopeWanted) work = startScopeSync(current);
-    else return;
+    if (loadDue) {
+      loadDue = false;
+      work = loadIndex(current);
+    } else {
+      const task = forced ? undefined : queue.shift();
+      if (task !== undefined && aheadOfForced > 0) aheadOfForced -= 1;
+      if (task !== undefined) work = execute(task, current, controller.signal);
+      else if (scopeWanted) work = startScopeSync(current);
+      else return;
+    }
     running = work.then(() => {
       running = null;
       preempt = null;
@@ -323,8 +421,9 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     const release = releaseLock;
     releaseLock = null;
     if (release === null) return;
-    if (running === null) release();
-    else void running.then(release);
+    const busy = [running, saving].filter((work): work is Promise<void> => work !== null);
+    if (busy.length === 0) release();
+    else void Promise.all(busy).then(release);
   }
 
   function onMessage(message: CoordinationMessage) {
@@ -415,6 +514,11 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
       lastError = null;
       preempted = 0;
       aheadOfForced = 0;
+      loadDue = options.savedIndex;
+      hydrateDue = false;
+      dirty = false;
+      lastSaveAt = null;
+      saved = { loadedFiles: 0, ignoredFiles: 0, lastSavedAt: null, error: null };
       if (coordination !== null) unsubscribe = coordination.subscribe(onMessage);
       seekLead();
       emitStatus();
@@ -423,6 +527,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     pause() {
       if (paused) return;
       paused = true;
+      if (leading) save(true, running);
       stepDown();
       emitStatus();
     },

@@ -3,9 +3,13 @@ import { buildPost, type BuiltPost } from 'pubky-social-specs';
 import { describe, expect, it } from 'vitest';
 import type { CrawlerOptions } from '../crawler.types';
 import { FakeNetwork } from '../fakeNetwork';
+import { decodeIndexFile } from '../indexFile';
 import { createMemoryStore } from '../memoryStore';
 import { fakeTime, settle } from '../runtime.fixtures';
+import type { RuntimeOptions } from '../runtime.types';
+import type { IndexStore } from '../store.types';
 import type { IndexerTransport } from '../transport.types';
+import { SOCIAL_ACTIVITY, SOCIAL_GRAPH } from './social.domain';
 import { ALICE, at, BRAN, CLEO, DION, MINUTE_MS, socialNetwork, T0 } from './social.fixtures';
 import type { SocialData } from './social.types';
 import { createSocialIndexer, type SocialChange } from './socialIndexer';
@@ -17,8 +21,35 @@ const authorStream = (author: string) =>
   `/v1/stream/posts/keys?source=author&viewer_id=${ALICE}&sorting=timeline&limit=10&author_id=${author}`;
 const key = (author: string, post: BuiltPost) => `${author}:${post.id}`;
 
-/** The fixture network on two homeservers, a shared store, and an indexer over any transport. */
-function socialWorld(crawler: Partial<CrawlerOptions> = {}) {
+/** Polls with real timers: the saved index gzips outside the fake clock. */
+async function until(check: () => boolean | Promise<boolean>, what: string): Promise<void> {
+  for (let i = 0; i < 1000; i += 1) {
+    if (await check()) return;
+    await new Promise<void>((resolve) => setTimeout(resolve, 2));
+  }
+  throw new Error(`timed out waiting for ${what}`);
+}
+
+/** The network as a transport that counts the index files it writes. */
+function countingWrites(network: FakeNetwork) {
+  const state = { writes: 0 };
+  const transport: IndexerTransport = {
+    resolveHomeserver: (user) => network.resolveHomeserver(user),
+    readEvents: (request) => network.readEvents(request),
+    getPublic: (request) => network.getPublic(request),
+    listIndexFiles: () => network.listIndexFiles(),
+    readIndexFile: (name) => network.readIndexFile(name),
+    writeIndexFile: (name, bytes) => {
+      state.writes += 1;
+      return network.writeIndexFile(name, bytes);
+    },
+    deleteIndexFile: (name) => network.deleteIndexFile(name),
+  };
+  return { transport, state };
+}
+
+/** The fixture network on two homeservers, a shared store, and an indexer over any transport and store. */
+function socialWorld(crawler: Partial<CrawlerOptions> = {}, runtime: Partial<RuntimeOptions> = {}) {
   const fixture = socialNetwork();
   const network = new FakeNetwork().addHomeserver('hs1').addHomeserver('hs2');
   network.addUser(ALICE, 'hs1').addUser(BRAN, 'hs1').addUser(CLEO, 'hs2').addUser(DION, 'hs2');
@@ -26,13 +57,13 @@ function socialWorld(crawler: Partial<CrawlerOptions> = {}) {
   for (const { author, path } of fixture.deletes) network.del(author, path);
   const store = createMemoryStore<SocialData>();
   const time = fakeTime(T0 + DAY_MS);
-  const indexerOf = (transport: IndexerTransport = network) =>
+  const indexerOf = (transport: IndexerTransport = network, on: IndexStore<SocialData> = store) =>
     createSocialIndexer({
       transport,
-      store,
+      store: on,
       now: () => time.clock.now,
       schedule: time.schedule,
-      options: { crawler },
+      options: { ...runtime, crawler },
     });
   return { fixture, network, time, indexerOf };
 }
@@ -155,5 +186,43 @@ describe('createSocialIndexer', () => {
 
     expect(answer.json).toMatchObject({ post_keys: [key(BRAN, image), key(CLEO, quote), key(BRAN, repost)] });
     expect(calls).toBe(0);
+  });
+
+  it('starts a second device from the first one’s saved index and serves its posts once fetched', async () => {
+    const { fixture, network, indexerOf } = socialWorld({}, { savedIndex: true });
+    const { image, quote, repost } = fixture.posts;
+    const first = indexerOf();
+    first.start(ALICE);
+    await first.ready();
+    await until(async () => (await network.listIndexFiles()).length === 1, 'the first save');
+
+    const second = indexerOf(network, createMemoryStore<SocialData>());
+    second.start(ALICE);
+    await second.ready();
+    const answer = await second.request({ url: FOLLOWING, method: 'GET' });
+
+    expect(second.status().savedIndex).toMatchObject({ loadedFiles: 1, error: null });
+    expect(answer.json).toMatchObject({ post_keys: [key(BRAN, image), key(CLEO, quote), key(BRAN, repost)] });
+  });
+
+  it('never writes a visited user or a post loaded alone into the saved index', async () => {
+    const { fixture, network, indexerOf } = socialWorld({ hops: 1 }, { savedIndex: true });
+    const { transport, state } = countingWrites(network);
+    const indexer = indexerOf(transport);
+    indexer.start(ALICE);
+    await indexer.ready();
+    await until(() => state.writes === 1, 'the first save');
+
+    await indexer.ensureUser(DION);
+    await indexer.ensurePost(ALICE, fixture.posts.gone.id);
+    indexer.pause();
+    await until(() => state.writes === 2, 'the save on pause');
+
+    const [name] = await network.listIndexFiles();
+    const file = await decodeIndexFile((await network.readIndexFile(name)) ?? new Uint8Array());
+    expect(file.members.map(({ user }) => user).sort()).toEqual([ALICE, BRAN, CLEO].sort());
+    expect(file.runs.length).toBeGreaterThan(0);
+    expect(file.runs.map(({ author }) => author)).not.toContain(DION);
+    expect(file.runs.every(({ group }) => group === SOCIAL_GRAPH || group === SOCIAL_ACTIVITY)).toBe(true);
   });
 });
