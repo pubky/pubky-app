@@ -168,6 +168,27 @@ describe('saved index', () => {
     expect(again.counts.bodies).toBe(0);
   });
 
+  it('reads the saved index again after the next scope sync when it could not be read at start', async () => {
+    const w = world();
+    const a = device(w);
+    a.runtime.start('alice');
+    await a.synced();
+    await until(() => a.counts.writes === 1, 'the first save');
+    const list = w.network.listIndexFiles.bind(w.network);
+    // Like an account's private storage before its session is restored
+    w.network.listIndexFiles = () => Promise.reject(new Error('no session yet'));
+
+    const b = device(w);
+    b.runtime.start('alice');
+    await b.synced();
+    expect(b.runtime.status().savedIndex).toMatchObject({ loadedFiles: 0, error: { message: 'no session yet' } });
+
+    w.network.listIndexFiles = list;
+    await b.runtime.refresh();
+    await until(() => b.runtime.status().savedIndex?.loadedFiles === 1, 'the second load');
+    expect(b.runtime.status().savedIndex?.error).toBeNull();
+  });
+
   it('ignores a file of another seed, a corrupt one and one of an unknown version', async () => {
     const w = world();
     await w.network.writeIndexFile('other.idx', await encodeIndexFile(emptyModel('other', 'dave', NOW)));

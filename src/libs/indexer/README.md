@@ -132,7 +132,9 @@ leaf scopes are no members' domain groups, so what the user opened is never writ
 sealed before writing and opened after reading; a file that does not open is ignored.
 
 At start the crawling tab applies the files of the same seed before its first sync: the runs merge in any order,
-the homeservers spare their lookups, the high-water marks let the next sync catch a restore. A record without data
+the homeservers spare their lookups, the high-water marks let the next sync catch a restore. Files that could not be
+listed or read, such as an account's before its session is restored, are read again after the next scope
+sync. A record without data
 never erases a stored body at the same cursor. Other writers' files older than `writerExpiryMs` are deleted. The
 tab saves after a scope sync that changed something, at most every `saveMinIntervalMs`, and when paused. Over
 `fileBudgetBytes` (200 MB) data goes first, then windowed history, each oldest first and farthest hop first.

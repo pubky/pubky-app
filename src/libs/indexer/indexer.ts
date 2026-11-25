@@ -101,6 +101,8 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
   let asOf: number | null = null;
   /** The saved index is read before the first crawl after a start. */
   let loadDue = false;
+  /** A saved index that could not be read is read again after the next scope sync. */
+  let loadAgain = false;
   /** Records read from saved files may still miss their data. */
   let hydrateDue = false;
   /** Whether this tab committed anything since its last save. */
@@ -178,7 +180,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
         reviveData: domain.reviveData?.bind(domain),
         open: sealer === undefined ? undefined : (bytes, name) => sealer.open(bytes, name),
       });
-      saved = { ...saved, loadedFiles: outcome.loaded, ignoredFiles: outcome.ignored };
+      saved = { ...saved, loadedFiles: outcome.loaded, ignoredFiles: outcome.ignored, error: null };
       if (outcome.writtenAt !== null) noteAsOf(outcome.writtenAt);
       if (outcome.loaded > 0) {
         dirty = true;
@@ -187,6 +189,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
       if (outcome.change.scopes.length > 0 || outcome.change.seeds.length > 0) announce(outcome.change);
     } catch (error) {
       saved = { ...saved, error: asError(error) };
+      loadAgain = true;
     }
   }
 
@@ -331,6 +334,9 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
 
   function startScopeSync(current: string): Promise<void> {
     periodicDue = false;
+    // Its storage may answer by now, such as an account's once its session is restored.
+    loadDue = loadDue || loadAgain;
+    loadAgain = false;
     const waiters = scopeDue;
     scopeDue = [];
     const outer = controller.signal;
@@ -595,6 +601,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
       preempted = 0;
       aheadOfForced = 0;
       loadDue = options.savedIndex && next !== null;
+      loadAgain = false;
       hydrateDue = false;
       dirty = false;
       lastSaveAt = null;
