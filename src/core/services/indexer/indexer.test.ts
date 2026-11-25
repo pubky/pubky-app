@@ -91,6 +91,7 @@ describe('IndexerService', () => {
 
     expect(createSocialIndexer).toHaveBeenCalledOnce();
     expect(createIdbStore).toHaveBeenCalledWith(`pubky-index-${ALICE}`);
+    expect(createSocialIndexer).toHaveBeenCalledWith(expect.objectContaining({ options: { savedIndex: true } }));
     expect(createBrowserCoordination).toHaveBeenCalledWith(null, `pubky-index-${ALICE}`);
     expect(fakes.indexers[0].start).toHaveBeenCalledExactlyOnceWith(ALICE);
     expect(IndexerService.current()).toBe(fakes.indexers[0]);
@@ -102,6 +103,7 @@ describe('IndexerService', () => {
 
     expect(createSocialIndexer).toHaveBeenCalledOnce();
     expect(createIdbStore).toHaveBeenCalledWith('pubky-index-visitor');
+    expect(createSocialIndexer).toHaveBeenCalledWith(expect.objectContaining({ options: { savedIndex: false } }));
     expect(createBrowserCoordination).not.toHaveBeenCalled();
     expect(HomeserverService.subscribeOwnedWrites).not.toHaveBeenCalled();
     expect(fakes.indexers[0].start).toHaveBeenCalledExactlyOnceWith(null);

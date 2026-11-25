@@ -86,6 +86,8 @@ export class IndexerService {
       store,
       now: () => Date.now(),
       coordination,
+      // The account's other devices start warm from the file this one saves under its private tree; a visitor has none.
+      options: { savedIndex: owner !== null },
     });
     // Every app write lands through HomeserverService; a refresh of the account makes it part of the answers.
     const stopRefreshing =
