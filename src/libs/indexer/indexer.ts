@@ -1,5 +1,6 @@
 import { createCrawler } from './crawler';
-import { DEFAULT_CRAWLER_OPTIONS, type StoreChange } from './crawler.types';
+import { DEFAULT_CRAWLER_OPTIONS, type LeafRequest, type StoreChange } from './crawler.types';
+import { MAX_CURSOR } from './cursor';
 import { IndexerAbortedError, IndexerError, IndexerNotStartedError } from './indexer.errors';
 import {
   type Coordination,
@@ -30,12 +31,19 @@ const defaultSchedule: Schedule = (callback, ms) => {
 
 const asError = (error: unknown): Error => (error instanceof Error ? error : new Error(String(error)));
 
+const byId = (...lists: ReadonlyArray<readonly ScopeKey[]>): ScopeKey[] => [
+  ...new Map(lists.flat().map((scope): [string, ScopeKey] => [scopeId(scope), scope])).values(),
+];
+
 /** Both changes in one, each scope and seed once. */
 function mergeChanges(a: StoreChange, b: StoreChange): StoreChange {
-  const scopes = new Map(a.scopes.map((scope): [string, ScopeKey] => [scopeId(scope), scope]));
-  for (const scope of b.scopes) scopes.set(scopeId(scope), scope);
-  return { scopes: [...scopes.values()], seeds: [...new Set([...a.seeds, ...b.seeds])] };
+  const merged: StoreChange = { scopes: byId(a.scopes, b.scopes), seeds: [...new Set([...a.seeds, ...b.seeds])] };
+  const forgotten = byId(a.forgotten ?? [], b.forgotten ?? []);
+  return forgotten.length === 0 ? merged : { ...merged, forgotten };
 }
+
+const userKey = (user: string) => JSON.stringify(['user', user]);
+const leafKey = (author: string, group: string) => JSON.stringify(['leaf', author, group]);
 
 interface Task {
   request: CrawlRequest;
@@ -128,6 +136,10 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
   }
 
   function noteChange(change: StoreChange) {
+    // A forgotten scope loads again on the next ensure, in whichever tab forgot it.
+    for (const { author, group } of change.forgotten ?? []) {
+      ensured.delete(domain.groups.some(({ id }) => id === group) ? userKey(author) : leafKey(author, group));
+    }
     pendingChange = pendingChange === null ? change : mergeChanges(pendingChange, change);
     if (cancelFlush === null) cancelFlush = schedule(flushChange, options.changeDebounceMs);
   }
@@ -497,6 +509,29 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     return promise;
   }
 
+  async function forget(target: { users?: readonly string[]; leaves?: readonly LeafRequest[] }): Promise<void> {
+    const users = target.users ?? [];
+    const leaves = target.leaves ?? [];
+    for (const user of users) ensured.delete(userKey(user));
+    for (const { author, group } of leaves) ensured.delete(leafKey(author, group));
+    const members = seed === null ? new Map<string, number>() : await store.readScopeMembers(seed);
+    const homeserverOf = async (user: string) => (await store.readUserHomeserver(user))?.homeserver ?? null;
+    const scopes: ScopeKey[] = [];
+    for (const user of users) {
+      const homeserver = await homeserverOf(user);
+      if (homeserver === null || user === seed || members.has(user)) continue;
+      for (const { id } of domain.groups) scopes.push({ author: user, homeserver, group: id });
+    }
+    for (const { author, group } of leaves) {
+      const homeserver = await homeserverOf(author);
+      if (homeserver !== null) scopes.push({ author, homeserver, group });
+    }
+    if (scopes.length === 0) return;
+    // Every cursor is at or below the largest one, so the eviction drops each scope whole.
+    await store.commit({ evictions: scopes.map((scope) => ({ scope, cutoff: MAX_CURSOR })) });
+    announce({ scopes, seeds: [], forgotten: scopes });
+  }
+
   function stop() {
     if (!started) return;
     started = false;
@@ -559,15 +594,20 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
       // Visitor mode has no scope to sync.
       return started && seed === null ? Promise.resolve() : submit({ kind: 'scope' });
     },
-    ensureUser: (user) => ensure(JSON.stringify(['user', user]), { kind: 'users', users: [user] }, options.ensureTtlMs),
+    ensureUser: (user) => ensure(userKey(user), { kind: 'users', users: [user] }, options.ensureTtlMs),
     ensureLeaf: (leaf) =>
       ensure(
-        JSON.stringify(['leaf', leaf.author, leaf.group]),
+        leafKey(leaf.author, leaf.group),
         { kind: 'leaf', leaf: { author: leaf.author, group: leaf.group, paths: [...leaf.paths] } },
         options.ensureTtlMs,
       ),
-    backfill: (author, group, pages) =>
-      ensure(JSON.stringify(['backfill', author, group, pages]), { kind: 'backfill', author, group, pages }, 0),
+    backfill: (author, group, pages, backfillOptions) =>
+      ensure(
+        JSON.stringify(['backfill', author, group]),
+        { kind: 'backfill', author, group, pages },
+        backfillOptions?.force === true ? 0 : options.backfillMinIntervalMs,
+      ),
+    forget,
     onChange(listener) {
       changeListeners.add(listener);
       return () => {

@@ -90,6 +90,8 @@ export interface StoreChange {
   scopes: ScopeKey[];
   /** Seeds whose scope members changed. */
   seeds: string[];
+  /** Scopes deleted whole because nothing needs them any longer (`forget`), also listed in `scopes`. */
+  forgotten?: ScopeKey[];
 }
 
 export interface HydrateResult {

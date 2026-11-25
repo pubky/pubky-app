@@ -14,6 +14,26 @@ import type { AuthorRecords, GroupHistory, Membership, SocialData } from './soci
 import { buildSocialView, type SocialView } from './social.view';
 
 const POST_GROUP_PREFIX = 'post:';
+const PROFILE_GROUP = 'profile';
+
+/**
+ * What one tab keeps loaded on demand. Past a limit the least recently ensured item leaves the view and its scopes
+ * leave the store.
+ */
+export interface SocialLimits {
+  /** Users loaded with `ensureUser`. */
+  maxVisitedUsers: number;
+  /** Posts loaded with `ensurePost`. */
+  maxLoosePosts: number;
+  /** Profiles loaded with `ensureProfile`. */
+  maxProfiles: number;
+}
+
+export const DEFAULT_SOCIAL_LIMITS: Readonly<SocialLimits> = Object.freeze({
+  maxVisitedUsers: 50,
+  maxLoosePosts: 500,
+  maxProfiles: 500,
+});
 
 export interface SocialIndexerParams {
   transport: IndexerTransport;
@@ -21,8 +41,9 @@ export interface SocialIndexerParams {
   /** Wall clock in ms. */
   now: () => number;
   schedule?: Schedule;
+  /** Its owner closes it: the indexer never does. */
   coordination?: Coordination | null;
-  options?: Partial<RuntimeOptions>;
+  options?: Partial<RuntimeOptions & SocialLimits>;
 }
 
 export interface SocialChange {
@@ -52,7 +73,10 @@ export interface SocialIndexer {
    * author joins no stream, ranking or count.
    */
   ensurePost(author: string, postId: string): Promise<void>;
-  backfill(author: string, group: string, pages: number): Promise<void>;
+  /** Loads only the user's profile, for an avatar or a name; a user the view lacks joins it as `referenced`. */
+  ensureProfile(user: string): Promise<void>;
+  /** Rate limited per author and group unless `force` (`backfillMinIntervalMs`). */
+  backfill(author: string, group: string, pages: number, options?: { force?: boolean }): Promise<void>;
   /** An empty view until the first build. */
   view(): SocialView;
   /**
@@ -69,6 +93,26 @@ export interface SocialIndexer {
   onChange(listener: (change: SocialChange) => void): () => void;
   status(): RuntimeStatus;
   onStatus(listener: (status: RuntimeStatus) => void): () => void;
+}
+
+/** The leaf scope holding a user's profile alone. */
+export const profileLeaf = (user: string): LeafRequest => ({
+  author: user,
+  group: PROFILE_GROUP,
+  paths: [PROFILE_PATH],
+});
+
+/** Moves `key` to the most recent end and returns the values pushed out past `max`, least recent first. */
+function touch<V>(items: Map<string, V>, key: string, value: V, max: number): V[] {
+  items.delete(key);
+  items.set(key, value);
+  const out: V[] = [];
+  for (const [old, item] of items) {
+    if (items.size <= max || old === key) break;
+    items.delete(old);
+    out.push(item);
+  }
+  return out;
 }
 
 /** The leaf scope holding every version of one post. */
@@ -158,6 +202,7 @@ const membershipsOf = (loaded: ReadonlyMap<string, Loaded>) =>
 
 export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer {
   const { store, now } = params;
+  const limits: SocialLimits = { ...DEFAULT_SOCIAL_LIMITS, ...params.options };
   const runtime = createIndexerRuntime({ ...params, domain: createSocialDomain() });
   const empty = buildSocialView([]);
 
@@ -170,8 +215,12 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
   let routed: { view: SocialView; syncing: boolean; router: NexusRouter } | null = null;
   let viewError: Error | null = null;
   let firstSyncSettled = false;
-  const ensuredUsers = new Set<string>();
+  /** What was loaded on demand, least recently ensured first. */
+  const ensuredUsers = new Map<string, string>();
   const ensuredPosts = new Map<string, LeafRequest>();
+  const ensuredProfiles = new Map<string, LeafRequest>();
+  /** Scopes another tab, or this one, forgot: what still has none drops out of the ensured items. */
+  let pendingForgotten: ScopeKey[] = [];
   /** Merged scopes by scope id, with the scope's change count when read. */
   const cache = new Map<string, { merged: MergedRuns<SocialData>; changes: number }>();
   /** Per scope id, the changes reported for it: data filled in at a stored cursor leaves the coverage as it was. */
@@ -240,16 +289,46 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
     }
   }
 
+  /** Uses an ensured profile over the stored one of an author the view holds only as referenced, when newer. */
+  async function addProfiles(loaded: Map<string, Loaded>): Promise<void> {
+    for (const leaf of ensuredProfiles.values()) {
+      const homeserver = await homeserverOf(leaf.author);
+      if (homeserver === null) continue;
+      const scope = await served({ author: leaf.author, homeserver, group: leaf.group });
+      if (scope.coverage.length === 0) continue;
+      await load(loaded, leaf.author, 'referenced', null);
+      const target = loaded.get(leaf.author);
+      if (target === undefined || target.membership !== 'referenced' || target.homeserver !== homeserver) continue;
+      const stored = target.graph.entries.get(PROFILE_PATH);
+      const fresh = scope.entries.get(PROFILE_PATH);
+      if (fresh !== undefined && (stored === undefined || fresh.cursor > stored.cursor)) target.graph = scope;
+    }
+  }
+
+  async function dropForgotten(): Promise<void> {
+    const forgotten = pendingForgotten;
+    pendingForgotten = [];
+    for (const scope of forgotten) {
+      // An activity scope may stay empty for a user who is loaded; the graph says.
+      if (scope.group === SOCIAL_ACTIVITY || (await store.readCoverage(scope)).length > 0) continue;
+      if (scope.group === SOCIAL_GRAPH) ensuredUsers.delete(scope.author);
+      else if (scope.group === PROFILE_GROUP) ensuredProfiles.delete(scope.author);
+      else ensuredPosts.delete(JSON.stringify([scope.author, scope.group]));
+    }
+  }
+
   async function buildOnce(
     forSeed: string | null,
   ): Promise<{ view: SocialView; memberships: Map<string, Membership>; hasScope: boolean }> {
     const members = forSeed === null ? new Map<string, number>() : await store.readScopeMembers(forSeed);
     const hops = new Map<string, number>(members);
     if (forSeed !== null && !hops.has(forSeed)) hops.set(forSeed, 0);
+    await dropForgotten();
     const loaded = new Map<string, Loaded>();
     for (const [author, hop] of hops) await load(loaded, author, 'member', hop);
-    for (const user of ensuredUsers) if (!hops.has(user)) await load(loaded, user, 'visited', null);
+    for (const user of ensuredUsers.keys()) if (!hops.has(user)) await load(loaded, user, 'visited', null);
     await addLeaves(loaded);
+    await addProfiles(loaded);
     const records = [...loaded].map(([author, entry]) => authorRecords(author, entry));
     return { view: buildSocialView(records), memberships: membershipsOf(loaded), hasScope: members.size > 0 };
   }
@@ -299,6 +378,7 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
   }
 
   runtime.onChange((change) => {
+    pendingForgotten.push(...(change.forgotten ?? []));
     for (const scope of change.scopes) {
       const id = scopeId(scope);
       changeCounts.set(id, (changeCounts.get(id) ?? 0) + 1);
@@ -312,6 +392,20 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
     firstSyncSettled = true;
     void requestRebuild([]);
   });
+
+  /** Waits for a load and for what it pushed out to be forgotten, then for the view. */
+  function loadedThen(load: Promise<void>, forgetting: Promise<void> | null): Promise<void> {
+    // A failed forget leaves only rows the view no longer reads.
+    const forgotten = forgetting?.catch(() => undefined) ?? null;
+    return Promise.all([load, forgotten]).then(() => requestRebuild([]));
+  }
+
+  function ensureLeaf(items: Map<string, LeafRequest>, key: string, leaf: LeafRequest, max: number): Promise<void> {
+    const known = items.has(key);
+    const evicted = touch(items, key, leaf, max);
+    if (!known || evicted.length > 0) void requestRebuild([]);
+    return loadedThen(runtime.ensureLeaf(leaf), evicted.length === 0 ? null : runtime.forget({ leaves: evicted }));
+  }
 
   const status = (): RuntimeStatus => {
     const base = runtime.status();
@@ -327,6 +421,8 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
         routed = null;
         ensuredUsers.clear();
         ensuredPosts.clear();
+        ensuredProfiles.clear();
+        pendingForgotten = [];
         cache.clear();
         readyPromise = new Promise<void>((resolve) => {
           markReady = resolve;
@@ -352,22 +448,17 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
     resume: () => runtime.resume(),
     refresh: (users) => runtime.refresh(users),
     ensureUser(user) {
-      if (!ensuredUsers.has(user)) {
-        ensuredUsers.add(user);
-        void requestRebuild([]);
-      }
-      return runtime.ensureUser(user).then(() => requestRebuild([]));
+      const known = ensuredUsers.has(user);
+      const evicted = touch(ensuredUsers, user, user, limits.maxVisitedUsers);
+      if (!known || evicted.length > 0) void requestRebuild([]);
+      return loadedThen(runtime.ensureUser(user), evicted.length === 0 ? null : runtime.forget({ users: evicted }));
     },
     ensurePost(author, postId) {
       const leaf = postLeaf(author, postId);
-      const key = JSON.stringify([author, leaf.group]);
-      if (!ensuredPosts.has(key)) {
-        ensuredPosts.set(key, leaf);
-        void requestRebuild([]);
-      }
-      return runtime.ensureLeaf(leaf).then(() => requestRebuild([]));
+      return ensureLeaf(ensuredPosts, JSON.stringify([author, leaf.group]), leaf, limits.maxLoosePosts);
     },
-    backfill: (author, group, pages) => runtime.backfill(author, group, pages),
+    ensureProfile: (user) => ensureLeaf(ensuredProfiles, user, profileLeaf(user), limits.maxProfiles),
+    backfill: (author, group, pages, options) => runtime.backfill(author, group, pages, options),
     view: () => current,
     ready: () => readyPromise,
     whenSynced: () => syncedPromise,

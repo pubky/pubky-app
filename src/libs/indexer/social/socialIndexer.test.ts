@@ -14,7 +14,7 @@ import { UnavailableQueryError } from './queries/queries.errors';
 import { SOCIAL_ACTIVITY, SOCIAL_GRAPH } from './social.domain';
 import { ALICE, at, BRAN, CLEO, DION, MINUTE_MS, socialNetwork, T0 } from './social.fixtures';
 import type { SocialData } from './social.types';
-import { createSocialIndexer, type SocialChange } from './socialIndexer';
+import { createSocialIndexer, type SocialChange, type SocialLimits } from './socialIndexer';
 
 const DAY_MS = 24 * 60 * MINUTE_MS;
 const DEBOUNCE = 250;
@@ -78,7 +78,7 @@ function holding(network: FakeNetwork, users: readonly string[]) {
 }
 
 /** The fixture network on two homeservers, a shared store, and an indexer over any transport and store. */
-function socialWorld(crawler: Partial<CrawlerOptions> = {}, runtime: Partial<RuntimeOptions> = {}) {
+function socialWorld(crawler: Partial<CrawlerOptions> = {}, runtime: Partial<RuntimeOptions & SocialLimits> = {}) {
   const fixture = socialNetwork();
   const network = new FakeNetwork().addHomeserver('hs1').addHomeserver('hs2');
   network.addUser(ALICE, 'hs1').addUser(BRAN, 'hs1').addUser(CLEO, 'hs2').addUser(DION, 'hs2');
@@ -94,7 +94,7 @@ function socialWorld(crawler: Partial<CrawlerOptions> = {}, runtime: Partial<Run
       schedule: time.schedule,
       options: { ...runtime, crawler },
     });
-  return { fixture, network, time, indexerOf };
+  return { fixture, network, time, indexerOf, store };
 }
 
 describe('createSocialIndexer', () => {
@@ -397,5 +397,48 @@ describe('createSocialIndexer', () => {
       }
       await indexer.refresh();
     });
+  });
+
+  it('loads a profile alone, for an avatar, without the user’s follows or posts', async () => {
+    const { indexerOf, store } = socialWorld({ hops: 0 });
+    const indexer = indexerOf();
+    indexer.start(ALICE);
+    await indexer.whenSynced();
+
+    await indexer.ensureProfile(CLEO);
+
+    const view = indexer.view();
+    expect(view.profile(CLEO)).toMatchObject({ name: 'Cleo', image: 'https://example.com/cleo.png' });
+    expect(view.membershipOf(CLEO)).toBe('referenced');
+    expect(view.postsBy(CLEO)).toEqual([]);
+    const groups = (await store.listScopes()).filter(({ author }) => author === CLEO).map(({ group }) => group);
+    expect(groups).toEqual(['profile']);
+  });
+
+  it('forgets the least recently loaded user and post past the limits, and loads them again on demand', async () => {
+    const { fixture, indexerOf, store } = socialWorld({ hops: 0 }, { maxVisitedUsers: 1, maxLoosePosts: 1 });
+    const { collection, orphan } = fixture.posts;
+    const indexer = indexerOf();
+    indexer.start(ALICE);
+    await indexer.whenSynced();
+    const scopesOf = async (author: string) =>
+      (await store.listScopes()).filter((scope) => scope.author === author).map(({ group }) => group);
+
+    await indexer.ensureUser(BRAN);
+    await indexer.ensureUser(CLEO);
+    await indexer.ensurePost(DION, collection.id);
+    await indexer.ensurePost(DION, orphan.id);
+
+    const view = indexer.view();
+    expect(view.membershipOf(BRAN)).toBeNull();
+    expect(view.membershipOf(CLEO)).toBe('visited');
+    expect(await scopesOf(BRAN)).toEqual([]);
+    expect(view.post(DION, collection.id)).toBeNull();
+    expect(view.post(DION, orphan.id)).not.toBeNull();
+    expect(await scopesOf(DION)).toEqual([`post:${orphan.id}`]);
+
+    await indexer.ensureUser(BRAN);
+    expect(indexer.view().profile(BRAN)).toMatchObject({ name: 'Bran' });
+    expect(indexer.view().membershipOf(CLEO)).toBeNull();
   });
 });

@@ -24,6 +24,8 @@ export interface RuntimeOptions {
   writerExpiryMs: number;
   /** Largest file the save aims for, trimming windowed history oldest first. */
   fileBudgetBytes: number;
+  /** Least time between two backfills of one author's group, unless forced. */
+  backfillMinIntervalMs: number;
   crawler: Partial<CrawlerOptions>;
 }
 
@@ -35,6 +37,7 @@ export const DEFAULT_RUNTIME_OPTIONS: Readonly<RuntimeOptions> = Object.freeze({
   saveMinIntervalMs: 60 * 1000,
   writerExpiryMs: 30 * 24 * 60 * 60 * 1000,
   fileBudgetBytes: 2 * 1024 * 1024,
+  backfillMinIntervalMs: 30 * 1000,
   crawler: {},
 });
 
@@ -134,8 +137,16 @@ export interface IndexerRuntime {
   refresh(users?: readonly string[]): Promise<void>;
   ensureUser(user: string): Promise<void>;
   ensureLeaf(leaf: LeafRequest): Promise<void>;
-  /** Shares a call only while the same one is pending: each finished backfill moves further back. */
-  backfill(author: string, group: string, pages: number): Promise<void>;
+  /**
+   * Shares a call while one for the same author and group is pending, and settles at once, doing nothing, within
+   * `backfillMinIntervalMs` after one finished, unless `force`: each finished backfill moves further back.
+   */
+  backfill(author: string, group: string, pages: number, options?: { force?: boolean }): Promise<void>;
+  /**
+   * Deletes what `ensureUser` or `ensureLeaf` loaded and lets the next such call load it again. The domain groups of
+   * the seed's scope members are kept. Every tab hears it as a change listing the scopes in `forgotten`.
+   */
+  forget(target: { users?: readonly string[]; leaves?: readonly LeafRequest[] }): Promise<void>;
   /** Called after commits, from this tab or another, merged and at most once per `changeDebounceMs`. */
   onChange(listener: (change: StoreChange) => void): () => void;
   status(): RuntimeStatus;

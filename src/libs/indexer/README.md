@@ -104,6 +104,11 @@ sync. Until then answers say `syncing: true` and the bootstrap `indexed: false`,
 `ensureUser`, `ensurePost` and `request` work. A profile, a user's stream, a post and its loaded thread answer from
 what was loaded; feeds, rankings, searches and hot tags over the scope are unavailable, there being no scope.
 
+`ensureProfile` loads a profile alone, for avatars. What a tab loads on demand is capped (`maxVisitedUsers`,
+`maxLoosePosts`, `maxProfiles`): past a cap the least recently ensured item leaves the view and the runtime's `forget`
+deletes its scopes, an eviction at the largest cursor, which every tab hears. A `backfill` of one author's group runs at
+most once per `backfillMinIntervalMs` unless forced.
+
 `createIndexerRuntime` (`indexer.ts`) is that loop for any domain: one queue for every crawl, and with
 coordination only the tab holding the lock crawls. Requests never overlap and go ahead of the scope sync: one
 arriving during a scope sync aborts it at its next safe point, and the sync resumes after it from what it

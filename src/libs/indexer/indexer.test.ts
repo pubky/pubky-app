@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { ACTIVITY, DAY_MS, FOLLOWS, GRAPH, NOW, type Post, postPath, testDomain } from './crawler.fixtures';
+import { ACTIVITY, DAY_MS, FOLLOWS, GRAPH, NOW, type Post, postPath, POSTS, testDomain } from './crawler.fixtures';
 import type { StoreChange } from './crawler.types';
 import { FakeNetwork } from './fakeNetwork';
 import { createIndexerRuntime } from './indexer';
@@ -265,6 +265,59 @@ describe('createIndexerRuntime queue', () => {
     runtime.stop();
 
     await expect(queued).rejects.toThrow('aborted');
+  });
+});
+
+describe('createIndexerRuntime backfill', () => {
+  it('backfills an author’s group at most once per interval unless forced', async () => {
+    const w = world();
+    const { runtime } = runtimeOf(w);
+    runtime.start('alice');
+    await settle();
+
+    const first = runtime.backfill('bob', ACTIVITY, 1);
+    expect(runtime.backfill('bob', ACTIVITY, 2)).toBe(first);
+    await first;
+    expect(runtime.backfill('bob', ACTIVITY, 1)).toBe(first);
+
+    const forced = runtime.backfill('bob', ACTIVITY, 1, { force: true });
+    expect(forced).not.toBe(first);
+    await forced;
+    await w.time.advance(30 * 1000);
+    const later = runtime.backfill('bob', ACTIVITY, 1);
+    expect(later).not.toBe(forced);
+    await later;
+  });
+});
+
+describe('createIndexerRuntime forget', () => {
+  it('deletes a visited user and a leaf, keeps members, and loads them again on the next ensure', async () => {
+    const w = world();
+    const { runtime, state } = runtimeOf(w);
+    const changes: StoreChange[] = [];
+    runtime.onChange((change) => changes.push(change));
+    runtime.start('alice');
+    await settle();
+    const leaf = { author: 'dave', group: 'post', paths: [POSTS] };
+    await runtime.ensureUser('carol');
+    await runtime.ensureLeaf(leaf);
+    const before = state.reads.length;
+
+    await runtime.forget({ users: ['carol', 'bob'], leaves: [leaf] });
+    await w.time.advance(DEBOUNCE);
+
+    const left = (await w.store.listScopes()).map(scopeId);
+    expect(left.some((id) => id.includes('carol') || id.includes('dave'))).toBe(false);
+    expect(left.some((id) => id.includes('bob'))).toBe(true);
+    expect(idsOf(changes[changes.length - 1].forgotten ?? [])).toEqual(
+      idsOf([
+        { author: 'carol', homeserver: 'hs1', group: GRAPH },
+        { author: 'carol', homeserver: 'hs1', group: ACTIVITY },
+        { author: 'dave', homeserver: 'hs1', group: 'post' },
+      ]),
+    );
+    await runtime.ensureUser('carol');
+    expect(crawlOrder(state.reads.slice(before))).toEqual(['carol']);
   });
 });
 
