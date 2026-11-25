@@ -8,6 +8,7 @@ import {
   expectAppWithoutNexus,
   forbidNexusRequests,
   type LocalNetwork,
+  logPhase,
   NETWORK_NAMES,
   NETWORK_TEXTS,
   openPostFromTimeline,
@@ -27,12 +28,15 @@ describe('local index: writing without Nexus', () => {
 
   before(() => {
     slowCypressDown();
+    logPhase('opening the app');
     cy.visit('/');
     expectAppWithoutNexus();
     seedLocalNetwork().then((seeded) => {
       network = seeded;
     });
+    logPhase('network seeded');
     waitForServiceWorker();
+    logPhase('service worker ready');
   });
 
   it('publishes a post that shows on Home and on the profile', () => {
@@ -41,6 +45,7 @@ describe('local index: writing without Nexus', () => {
 
     createQuickPost(postText);
     revealPostInTimeline(postText);
+    logPhase('new post on Home');
 
     goToProfilePageFromHeader();
     openProfileTab('posts');

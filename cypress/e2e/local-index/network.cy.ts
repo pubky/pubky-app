@@ -16,6 +16,7 @@ import {
   forbidNexusRequests,
   localIndexStat,
   type LocalNetwork,
+  logPhase,
   NETWORK_NAMES,
   NETWORK_TAG,
   NETWORK_TEXTS,
@@ -41,13 +42,16 @@ describe('local index: reading the network without Nexus', () => {
 
   before(() => {
     slowCypressDown();
+    logPhase('opening the app');
     // Installs the app and its service worker while the network is seeded
     cy.visit('/');
     expectAppWithoutNexus();
     seedLocalNetwork().then((seeded) => {
       network = seeded;
     });
+    logPhase('network seeded');
     waitForServiceWorker();
+    logPhase('service worker ready');
   });
 
   it('shows the network on Home, newest first, with edits and deletes applied', () => {
@@ -62,6 +66,7 @@ describe('local index: reading the network without Nexus', () => {
       NETWORK_TEXTS.aliceAfterEdit,
       NETWORK_TEXTS.viewerRoot,
     ].forEach(expectTimelineContains);
+    logPhase('Home shows the network');
     // Not Alice's tagged post: Bob's quote above it holds its text too
     expectPostOrder(NETWORK_TEXTS.bobRepost, NETWORK_TEXTS.carolNote);
     expectPostOrder(NETWORK_TEXTS.carolNote, NETWORK_TEXTS.bobNote);

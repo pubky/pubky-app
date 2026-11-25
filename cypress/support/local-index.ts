@@ -173,6 +173,37 @@ export const seedLocalNetwork = (): Cypress.Chainable<LocalNetwork> => {
   return cy.then((): LocalNetwork => ({ ...users, posts }));
 };
 
+const PHASE_LOG_NAME = '[local-index]';
+let lastPhaseAt: number | null = null;
+
+/**
+ * Prints a wall-clock phase mark in the run's log, with the time since the previous mark, so a slow run says where its
+ * seconds went. `detail` is appended as is.
+ */
+export const logPhase = (label: string, detail = '') => {
+  cy.then(() => {
+    const now = Date.now();
+    const since = lastPhaseAt === null ? '' : ` (+${((now - lastPhaseAt) / 1000).toFixed(1)}s)`;
+    lastPhaseAt = now;
+    const test = `${Cypress.spec.name} "${Cypress.currentTest?.title ?? ''}"`;
+    const line = `${PHASE_LOG_NAME} ${new Date(now).toISOString()}${since} ${test}: ${label}${detail ? ` ${detail}` : ''}`;
+    cy.task('log', line, { log: false });
+  });
+};
+
+/** The status card as `label=value` pairs, for a phase mark. */
+const localIndexStats = () =>
+  cy
+    .get('[data-testid="local-index-stats"]')
+    .filter(':visible')
+    .children()
+    .then(($rows) =>
+      $rows
+        .toArray()
+        .map((row) => Array.from(row.querySelectorAll('span'), (span) => span.textContent ?? '').join('='))
+        .join(', '),
+    );
+
 // The status card's value next to `label`, e.g. 'First sync' or 'Users at hop 1'
 export const localIndexStat = (label: string, options: Partial<Cypress.Timeoutable> = {}) =>
   cy
@@ -195,10 +226,14 @@ export const openLocalIndexStatus = () => {
  * Home after the sync loads every feed from the finished index, so a test asserts on the whole network at once.
  */
 export const signInToLocalIndex = (user: SeededUser) => {
+  logPhase('signing in');
   cy.signInWithPubkyRing(user.name);
+  logPhase('signed in, on Home');
   openLocalIndexStatus();
   localIndexStat('First sync', FIRST_SYNC_TIMEOUT).should('have.text', 'Done');
+  localIndexStats().then((stats) => logPhase('first sync done', `{${stats}}`));
   goToHomePage();
+  logPhase('Home loaded');
 };
 
 /** Opens a post's page from its own card in the timeline, not from a card that quotes it. */

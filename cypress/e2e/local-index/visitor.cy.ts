@@ -7,6 +7,7 @@ import {
   expectAppWithoutNexus,
   forbidNexusRequests,
   type LocalNetwork,
+  logPhase,
   NETWORK_NAMES,
   NETWORK_TEXTS,
   seedLocalNetwork,
@@ -20,15 +21,19 @@ describe('local index: signed-out visitor without Nexus', () => {
 
   before(() => {
     slowCypressDown();
+    logPhase('opening the app');
     cy.visit('/');
     expectAppWithoutNexus();
     seedLocalNetwork().then((seeded) => {
       network = seeded;
     });
+    logPhase('network seeded');
     waitForServiceWorker();
+    logPhase('service worker ready');
   });
 
   it('opens a shared post', () => {
+    logPhase('opening a shared post');
     cy.visit(`/post/${network.olga.id}/${network.posts.olgaNote.id}`);
 
     cy.get('[data-cy="single-post-card"]')
@@ -38,6 +43,7 @@ describe('local index: signed-out visitor without Nexus', () => {
       .first()
       .should('contain.text', NETWORK_TEXTS.olgaNote);
     cy.get('[data-cy="post-page-title"]').should('contain.text', NETWORK_NAMES.olga);
+    logPhase('shared post shown');
   });
 
   it('opens a shared profile', () => {
