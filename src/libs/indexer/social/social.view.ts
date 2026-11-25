@@ -1,7 +1,17 @@
-import { idMicros, type KnownPostKind } from 'pubky-social-specs';
-import type { Cursor, RecordEntry } from '../indexer.types';
-import { followeeOfPath, locate, PROFILE_PATH } from './social.domain';
-import type { AuthorRecords, Membership, PostData, SocialData, SocialTarget, TagData, UserData } from './social.types';
+import type { KnownPostKind } from 'pubky-social-specs';
+import type { Cursor } from '../indexer.types';
+import {
+  type AuthorPart,
+  authorPartOf,
+  compareNewest,
+  compareText,
+  type EdgeKind,
+  NONE,
+  postKey,
+  userKey,
+} from './social.author';
+import { combine, type Combined } from './social.combine';
+import type { AuthorRecords, Membership, PostData, TagData, UserData } from './social.types';
 import { buildTimeTable, estimateMs, type TimeSample } from './timeTable';
 
 /** A logical post: its newest live version. */
@@ -111,66 +121,14 @@ export interface SocialView {
   followedAtMs(follower: string, followee: string): number | null;
 }
 
-const NONE: readonly never[] = Object.freeze([]);
-const NO_RECORDS: ReadonlyMap<string, RecordEntry<SocialData>> = new Map();
-const postKey = (author: string, postId: string) => `${author}/${postId}`;
-const followKey = (follower: string, followee: string) => `${follower}/${followee}`;
-const userKey = (user: string) => `user/${user}`;
-
-/** The key of what a target names, `null` for a target outside the social tree. */
-function targetKey(target: SocialTarget): string | null {
-  if (target.kind === 'post') return postKey(target.author, target.postId);
-  if (target.kind === 'user') return userKey(target.author);
-  return null;
-}
-
-const msOf = (id: string) => Math.floor(idMicros(id) / 1000);
-const compareText = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
-
-/** Newest first; at the same millisecond by author, then the newer id first. */
-function compareNewest(a: SocialPost, b: SocialPost): number {
-  return b.createdAtMs - a.createdAtMs || compareText(a.author, b.author) || compareText(b.postId, a.postId);
-}
-
-function push<V>(map: Map<string, V[]>, key: string, value: V): void {
-  const list = map.get(key);
-  if (list === undefined) map.set(key, [value]);
-  else list.push(value);
-}
-
-/** The newest live version of each post of the author, skipped when that version has no data. */
-function postsOf(author: string, records: ReadonlyMap<string, RecordEntry<SocialData>>): SocialPost[] {
-  const newest = new Map<string, { editId: string; record: RecordEntry<SocialData> }>();
-  for (const [path, record] of records) {
-    const at = locate(author, path);
-    if (at === null || at.kind !== 'post' || at.editId === undefined) continue;
-    const current = newest.get(at.id);
-    if (current === undefined || at.editId > current.editId) newest.set(at.id, { editId: at.editId, record });
-  }
-  const posts: SocialPost[] = [];
-  for (const [postId, { editId, record }] of newest) {
-    if (record.data?.type !== 'post') continue;
-    const createdAtMs = msOf(postId);
-    const editedAtMs = editId === postId ? null : msOf(editId);
-    posts.push({ author, postId, editId, createdAtMs, editedAtMs, data: record.data });
-  }
-  return posts.sort(compareNewest);
-}
-
-/** Every post version is a sample: its edit id holds the time it was written. */
-function timeTablesOf(records: readonly AuthorRecords[]): Map<string, TimeSample[]> {
-  const samples = new Map<string, TimeSample[]>();
-  for (const { author, homeserver, membership, activity, loose } of records) {
-    const own: [string, RecordEntry<SocialData>][] = membership === 'referenced' ? [] : [...activity];
-    for (const [path, record] of [...own, ...(loose ?? NO_RECORDS)]) {
-      const at = locate(author, path);
-      if (at === null || at.kind !== 'post' || at.editId === undefined) continue;
-      push(samples, homeserver, { cursor: record.cursor, ms: msOf(at.editId) });
-    }
-  }
-  const tables = new Map<string, TimeSample[]>();
-  for (const [homeserver, found] of samples) tables.set(homeserver, buildTimeTable(found));
-  return tables;
+/** The view with what it is built from. Its answers never change once built. */
+export interface SocialState {
+  readonly view: SocialView;
+  /** By author, in the order the records came. */
+  readonly parts: ReadonlyMap<string, AuthorPart>;
+  readonly combined: Combined;
+  /** Each homeserver's time table, built on first use. */
+  readonly tables: Map<string, readonly TimeSample[]>;
 }
 
 /** Labels by number of taggers, most first, then by label. */
@@ -181,138 +139,78 @@ function groupTags(taggersByLabel: ReadonlyMap<string, ReadonlySet<string>> | un
     .sort((a, b) => b.taggers.length - a.taggers.length || compareText(a.label, b.label));
 }
 
-export function buildSocialView(records: Iterable<AuthorRecords>): SocialView {
-  const entries = [...records];
-  const tables = timeTablesOf(entries);
-  const homeservers = new Map(entries.map(({ author, homeserver }): [string, string] => [author, homeserver]));
-  const timeOf = (author: string, cursor: Cursor): number | null => {
-    const homeserver = homeservers.get(author);
-    const table = homeserver === undefined ? undefined : tables.get(homeserver);
-    return table === undefined ? null : estimateMs(table, cursor);
+function stateOf(
+  parts: ReadonlyMap<string, AuthorPart>,
+  combined: Combined,
+  tables: Map<string, readonly TimeSample[]>,
+): SocialState {
+  const { followers: followersOf, tagsOn, edges } = combined;
+  const tableOf = (homeserver: string): readonly TimeSample[] => {
+    const known = tables.get(homeserver);
+    if (known !== undefined) return known;
+    const samples: TimeSample[] = [];
+    for (const part of parts.values()) {
+      if (part.records.homeserver === homeserver) for (const sample of part.samples) samples.push(sample);
+    }
+    const table = buildTimeTable(samples);
+    tables.set(homeserver, table);
+    return table;
   };
-  const memberships = new Map<string, Membership>();
-  const deletedPosts = new Map<string, ReadonlySet<string>>();
-  const deletedProfiles = new Set<string>();
-  const histories = new Map<string, AuthorRecords['history']>();
-  const profileCursors = new Map<string, Cursor>();
-  const followCursors = new Map<string, Cursor>();
-  const hops = new Map<string, number | null>();
-  const profiles = new Map<string, UserData>();
-  const followingOf = new Map<string, string[]>();
-  const followersOf = new Map<string, string[]>();
-  const posts = new Map<string, SocialPost>();
-  const postsByAuthor = new Map<string, SocialPost[]>();
-  const replies = new Map<string, SocialPost[]>();
-  const reposts = new Map<string, SocialPost[]>();
-  const mentions = new Map<string, SocialPost[]>();
-  const collections = new Map<string, SocialPost[]>();
-  const given = new Map<string, SocialTag[]>();
-  const tagsOn = new Map<string, Map<string, Set<string>>>();
-
-  const loosePosts: SocialPost[] = [];
-
-  for (const entry of entries) {
-    const { author, membership } = entry;
-    memberships.set(author, membership);
-    hops.set(author, entry.hop);
-    if (entry.deleted !== undefined) {
-      deletedPosts.set(author, entry.deleted.posts);
-      if (entry.deleted.profile) deletedProfiles.add(author);
-    }
-    loosePosts.push(...postsOf(author, entry.loose ?? NO_RECORDS));
-    const profile = entry.graph.get(PROFILE_PATH);
-    if (profile?.data?.type === 'user') {
-      profiles.set(author, profile.data);
-      profileCursors.set(author, profile.cursor);
-    }
-    if (membership === 'referenced') continue;
-
-    const member = membership === 'member';
-    histories.set(author, entry.history);
-    const following: string[] = [];
-    for (const [path, record] of entry.graph) {
-      const followee = followeeOfPath(path);
-      if (followee === null) continue;
-      following.push(followee);
-      followCursors.set(followKey(author, followee), record.cursor);
-    }
-    followingOf.set(author, following.sort(compareText));
-    if (member) for (const followee of following) push(followersOf, followee, author);
-
-    postsByAuthor.set(author, postsOf(author, entry.activity));
-
-    for (const record of entry.activity.values()) {
-      if (record.data?.type !== 'tag') continue;
-      push(given, author, { ...record.data, atMs: timeOf(author, record.cursor) });
-      if (!member) continue;
-      const key = targetKey(record.data.target);
-      if (key === null) continue;
-      const byLabel = tagsOn.get(key) ?? new Map<string, Set<string>>();
-      tagsOn.set(key, byLabel);
-      const taggers = byLabel.get(record.data.label) ?? new Set<string>();
-      byLabel.set(record.data.label, taggers.add(author));
-    }
-  }
-
-  // A post in an author's stream wins over the same post loaded alone.
-  for (const post of loosePosts) posts.set(postKey(post.author, post.postId), post);
-  const memberPosts: SocialPost[] = [];
-  for (const [author, list] of postsByAuthor) {
-    for (const post of list) posts.set(postKey(post.author, post.postId), post);
-    if (memberships.get(author) === 'member') memberPosts.push(...list);
-  }
-  for (const post of memberPosts.sort(compareNewest)) {
-    const { parent, embed, items } = post.data;
-    const parentKey = parent === null ? null : targetKey(parent);
-    if (parentKey !== null) push(replies, parentKey, post);
-    const embedKey = embed === null ? null : targetKey(embed);
-    if (embedKey !== null) push(reposts, embedKey, post);
-    for (const user of post.data.mentions) push(mentions, user, post);
-    const itemKeys = new Set((items ?? []).map(({ target }) => targetKey(target)));
-    for (const key of itemKeys) if (key !== null) push(collections, key, post);
-  }
-  for (const followers of followersOf.values()) followers.sort(compareText);
-  for (const tags of given.values()) tags.sort((a, b) => compareText(a.label, b.label) || compareText(a.uri, b.uri));
+  const timeOf = (author: string, cursor: Cursor): number | null => {
+    const part = parts.get(author);
+    return part === undefined ? null : estimateMs(tableOf(part.records.homeserver), cursor);
+  };
+  /** Tags with their times, made on first use: the times depend on every author of the homeserver. */
+  const given = new Map<string, readonly SocialTag[]>();
+  const tagsBy = (user: string): readonly SocialTag[] => {
+    const known = given.get(user);
+    if (known !== undefined) return known;
+    const tags = parts.get(user)?.tags ?? NONE;
+    const dated = tags.length === 0 ? NONE : tags.map(({ data, cursor }) => ({ ...data, atMs: timeOf(user, cursor) }));
+    given.set(user, dated);
+    return dated;
+  };
 
   const authors = Object.freeze(
-    entries.filter(({ membership }) => membership === 'member').map(({ author }) => author),
+    [...parts.values()].filter(({ records }) => records.membership === 'member').map(({ records }) => records.author),
   );
-  const following = (user: string): readonly string[] => followingOf.get(user) ?? NONE;
+  const following = (user: string): readonly string[] => parts.get(user)?.following ?? NONE;
   const followers = (user: string): readonly string[] => followersOf.get(user) ?? NONE;
   const friends = (user: string): string[] => {
     const back = new Set(followers(user));
     return following(user).filter((followee) => back.has(followee));
   };
-  const postsBy = (author: string): readonly SocialPost[] => postsByAuthor.get(author) ?? NONE;
+  const postsBy = (author: string): readonly SocialPost[] => parts.get(author)?.posts ?? NONE;
   const isReply = (post: SocialPost) => post.data.parent !== null;
+  const listOf = (kind: EdgeKind, key: string): readonly SocialPost[] => edges[kind].get(key) ?? NONE;
   const tagsOnPost = (author: string, postId: string) => groupTags(tagsOn.get(postKey(author, postId)));
   const tagsOnUser = (user: string) => groupTags(tagsOn.get(userKey(user)));
   const taggings = (groups: readonly TagGroup[]) => groups.reduce((sum, group) => sum + group.taggers.length, 0);
 
-  return {
+  const view: SocialView = {
     authors,
-    membershipOf: (user) => memberships.get(user) ?? null,
-    hopOf: (user) => hops.get(user) ?? null,
-    profile: (user) => profiles.get(user) ?? null,
+    membershipOf: (user) => parts.get(user)?.records.membership ?? null,
+    hopOf: (user) => parts.get(user)?.records.hop ?? null,
+    profile: (user) => parts.get(user)?.profile ?? null,
     following,
     followers,
     friends,
-    post: (author, postId) => posts.get(postKey(author, postId)) ?? null,
+    post: (author, postId) => parts.get(author)?.byId.get(postId) ?? null,
     postsBy,
     rootPostsBy: (author) => postsBy(author).filter((post) => !isReply(post)),
     repliesBy: (author) => postsBy(author).filter(isReply),
-    repliesTo: (author, postId) => replies.get(postKey(author, postId)) ?? NONE,
-    repostsOf: (author, postId) => reposts.get(postKey(author, postId)) ?? NONE,
-    mentionsOf: (user) => mentions.get(user) ?? NONE,
+    repliesTo: (author, postId) => listOf('replies', postKey(author, postId)),
+    repostsOf: (author, postId) => listOf('reposts', postKey(author, postId)),
+    mentionsOf: (user) => listOf('mentions', user),
     tagsOnPost,
     tagsOnUser,
-    tagsBy: (user) => given.get(user) ?? NONE,
-    collectionsContaining: (author, postId) => collections.get(postKey(author, postId)) ?? NONE,
+    tagsBy,
+    collectionsContaining: (author, postId) => listOf('collections', postKey(author, postId)),
     postCounts: (author, postId) => {
       const tags = tagsOnPost(author, postId);
       return {
-        replies: (replies.get(postKey(author, postId)) ?? NONE).length,
-        reposts: (reposts.get(postKey(author, postId)) ?? NONE).length,
+        replies: listOf('replies', postKey(author, postId)).length,
+        reposts: listOf('reposts', postKey(author, postId)).length,
         tags: taggings(tags),
         uniqueTags: tags.length,
       };
@@ -325,7 +223,7 @@ export function buildSocialView(records: Iterable<AuthorRecords>): SocialView {
         following: following(user).length,
         followers: followers(user).length,
         friends: friends(user).length,
-        tagsGiven: (given.get(user) ?? NONE).length,
+        tagsGiven: tagsBy(user).length,
         tagged: taggings(tagsOnUser(user)),
       };
     },
@@ -339,20 +237,39 @@ export function buildSocialView(records: Iterable<AuthorRecords>): SocialView {
     },
     timeOf,
     historyOf: (author, group = 'activity') => {
-      const history = histories.get(author)?.[group];
+      const records = parts.get(author)?.records;
+      const history = records === undefined || records.membership === 'referenced' ? undefined : records.history[group];
       if (history === undefined) return { complete: false, sinceMs: null };
       const { complete, tail } = history;
       return { complete, sinceMs: complete || tail === null ? null : timeOf(author, tail) };
     },
-    postDeleted: (author, postId) => deletedPosts.get(author)?.has(postId) ?? false,
-    profileDeleted: (user) => deletedProfiles.has(user),
+    postDeleted: (author, postId) => parts.get(author)?.records.deleted?.posts.has(postId) ?? false,
+    profileDeleted: (user) => parts.get(user)?.records.deleted?.profile ?? false,
     profileAtMs: (user) => {
-      const cursor = profileCursors.get(user);
-      return cursor === undefined ? null : timeOf(user, cursor);
+      const cursor = parts.get(user)?.profileCursor ?? null;
+      return cursor === null ? null : timeOf(user, cursor);
     },
     followedAtMs: (follower, followee) => {
-      const cursor = followCursors.get(followKey(follower, followee));
+      const cursor = parts.get(follower)?.followCursors.get(followee);
       return cursor === undefined ? null : timeOf(follower, cursor);
     },
   };
+  return { view, parts, combined, tables };
+}
+
+/** Each author's part, a later entry of an author replacing an earlier one. */
+function partsOf(records: Iterable<AuthorRecords>): Map<string, AuthorPart> {
+  const parts = new Map<string, AuthorPart>();
+  for (const entry of records) parts.set(entry.author, authorPartOf(entry));
+  return parts;
+}
+
+/** The view of the records, built from scratch. Records name each author once; a later entry replaces an earlier one. */
+export function buildSocialState(records: Iterable<AuthorRecords>): SocialState {
+  const parts = partsOf(records);
+  return stateOf(parts, combine(parts.values()), new Map());
+}
+
+export function buildSocialView(records: Iterable<AuthorRecords>): SocialView {
+  return buildSocialState(records).view;
 }
