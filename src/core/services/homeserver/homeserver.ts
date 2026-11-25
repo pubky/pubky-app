@@ -751,6 +751,7 @@ export class HomeserverService {
     limit = LIST_DEFAULT_LIMIT,
     session,
   }: THomeserverListParams): Promise<string[]> {
+    const pubkySdk = this.getPubkySdk();
     const owned = session
       ? resolveOwnedSessionPath({ url: baseDirectory, session, allowedPrefixes: STORAGE_PATH_PREFIXES })
       : this.resolveOwnedSessionPath(baseDirectory);
@@ -772,7 +773,6 @@ export class HomeserverService {
         return files;
       }
 
-      const pubkySdk = this.getPubkySdk();
       const files = await pubkySdk.publicStorage.list(baseDirectory as Address, cursor ?? null, reverse, limit, false);
       Logger.debug('List successful', { baseDirectory, filesCount: files.length });
       return files;
