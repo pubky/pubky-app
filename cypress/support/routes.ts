@@ -5,8 +5,7 @@ let recordedRoutes: string[] | null = null;
 // Windows whose history methods and navigation events already report into `recordedRoutes`.
 const instrumented = new WeakSet<Window>();
 
-// TypeScript's DOM types do not include the Navigation API yet. `currententrychange` fires for
-// pushState and replaceState whoever holds the method, including a copy captured before we wrapped it.
+// TypeScript's DOM types do not include the Navigation API yet.
 type CurrentEntryNavigation = {
   addEventListener(type: 'currententrychange', listener: () => void): void;
 };
@@ -17,22 +16,26 @@ const recordUrl = (url: string) => {
   recordedRoutes.push(url);
 };
 
-// Cypress reports `url:changed` only from its own `history.pushState` wrapper, and skips installing
-// that wrapper when a new document's load begins before the previous document's unload — a
-// service-worker cache makes the race intermittent. Next's app router then calls the native method
-// it captured, so a client-side walk never emits `url:changed`, while `cy.location` still reads the
-// address bar. `currententrychange` is the browser's own signal for those calls. Where the Navigation
-// API is missing, wrap the methods that are installed now so the same calls are still observed.
+// Cypress emits `url:changed` only from its own history wrapper, and it skips installing that wrapper
+// when a new document starts loading before the previous one unloads. `currententrychange` alone
+// still recorded nothing in Chrome under Cypress: the signup finished on /home with an empty list.
+// Next's app router calls the live `history.pushState` / `replaceState` (including the copy it
+// installed itself), so wrap whichever functions are there now and record after they return.
+// `popstate` covers back and forward. Recording must not throw: a throw rejects the navigation.
 const installRouteRecorder = (win: Window) => {
   if (instrumented.has(win)) return;
   instrumented.add(win);
 
-  const record = () => recordUrl(win.location.href);
+  const record = () => {
+    try {
+      recordUrl(win.location.href);
+    } catch {
+      // The history call has already changed the document. Swallow a read failure.
+    }
+  };
+
   const navigation: CurrentEntryNavigation | undefined = Reflect.get(win, 'navigation');
-  if (navigation) {
-    navigation.addEventListener('currententrychange', record);
-    return;
-  }
+  if (navigation) navigation.addEventListener('currententrychange', record);
 
   const { pushState, replaceState } = win.history;
   win.history.pushState = function pushStateWrapper(this: History, ...args: Parameters<History['pushState']>) {
@@ -51,7 +54,7 @@ const installRouteRecorder = (win: Window) => {
 /**
  * Appends every URL the document reaches from here on to `visited`. A full load (a reload, a
  * `cy.visit`) drops the document's listeners, so the next document is instrumented from its load
- * and that load's URL is recorded. Does not throw; a listener that throws hangs the run.
+ * and that load's URL is recorded.
  */
 export const recordRoutes = (visited: string[]) => {
   recordedRoutes = visited;
