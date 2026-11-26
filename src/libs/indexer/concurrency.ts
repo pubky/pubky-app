@@ -12,18 +12,18 @@ export function throwIfAborted(signal?: AbortSignal): void {
   if (signal?.aborted) throw new IndexerAbortedError({ cause: signal.reason });
 }
 
-/** Resolves after `ms`, or rejects with `IndexerAbortedError` as soon as `signal` fires. */
-export function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+/** Resolves after `ms` on `schedule`, or rejects with `IndexerAbortedError` as soon as `signal` fires. */
+export function sleep(ms: number, signal?: AbortSignal, schedule: Schedule = timerSchedule): Promise<void> {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) {
       reject(new IndexerAbortedError({ cause: signal.reason }));
       return;
     }
     const onAbort = () => {
-      clearTimeout(timer);
+      cancel();
       reject(new IndexerAbortedError({ cause: signal?.reason }));
     };
-    const timer = setTimeout(() => {
+    const cancel = schedule(() => {
       signal?.removeEventListener('abort', onAbort);
       resolve();
     }, ms);

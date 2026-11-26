@@ -77,8 +77,8 @@ const newestOf = (current: HighWater | null, event: AuthoredStreamEvent | null):
 
 export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
   const { transport, store, domain, now } = params;
-  const wait = params.sleep ?? sleep;
   const schedule = params.schedule ?? timerSchedule;
+  const wait = params.sleep ?? ((ms: number, signal?: AbortSignal) => sleep(ms, signal, schedule));
   const options = { ...DEFAULT_CRAWLER_OPTIONS, ...params.options };
   const scopeGroup = domain.groups.find((group) => group.id === domain.scopeGroup);
   if (scopeGroup === undefined || scopeGroup.history !== 'full') {

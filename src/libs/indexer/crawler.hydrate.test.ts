@@ -25,7 +25,13 @@ async function setup() {
   await store.applyRuns((await synced.exportRuns(SCOPE)).map(dataless));
   await store.writeUserHomeserver('alice', { homeserver: 'hs1', resolvedAt: NOW });
   await store.writeScopeMembers('alice', new Map([['alice', 0]]));
-  const crawler = createCrawler({ transport: network, store, domain: testDomain, now: () => NOW });
+  const crawler = createCrawler({
+    transport: network,
+    store,
+    domain: testDomain,
+    now: () => NOW,
+    sleep: async () => undefined,
+  });
   return { network, paths, synced, store, crawler };
 }
 

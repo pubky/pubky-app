@@ -56,7 +56,7 @@ export interface CrawlerParams<D> {
   domain: Domain<D>;
   /** Wall clock in ms, injected so tests control time. */
   now: () => number;
-  /** Waits before retrying a failed request; a timer by default. Rejects with `IndexerAbortedError` on abort. */
+  /** Waits before retrying a failed request; on `schedule` by default. Rejects with `IndexerAbortedError` on abort. */
   sleep?: (ms: number, signal?: AbortSignal) => Promise<void>;
   /** Timers for request deadlines; `setTimeout` by default. */
   schedule?: Schedule;

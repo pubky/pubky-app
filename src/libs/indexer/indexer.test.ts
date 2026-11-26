@@ -329,9 +329,10 @@ describe('createIndexerRuntime requests that never settle', () => {
     const runtime = runtimeWith(w, transport);
 
     runtime.start('alice');
-    await w.time.advance(30 * 1000);
+    // The read and its three retries, each at its deadline, with the waits of 1, 2 and 4 s between them.
+    await w.time.advance(4 * 30 * 1000 + 7 * 1000);
 
-    expect(hung.reads).toBe(1);
+    expect(hung.reads).toBe(4);
     expect(runtime.status()).toMatchObject({ state: 'idle', firstSyncPending: false });
     expect(runtime.status().stats.homeserversFailed).toBe(1);
     expect((await w.store.readHomeserverState('hs1')).failure?.failures).toBe(1);
