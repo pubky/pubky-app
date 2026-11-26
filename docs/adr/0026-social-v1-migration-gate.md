@@ -142,19 +142,40 @@ and was immediately shown the migration prompt before onboarding.
 
 **Decision.** When `SocialMigrationApplication.readFlag` succeeds without finding a current flag (absent or at an
 older revision) — on `signin`, a gated `upgrade`, or a `restore` that already passed the `pre-migration-grant` check
-— the gate runs one bounded `LIST` of `/pub/pubky.app/` with `limit: 1` (`SocialMigrationApplication.hasLegacyData`,
-through `HomeserverService.list` with the explicit session, bounded by `HOMESERVER_SYNC_READ_TIMEOUT_MS` like
-`readFlag`). When the listing is empty (empty response or 404), there is nothing to copy: the gate runs the engine
-inline (`inline: true`) on the same path as an invite-code signup, so the engine checks and writes
-`/priv/social/v1/_migrated.json` silently and the screen is never shown unless the run blocks or waits on another
-tab's lock. Any non-empty listing, and any failure of either `readFlag` or `hasLegacyData` (network failure, 401,
-403 or timeout), falls back to the existing `confirm` screen so an account with real 0.x data never skips migration.
+— and the latest local record neither trusts the current revision nor holds an already-confirmed `lastRun`, the gate
+runs one bounded `LIST` of `/pub/pubky.app/` with `limit: 1` (`SocialMigrationApplication.hasLegacyData`, through
+`HomeserverService.list` with the explicit session, bounded by `HOMESERVER_SYNC_READ_TIMEOUT_MS` like `readFlag`).
+After each homeserver read, the gate re-reads the local record and passes at once if another tab finished the migration
+meanwhile. When the listing is empty (empty response or 404) and no confirmed run started in another tab, the gate runs
+the engine inline (`inline: true`) on the same path as an invite-code signup, so the engine checks and writes
+`/priv/social/v1/_migrated.json` silently and the screen is never shown unless the run blocks, waits on another tab's
+lock, or finds legacy files. The inline path passes `onLegacyDataFound` through `HomeserverService.migrateToSocialV1`:
+if an existing 0.x client writes under `/pub/pubky.app/` after `hasLegacyData` returned empty and the engine's own
+listing finds any file, the run aborts before copying anything and transitions to the `confirm` screen. `lastRun`
+records `confirmed` (`false` for an automatic inline attempt, `true` once confirmed; omitted on records from earlier
+builds, which were always confirmed), so an interrupted automatic attempt never suppresses `confirm` if legacy files
+appear before the next visit, while a confirmed interrupted run skips the extra `LIST` and resumes without asking
+again.
+
+The fallback paths when a check does not confirm an empty tree depend on the entry and local state:
+
+- **Failed `readFlag` on `restore`:** propagates to `AuthController` and enters `temporary-error` (no `LIST` and no
+  `confirm` screen; Retry and the focus/reconnect retries apply as before).
+- **Failed `readFlag` on `signin` or a gated `upgrade`:** skips `hasLegacyData`; if another tab completed the migration
+  meanwhile (trusted local record) it passes, if this browser holds a confirmed `lastRun` it resumes without `confirm`,
+  and otherwise (no confirmed run) it shows `confirm` so the engine's own check settles it after Continue.
+- **Non-empty or failed `hasLegacyData` (network failure, 401, 403 or timeout):** does not run inline; if another tab
+  completed the migration during the wait it passes, if a confirmed `lastRun` appeared meanwhile it resumes without
+  `confirm`, and otherwise it shows `confirm` so an account with real 0.x data never skips migration.
+
 The rule applies to all sign-in methods (Passport, Ring, etc.) alike.
 
-**Consequences.** A sign-in of an account without a current flag costs one extra bounded `LIST` (`limit: 1`) when
-`readFlag` succeeds; accounts with a trusted local record or a current flag make no extra request, and a failed
-`readFlag` skips the listing and asks immediately. New Passport accounts and fresh Ring keys no longer see the update
-prompt on first sign-in, while accounts with any 0.x data keep the existing `confirm` flow unchanged.
+**Consequences.** A sign-in of an account without a current flag or a confirmed `lastRun` costs one extra bounded
+`LIST` (`limit: 1`) when `readFlag` succeeds; accounts with a trusted local record, a current flag, or a confirmed
+`lastRun` make no extra `LIST`, and a failed `readFlag` skips the listing (entering `temporary-error` on `restore`, and
+resuming a confirmed `lastRun` or asking on `confirm` on `signin` and gated `upgrade`). New Passport accounts and fresh
+Ring keys no longer see the update prompt on first sign-in, while accounts with any 0.x data — even written concurrently
+— keep the `confirm` gate before the first copy.
 
 ## Amendment — the gate asks before the first run (2026-11-17)
 
