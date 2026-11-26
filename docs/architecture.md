@@ -355,6 +355,7 @@ ADRs capture the _why_ behind key architectural decisions. Stored in `docs/adr/`
 | 0029 | Cross-device notification `last_read` sync                                |
 | 0030 | Bounded IndexedDB connection recovery                                     |
 | 0031 | The local index as a read source (proposed)                               |
+| 0032 | A static export of the app, served from 127.0.0.1 (proposed)              |
 
 ## Quick Checklist
 

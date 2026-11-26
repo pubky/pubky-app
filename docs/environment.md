@@ -16,7 +16,7 @@ All build-time variables are validated in `src/libs/env/env.ts` using Zod schema
 
 The schema is intentionally small:
 
-- **Build-intrinsic public values** (baked into the artifact by design): `NEXT_PUBLIC_DB_NAME`, `NEXT_PUBLIC_DB_VERSION` (default `4` since the social v1 port, 2026-10-30; the Docker workflows pass the same value as a build arg, so a bump is the app change plus a CI-task PR, and a mismatch recreates the local database: ADR-0019, `docs/data-patterns.md`, _Schema changes_), `NEXT_PUBLIC_DEBUG_MODE`, `NEXT_PUBLIC_APP_VERSION`.
+- **Build-intrinsic public values** (baked into the artifact by design): `NEXT_PUBLIC_DB_NAME`, `NEXT_PUBLIC_DB_VERSION` (default `4` since the social v1 port, 2026-10-30; the Docker workflows pass the same value as a build arg, so a bump is the app change plus a CI-task PR, and a mismatch recreates the local database: ADR-0019, `docs/data-patterns.md`, _Schema changes_), `NEXT_PUBLIC_DEBUG_MODE`, `NEXT_PUBLIC_APP_VERSION`, `NEXT_PUBLIC_STATIC_EXPORT` (`true` builds the static export, the offline bundle, which has no app server and bakes the runtime config at build time with a strict parse: `docs/offline-bundle.md`, ADR-0032).
 - **Server-only variables** (never exposed to the browser): `HOMESERVER_ADMIN_URL` / `HOMESERVER_ADMIN_PASSWORD` (dev/test signup tokens) and the Chatwoot support credentials (`BASE_URL_SUPPORT`, `SUPPORT_API_ACCESS_TOKEN`, `SUPPORT_ACCOUNT_ID`).
 - `NODE_ENV` / `VITEST`.
 
@@ -66,7 +66,7 @@ const dbVersion = Env.NEXT_PUBLIC_DB_VERSION; // number
 const debugMode = Env.NEXT_PUBLIC_DEBUG_MODE; // boolean
 ```
 
-ESLint allows a literal `process.env.X` read of the four build-intrinsic values (`DB_NAME`, `DB_VERSION`, `DEBUG_MODE`, `APP_VERSION`) in any file and blocks every other direct read. By convention only two files use that allowance, where importing `Env` is unsuitable: `src/sw.ts` (the service worker is a child compilation of the client bundle, `Env` would pull zod and the error factories into `public/sw.js`, and webpack's DefinePlugin inlines the literal there) and `src/libs/logger/logger.ts`.
+ESLint allows a literal `process.env.X` read of the five build-intrinsic values (`DB_NAME`, `DB_VERSION`, `DEBUG_MODE`, `APP_VERSION`, `STATIC_EXPORT`) in any file and blocks every other direct read. By convention only two files use that allowance, where importing `Env` is unsuitable: `src/sw.ts` (the service worker is a child compilation of the client bundle, `Env` would pull zod and the error factories into `public/sw.js`, and webpack's DefinePlugin inlines the literal there) and `src/libs/logger/logger.ts`.
 
 ## Runtime configuration (`PUBKY_RUNTIME_*`)
 

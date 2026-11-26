@@ -39,6 +39,7 @@ Single source of truth for all project standards, conventions, and architectural
 | `sentry.md`                         | What Sentry and Pulse capture, capture rule, drop rules, the Pulse consent gate, privacy scrubbing, source maps    |
 | `environment.md`                    | Build-time `Env` and runtime `PUBKY_RUNTIME_*` configuration                                                       |
 | `pwa.md`                            | Service worker scope, update flow, offline fallback, precache allow-list, manifest, install banner, local testing  |
+| `offline-bundle.md`                 | The static export served from `127.0.0.1`: building it, the launcher, what it contacts, what does not work         |
 | `commit-message.md`                 | Conventional commit format, branch naming, pull request conventions                                                |
 | `release.md`                        | Cutting a production release from `dev` onto `master`                                                              |
 | `hotfix.md`                         | Cutting a production patch without taking `dev` HEAD (see `release.md` for shared steps)                           |
