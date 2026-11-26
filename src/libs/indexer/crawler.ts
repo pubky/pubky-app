@@ -80,6 +80,14 @@ interface WindowBound {
   held: number;
 }
 
+/** How a newest-first read goes: events per page, pages per batch, the cursor every user stops at, paths per user. */
+interface NewestFirstPlan {
+  limit: number;
+  pages: number;
+  cutoff: () => Cursor | null;
+  maxPaths: number;
+}
+
 /** Users' events to commit newest first, each user's in their range `(tail, top]`. */
 interface Below {
   ranges: ReadonlyMap<string, { top: Cursor; tail: Cursor }>;
@@ -544,28 +552,35 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
           const held = [...entries.values()].filter(({ cursor }) => cursor > tail).length;
           if (held < options.windowMaxEntries) below.set(user, { top: tail, floor: null, held });
         }
-        await readWindowBelow(ctx, homeserver, group, below);
+        await readNewestFirst(ctx, homeserver, group, below, {
+          limit: options.pageLimit,
+          pages: Infinity,
+          cutoff: () => cutoffOf(ctx, homeserver),
+          maxPaths: options.windowMaxEntries,
+        });
       }
     });
   }
 
   /**
-   * Reads the users' windowed group newest first from each one's top down to where their read stops: the cutoff, once
-   * the homeserver's clock places it, their floor, their `windowMaxEntries`-th path or their stream start. Every page
-   * read adds its dated writes to the clock, which every batch of the homeserver shares: until the clock holds a write
-   * older than the window, a batch keeps reading. The batches commit as one stream, newest events first: a round
-   * commits what every batch has read, everything above the highest point a batch still reading has reached, while
-   * that batch reads its next page.
+   * Reads the users' group newest first from each one's top down to where their read stops: the plan's cutoff, once
+   * it places one, their floor, their `maxPaths`-th path, the plan's last page or their stream start. A window's cutoff
+   * comes from the homeserver's clock, to which every page read adds its dated writes, shared by every batch of the
+   * homeserver: until the clock holds a write older than the window, a batch keeps reading. The batches commit as one
+   * stream, newest events first: a round commits what every batch has read, everything above the highest point a
+   * batch still reading has reached, while that batch reads its next page. The events read.
    */
-  async function readWindowBelow(
+  async function readNewestFirst(
     ctx: OperationContext,
     homeserver: string,
     group: PathGroup,
     bounds: ReadonlyMap<string, WindowBound>,
-  ) {
-    if (bounds.size === 0) return;
-    const limit = options.pageLimit;
+    plan: NewestFirstPlan,
+  ): Promise<number> {
+    if (bounds.size === 0) return 0;
+    const { limit } = plan;
     const read = reader(ctx, homeserver, group.paths, limit);
+    let taken = 0;
     interface Batch {
       /** Per user, the head of the range still to commit. */
       tops: Map<string, Cursor>;
@@ -579,6 +594,8 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
       events: AuthoredStreamEvent[];
       /** Every event of the users still reading above it is read. */
       low: Cursor;
+      /** Pages read. */
+      pages: number;
     }
     const end = (batch: Batch, user: string, cursor: Cursor) => {
       batch.reading.delete(user);
@@ -591,7 +608,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     };
     /** Stops the users whose reads everything above their stop is read for. */
     const settle = (batch: Batch) => {
-      const cutoff = cutoffOf(ctx, homeserver);
+      const cutoff = plan.cutoff();
       for (const user of [...batch.reading]) {
         const stop = stopOf(user, cutoff);
         if (stop !== null && batch.low <= stop) end(batch, user, stop);
@@ -599,7 +616,9 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     };
     /** Takes in a page of the users still reading. A full page holds all their events down to its lowest cursor. */
     const take = (batch: Batch, page: readonly AuthoredStreamEvent[]) => {
-      const cutoff = cutoffOf(ctx, homeserver);
+      taken += page.length;
+      batch.pages += 1;
+      const cutoff = plan.cutoff();
       for (const event of [...page].sort((a, b) => (a.cursor > b.cursor ? -1 : 1))) {
         const user = event.author;
         if (!batch.reading.has(user)) continue;
@@ -612,7 +631,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
         batch.paths.set(user, paths);
         if (!paths.has(event.path)) {
           // The range keeps the user's newest paths: it ends just above the first one past the bound.
-          if ((bounds.get(user)?.held ?? 0) + paths.size >= options.windowMaxEntries) {
+          if ((bounds.get(user)?.held ?? 0) + paths.size >= plan.maxPaths) {
             end(batch, user, event.cursor);
             continue;
           }
@@ -623,8 +642,10 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
       const lowest = lowestOf(page);
       batch.low = page.length >= limit && lowest !== null ? lowest - ONE : CURSOR_ZERO;
       settle(batch);
-      // The stream start: whoever is still reading has nothing older.
-      if (batch.low === CURSOR_ZERO) for (const user of [...batch.reading]) end(batch, user, CURSOR_ZERO);
+      // The stream start, or the plan's last page: whoever is still reading stops at what this page reached.
+      if (batch.low === CURSOR_ZERO || batch.pages >= plan.pages) {
+        for (const user of [...batch.reading]) end(batch, user, batch.low);
+      }
     };
     const readFirst = async (users: Array<[string, WindowBound]>): Promise<Batch> => {
       const page = await read(
@@ -645,6 +666,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
         paths: new Map(),
         events: [],
         low: CURSOR_ZERO,
+        pages: 0,
       };
       take(batch, page);
       return batch;
@@ -695,6 +717,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
       for (const outcome of settled) if (outcome.status === 'rejected') throw outcome.reason;
       if (next === undefined) break;
     }
+    return taken;
   }
 
   /**
@@ -780,7 +803,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
       for (const group of windowGroups) {
         for (const user of users) {
           const scope = { author: user, homeserver, group: group.id };
-          if (!(await catchUp(ctx, scope, group))) await readPageBelow(ctx, scope, group, null);
+          if (!(await catchUp(ctx, scope, group))) await readSlice(ctx, scope, group, null);
         }
       }
     });
@@ -1002,33 +1025,17 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
   }
 
   /**
-   * Reads the page of `sliceLimit` events below `below`, a tail of the scope, or the newest page when `null`,
-   * fetches the files the page needs to render and commits it. Its events, `null` when the newest page was empty:
-   * the author has no event in the group.
+   * Reads the slice of `sliceLimit` events below `below`, a tail of the scope, or the newest slice when `null`, fetches
+   * the files it needs to render and commits it: the newest-first read of one user for one page, with no cutoff. Its
+   * events.
    */
-  async function readPageBelow(
-    ctx: OperationContext,
-    scope: ScopeKey,
-    group: PathGroup,
-    below: Cursor | null,
-  ): Promise<number | null> {
-    const limit = options.sliceLimit;
-    // The tail itself is outside its range, so the read starts one above it.
-    const page = await reader(
-      ctx,
-      scope.homeserver,
-      group.paths,
-      limit,
-    )([{ user: scope.author, cursor: below === null ? null : below + ONE }], true);
-    if (below === null && page.length === 0) return null;
-    const lowest = lowestOf(page);
-    // A full page holds every event down to its lowest cursor; a shorter one reached the stream start. The newest
-    // page ends at the newest event read: nothing above it exists yet.
-    const tail = page.length >= limit && lowest !== null ? lowest - ONE : CURSOR_ZERO;
-    const ranges = new Map([[scope.author, { top: below ?? highestOf(page), tail }]]);
-    await commitBelow(ctx, scope.homeserver, group, [{ ranges, events: page }]);
-    return page.length;
-  }
+  const readSlice = (ctx: OperationContext, scope: ScopeKey, group: PathGroup, below: Cursor | null) =>
+    readNewestFirst(ctx, scope.homeserver, group, new Map([[scope.author, { top: below, floor: null, held: 0 }]]), {
+      limit: options.sliceLimit,
+      pages: 1,
+      cutoff: () => null,
+      maxPaths: Infinity,
+    });
 
   async function backfill(author: string, groupId: string, pages: number, signal?: AbortSignal) {
     const group = domain.groups.find(({ id }) => id === groupId);
@@ -1058,8 +1065,9 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
       // range, as after a window that held none of the author's events, it starts at their newest event.
       const tail = topTailOf(await store.readCoverage(scope));
       if (tail === CURSOR_ZERO) break;
-      const read = await readPageBelow(ctx, scope, group, tail);
-      if (read === null) break;
+      const read = await readSlice(ctx, scope, group, tail);
+      // An empty newest slice: the author has no event in the group.
+      if (tail === null && read === 0) break;
       events += read;
     }
     return { tail: topTailOf(await store.readCoverage(scope)), pages: done, events };
