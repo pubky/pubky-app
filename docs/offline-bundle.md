@@ -79,7 +79,10 @@ The export prerenders each dynamic page once, for the placeholder, so `params` i
 `usePathname()` and the matchers in `src/app/routes.ts` (`matchPostRoute`, `matchSingleCollectionRoute`,
 `matchDynamicProfileRoute`, `matchCustomFeedRoute`, `matchInviteRoute`). This holds in every build, and a new
 dynamic route follows it: its server page renders a client component that reads the path, and the route exports
-`generateStaticParams() { return placeholderParams(...) }` from a server module. Next ignores
+`const generateStaticParams = placeholderParams(...)` from a server module. That is `undefined` outside the
+export on purpose: in a server build, any `generateStaticParams` function, even one returning `[]`, makes Next
+generate unlisted params statically on demand, and the root layout's `connection()` then answers every request
+with a 500 (`DYNAMIC_SERVER_USAGE`). Next ignores
 `generateStaticParams` in a module whose default export is a client component, so that module needs a server
 default of its own.
 

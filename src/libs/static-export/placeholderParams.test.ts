@@ -6,14 +6,14 @@ describe('placeholderParams', () => {
     vi.resetModules();
   });
 
-  it('generates no page in a server build', async () => {
+  it('exports no generateStaticParams in a server build, so the route renders per request', async () => {
     const { placeholderParams } = await import('./placeholderParams');
-    expect(placeholderParams('userId', 'postId')).toEqual([]);
+    expect(placeholderParams('userId', 'postId')).toBeUndefined();
   });
 
   it('generates one placeholder page in the static export', async () => {
     vi.stubEnv('NEXT_PUBLIC_STATIC_EXPORT', 'true');
     const { placeholderParams } = await import('./placeholderParams');
-    expect(placeholderParams('userId', 'postId')).toEqual([{ userId: '_', postId: '_' }]);
+    expect(placeholderParams('userId', 'postId')?.()).toEqual([{ userId: '_', postId: '_' }]);
   });
 });

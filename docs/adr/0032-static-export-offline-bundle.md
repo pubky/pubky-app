@@ -31,9 +31,12 @@ build-intrinsic value on `Env`, like the database name: the artifact either has 
    the export, so a server still renders every request with the config of that moment. The export prerenders the
    layout once, and its build parses `PUBKY_RUNTIME_*` with the strict schema: a missing value fails the build
    instead of becoming a staging default.
-3. **One placeholder page per dynamic route.** Each dynamic route exports `generateStaticParams` returning one
-   `_` set (`placeholderParams`), and none in a server build. A local launcher serves that page, and the client
-   router's payload files under it, for every real id.
+3. **One placeholder page per dynamic route.** Each dynamic route exports
+   `generateStaticParams = placeholderParams(...)`: a function returning one `_` set in the export, and
+   `undefined` in a server build. The server build must have no function at all: Next statically generates a
+   route that has one on demand for unlisted params, even when it returns `[]`, and the root layout's
+   `connection()` then fails every request with `DYNAMIC_SERVER_USAGE`. A local launcher serves the placeholder
+   page, and the client router's payload files under it, for every real id.
 4. **Pages read ids from the URL path.** In the export, `params` and `useParams()` report the placeholder, and
    `usePathname()` reports the real URL (the router reads its canonical URL from `location`). Every page reads its
    ids through `usePathname()` and the route matchers in `src/app/routes.ts`, in both builds, so there is one way

@@ -23,9 +23,7 @@ export interface PostPageProps {
   }>;
 }
 
-export function generateStaticParams() {
-  return placeholderParams('userId', 'postId');
-}
+export const generateStaticParams = placeholderParams('userId', 'postId');
 
 export async function generateMetadata({ params }: PostPageProps): Promise<NextMetadata> {
   try {
