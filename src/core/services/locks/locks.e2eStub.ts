@@ -77,12 +77,21 @@ const handle = (options: VerificationTaskHandleOptions) => ({
 function createCreator(stubUrl: string, owner: string): Creator {
   const creator: Pick<
     Creator,
+    | 'creatorAuthorityStatus'
     | 'setLockServicePointer'
     | 'paykitSetupStatus'
     | 'registerGuardedResource'
     | 'createContentLock'
     | 'deleteContentLock'
   > = {
+    // Answered without a request: the Cypress stub has no grant to revoke.
+    creatorAuthorityStatus: async () => ({
+      creator: withPubkyPrefix(owner),
+      authorized: true,
+      auth_kind: 'grant',
+      granted_scopes: [],
+      session_expires_at: null,
+    }),
     setLockServicePointer: async (options) => {
       await post(stubUrl, 'creator/lock-service-pointer', { owner, default_lock_server: options.defaultLockServer });
     },

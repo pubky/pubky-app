@@ -766,7 +766,8 @@ Never commit either.
   and homeserver, with the Lock Server / Paykit / Bitkit boundary stubbed. `PUBKY_RUNTIME_E2E_LOCKS_STUB_URL`
   (the Locks CI job only, never a deploy) makes `initLockClient()` and `getLocksReads()` return
   `locks.e2eStub.ts`: it sends each Lock Server call as `POST <stub>/e2e/<operation>`, which the spec
-  answers with `cy.intercept`. The stub never writes to the homeserver: as the real Lock Server does,
+  answers with `cy.intercept`. The creator authority check is the exception: the stub answers it as authorized
+  without a request. The stub never writes to the homeserver: as the real Lock Server does,
   the intercept makes the guarded-bytes and `lock.json` writes before it answers, through
   `cypress/plugins/lock-server.ts` and the `seedLockServerWrite` task in Cypress's Node process, with a
   session the creator's key granted for `/priv/app.locks/:rw,/pub/app.locks/:rw`. A non-2xx answer rejects with the pinned SDK's own error (`InvalidInput`, with the viewer,
