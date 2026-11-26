@@ -53,7 +53,7 @@ default, today's behavior), `local`, or `local,nexus`. Without `nexus` the Nexus
   extension once complete, or once a step of theirs was skipped, failed or read nothing; the page is served short,
   ending the feed, once no named author is left. `INDEXER_PAGE_BACKFILL_MAX_ROUNDS` (20) caps the rounds as a safety
   net. There is no wall-clock budget: the stream layer reads only the page length (`reachedEnd: rawPageIds.length <
-  limit`) and has no way to say short but not ended, so a page cut short by time would end the feed with older posts
+limit`) and has no way to say short but not ended, so a page cut short by time would end the feed with older posts
   still to load. A step's time is bounded by its size (one page of `backfillPageLimit` events) and the transport's
   request deadlines. A full page is served as it came, so the first page
   of a feed waits on nothing it does not show. The wait shows as the feed's loading-more state. Only the author streams and Following name older history; the All, friends and web of trust
