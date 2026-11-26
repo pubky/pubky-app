@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { createRequestGate, type Priority } from './concurrency';
-import { IndexerAbortedError } from './indexer.errors';
-import { settle } from './runtime.fixtures';
+import { createRequestGate, type Priority, sleep } from './concurrency';
+import { IndexerAbortedError, RateLimitedError } from './indexer.errors';
+import { fakeTime, settle } from './runtime.fixtures';
 
 /** A gate whose calls each wait for `finish`, logging when they start. */
 function gated(limit: number) {
@@ -95,5 +95,95 @@ describe('createRequestGate', () => {
     controller.abort();
     await expect(ask('a', 'foreground', 'late', controller.signal)).rejects.toBeInstanceOf(IndexerAbortedError);
     expect(started).toEqual([]);
+  });
+
+  describe('after a 429', () => {
+    /** A gate on fake time whose calls each answer `refuse` or `succeed` when told, logging when they start. */
+    function paced(limit: number) {
+      const time = fakeTime(0);
+      const gate = createRequestGate(limit, {
+        now: () => time.clock.now,
+        sleep: (ms) => sleep(ms, undefined, time.schedule),
+      });
+      const started: Array<[string, number]> = [];
+      const answers = new Map<string, (refused: boolean, retryAfterMs?: number) => void>();
+      const ask = (route: string, name: string) =>
+        gate
+          .run(
+            'hs',
+            'foreground',
+            () =>
+              new Promise<string>((resolve, reject) => {
+                started.push([name, time.clock.now]);
+                answers.set(name, (refused, retryAfterMs) =>
+                  refused ? reject(new RateLimitedError('hs', retryAfterMs)) : resolve(name),
+                );
+              }),
+            undefined,
+            route,
+          )
+          .catch(() => 'refused');
+      const answer = async (name: string, refused: boolean, retryAfterMs?: number) => {
+        answers.get(name)?.(refused, retryAfterMs);
+        await settle();
+      };
+      return { time, ask, started, answer };
+    }
+
+    it('closes the route for every call until the named wait, then starts them one per gap, other routes free', async () => {
+      const { time, ask, started, answer } = paced(6);
+      void ask('stream', 's1');
+      await settle();
+      await answer('s1', true, 500);
+      for (const name of ['s2', 's3', 's4']) void ask('stream', name);
+      void ask('file', 'f1');
+      await settle();
+      expect(started).toEqual([
+        ['s1', 0],
+        ['f1', 0],
+      ]);
+
+      await time.advance(5000);
+      // The first once the named wait is over, each next one a gap of 1 s later.
+      expect(started.slice(2)).toEqual([
+        ['s2', 500],
+        ['s3', 1500],
+        ['s4', 2500],
+      ]);
+    });
+
+    it('counts the refusals of calls in flight together once, and doubles the gap per refusal after that', async () => {
+      const { time, ask, started, answer } = paced(6);
+      void ask('stream', 's1');
+      void ask('stream', 's2');
+      await settle();
+      await answer('s1', true);
+      await answer('s2', true);
+      void ask('stream', 's3');
+      void ask('stream', 's4');
+      await time.advance(1000);
+      expect(started.slice(2)).toEqual([['s3', 1000]]);
+
+      // Started after the last refusal: a new one, so the gap doubles.
+      await answer('s3', true);
+      void ask('stream', 's5');
+      await time.advance(10 * 1000);
+      expect(started.slice(3)).toEqual([
+        ['s4', 3000],
+        ['s5', 5000],
+      ]);
+    });
+
+    it('ends the pace a minute after the last refusal', async () => {
+      const { time, ask, started, answer } = paced(6);
+      void ask('stream', 's1');
+      await settle();
+      await answer('s1', true);
+      await time.advance(60 * 1000);
+      for (const name of ['s2', 's3', 's4']) void ask('stream', name);
+      await settle();
+      expect(started.slice(1).map(([name]) => name)).toEqual(['s2', 's3', 's4']);
+      expect(started.slice(1).every(([, at]) => at === 60 * 1000)).toBe(true);
+    });
   });
 });

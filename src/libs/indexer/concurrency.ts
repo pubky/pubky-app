@@ -1,4 +1,4 @@
-import { IndexerAbortedError, RequestTimeoutError } from './indexer.errors';
+import { IndexerAbortedError, RateLimitedError, RequestTimeoutError } from './indexer.errors';
 
 /** Runs `callback` after `ms` and returns the function that cancels it. */
 export type Schedule = (callback: () => void, ms: number) => () => void;
@@ -133,33 +133,116 @@ const PRIORITIES: readonly Priority[] = ['foreground', 'background'];
 
 export interface RequestGate {
   /**
-   * Runs `call` once its key has a free slot, or rejects with `IndexerAbortedError` if `signal` fires while it waits.
-   * A call that started runs to its end: the gate never interrupts one for another.
+   * Runs `call` once its key has a free slot and its route is open, or rejects with `IndexerAbortedError` if `signal`
+   * fires while it waits. A call that started runs to its end: the gate never interrupts one for another.
    */
-  run<T>(key: string, priority: Priority, call: () => Promise<T>, signal?: AbortSignal): Promise<T>;
+  run<T>(key: string, priority: Priority, call: () => Promise<T>, signal?: AbortSignal, route?: string): Promise<T>;
 }
+
+/** How the gate tells time and waits, injected so tests control both. */
+export interface GateClock {
+  now: () => number;
+  sleep: (ms: number) => Promise<void>;
+}
+
+/** The pace of a route once a server refused it: the next start allowed, the gap between starts, the refusal. */
+interface Pace {
+  next: number;
+  spacing: number;
+  refusedAt: number;
+}
+
+/** The first gap between starts after a refusal, doubled by each refusal of a call started after the last one. */
+const PACE_FIRST_MS = 1000;
+const PACE_MAX_MS = 8 * 1000;
+/** A full token bucket of any per-minute quota refills within a minute: past it without a refusal, the pace ends. */
+const PACE_CALM_MS = 60 * 1000;
 
 /**
  * Admits at most `limit` calls per key at once, in arrival order within a priority and foreground first. A
- * background call starts only while no foreground call waits, and leaves one slot free when there are two or more, so
- * a foreground call arriving while the others run starts at once.
+ * background call starts only while no foreground call is ready to, and leaves one slot free when there are two or
+ * more, so a foreground call arriving while the others run starts at once.
+ *
+ * A call rejected with `RateLimitedError` closes its key's route for every call of it, until the wait the server
+ * named or else the route's gap, and from then on its calls start one per gap: a server's token bucket refills one
+ * token at a time, and a refusal says it is empty. Each refusal of a call that started after the last one doubles the
+ * gap, up to its max; calls that were in flight together count once. A minute without a refusal ends the pace.
  */
-export function createRequestGate(limit: number): RequestGate {
+export function createRequestGate(limit: number, clock: GateClock = { now: Date.now, sleep }): RequestGate {
+  interface Waiting {
+    route: string;
+    start: () => void;
+  }
   interface Lane {
     active: number;
-    waiting: Record<Priority, Array<() => void>>;
+    waiting: Record<Priority, Waiting[]>;
+    paces: Map<string, Pace>;
+    /** When a drain is scheduled for a paced call, if one is. */
+    wakeAt: number | null;
   }
   const backgroundLimit = Math.max(1, limit - 1);
   const lanes = new Map<string, Lane>();
   const laneOf = (key: string): Lane => {
     const known = lanes.get(key);
     if (known !== undefined) return known;
-    const lane: Lane = { active: 0, waiting: { foreground: [], background: [] } };
+    const lane: Lane = { active: 0, waiting: { foreground: [], background: [] }, paces: new Map(), wakeAt: null };
     lanes.set(key, lane);
     return lane;
   };
+  /** When the route may start a call next; the pace ends once calm. */
+  const dueAt = (lane: Lane, route: string, now: number): number => {
+    const pace = lane.paces.get(route);
+    if (pace === undefined) return now;
+    if (now - pace.refusedAt >= PACE_CALM_MS) {
+      lane.paces.delete(route);
+      return now;
+    }
+    return pace.next;
+  };
+  const drain = (lane: Lane) => {
+    const now = clock.now();
+    let wake: number | null = null;
+    for (const rank of PRIORITIES) {
+      const queue = lane.waiting[rank];
+      const cap = rank === 'foreground' ? limit : backgroundLimit;
+      let ready = false;
+      for (let i = 0; i < queue.length;) {
+        const due = dueAt(lane, queue[i].route, now);
+        if (due > now) {
+          wake = wake === null || due < wake ? due : wake;
+          i += 1;
+          continue;
+        }
+        if (lane.active >= cap) {
+          ready = true;
+          break;
+        }
+        const [entry] = queue.splice(i, 1);
+        const pace = lane.paces.get(entry.route);
+        if (pace !== undefined) pace.next = now + pace.spacing;
+        entry.start();
+      }
+      if (ready) break;
+    }
+    if (wake !== null && (lane.wakeAt === null || wake < lane.wakeAt)) {
+      const at = wake;
+      lane.wakeAt = at;
+      void clock.sleep(at - now).then(() => {
+        if (lane.wakeAt === at) lane.wakeAt = null;
+        drain(lane);
+      });
+    }
+  };
+  const refuse = (lane: Lane, route: string, startedAt: number, retryAfterMs: number | undefined) => {
+    const now = clock.now();
+    const known = lane.paces.get(route);
+    // In flight before the last refusal: that one already said the bucket was empty.
+    if (known !== undefined && startedAt <= known.refusedAt && now - known.refusedAt < PACE_CALM_MS) return;
+    const spacing = known === undefined ? PACE_FIRST_MS : Math.min(known.spacing * 2, PACE_MAX_MS);
+    lane.paces.set(route, { spacing, refusedAt: now, next: now + (retryAfterMs ?? spacing) });
+  };
   return {
-    run<T>(key: string, priority: Priority, call: () => Promise<T>, signal?: AbortSignal): Promise<T> {
+    run<T>(key: string, priority: Priority, call: () => Promise<T>, signal?: AbortSignal, route = ''): Promise<T> {
       return new Promise<T>((resolve, reject) => {
         if (signal?.aborted) {
           reject(new IndexerAbortedError({ cause: signal.reason }));
@@ -167,35 +250,34 @@ export function createRequestGate(limit: number): RequestGate {
         }
         const lane = laneOf(key);
         const waiting = lane.waiting[priority];
-        const drain = () => {
-          for (const rank of PRIORITIES) {
-            const queue = lane.waiting[rank];
-            const cap = rank === 'foreground' ? limit : backgroundLimit;
-            while (queue.length > 0 && lane.active < cap) queue.shift()?.();
-            if (queue.length > 0) return;
-          }
-        };
         const onAbort = () => {
-          waiting.splice(waiting.indexOf(start), 1);
+          waiting.splice(waiting.indexOf(entry), 1);
           reject(new IndexerAbortedError({ cause: signal?.reason }));
         };
+        const entry: Waiting = { route, start };
         function start() {
           signal?.removeEventListener('abort', onAbort);
           lane.active += 1;
+          const startedAt = clock.now();
           let pending: Promise<T>;
           try {
             pending = call();
           } catch (error) {
             pending = Promise.reject(error);
           }
-          void pending.then(resolve, reject).finally(() => {
-            lane.active -= 1;
-            drain();
-          });
+          void pending
+            .then(resolve, (error: unknown) => {
+              if (error instanceof RateLimitedError) refuse(lane, route, startedAt, error.retryAfterMs);
+              reject(error);
+            })
+            .finally(() => {
+              lane.active -= 1;
+              drain(lane);
+            });
         }
-        waiting.push(start);
+        waiting.push(entry);
         signal?.addEventListener('abort', onAbort, { once: true });
-        drain();
+        drain(lane);
       });
     },
   };

@@ -123,12 +123,18 @@ like any failed lookup, and an index file call past `indexFileTimeoutMs` (2 min)
 such as a `stop`, settles the operation at once, even while a call hangs. A call that settles after
 its deadline or abort is ignored.
 
-A request answered 429, or failed or past its deadline, is retried up to three times, after the wait a 429 named
-or, since the SDK passes none on, after 1 s doubling per consecutive failure of that homeserver up to 8 s, reset by
-its next success. So one slow or failed request on a healthy homeserver costs a retry, never the homeserver. Only a
-request that fails all four times fails it, once for the operation however many of its reads failed together, and then
-no other request of the operation retries against it, so a dead homeserver costs at most four requests per request in
-flight to it, not one per record. Retries never change what a
+A request answered 429, or failed or past its deadline, is retried up to three times. A failure waits 1 s before
+its first retry, doubling per retry of that request up to 8 s, so requests failing together never push each other's
+waits. A 429 is the homeserver's limiter speaking: it keys a quota by route (a path pattern and a method) and by IP
+or user, refills one token per period, and names no wait, so the SDK passes none on. The gate closes that route of
+the homeserver for every request of every operation, until the wait a 429 names or else the route's gap, then starts
+its requests one per gap: a refusal says the bucket is empty, and it refills one token at a time. Each 429 to a
+request started after the last one doubles the gap, from 1 s up to 8 s; the requests in flight together count once.
+A minute without a 429 ends the pace, the time a full bucket of a per-minute quota takes to refill. So a homeserver
+that rate limits its event stream sees one request per gap from the whole crawler instead of a burst per operation,
+and its file route stays open. Only a request that fails all four times fails the homeserver, once for the operation
+however many of its reads failed together, and then no other request of the operation retries against it, so a dead
+homeserver costs at most four requests per request in flight to it, not one per record. Retries never change what a
 failure leaves behind: a batch, or a slice of a newest-first read, commits only once the files it needs to render are
 fetched, so a failed one commits nothing, its users keep their stored coverage, the slices above it included, and a
 later sync reads them again from there. A `later` file that

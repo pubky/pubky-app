@@ -43,7 +43,7 @@ import type { AuthoredStreamEvent } from './transport.types';
 const DAY_MS = 24 * 60 * 60 * 1000;
 const BACKOFF_BASE_MS = 60 * 1000;
 const BACKOFF_MAX_MS = 30 * 60 * 1000;
-/** Waits before a retry the homeserver names none for: doubling per consecutive failure of it, up to the max. */
+/** Waits before retrying a request that failed: doubling per retry of it, up to the max. */
 const RETRY_FIRST_WAIT_MS = 1000;
 const RETRY_MAX_WAIT_MS = 8 * 1000;
 const RETRIES = 3;
@@ -103,6 +103,9 @@ const contextOf = (signal?: AbortSignal, priority: Priority = 'foreground'): Ope
   unsaved: new Map(),
   failed: new Set(),
 });
+
+/** The homeserver routes the crawler calls: the event stream and public files. */
+type Route = 'stream' | 'file';
 
 type Counter = 'lookups' | 'streamRequests' | 'bodyRequests' | 'events';
 
@@ -170,7 +173,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
   const allPaths = domain.groups.flatMap((group) => group.paths);
 
   /** Every request to a homeserver, of every operation, queues here, so the crawler and not the browser orders them. */
-  const gate = createRequestGate(options.homeserverConcurrency);
+  const gate = createRequestGate(options.homeserverConcurrency, { now, sleep: (ms) => wait(ms) });
   const counters = { usersPerHop: [] as number[], lookups: 0, streamRequests: 0, bodyRequests: 0, events: 0 };
   let seedReach: CrawlerStats['seed'];
   let excluded: ReadonlySet<string> = new Set(options.excluded);
@@ -178,8 +181,6 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
   const failed = new Set<string>();
   /** Lookups in flight by user, so operations running together resolve a user once. */
   const lookups = new Map<string, Promise<string | null>>();
-  /** Consecutive failed requests per homeserver, 429s included, across operations, until one to it succeeds. */
-  const failing = new Map<string, number>();
   /**
    * Records stored without the file they need, by scope id then path, each with the epoch of the read that stored it.
    * One lives from the commit that stored it until a fill tries it, a later event of its path replaces it, or its
@@ -258,25 +259,23 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
   }
 
   /**
-   * Runs a request to the homeserver, retrying a 429 or a failure up to `RETRIES` times, after the wait a 429 named
-   * or else one that grows with the homeserver's consecutive failures. So one slow or failed request costs a retry,
-   * and only a request that keeps failing fails its homeserver.
+   * Runs a request to the homeserver, retrying a 429 or a failure up to `RETRIES` times: a 429 once the gate opens
+   * its route again, a failure after a wait that doubles per retry of this request. So one slow or failed request
+   * costs a retry, and only a request that keeps failing fails its homeserver.
    */
   async function attempt<T>(ctx: OperationContext, homeserver: string, request: () => Promise<T>): Promise<T> {
     for (let retry = 0; ; retry += 1) {
       throwIfAborted(ctx.signal);
       try {
-        const result = await request();
-        failing.delete(homeserver);
-        return result;
+        return await request();
       } catch (error) {
         throwIfAborted(ctx.signal);
         if (!(error instanceof RateLimitedError || error instanceof HomeserverUnreachableError)) throw error;
-        const streak = failing.get(homeserver) ?? 0;
-        failing.set(homeserver, streak + 1);
         if (retry >= RETRIES) throw error;
-        const named = error instanceof RateLimitedError ? error.retryAfterMs : undefined;
-        await wait(named ?? Math.min(RETRY_FIRST_WAIT_MS * 2 ** streak, RETRY_MAX_WAIT_MS), ctx.signal);
+        // The gate holds a rate-limited route closed for every request; a failure waits on its own.
+        if (error instanceof HomeserverUnreachableError) {
+          await wait(Math.min(RETRY_FIRST_WAIT_MS * 2 ** retry, RETRY_MAX_WAIT_MS), ctx.signal);
+        }
         // Another request of this operation gave up on the homeserver meanwhile: ask it nothing more.
         if (ctx.failed.has(homeserver)) throw error;
       }
@@ -285,15 +284,21 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
 
   /**
    * One call to the homeserver once the gate lets it go, under the request deadline from then on; past it the
-   * request fails as unreachable.
+   * request fails as unreachable. A homeserver limits each route on its own, so the gate paces each.
    */
-  async function call<T>(ctx: OperationContext, homeserver: string, request: (signal: AbortSignal) => Promise<T>) {
+  async function call<T>(
+    ctx: OperationContext,
+    homeserver: string,
+    route: Route,
+    request: (signal: AbortSignal) => Promise<T>,
+  ) {
     try {
       return await gate.run(
         homeserver,
         ctx.priority,
         () => withDeadline(request, options.requestTimeoutMs, schedule, ctx.signal),
         ctx.signal,
+        route,
       );
     } catch (error) {
       if (error instanceof RequestTimeoutError) throw new HomeserverUnreachableError(homeserver, { cause: error });
@@ -305,7 +310,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     return async (users, reverse) => {
       const events = await attempt(ctx, homeserver, () => {
         count('streamRequests');
-        return call(ctx, homeserver, (signal) =>
+        return call(ctx, homeserver, 'stream', (signal) =>
           transport.readEvents({ homeserver, users, paths, limit, reverse, signal }),
         );
       });
@@ -408,7 +413,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
   ): Promise<D | null> {
     const bytes = await attempt(ctx, homeserver, () => {
       count('bodyRequests');
-      return call(ctx, homeserver, (signal) => transport.getPublic({ author, path: record.path, signal }));
+      return call(ctx, homeserver, 'file', (signal) => transport.getPublic({ author, path: record.path, signal }));
     });
     // A 404 or other bytes mean a later event replaced this one, and that event brings the data.
     if (bytes === null) return null;

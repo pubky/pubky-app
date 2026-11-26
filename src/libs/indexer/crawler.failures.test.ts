@@ -33,8 +33,8 @@ describe('syncScope failures', () => {
 
     expect(first.failedHomeservers).toEqual(['hs2']);
     expect(first.members.has('bob')).toBe(true);
-    // bob's graph and activity, read at once, retried three times each, the wait growing with hs2's failures.
-    expect(waits.sort((a, b) => a - b)).toEqual([1000, 2000, 4000, 8000, 8000, 8000]);
+    // bob's graph and activity, read at once, retried three times each, each wait doubling per retry of its read.
+    expect(waits.sort((a, b) => a - b)).toEqual([1000, 1000, 2000, 2000, 4000, 4000]);
     expect(await served(store, 'carol', 'hs3', ACTIVITY)).toEqual(network.liveOf('carol', [POSTS]));
     expect((await store.readHomeserverState('hs2')).failure).toEqual({ failures: 1, retryAt: clock.now + MINUTE_MS });
 
@@ -57,46 +57,54 @@ describe('syncScope failures', () => {
     expect(await served(store, 'bob', 'hs2', ACTIVITY)).toEqual(network.liveOf('bob', [POSTS]));
   });
 
-  it('retries a rate-limited request after the asked wait and succeeds', async () => {
+  it('retries a rate-limited request once the asked wait is over and succeeds', async () => {
     const { network, store, crawler, waits } = threeHomeservers();
-    network.rateLimit('hs3', 2, 250);
+    network.rateLimit('hs3', 1, 250);
 
     const { failedHomeservers } = await crawler.syncScope('alice');
 
     expect(failedHomeservers).toEqual([]);
-    expect(waits).toEqual([250, 250]);
+    expect(waits[0]).toBe(250);
     expect(await served(store, 'carol', 'hs3', ACTIVITY)).toEqual(network.liveOf('carol', [POSTS]));
   });
 
   it('gives up on a homeserver for this sync after three rate-limited retries, without backing off', async () => {
-    const { network, store, crawler, waits } = threeHomeservers();
+    const { network, store, crawler } = threeHomeservers();
     // carol's graph and activity reads, each refused four times.
     network.rateLimit('hs3', 8);
 
     const { failedHomeservers } = await crawler.syncScope('alice');
 
     expect(failedHomeservers).toEqual(['hs3']);
-    expect(waits.sort((a, b) => a - b)).toEqual([1000, 2000, 4000, 8000, 8000, 8000]);
     expect((await store.readHomeserverState('hs3')).failure).toBeNull();
     expect(await served(store, 'bob', 'hs2', ACTIVITY)).toEqual(network.liveOf('bob', [POSTS]));
   });
 
-  it('doubles the wait per consecutive 429 of a homeserver up to 8 s, until a success resets it', async () => {
-    const { network, store, crawler, waits } = threeHomeservers();
-    // Enough to refuse carol's graph and activity reads with all their retries.
+  it('paces a rate-limited homeserver for every operation after it, one stream request per gap', async () => {
+    const { network, crawlerOf, clock } = threeHomeservers();
+    const starts: number[] = [];
+    const crawler = crawlerOf({
+      resolveHomeserver: (user) => network.resolveHomeserver(user),
+      readEvents: (request) => {
+        if (request.homeserver === 'hs3') starts.push(clock.now);
+        return network.readEvents(request);
+      },
+      getPublic: (request) => network.getPublic(request),
+      listIndexFiles: () => network.listIndexFiles(),
+      readIndexFile: (name) => network.readIndexFile(name),
+      writeIndexFile: (name, bytes) => network.writeIndexFile(name, bytes),
+      deleteIndexFile: (name) => network.deleteIndexFile(name),
+    });
     network.rateLimit('hs3', 8);
     await crawler.syncScope('alice');
-    expect(waits.sort((a, b) => a - b)).toEqual([1000, 2000, 4000, 8000, 8000, 8000]);
+    const refused = starts.length;
+    expect(refused).toBe(8);
 
-    network.rateLimit('hs3', 1);
-    expect((await crawler.syncScope('alice')).failedHomeservers).toEqual([]);
-    expect(waits.slice(6)).toEqual([8000]);
-    expect(await served(store, 'carol', 'hs3', ACTIVITY)).toEqual(network.liveOf('carol', [POSTS]));
-
-    network.rateLimit('hs3', 1);
-    network.rateLimit('hs2', 2);
-    await crawler.syncScope('alice');
-    expect(waits.slice(7).sort((a, b) => a - b)).toEqual([1000, 1000, 2000]);
+    // The next operation finds the route paced, so its reads go one per gap instead of all at once.
+    expect((await crawler.syncUsers(['carol'])).failedHomeservers).toEqual([]);
+    expect(starts.length - refused).toBeGreaterThanOrEqual(2);
+    const gaps = starts.slice(refused - 1).map((at, i, all) => (i === 0 ? null : at - all[i - 1]));
+    expect(gaps.slice(1).every((gap) => gap !== null && gap >= 1000)).toBe(true);
   });
 
   it('crawls the homeservers of a hop together, so a stalled one holds up none of the others', async () => {
