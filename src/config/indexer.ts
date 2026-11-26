@@ -43,14 +43,7 @@ export const INDEXER_PAGE_BACKFILL_AUTHORS = 3;
 
 /**
  * Rounds of older activity one stream page request may run, a safety net only: the outcome of each step ends the
- * extension (history complete, a step skipped or failed) and the time budget below bounds it. 20 rounds read up to
- * 2000 events per author, more than the budget leaves time for at real homeserver latency, so the cap fires only
- * when steps settle without reading anything new.
+ * extension (history complete, a step skipped, failed or reading nothing). 20 rounds read up to 2000 events per
+ * author, so the cap fires only on a history that sparse or on steps that never report an end.
  */
 export const INDEXER_PAGE_BACKFILL_MAX_ROUNDS = 20;
-
-/**
- * Wall-clock time one stream page request may spend loading older activity before the page is served as it is. An
- * author with sparse posts can take many rounds of a few seconds each to fill a page.
- */
-export const INDEXER_PAGE_BACKFILL_BUDGET_MS = 8_000;

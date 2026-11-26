@@ -1,7 +1,6 @@
 import {
   INDEXER_HINT_BACKFILL_PAGES,
   INDEXER_PAGE_BACKFILL_AUTHORS,
-  INDEXER_PAGE_BACKFILL_BUDGET_MS,
   INDEXER_PAGE_BACKFILL_MAX_ROUNDS,
 } from '@/config/indexer';
 import {
@@ -280,13 +279,12 @@ function hintsToLoad(more: readonly MoreHint[], url: string, unproven: boolean):
   return more.filter((hint) => hint.kind !== 'backfill' || extendsHistory);
 }
 
-const STREAM_PAGE_PATH = new RegExp(`/${NEXUS_API_VERSION}/stream/posts/keys$`);
-
 /** The page size of a post stream page older history can extend, `null` for any other read. */
 function extendablePageLimit(url: string): number | null {
   const parsed = new URL(url, 'http://local.invalid');
   // A page bounded by `end` (a head poll) asks for posts newer than a score: it is never a scroll, so never forced.
-  if (!STREAM_PAGE_PATH.test(parsed.pathname) || parsed.searchParams.has('end')) return null;
+  if (!parsed.pathname.endsWith(`/${NEXUS_API_VERSION}/stream/posts/keys`) || parsed.searchParams.has('end'))
+    return null;
   const limit = Number(parsed.searchParams.get('limit'));
   return Number.isInteger(limit) && limit > 0 ? limit : null;
 }
@@ -330,15 +328,6 @@ async function stepBack(indexer: SocialIndexer, author: string): Promise<Backfil
   }
 }
 
-/** What `work` settles with, or `null` when it takes longer than `ms`; it keeps running past them either way. */
-function within<T>(work: Promise<T>, ms: number): Promise<T | null> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const timeout = new Promise<null>((resolve) => {
-    timer = setTimeout(() => resolve(null), ms);
-  });
-  return Promise.race([work, timeout]).finally(() => clearTimeout(timer));
-}
-
 /** Whether an author may give a page more after this step: it ran, read something and did not reach the start. */
 const hasMoreAfter = (outcome: BackfillOutcome | null): boolean =>
   outcome !== null && outcome.status === 'ran' && !outcome.complete && outcome.events > 0;
@@ -346,12 +335,10 @@ const hasMoreAfter = (outcome: BackfillOutcome | null): boolean =>
 /**
  * Loads older history into a stream page that came back short while its answer names authors whose history older
  * posts could come from, one step per author and round, and asks again after each round. The app reads a short page
- * as the end of the feed. An author leaves the extension once a step says their history is complete, or a step of
- * theirs was skipped or failed; the page is served as it is once no named author is left, after
- * `INDEXER_PAGE_BACKFILL_MAX_ROUNDS` rounds, or once `INDEXER_PAGE_BACKFILL_BUDGET_MS` ran out. A short page served
- * on the budget still ends the feed, as the stream layer reads only the page length; a step still running lands in
- * the index, and the next open of the feed continues from there. A full page is served as it came, so a feed's first
- * page waits for nothing it does not show.
+ * as the end of the feed, so the page waits for the steps, shown as the feed's loading-more state. An author leaves
+ * the extension once a step says their history is complete, or a step of theirs was skipped, failed or read nothing;
+ * the page is served as it is once no named author is left or after `INDEXER_PAGE_BACKFILL_MAX_ROUNDS` rounds. A full
+ * page is served as it came, so a feed's first page waits for nothing it does not show.
  */
 async function extendStreamPage(
   indexer: SocialIndexer,
@@ -359,17 +346,14 @@ async function extendStreamPage(
   first: NexusResponse,
   limit: number,
 ): Promise<NexusResponse> {
-  const deadline = Date.now() + INDEXER_PAGE_BACKFILL_BUDGET_MS;
   const done = new Set<string>();
   let response = first;
   for (let round = 0; round < INDEXER_PAGE_BACKFILL_MAX_ROUNDS; round += 1) {
     const keys = pageKeysOf(response);
     if (keys === null || keys.length >= limit) return response;
     const authors = authorsToExtend(indexer, response.more ?? [], done);
-    const left = deadline - Date.now();
-    if (authors.length === 0 || left <= 0) return response;
-    const outcomes = await within(Promise.all(authors.map((author) => stepBack(indexer, author))), left);
-    if (outcomes === null) return indexer.request(request);
+    if (authors.length === 0) return response;
+    const outcomes = await Promise.all(authors.map((author) => stepBack(indexer, author)));
     outcomes.forEach((outcome, i) => {
       if (!hasMoreAfter(outcome)) done.add(authors[i]);
     });
@@ -382,7 +366,7 @@ async function extendStreamPage(
 /**
  * Answers a Nexus read from the local index. When the answer names what could be loaded to improve it
  * (`hintsToLoad`), that is loaded once and the read asked once more; a short post stream page then gets older
- * history until it is full, proven to end, or out of time (`extendStreamPage`). A route the index cannot serve (global search
+ * history until it is full or proven to end (`extendStreamPage`). A route the index cannot serve (global search
  * and rankings, and for a signed-out visitor's index every feed, ranking and search over a scope it does not have)
  * is `unavailable`.
  */
