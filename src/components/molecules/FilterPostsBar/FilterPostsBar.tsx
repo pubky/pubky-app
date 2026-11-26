@@ -1,6 +1,8 @@
 'use client';
 
-import { Search } from 'lucide-react';
+import { useRef } from 'react';
+import { Search, X } from 'lucide-react';
+import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Input } from '@/atoms/Input/Input';
 import { Typography } from '@/atoms/Typography/Typography';
@@ -18,6 +20,13 @@ const MESSAGE_ID = 'filter-posts-bar-message';
  * the validation message mirrors the `InputField` message pattern.
  */
 export function FilterPostsBar({ value, onValueChange, validationMessage }: FilterPostsBarProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const clearValue = () => {
+    onValueChange('');
+    inputRef.current?.focus();
+  };
+
   return (
     <Container overrideDefaults className="flex min-w-0 shrink-0 flex-col gap-2">
       <Container
@@ -28,6 +37,7 @@ export function FilterPostsBar({ value, onValueChange, validationMessage }: Filt
         overrideDefaults
       >
         <Input
+          ref={inputRef}
           type="text"
           placeholder={'Filter posts'}
           value={value}
@@ -39,9 +49,27 @@ export function FilterPostsBar({ value, onValueChange, validationMessage }: Filt
           aria-describedby={validationMessage ? MESSAGE_ID : undefined}
           className="h-auto min-w-20 flex-1 border-none bg-transparent pr-0 pl-0 text-base font-medium text-foreground shadow-none md:text-base"
         />
-        <span className="pointer-events-none -mr-2 flex size-8 shrink-0 items-center justify-center" aria-hidden="true">
-          <Search className="size-4 text-muted-foreground" />
-        </span>
+        {value ? (
+          <Button
+            type="button"
+            variant={ButtonVariant.GHOST}
+            size="icon"
+            aria-label="Clear filter"
+            data-cy="profile-filter-posts-clear"
+            // Forced-colors mode drops the box-shadow focus ring, so draw an outline in that mode instead.
+            className="-mr-2 size-8 shrink-0 border-none p-0 text-muted-foreground shadow-none forced-colors:focus-visible:outline-2 forced-colors:focus-visible:outline-solid"
+            onClick={clearValue}
+          >
+            <X className="size-4" aria-hidden="true" />
+          </Button>
+        ) : (
+          <span
+            className="pointer-events-none -mr-2 flex size-8 shrink-0 items-center justify-center"
+            aria-hidden="true"
+          >
+            <Search className="size-4 text-muted-foreground" />
+          </span>
+        )}
       </Container>
       {validationMessage && (
         <Typography as="small" size="sm" id={MESSAGE_ID} role="alert" className="ml-6 text-red-500">

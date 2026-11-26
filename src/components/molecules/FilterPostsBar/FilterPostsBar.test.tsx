@@ -48,6 +48,29 @@ describe('FilterPostsBar', () => {
     expect(input).toHaveAttribute('aria-describedby', message.id);
   });
 
+  it('hides the clear button while the input is empty', () => {
+    render(<FilterPostsBar value="" onValueChange={vi.fn()} />);
+
+    expect(screen.queryByRole('button', { name: 'Clear filter' })).not.toBeInTheDocument();
+  });
+
+  it('swaps the search icon for a clear button once the input has text', () => {
+    const { container } = render(<FilterPostsBar value="bitcoin" onValueChange={vi.fn()} />);
+
+    expect(screen.getByRole('button', { name: 'Clear filter' })).toBeInTheDocument();
+    expect(container.querySelector('svg.lucide-search')).not.toBeInTheDocument();
+  });
+
+  it('clears the value and keeps focus in the input when the clear button is pressed', () => {
+    const onValueChange = vi.fn();
+    render(<FilterPostsBar value="bitcoin" onValueChange={onValueChange} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clear filter' }));
+
+    expect(onValueChange).toHaveBeenCalledWith('');
+    expect(screen.getByRole('textbox', { name: 'Filter posts' })).toHaveFocus();
+  });
+
   it('omits the message and invalid state when the query is fine', () => {
     render(<FilterPostsBar value="bitcoin" onValueChange={vi.fn()} />);
 
