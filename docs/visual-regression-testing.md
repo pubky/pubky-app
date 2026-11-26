@@ -87,12 +87,16 @@ to genuinely-changed surfaces. The trade-off is that a visual change under 0.1%
 of pixels won't be flagged — still pin every deterministic source below so real
 diffs stand out:
 
-The comparator also has a per-pixel `threshold` (pixelmatch default `0.1`)
-below which a colour change is not counted at all. Very low-contrast content —
-e.g. the dark-gray empty-state illustrations on the near-black background —
-falls entirely under it, so VRT does not guard that artwork, and `--update`
-will not rewrite a baseline whose only change is in such content. To refresh
-those baselines, delete the PNGs first so they are regenerated from scratch.
+The comparator also has a per-pixel `threshold`, set to `0.05` (the pixelmatch
+default is `0.1`). A pixel counts as mismatched only when its YIQ colour delta
+exceeds `35215 × threshold²` (about 88), and anti-aliased pixels are never
+counted. At `0.1` (about 352) a page background changing from `#eeeef6` to
+`#ffffff` (delta about 134) passed across 98% of the page; at `0.05` it fails,
+while a uniform grey shift of up to about 13 levels still passes. Content
+fainter than that — e.g. very low-contrast artwork on the near-black
+background — is still not guarded, and `--update` will not rewrite a baseline
+whose only change is in such content. To refresh those baselines, delete the
+PNGs first so they are regenerated from scratch.
 
 - **Async data** — mock the hook/controller to a fixed value. An unmocked fetch
   resolves differently per run/region. This is the #1 cause of flakiness.
