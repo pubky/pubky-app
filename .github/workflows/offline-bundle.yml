@@ -13,9 +13,34 @@ concurrency:
 
 jobs:
   bundle:
-    name: Build the offline bundle
+    name: Build the offline bundle (${{ matrix.network }})
     if: github.head_ref == 'feat/indexer'
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      # One bundle per network, since the export bakes the config in. The production values are the
+      # ones pubky-stack deploys. Many production accounts have not moved to social v1 yet, so that
+      # bundle's local index reads the older tree too.
+      matrix:
+        include:
+          - network: staging
+            deploy_env: staging
+            homeserver: ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy
+            homeserver_url: https://homeserver.staging.pubky.app
+            homegate_url: https://homegate.staging.pubky.app
+            http_relay: https://httprelay.staging.pubky.app/inbox
+            moderation_id: nto4u7kkagk5hfjk4wgueemzy61nssic811hid1ty9u81uatmqzy
+            legacy_tree: ''
+          - network: production
+            deploy_env: production
+            homeserver: 8um71us3fyw6h8wbcxb5ar3rwusy1a6u49956ikzojg3gcwd1dty
+            homeserver_url: https://homeserver.pubky.app
+            homegate_url: https://homegate.pubky.app
+            http_relay: https://httprelay.pubky.app/inbox
+            moderation_id: euarj183st16psbzusb44usk8i1k5foubnw7zt3n3j8h9zxg6hro
+            legacy_tree: 'true'
+    env:
+      BUNDLE: pubky-app-offline-${{ matrix.network }}
 
     steps:
       - name: Checkout code
@@ -32,19 +57,20 @@ jobs:
         uses: ./.github/actions/install-dependencies
 
       # The export bakes this config into every page, and its build fails when a required value is
-      # missing. Staging network, the in-browser index, no optional third-party service and no embeds.
+      # missing. The in-browser index, no Nexus, no optional third-party service and no embeds.
       - name: Export
         env:
           NEXT_PUBLIC_STATIC_EXPORT: 'true'
-          PUBKY_RUNTIME_ENV: staging
+          PUBKY_RUNTIME_ENV: ${{ matrix.deploy_env }}
           PUBKY_RUNTIME_TESTNET: 'false'
-          PUBKY_RUNTIME_HOMESERVER: ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy
-          PUBKY_RUNTIME_HOMESERVER_URL: https://homeserver.staging.pubky.app
+          PUBKY_RUNTIME_HOMESERVER: ${{ matrix.homeserver }}
+          PUBKY_RUNTIME_HOMESERVER_URL: ${{ matrix.homeserver_url }}
           PUBKY_RUNTIME_INDEXER_SOURCES: local
-          PUBKY_RUNTIME_HOMEGATE_URL: https://homegate.staging.pubky.app
+          PUBKY_RUNTIME_INDEXER_LEGACY_TREE: ${{ matrix.legacy_tree }}
+          PUBKY_RUNTIME_HOMEGATE_URL: ${{ matrix.homegate_url }}
           PUBKY_RUNTIME_PKARR_RELAYS: '["https://pkarr.pubky.app","https://pkarr.pubky.org"]'
-          PUBKY_RUNTIME_DEFAULT_HTTP_RELAY: https://httprelay.staging.pubky.app/inbox
-          PUBKY_RUNTIME_MODERATION_ID: nto4u7kkagk5hfjk4wgueemzy61nssic811hid1ty9u81uatmqzy
+          PUBKY_RUNTIME_DEFAULT_HTTP_RELAY: ${{ matrix.http_relay }}
+          PUBKY_RUNTIME_MODERATION_ID: ${{ matrix.moderation_id }}
           PUBKY_RUNTIME_THIRD_PARTY_EMBEDS: 'false'
         run: npm run build
 
@@ -55,6 +81,8 @@ jobs:
           test -f out/post/_/_.html
           test -f out/profile/_.html
           grep -q 'window.__PUBKY_CONFIG__=Object.freeze' out/index.html
+          grep -q '"homeserver":"${{ matrix.homeserver }}"' out/index.html
+          if grep -qE '"(nexusUrl|cdnUrl)"' out/index.html; then echo 'a Nexus URL in the config'; exit 1; fi
           if find out -name '*.map' | grep -q .; then echo 'source maps in the export'; exit 1; fi
           if [ -d out/api ]; then echo 'route handlers in the export'; exit 1; fi
 
@@ -80,20 +108,20 @@ jobs:
       # Zipped here, not by the artifact upload, which drops the executable bit.
       - name: Assemble the bundle
         run: |
-          mkdir -p bundle/pubky-app-offline
-          cp -r out bundle/pubky-app-offline/app
+          mkdir -p "bundle/$BUNDLE"
+          cp -r out "bundle/$BUNDLE/app"
           cp offline-bundle/serve.py offline-bundle/serve.mjs offline-bundle/routes.json offline-bundle/README.txt \
-            offline-bundle/launcher/dist/* bundle/pubky-app-offline/
-          chmod +x bundle/pubky-app-offline/pubky-app-* bundle/pubky-app-offline/serve.*
-          (cd bundle && zip -qr -9 pubky-app-offline.zip pubky-app-offline)
-          du -sh bundle/pubky-app-offline bundle/pubky-app-offline/app
-          ls -l bundle/pubky-app-offline.zip
+            offline-bundle/launcher/dist/* "bundle/$BUNDLE/"
+          chmod +x "bundle/$BUNDLE"/pubky-app-* "bundle/$BUNDLE"/serve.*
+          (cd bundle && zip -qr -9 "$BUNDLE.zip" "$BUNDLE")
+          du -sh "bundle/$BUNDLE" "bundle/$BUNDLE/app"
+          ls -l "bundle/$BUNDLE.zip"
 
       - name: Upload the bundle
         uses: actions/upload-artifact@v7
         with:
-          name: pubky-app-offline
-          path: bundle/pubky-app-offline.zip
+          name: ${{ env.BUNDLE }}
+          path: bundle/${{ env.BUNDLE }}.zip
           # Already compressed.
           compression-level: 0
           retention-days: 7

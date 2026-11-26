@@ -7,12 +7,24 @@ local index (`PUBKY_RUNTIME_INDEXER_SOURCES=local`, ADR-0031). The decisions are
 
 ## Building it
 
-CI builds it: `.github/workflows/offline-bundle.yml` exports the app, checks the export and uploads the bundle as
-the `pubky-app-offline` artifact (kept 7 days), which holds `pubky-app-offline.zip`: the zip is made in the job
-because an artifact upload drops the executable bit of the launchers. Download it from the run's page, or with
-`gh run download <run id> --repo pubky/pubky-app -n pubky-app-offline`.
+CI builds it: `.github/workflows/offline-bundle.yml` builds one bundle per network, each from its own export, and
+uploads them as two artifacts (kept 7 days):
 
-By hand, from a checkout with dependencies installed:
+| Artifact                       | Network                                                             | Older tree |
+| ------------------------------ | ------------------------------------------------------------------- | ---------- |
+| `pubky-app-offline-staging`    | Staging (`homeserver.staging.pubky.app`)                            | Off        |
+| `pubky-app-offline-production` | Production (`homeserver.pubky.app`), the values pubky-stack deploys | On         |
+
+Each holds `pubky-app-offline-<network>.zip`, which unpacks to a folder of the same name. The zip is made in the
+job because an artifact upload drops the executable bit of the launchers. Download one from the run's page, or with
+`gh run download <run id> --repo pubky/pubky-app -n pubky-app-offline-production`.
+
+The production bundle sets `PUBKY_RUNTIME_INDEXER_LEGACY_TREE=true`: many production accounts still hold only the
+tree written before social v1, and without it their profiles and posts would not show. Both bundles set no Nexus
+or CDN URL, and the job fails if either ends up in the baked config.
+
+By hand, from a checkout with dependencies installed (staging shown; the production values are in the workflow's
+matrix):
 
 ```bash
 NEXT_PUBLIC_STATIC_EXPORT=true \
@@ -23,6 +35,7 @@ PUBKY_RUNTIME_INDEXER_SOURCES=local \
 PUBKY_RUNTIME_HOMEGATE_URL=https://homegate.staging.pubky.app \
 PUBKY_RUNTIME_PKARR_RELAYS='["https://pkarr.pubky.app","https://pkarr.pubky.org"]' \
 PUBKY_RUNTIME_DEFAULT_HTTP_RELAY=https://httprelay.staging.pubky.app/inbox \
+PUBKY_RUNTIME_MODERATION_ID=nto4u7kkagk5hfjk4wgueemzy61nssic811hid1ty9u81uatmqzy \
 PUBKY_RUNTIME_THIRD_PARTY_EMBEDS=false \
 npm run build
 mkdir -p pubky-app-offline && cp -r out pubky-app-offline/app
@@ -94,7 +107,8 @@ the same routes as before.
 ## What it contacts
 
 Signed out, opening a post or a profile contacts only the page's own origin, the homeserver of each user it shows
-(`homeserver.staging.pubky.app` in the staging bundle) and the PKARR relays that resolve those homeservers.
+(`homeserver.staging.pubky.app` in the staging bundle, `homeserver.pubky.app` and others in the production one) and
+the PKARR relays that resolve those homeservers.
 Beyond that, as the app is used:
 
 - the HTTP relay, for signing in with Pubky Ring;
