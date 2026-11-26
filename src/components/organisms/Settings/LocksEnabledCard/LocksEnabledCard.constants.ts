@@ -16,8 +16,8 @@ export const LOCKS_ACCESS_ROWS: LocksAccessRow[] = [
     label: 'Linked Bitkit wallet to enable payments',
     action: 'Disconnect Bitkit',
     dialogTitle: 'Disconnect Bitkit?',
-    // TODO:[Locks] #2984 — final text pending with design: "Unlink pubky" does not stop Locks payments.
+    // TODO:[Locks] #2984 — final text pending with design: "Unlink Profile" does not stop Locks payments.
     dialogText:
-      "To stop Bitkit from generating payment addresses through Paykit and unlink your pubky, open Bitkit, go to your profile, tap edit, scroll down, and tap 'Unlink pubky'. Previously shared activity may remain visible.",
+      "To stop Bitkit from generating payment addresses through Paykit and unlink your pubky, open Bitkit, go to your profile, tap edit, scroll down, and tap 'Unlink Profile'. Previously shared activity may remain visible.",
   },
 ];

@@ -25,7 +25,7 @@ describe('LocksEnabledCard', () => {
     [
       'Disconnect Bitkit',
       'Disconnect Bitkit?',
-      /open Bitkit, go to your profile, tap edit, scroll down, and tap 'Unlink pubky'/,
+      /open Bitkit, go to your profile, tap edit, scroll down, and tap 'Unlink Profile'/,
     ],
   ])('"%s" only explains where to do it, then checks again on OK', (action, title, text) => {
     const { onRecheck } = renderCard();

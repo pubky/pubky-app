@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   markSetUp: vi.fn(),
   statusOptions: vi.fn(),
   paidUnlocks: { status: 'available' } as PaidUnlockAvailability,
+  isMobile: false,
 }));
 
 vi.mock('@/hooks/useLocksSettingsStatus/useLocksSettingsStatus', () => ({
@@ -20,6 +21,10 @@ vi.mock('@/hooks/useLocksSettingsStatus/useLocksSettingsStatus', () => ({
     mocks.statusOptions(options);
     return { status: mocks.status, recheck: mocks.recheck, markSetUp: mocks.markSetUp };
   },
+}));
+
+vi.mock('@/hooks/useIsMobile/useIsMobile', () => ({
+  useIsMobile: () => mocks.isMobile,
 }));
 
 vi.mock('@/hooks/usePaidUnlockAvailability/usePaidUnlockAvailability', () => ({
@@ -54,6 +59,7 @@ describe('Locks settings page', () => {
     vi.clearAllMocks();
     mocks.status = 'not-set-up';
     mocks.paidUnlocks = { status: 'available' };
+    mocks.isMobile = false;
   });
 
   it('shows a loading state, never "Enable Locks", while the setup is unknown', () => {
@@ -67,7 +73,7 @@ describe('Locks settings page', () => {
   it('opens the Locks setup dialog from "Enable Locks" and shows set up when it finishes, without a recheck', () => {
     render(<Locks />);
 
-    expect(screen.getByText('Enable Locks to earn bitcoin from your content.')).toBeInTheDocument();
+    expect(screen.getByText('Enable Locks to earn from your content.')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Enable Locks' }));
     expect(screen.getByTestId('dialog-locks-auth')).toHaveAttribute('data-start-at-held-check', 'false');
 
@@ -113,6 +119,17 @@ describe('Locks settings page', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('Locks enabled')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Enable Locks' })).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ['not-set-up', 'Enable Locks to earn money from your content.'],
+    ['set-up', 'You are able to receive payments and earn money from your content.'],
+  ] as const)('uses the mobile wording when %s in the mobile layout', (status, text) => {
+    mocks.status = status;
+    mocks.isMobile = true;
+    render(<Locks />);
+
+    expect(screen.getByText(text)).toBeInTheDocument();
   });
 
   it('offers a retry and a reconnect that starts at Paykit when the Lock Server answers unavailable', () => {

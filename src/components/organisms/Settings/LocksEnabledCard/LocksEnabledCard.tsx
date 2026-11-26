@@ -21,7 +21,11 @@ import type { LocksEnabledCardProps } from './LocksEnabledCard.types';
 export function LocksEnabledCard({ onRecheck }: LocksEnabledCardProps) {
   return (
     <Container overrideDefaults className="flex w-full flex-col gap-4 md:gap-6">
-      <Heading level={3} className="text-xl leading-7">
+      {/* Figma v28: a label in the mobile layout, a heading from `lg`. */}
+      <Heading
+        level={3}
+        className="text-xs leading-4 font-medium tracking-widest text-muted-foreground uppercase lg:text-xl lg:leading-7 lg:font-semibold lg:tracking-normal lg:text-foreground lg:normal-case"
+      >
         {'Locks enabled'}
       </Heading>
       <Container overrideDefaults className="flex w-full flex-col gap-6 md:gap-3">

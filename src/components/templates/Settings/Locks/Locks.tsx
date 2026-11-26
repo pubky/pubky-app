@@ -5,6 +5,7 @@ import { Lock } from 'lucide-react';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Spinner } from '@/atoms/Spinner/Spinner';
+import { useIsMobile } from '@/hooks/useIsMobile/useIsMobile';
 import { useLocksSettingsStatus } from '@/hooks/useLocksSettingsStatus/useLocksSettingsStatus';
 import type { LocksSettingsStatus } from '@/hooks/useLocksSettingsStatus/useLocksSettingsStatus.types';
 import { usePaidUnlockAvailability } from '@/hooks/usePaidUnlockAvailability/usePaidUnlockAvailability';
@@ -17,22 +18,30 @@ const CHECK_FAILED = 'Something went wrong while checking your Bitkit wallet.';
 
 const DESCRIPTIONS = {
   loading: undefined,
-  'not-set-up': 'Enable Locks to earn bitcoin from your content.',
+  'not-set-up': 'Enable Locks to earn from your content.',
   'set-up': 'You are able to receive payments and earn bitcoin from your content.',
   unavailable: CHECK_FAILED,
   error: CHECK_FAILED,
+} satisfies Record<LocksSettingsStatus, string | undefined>;
+
+// Figma v28 words the mobile frames differently. Below `lg`, Settings shows its mobile layout.
+const MOBILE_DESCRIPTIONS = {
+  ...DESCRIPTIONS,
+  'not-set-up': 'Enable Locks to earn money from your content.',
+  'set-up': 'You are able to receive payments and earn money from your content.',
 } satisfies Record<LocksSettingsStatus, string | undefined>;
 
 export function Locks() {
   const [authDialog, setAuthDialog] = useState<'setup' | 'reconnect' | null>(null);
   const { status, recheck, markSetUp } = useLocksSettingsStatus({ paused: authDialog !== null });
   const paidUnlocks = usePaidUnlockAvailability();
+  const isMobile = useIsMobile();
 
   return (
     <SettingsSectionCard
       icon={Lock}
       title={'Locks'}
-      description={DESCRIPTIONS[status]}
+      description={(isMobile ? MOBILE_DESCRIPTIONS : DESCRIPTIONS)[status]}
       wrapChildren={status === 'set-up'}
     >
       {status === 'loading' && (
