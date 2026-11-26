@@ -31,7 +31,6 @@ const nextConfig: NextConfig = {
   // Route handlers, metadata images and pages that need a request are named `*.server.ts(x)`, so
   // the static export leaves them out and every other build sees today's routes.
   pageExtensions: isStaticExport ? PAGE_EXTENSIONS : [...PAGE_EXTENSIONS, 'server.tsx', 'server.ts'],
-  ...(isStaticExport && { output: 'export', images: { unoptimized: true } }),
   async rewrites() {
     // Development convenience only. Deployed containers use their reverse proxy so the
     // Shop upstream can change at deploy time without rebuilding the App image.
@@ -53,8 +52,6 @@ const nextConfig: NextConfig = {
     return [{ source: '/shop-embed/:path*', destination: `${new URL(origin).origin}/shop-embed/:path*` }];
   },
   async redirects() {
-    // A static export cannot redirect; the offline bundle's launcher serves these two paths itself.
-    if (isStaticExport) return [];
     return [
       // /profile/[pubky] is the canonical other-user posts view (see app/profile/[pubky]/page.tsx).
       // The legacy /profile/[pubky]/posts route is kept as a 308 permanent redirect so existing
@@ -73,6 +70,14 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  // A static export has no server to rewrite or redirect; the offline bundle's launcher serves the
+  // two redirects itself.
+  ...(isStaticExport && {
+    output: 'export',
+    images: { unoptimized: true },
+    rewrites: undefined,
+    redirects: undefined,
+  }),
   webpack: (config, { isServer }) => {
     if (isServer) {
       config.externals.push('@synonymdev/pubky');
