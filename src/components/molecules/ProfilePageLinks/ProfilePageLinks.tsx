@@ -52,10 +52,14 @@ export function ProfilePageLinks({ links, isOwnProfile = false }: ProfilePageLin
                 href={link.url}
                 data-cy={`profile-link-${link.label.toLowerCase()}`}
                 onClick={(e) => handleLinkClick(link.url, e)}
-                className="flex cursor-pointer items-center gap-2.5 py-1"
+                className="flex cursor-pointer items-start gap-2.5 py-1"
               >
-                <Icon size={16} className="shrink-0 text-foreground" />
-                <Typography as="span" className="flex-1 text-base font-medium text-secondary-foreground">
+                {/* mt-1 centres the 16px icon on the first 24px line, so a wrapped title keeps it at the top. */}
+                <Icon size={16} className="mt-1 shrink-0 text-foreground" />
+                <Typography
+                  as="span"
+                  className="min-w-0 flex-1 text-base font-medium wrap-anywhere text-secondary-foreground"
+                >
                   {link.label}
                 </Typography>
               </a>

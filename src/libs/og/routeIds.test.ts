@@ -132,10 +132,22 @@ describe('normalizePostIds', () => {
     expect(normalizePostIds(VALID_PUBKY, '  ')).toBeNull();
   });
 
-  it('leaves mid-id characters untouched (dot-free ids only end mangled)', () => {
-    // A post id containing an interior dot is not a shape we see from crawlers;
-    // interior characters are opaque and pass through.
-    const mid = `a.${POST_ID.slice(2)}`;
-    expect(normalizePostIds(VALID_PUBKY, mid)).toEqual({ userId: VALID_PUBKY, postId: mid });
+  it.each([
+    ['a crawler-guessed Next.js metadata segment', 'Next.Metadata'],
+    ['an interior dot', `a.${POST_ID.slice(2)}`],
+    ['an interior hyphen', `${POST_ID.slice(0, 6)}-${POST_ID.slice(7)}`],
+    ['a short id', POST_ID.slice(1)],
+    ['a long id', `${POST_ID}0`],
+  ])('rejects a post id Nexus cannot accept: %s', (_label, postId) => {
+    // Nexus answers 400 to anything but a 13-character Crockford base32 id
+    // (PUBKY-APP-KG/KF), so these never reach it.
+    expect(normalizePostIds(VALID_PUBKY, postId)).toBeNull();
+  });
+
+  it('accepts a 13-character id in either case', () => {
+    expect(normalizePostIds(VALID_PUBKY, POST_ID.toLowerCase())).toEqual({
+      userId: VALID_PUBKY,
+      postId: POST_ID.toLowerCase(),
+    });
   });
 });
