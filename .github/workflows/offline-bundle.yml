@@ -58,17 +58,42 @@ jobs:
           if find out -name '*.map' | grep -q .; then echo 'source maps in the export'; exit 1; fi
           if [ -d out/api ]; then echo 'route handlers in the export'; exit 1; fi
 
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: offline-bundle/launcher/go.mod
+          cache: false
+
+      # One static launcher per desktop OS, for people without Python or Node.
+      - name: Build the launchers
+        working-directory: offline-bundle/launcher
+        run: |
+          gofmt -d .
+          test -z "$(gofmt -l .)"
+          go vet ./...
+          build() { CGO_ENABLED=0 GOOS=$1 GOARCH=$2 go build -trimpath -ldflags='-s -w' -o "dist/$3" .; }
+          build darwin arm64 pubky-app-macos-arm64
+          build darwin amd64 pubky-app-macos-intel
+          build windows amd64 pubky-app-windows.exe
+          build linux amd64 pubky-app-linux
+
+      # Zipped here, not by the artifact upload, which drops the executable bit.
       - name: Assemble the bundle
         run: |
           mkdir -p bundle/pubky-app-offline
           cp -r out bundle/pubky-app-offline/app
           cp offline-bundle/serve.py offline-bundle/serve.mjs offline-bundle/routes.json offline-bundle/README.txt \
-            bundle/pubky-app-offline/
+            offline-bundle/launcher/dist/* bundle/pubky-app-offline/
+          chmod +x bundle/pubky-app-offline/pubky-app-* bundle/pubky-app-offline/serve.*
+          (cd bundle && zip -qr -9 pubky-app-offline.zip pubky-app-offline)
           du -sh bundle/pubky-app-offline bundle/pubky-app-offline/app
+          ls -l bundle/pubky-app-offline.zip
 
       - name: Upload the bundle
         uses: actions/upload-artifact@v7
         with:
           name: pubky-app-offline
-          path: bundle
+          path: bundle/pubky-app-offline.zip
+          # Already compressed.
+          compression-level: 0
           retention-days: 7

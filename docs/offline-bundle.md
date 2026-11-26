@@ -8,7 +8,8 @@ local index (`PUBKY_RUNTIME_INDEXER_SOURCES=local`, ADR-0031). The decisions are
 ## Building it
 
 CI builds it: `.github/workflows/offline-bundle.yml` exports the app, checks the export and uploads the bundle as
-the `pubky-app-offline` artifact (kept 7 days). Download it from the run's page, or with
+the `pubky-app-offline` artifact (kept 7 days), which holds `pubky-app-offline.zip`: the zip is made in the job
+because an artifact upload drops the executable bit of the launchers. Download it from the run's page, or with
 `gh run download <run id> --repo pubky/pubky-app -n pubky-app-offline`.
 
 By hand, from a checkout with dependencies installed:
@@ -26,7 +27,11 @@ PUBKY_RUNTIME_THIRD_PARTY_EMBEDS=false \
 npm run build
 mkdir -p pubky-app-offline && cp -r out pubky-app-offline/app
 cp offline-bundle/{serve.py,serve.mjs,routes.json,README.txt} pubky-app-offline/
+(cd offline-bundle/launcher && go build -o ../../pubky-app-offline/pubky-app .)
 ```
+
+The launchers are not signed: macOS Gatekeeper and Windows SmartScreen warn on first open, and `README.txt` says
+how to get past that. Signing needs the company's Apple Developer and code-signing certificates.
 
 The export writes `out/`. Its runtime config is read once, at build time, and written into every page, so the
 build parses `PUBKY_RUNTIME_*` strictly: a missing required value fails the build instead of falling back to the
@@ -39,8 +44,9 @@ variable unset. `PUBKY_RUNTIME_DEFAULT_URL` sets the public web app that shared 
 | Path                    | What                                                                                      |
 | ----------------------- | ----------------------------------------------------------------------------------------- |
 | `app/`                  | The export: one HTML file and one set of payload files per route, `_next/static`, `sw.js` |
-| `serve.py`, `serve.mjs` | The launcher, in Python 3 and in Node; standard library only                              |
-| `routes.json`           | The launcher's route table, shared by both scripts                                        |
+| `pubky-app-*`           | The launcher as one static executable each for macOS (Apple chip, Intel), Windows, Linux  |
+| `serve.py`, `serve.mjs` | The same launcher in Python 3 and in Node; standard library only                          |
+| `routes.json`           | The launchers' route table, shared by all three                                           |
 | `README.txt`            | How to start it, for someone who is not a developer                                       |
 
 The export has no source maps. Each dynamic route (`/post/[userId]/[postId]`, `/collections/[userId]/[postId]`,
@@ -48,7 +54,8 @@ The export has no source maps. Each dynamic route (`/post/[userId]/[postId]`, `/
 
 ## The launcher
 
-`python3 serve.py` or `node serve.mjs` serves `app/` on `127.0.0.1:8473` and opens the browser (`--no-browser`
+The executable (`offline-bundle/launcher/main.go`, built for each OS in CI), `python3 serve.py` or
+`node serve.mjs` serves `app/` on `127.0.0.1:8473` and opens the browser (`--no-browser`
 skips that, `--port N` picks another port). It:
 
 - serves `/x` from `x.html` (or `x/index.html`), and any other file as is, with its MIME type;
