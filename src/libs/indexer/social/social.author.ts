@@ -2,7 +2,7 @@ import { idMicros } from 'pubky-social-specs';
 import type { Cursor, RecordEntry } from '../indexer.types';
 import { socialV1Tree } from './social.domain';
 import type { AuthorRecords, SocialData, SocialTarget, SocialTree, TagData, UserData } from './social.types';
-import type { SocialPost } from './social.view';
+import type { SocialFile, SocialPost } from './social.view';
 import type { TimeSample } from './timeTable';
 
 export const NONE: readonly never[] = Object.freeze([]);
@@ -64,6 +64,8 @@ export interface AuthorPart {
   readonly tags: readonly AuthoredTag[];
   /** Every post version the author's homeserver table learns from. */
   readonly samples: readonly TimeSample[];
+  /** File records by path: the stream's over the ones loaded alone. */
+  readonly files: ReadonlyMap<string, SocialFile>;
 }
 
 /** The newest live version of each post of the author, skipped when that version has no data. */
@@ -89,6 +91,20 @@ function postsOf(
   return posts.sort(compareNewest);
 }
 
+function filesInto(
+  tree: SocialTree,
+  author: string,
+  records: ReadonlyMap<string, RecordEntry<SocialData>>,
+  into: Map<string, SocialFile>,
+): void {
+  for (const [path, record] of records) {
+    const key = tree.keyOf(author, path);
+    if (key?.kind === 'file' && record.data?.type === 'file') {
+      into.set(path, { author, path, fileId: key.fileId, data: record.data });
+    }
+  }
+}
+
 /** Every post version is a sample: its edit id holds the time it was written. */
 function samplesOf(
   tree: SocialTree,
@@ -112,12 +128,15 @@ export function authorPartOf(records: AuthorRecords): AuthorPart {
   // A post in an author's stream wins over the same post loaded alone.
   for (const post of postsOf(tree, author, loose)) byId.set(post.postId, post);
   const samples: TimeSample[] = [];
+  const files = new Map<string, SocialFile>();
+  filesInto(tree, author, loose, files);
   const base = {
     records,
     profile,
     profileCursor: profile === null || stored === undefined ? null : stored.cursor,
     byId,
     samples,
+    files,
   };
   if (membership === 'referenced') {
     samplesOf(tree, author, loose, samples);
@@ -125,6 +144,7 @@ export function authorPartOf(records: AuthorRecords): AuthorPart {
   }
   samplesOf(tree, author, records.activity, samples);
   samplesOf(tree, author, loose, samples);
+  filesInto(tree, author, records.activity, files);
   const following: string[] = [];
   const followCursors = new Map<string, Cursor>();
   for (const [path, record] of records.graph) {

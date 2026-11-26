@@ -13,6 +13,9 @@ import {
   NETWORK_TEXTS,
   seedLocalNetwork,
 } from '../../support/local-index';
+import { createImagePostViaApi, seedUserViaApi } from '../../support/seed';
+
+const LEGACY_IMAGE_TEXT = `An un-migrated author's image ${Date.now()}`;
 
 // Nothing signs in here, as a shared link opens: the visitor's index loads the post or profile on demand
 describe('local index: signed-out visitor without Nexus', () => {
@@ -57,6 +60,30 @@ describe('local index: signed-out visitor without Nexus', () => {
 
     cy.get('[data-cy="profile-username-header"]').filter(':visible').should('have.text', NETWORK_NAMES.olga);
     expectTimelineContains(NETWORK_TEXTS.olgaNote);
+  });
+
+  // The e2e workflow turns the older tree on for this spec: the card's type and name come from the file record the
+  // index reads there, and the bytes from the blob it points at
+  it("shows the image card of an un-migrated author's post", () => {
+    seedUserViaApi('Legacy Lena', { legacy: true }).then((author) => {
+      createImagePostViaApi(author, LEGACY_IMAGE_TEXT).then((post) => {
+        cy.visit(`/post/${author.id}/${post.id}`);
+
+        cy.get('[data-cy="single-post-card"]')
+          .filter(':visible')
+          .should('contain.text', LEGACY_IMAGE_TEXT)
+          .find('[data-cy="post-attachment-image"]')
+          .should('have.length', 1)
+          .scrollIntoView()
+          .should(($image) => {
+            const image = $image[0] as HTMLImageElement;
+            expect(image.currentSrc || image.src, 'image URL').to.match(
+              new RegExp(`/_pubky/file/${author.id}/[0-9A-Z]{13}(\\?|$)`),
+            );
+            expect(image.naturalWidth, 'decoded width').to.be.greaterThan(0);
+          });
+      });
+    });
   });
 
   it('asks to sign in on Home', () => {

@@ -25,12 +25,15 @@ export interface SocialLimits {
   maxLoosePosts: number;
   /** Profiles loaded with `ensureProfile`. */
   maxProfiles: number;
+  /** File records loaded with `ensureFile`. */
+  maxFiles: number;
 }
 
 export const DEFAULT_SOCIAL_LIMITS: Readonly<SocialLimits> = Object.freeze({
   maxVisitedUsers: 50,
   maxLoosePosts: 500,
   maxProfiles: 500,
+  maxFiles: 500,
 });
 
 export interface SocialViewOptions {
@@ -116,6 +119,11 @@ export interface SocialIndexer {
   ensurePost(author: string, postId: string): Promise<void>;
   /** Loads only the user's profile, for an avatar or a name; a user the view lacks joins it as `referenced`. */
   ensureProfile(user: string): Promise<void>;
+  /**
+   * Loads the file record at the path of the author's tree, for a post's attachment outside the window. Resolves at
+   * once when no tree read keeps a record there.
+   */
+  ensureFile(author: string, path: string): Promise<void>;
   /**
    * Leaves these users out of the view's members now, and of the scope from the next sync on, with whoever is reached
    * only through them.
@@ -320,6 +328,7 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
   const ensuredUsers = new Map<string, string>();
   const ensuredPosts = new Map<string, LeafRequest>();
   const ensuredProfiles = new Map<string, LeafRequest>();
+  const ensuredFiles = new Map<string, LeafRequest>();
   /** Scopes another tab, or this one, forgot: what still has none drops out of the ensured items. */
   let pendingForgotten: ScopeKey[] = [];
   /** Merged scopes by scope id, with the scope's change count when read. */
@@ -378,9 +387,9 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
     loaded.set(author, { homeserver, membership, hop, graph, activity, leaves: [] });
   }
 
-  /** Adds each ensured post's leaf scope to its author, who is referenced when not loaded otherwise. */
+  /** Adds each ensured post's or file's leaf scope to its author, who is referenced when not loaded otherwise. */
   async function addLeaves(loaded: Map<string, Loaded>): Promise<void> {
-    for (const leaf of ensuredPosts.values()) {
+    for (const leaf of [...ensuredPosts.values(), ...ensuredFiles.values()]) {
       const homeserver = await homeserverOf(leaf.author);
       if (homeserver === null) continue;
       const scope = await served({ author: leaf.author, homeserver, group: leaf.group });
@@ -416,7 +425,11 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
       if (scope.group === activityGroup || (await store.readCoverage(scope)).length > 0) continue;
       if (scope.group === graphGroup) ensuredUsers.delete(scope.author);
       else if (scope.group === profileGroup) ensuredProfiles.delete(scope.author);
-      else ensuredPosts.delete(JSON.stringify([scope.author, scope.group]));
+      else {
+        const key = JSON.stringify([scope.author, scope.group]);
+        ensuredPosts.delete(key);
+        ensuredFiles.delete(key);
+      }
     }
   }
 
@@ -609,6 +622,12 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
     return ensureLeaf(ensuredProfiles, user, domain.profileLeaf(user), limits.maxProfiles);
   }
 
+  function ensureFile(author: string, path: string): Promise<void> {
+    const leaf = domain.fileLeaf(author, path);
+    if (leaf === null) return Promise.resolve();
+    return ensureLeaf(ensuredFiles, JSON.stringify([author, leaf.group]), leaf, limits.maxFiles);
+  }
+
   /** Never rejects: the post loads without it. */
   function ensureProfileIfMissing(user: string): Promise<void> {
     return current.profile(user) === null ? ensureProfile(user).catch(() => undefined) : Promise.resolve();
@@ -659,6 +678,7 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
         ensuredUsers.clear();
         ensuredPosts.clear();
         ensuredProfiles.clear();
+        ensuredFiles.clear();
         pendingForgotten = [];
         cache.clear();
         built.clear();
@@ -700,6 +720,7 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
       return Promise.all([post, profile]).then(() => undefined);
     },
     ensureProfile,
+    ensureFile,
     setExcluded(users) {
       excluded = new Set(users);
       runtime.setExcluded(excluded);

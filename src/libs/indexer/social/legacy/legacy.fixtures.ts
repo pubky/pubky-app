@@ -45,3 +45,6 @@ export const legacyPost = ({ content = '', kind = 'short', parent, embed, attach
   });
 
 export const legacyTag = (uri: string, label: string) => encodeJson({ uri, label, created_at: 1 });
+
+export const legacyFileRecord = (src: string, extra: Record<string, unknown> = {}) =>
+  encodeJson({ name: 'cat.png', created_at: 1_790_000_000_000_000, src, content_type: 'image/png', size: 3, ...extra });

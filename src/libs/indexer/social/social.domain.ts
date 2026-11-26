@@ -19,6 +19,7 @@ import { parseMentions } from './mentions';
 import type {
   AttachmentData,
   CollectionItemData,
+  FileData,
   PostData,
   SocialData,
   SocialRecordKey,
@@ -258,6 +259,7 @@ const POST_FIELDS = [
   'layout',
 ];
 const TAG_FIELDS = ['type', 'uri', 'target', 'label'];
+const FILE_FIELDS = ['type', 'name', 'contentType', 'size', 'src', 'createdAt'];
 
 function isUserData(value: Fields): value is Fields & UserData {
   return (
@@ -302,12 +304,27 @@ function isTagData(value: Fields): value is Fields & TagData {
   );
 }
 
+function isFileData(value: Fields): value is Fields & FileData {
+  return (
+    hasOnly(value, FILE_FIELDS) &&
+    value.type === 'file' &&
+    isText(value.name) &&
+    isText(value.contentType) &&
+    typeof value.size === 'number' &&
+    Number.isSafeInteger(value.size) &&
+    value.size >= 0 &&
+    isText(value.src) &&
+    Number.isSafeInteger(value.createdAt)
+  );
+}
+
 /** The payload when it has exactly the shape `reduce` makes for a record of this key, else `null`. Any tree's. */
 export function reviveAs(key: SocialRecordKey | null, value: unknown): SocialData | null {
   if (key === null || !isFields(value)) return null;
   if (key.kind === 'profile') return isUserData(value) ? value : null;
   if (key.kind === 'post') return isPostData(value, key.postId, key.editId) ? value : null;
   if (key.kind === 'tag') return isTagData(value) ? value : null;
+  if (key.kind === 'file') return isFileData(value) ? value : null;
   return null;
 }
 
@@ -359,6 +376,8 @@ export interface SocialDomain extends Domain<SocialData> {
   profileLeaf(user: string): LeafRequest;
   /** The leaf scope holding every version of one post. */
   postLeaf(author: string, postId: string): LeafRequest;
+  /** The leaf scope holding the file record at the path, `null` when no tree reads one there. */
+  fileLeaf(author: string, path: string): LeafRequest | null;
   /**
    * The one tree an author is read through, from any of their scopes' entries. Social v1 once it holds a profile event
    * of the author, a tombstone included, since a move never goes back and the move copies the older tree; the older
@@ -379,6 +398,7 @@ export function createSocialDomain(legacyTree?: SocialTree): SocialDomain {
   const activityGroup = named(SOCIAL_ACTIVITY);
   const profileGroup = named('profile');
   const postGroup = named('post');
+  const fileGroup = named('file');
   const treeAt = (path: string): SocialTree | null => trees.find((tree) => tree.owns(path)) ?? null;
   const treeOf = (scopes: Iterable<ReadonlyMap<string, Entry<SocialData>>>): SocialTree => {
     if (legacyTree === undefined) return socialV1Tree;
@@ -420,6 +440,10 @@ export function createSocialDomain(legacyTree?: SocialTree): SocialDomain {
       group: `${postGroup}:${postId}`,
       paths: trees.map((tree) => tree.postPath(postId)),
     }),
+    fileLeaf: (author, path) => {
+      const key = treeAt(path)?.keyOf(author, path) ?? null;
+      return key?.kind === 'file' ? { author, group: `${fileGroup}:${key.fileId}`, paths: [path] } : null;
+    },
     treeOf,
   };
 }

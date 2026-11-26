@@ -255,6 +255,8 @@ function startHintLoad(indexer: SocialIndexer, hint: MoreHint): Promise<unknown>
       return indexer.ensurePost(hint.author, hint.postId);
     case 'backfill':
       return indexer.backfill(hint.author, SOCIAL_ACTIVITY, INDEXER_HINT_BACKFILL_PAGES);
+    case 'file':
+      return indexer.ensureFile(hint.author, hint.path);
   }
 }
 
@@ -269,9 +271,9 @@ async function timedLoad<T>(hint: MoreHint, load: () => Promise<T>): Promise<T> 
 }
 
 /**
- * The hints worth one load before asking again. A user or post the answer lacks is always loaded: the app reads one
- * post or user through `by_ids` and a profile's posts through its author stream, and each answers without it rather
- * than with a 404. Older history only for a 404 the index cannot vouch for or a read about one post or user; a
+ * The hints worth one load before asking again. A user, post or file record the answer lacks is always loaded: the app
+ * reads one post or user through `by_ids` and a profile's posts through its author stream, and each answers without
+ * it rather than with a 404, as file details do. Older history only for a 404 the index cannot vouch for or a read about one post or user; a
  * stream page gets it from `extendStreamPage`.
  */
 function hintsToLoad(more: readonly MoreHint[], url: string, unproven: boolean): MoreHint[] {

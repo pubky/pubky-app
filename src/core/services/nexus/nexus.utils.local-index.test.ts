@@ -53,6 +53,7 @@ function fakeIndexer(...responses: Array<NexusResponse | Error>) {
     request,
     ensureUser: vi.fn<SocialIndexer['ensureUser']>().mockResolvedValue(undefined),
     ensurePost: vi.fn<SocialIndexer['ensurePost']>().mockResolvedValue(undefined),
+    ensureFile: vi.fn<SocialIndexer['ensureFile']>().mockResolvedValue(undefined),
     backfill: vi.fn<SocialIndexer['backfill']>().mockResolvedValue(STEP),
     view: vi.fn<SocialIndexer['view']>().mockReturnValue(viewSince()),
   };
@@ -204,6 +205,19 @@ describe('queryNexus routing by indexer sources', () => {
       await expect(queryNexus({ url: uniqueUrl('user/alice/counts') })).resolves.toEqual({ posts: 9 });
 
       expect(indexer.backfill).toHaveBeenCalledExactlyOnceWith('alice', 'activity', 1);
+    });
+
+    it('answers the /v0 file details from the index, loading the file records it lacks first', async () => {
+      const path = '/pub/pubky.app/files/0033';
+      const indexer = fakeIndexer(answer([], [{ kind: 'file', author: 'olga', path }]), answer([{ id: '0033' }]));
+      const url = buildNexusUrl('files/by_ids', { version: 'v0' });
+      const body = JSON.stringify({ uris: [`pubky://olga${path}`] });
+
+      await expect(queryNexus({ url, method: HttpMethod.POST, body })).resolves.toEqual([{ id: '0033' }]);
+
+      expect(indexer.ensureFile).toHaveBeenCalledExactlyOnceWith('olga', path);
+      expect(indexer.request).toHaveBeenCalledTimes(2);
+      expect(fetch).not.toHaveBeenCalled();
     });
 
     it('loads the posts a by_ids read lacks, once, and asks once more', async () => {

@@ -62,6 +62,12 @@ const PERMANENT: Record<string, { patterns: readonly PatternName[]; reason: stri
       '`POST v0/files/by_ids` stays: the file details of 0.x attachments, which `/v1` does not serve; sunset when `/v0` ' +
       'gets a removal date or every author has migrated (ADR-0027)',
   },
+  'src/libs/indexer/social/nexusRouter.ts': {
+    patterns: ['nexusV0'],
+    reason:
+      'the local index answers that same `POST v0/files/by_ids` from the 0.x File records it reads; the route goes ' +
+      'when the call in `file.api.ts` does',
+  },
   'src/config/app-files.ts': {
     patterns: ['legacyTree'],
     reason:

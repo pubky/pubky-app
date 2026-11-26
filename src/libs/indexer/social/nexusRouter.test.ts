@@ -358,6 +358,42 @@ describe('nexus router: search, tags, bootstrap and ingest', () => {
   });
 });
 
+describe('nexus router: file details', () => {
+  const V0 = 'https://nexus.staging.pubky.app/v0';
+  const files = (body: unknown) =>
+    router.route({ url: `${V0}/files/by_ids`, method: 'POST', body: JSON.stringify(body) });
+
+  it('serves the route on /v0, where the central indexer keeps it, naming what it lacks', async () => {
+    const path = '/pub/pubky.app/files/0033QP8EZJ2A0';
+
+    expect(await files({ uris: [`pubky://${BRAN}${path}`, 'not a uri'] })).toEqual({
+      status: 200,
+      json: [],
+      coverage: { kind: 'scope', note: 'not loaded yet' },
+      more: [{ kind: 'file', author: BRAN, path }],
+    });
+    expect(await files({ uris: [] })).toEqual({ status: 200, json: [], coverage: { kind: 'exact' } });
+  });
+
+  it('rejects a body without its URIs or with too many', async () => {
+    for (const body of [{}, { uris: Array.from({ length: 101 }, () => 'x') }]) {
+      const error = await rejection(files(body));
+
+      expect(error).toBeInstanceOf(InvalidQueryError);
+      if (error instanceof InvalidQueryError) expect(error.parameter).toBe('uris');
+    }
+  });
+
+  it('serves no other route on /v0', async () => {
+    expect(await rejection(router.route({ url: `${V0}/user/${ALICE}/details`, method: 'GET' }))).toBeInstanceOf(
+      UnavailableQueryError,
+    );
+    expect(await rejection(router.route({ url: `${NEXUS}/files/by_ids`, method: 'POST', body: '{}' }))).toBeInstanceOf(
+      UnavailableQueryError,
+    );
+  });
+});
+
 describe('nexus router: not found', () => {
   it('answers 404 for a post or user the whole history lacks', async () => {
     const missing = await get(`post/${ALICE}/0000000000000`);
@@ -409,7 +445,7 @@ describe('nexus router: refusals', () => {
     ['someone else’s notifications', { url: `${NEXUS}/user/${BRAN}/notifications?skip=0&limit=30`, method: 'GET' }],
     ['an unknown route', { url: `${NEXUS}/user/${ALICE}/relationship/${BRAN}`, method: 'GET' }],
     ['a known route with another method', { url: `${NEXUS}/user/${ALICE}/details`, method: 'POST' }],
-    ['another API version', { url: 'https://nexus.staging.pubky.app/v0/files/by_ids', method: 'POST', body: '{}' }],
+    ['another API version', { url: `https://nexus.staging.pubky.app/v2/user/${ALICE}/details`, method: 'GET' }],
     ['a URL with no version', { url: 'https://nexus.staging.pubky.app/user/x/details', method: 'GET' }],
   ];
 

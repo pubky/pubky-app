@@ -64,15 +64,29 @@ export interface TagData {
   label: string;
 }
 
+/** A file's description, in a tree that keeps one beside the bytes. */
+export interface FileData {
+  type: 'file';
+  name: string;
+  contentType: string;
+  /** In bytes. */
+  size: number;
+  /** The bytes, a file of the same owner. */
+  src: string;
+  /** As the record states it. */
+  createdAt: number;
+}
+
 /** The payload of a social record. Follows carry none: the path says everything. */
-export type SocialData = UserData | PostData | TagData;
+export type SocialData = UserData | PostData | TagData | FileData;
 
 /** What a record is in its author's tree, whichever tree's path spells it. */
 export type SocialRecordKey =
   | { kind: 'profile' }
   | { kind: 'follow'; followee: string }
   | { kind: 'post'; postId: string; editId: string }
-  | { kind: 'tag' };
+  | { kind: 'tag' }
+  | { kind: 'file'; fileId: string };
 
 /**
  * One layout of the social records on a homeserver: where they live and how its files read into the shapes above.

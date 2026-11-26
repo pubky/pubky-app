@@ -11,7 +11,7 @@ import {
   userKey,
 } from './social.author';
 import { type AuthorChange, combine, type Combined, patchCombined } from './social.combine';
-import type { AuthorRecords, Membership, PostData, TagData, UserData } from './social.types';
+import type { AuthorRecords, FileData, Membership, PostData, TagData, UserData } from './social.types';
 import { buildTimeTable, estimateMs, type TimeSample } from './timeTable';
 
 /** A logical post: its newest live version. */
@@ -23,6 +23,14 @@ export interface SocialPost {
   /** When the newest version was written, `null` for a post never edited. */
   editedAtMs: number | null;
   data: PostData;
+}
+
+/** A file record: what a tree that keeps one says about a file. */
+export interface SocialFile {
+  author: string;
+  path: string;
+  fileId: string;
+  data: FileData;
 }
 
 /** A tag with the estimated time it was written, `null` when unknown. */
@@ -115,6 +123,8 @@ export interface SocialView {
   postDeleted(author: string, postId: string): boolean;
   /** Whether a tombstone proves the profile deleted. */
   profileDeleted(user: string): boolean;
+  /** The file record at the path of the author's tree, `null` when none is loaded. */
+  file(author: string, path: string): SocialFile | null;
   /** The estimated time of the profile's last write. */
   profileAtMs(user: string): number | null;
   /** The estimated time `follower` followed `followee`, `null` when unknown or not following. */
@@ -248,6 +258,7 @@ function stateOf(
     },
     postDeleted: (author, postId) => parts.get(author)?.records.deleted?.posts.has(postId) ?? false,
     profileDeleted: (user) => parts.get(user)?.records.deleted?.profile ?? false,
+    file: (author, path) => parts.get(author)?.files.get(path) ?? null,
     profileAtMs: (user) => {
       const cursor = parts.get(user)?.profileCursor ?? null;
       return cursor === null ? null : timeOf(user, cursor);

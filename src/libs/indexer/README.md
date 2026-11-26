@@ -123,7 +123,7 @@ toward the same limits but never push out an item that was asked for: each enter
 none starts while its limit is reached.
 
 `ensureProfile` loads a profile alone, for avatars. What a tab loads on demand is capped (`maxVisitedUsers`,
-`maxLoosePosts`, `maxProfiles`): past a cap the least recently ensured item leaves the view and the runtime's `forget`
+`maxLoosePosts`, `maxProfiles`, `maxFiles`): past a cap the least recently ensured item leaves the view and the runtime's `forget`
 deletes its scopes, an eviction at the largest cursor, which every tab hears. A `backfill` of one author's group runs at
 most once per `backfillMinIntervalMs` unless forced. Like the `ensure` calls it resolves once the view holds what it
 loaded, so a request asked right after it sees the older posts, and it says what it did: `status` (`ran`, or
@@ -169,6 +169,11 @@ An older post was one file rewritten in place by an edit: it becomes one version
 window dates it by that id, so an edit of an old post dates as old. An older article or collection keeps its JSON in
 `content`; a long post without a title reads as a note. `legacyMedia.ts` reads an older attachment or avatar: the file
 record names the type and a blob of the same owner holds the bytes.
+
+Those file records are records of the older tree too: read within the window with the posts, and loaded alone by
+`ensureFile` for a post outside it. The central indexer's file details route, which it keeps on `/v0`, answers from
+them (`POST v0/files/by_ids`), naming in `more` each file it lacks. A v1 file has no record beside it, its name says its
+type, so that route has nothing to say about it, as on the central indexer.
 
 ## Saved index
 

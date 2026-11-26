@@ -20,10 +20,11 @@ const ONE = BigInt(1);
 const NO_RECORDS: ReadonlyMap<string, RecordEntry<SocialData>> = new Map();
 const show = (value: unknown) => JSON.stringify(value) ?? 'undefined';
 
-/** Every user and post the records name, to ask both views about. */
+/** Every user, post and file record the records name, to ask both views about. */
 function subjects(records: readonly AuthorRecords[], views: readonly SocialView[]) {
   const users = new Set<string>();
   const posts = new Map<string, [string, string]>();
+  const files: [string, string][] = [];
   const addPost = (author: string, postId: string) => posts.set(`${author}/${postId}`, [author, postId]);
   const addTarget = (target: SocialTarget | null) => {
     if (target === null || target.kind === 'other') return;
@@ -36,6 +37,7 @@ function subjects(records: readonly AuthorRecords[], views: readonly SocialView[
       for (const path of map.keys()) {
         const key = tree.keyOf(author, path);
         if (key?.kind === 'post') addPost(author, key.postId);
+        if (key?.kind === 'file') files.push([author, path]);
       }
     }
     for (const postId of deleted?.posts ?? []) addPost(author, postId);
@@ -52,7 +54,7 @@ function subjects(records: readonly AuthorRecords[], views: readonly SocialView[
       }
     }
   }
-  return { users: [...users], posts: [...posts.values()] };
+  return { users: [...users], posts: [...posts.values()], files };
 }
 
 /** Cursors to probe the time tables at: every record's, and either side of it. */
@@ -84,7 +86,7 @@ export function findViewMismatch(
     const from = Math.max(0, at - 100);
     return `${what}: expected ...${want.slice(from, from + 300)}, got ...${got.slice(from, from + 300)}`;
   };
-  const { users, posts } = subjects(entries, [expected, actual]);
+  const { users, posts, files } = subjects(entries, [expected, actual]);
   const questions: [string, (view: SocialView) => unknown][] = [
     ['authors', (view) => view.authors],
     ['timeline', (view) => view.timeline(users)],
@@ -129,6 +131,7 @@ export function findViewMismatch(
       }),
     ]);
   }
+  for (const [author, path] of files) questions.push([`file ${author}${path}`, (view) => view.file(author, path)]);
   for (const entry of entries) {
     const cursors = cursorsOf(entry);
     questions.push([`times of ${entry.author}`, (view) => cursors.map((cursor) => view.timeOf(entry.author, cursor))]);

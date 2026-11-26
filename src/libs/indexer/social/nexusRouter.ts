@@ -144,6 +144,8 @@ interface Matched {
 }
 
 interface Route {
+  /** The central indexer's API version that serves the route, `/v1` when absent. */
+  version?: string;
   method: NexusRequest['method'];
   /** Relative to the version, with `:name` for a captured segment. */
   path: string;
@@ -335,22 +337,29 @@ function routesOf(queries: SocialQueries): Route[] {
     },
     { method: 'GET', path: 'bootstrap/:user_id', answer: ({ path }) => queries.bootstrap({ user_id: path.user_id }) },
     { method: 'PUT', path: 'ingest/:user_id', answer: ({ path }) => queries.ingest({ user_id: path.user_id }) },
+    // The central indexer serves file details on `/v0` alone.
+    {
+      version: 'v0',
+      method: 'POST',
+      path: 'files/by_ids',
+      answer: ({ body }) => queries.filesByIds({ uris: body().strings('uris') }),
+    },
   ];
 }
 
-/** The segments after the API version, decoded. */
-function routeSegments(url: string): string[] {
-  const segments = new URL(url, 'http://local.invalid').pathname.split('/').filter((segment) => segment !== '');
-  const at = segments.findIndex((segment) => VERSION_SEGMENT.test(segment));
+/** The API version and the segments after it, decoded. */
+function routeSegments(url: string): { version: string; segments: string[] } {
+  const all = new URL(url, 'http://local.invalid').pathname.split('/').filter((segment) => segment !== '');
+  const at = all.findIndex((segment) => VERSION_SEGMENT.test(segment));
   if (at === -1) throw new UnavailableQueryError(url, 'no API version in the path');
-  if (segments[at] !== API_VERSION) throw new UnavailableQueryError(url, `API version ${segments[at]} is not served`);
-  return segments.slice(at + 1).map((segment) => {
+  const segments = all.slice(at + 1).map((segment) => {
     try {
       return decodeURIComponent(segment);
     } catch {
       throw new InvalidQueryError(url, 'path', 'has a malformed escape');
     }
   });
+  return { version: all[at], segments };
 }
 
 /** The captured segments when `segments` fit the pattern, `null` otherwise. */
@@ -365,22 +374,22 @@ function matchPath(pattern: string, segments: readonly string[]): Record<string,
   return captured;
 }
 
-/** Answers the central indexer's `/v1` routes from the local queries; it parses and dispatches, nothing more. */
+/** Answers the central indexer's routes from the local queries; it parses and dispatches, nothing more. */
 export function createNexusRouter(queries: SocialQueries): NexusRouter {
   const routes = routesOf(queries);
   return {
     route: async ({ url, method, body }) => {
-      const segments = routeSegments(url);
+      const { version, segments } = routeSegments(url);
       const search = new URL(url, 'http://local.invalid').searchParams;
       for (const route of routes) {
-        if (route.method !== method) continue;
+        if (route.method !== method || (route.version ?? API_VERSION) !== version) continue;
         const path = matchPath(route.path, segments);
         if (path === null) continue;
         return responseOf(() =>
           route.answer({ path, query: queryReader(route.path, search), body: () => bodyReader(route.path, body) }),
         );
       }
-      throw new UnavailableQueryError(`${method} ${segments.join('/')}`, 'no such route is served locally');
+      throw new UnavailableQueryError(`${method} ${version}/${segments.join('/')}`, 'no such route is served locally');
     },
   };
 }

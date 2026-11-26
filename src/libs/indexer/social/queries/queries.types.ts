@@ -8,13 +8,14 @@ export interface Coverage {
 }
 
 /**
- * What the caller can load to extend an answer and ask again: an author's older activity, one post, or one
- * user's records.
+ * What the caller can load to extend an answer and ask again: an author's older activity, one post, one user's
+ * records, or what lies at one path of an author's tree.
  */
 export type MoreHint =
   | { kind: 'backfill'; author: string }
   | { kind: 'post'; author: string; postId: string }
-  | { kind: 'user'; user: string };
+  | { kind: 'user'; user: string }
+  | { kind: 'file'; author: string; path: string };
 
 export interface Answer<T> {
   data: T;
@@ -187,6 +188,25 @@ export interface BootstrapJson {
   ids: { stream: string[]; influencers: string[]; recommended: string[]; hot_tags: HotTagJson[] };
   indexed: boolean;
   notifications: NotificationJson[];
+}
+
+/**
+ * A file record, as the central indexer's file details serve it. `urls` is JSON text there too; `metadata` holds
+ * measured dimensions, which the local index never measures.
+ */
+export interface FileDetailsJson {
+  id: string;
+  uri: string;
+  owner_id: string;
+  /** The record's creation time from its id, in milliseconds: the local index has no ingest clock. */
+  indexed_at: number;
+  created_at: number;
+  src: string;
+  name: string;
+  size: number;
+  content_type: string;
+  urls: string;
+  metadata: Record<string, string> | null;
 }
 
 export interface IngestJson {

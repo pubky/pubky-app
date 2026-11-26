@@ -347,6 +347,16 @@ jobs:
           EOF
           cat docker-compose.override.yml
 
+      # The visitor spec also opens an un-migrated author's image post, which needs the older tree read.
+      - name: Read the older social tree for the visitor spec
+        if: inputs.indexer_sources == 'local' && matrix.spec == 'visitor.cy.ts'
+        working-directory: pubky-stack/docker
+        run: |
+          cat >> docker-compose.override.yml <<'EOF'
+                PUBKY_RUNTIME_INDEXER_LEGACY_TREE: "true"
+          EOF
+          cat docker-compose.override.yml
+
       # Locks needs Pubky Ring, Bitkit and a Lock / Paykit Server, none of which run in CI: the Locks
       # spec alone runs the app against a stubbed Lock Server (see the script and locks.cy.ts).
       - name: Enable the stubbed Locks boundary for the Locks spec

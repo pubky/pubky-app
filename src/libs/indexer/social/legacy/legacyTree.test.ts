@@ -14,6 +14,8 @@ import {
 import { ALICE, BRAN, CLEO } from '../social.fixtures';
 import type { SocialData } from '../social.types';
 import {
+  legacyBlobUri,
+  legacyFileRecord,
   legacyFileUriOf,
   legacyFollow,
   legacyId,
@@ -35,17 +37,19 @@ const reduce = (path: string, bytes: Uint8Array) => tree.reduce(ALICE, path, byt
 const article = (envelope: unknown) => encodeJson({ content: JSON.stringify(envelope), kind: 'long' });
 
 describe('legacySocialTree paths', () => {
-  it('names the profile, follows, posts and tags, and nothing else', () => {
+  it('names the profile, follows, posts, tags and file records, and nothing else', () => {
     expect(tree.keyOf(ALICE, legacyPath.profile)).toEqual({ kind: 'profile' });
     expect(tree.keyOf(ALICE, legacyPath.follow(BRAN))).toEqual({ kind: 'follow', followee: BRAN });
     expect(tree.keyOf(ALICE, legacyPath.post(p1))).toEqual({ kind: 'post', postId: p1, editId: p1 });
     expect(tree.keyOf(ALICE, legacyPath.tag('TAGID'))).toEqual({ kind: 'tag' });
+    expect(tree.keyOf(ALICE, legacyPath.file(p1))).toEqual({ kind: 'file', fileId: p1 });
     for (const path of [
       legacyPath.follow('not-a-key'),
       legacyPath.post('not-an-id'),
       `${legacyPath.post(p1)}/x`,
       legacyPath.tag(''),
-      legacyPath.file(p1),
+      legacyPath.file('not-an-id'),
+      legacyPath.blob('BLOB1'),
       `${LEGACY_ROOT}mutes/${BRAN}`,
       PROFILE_PATH,
       `${FOLLOWS_PREFIX}${BRAN}.json`,
@@ -64,13 +68,15 @@ describe('legacySocialTree paths', () => {
     expect(socialV1Tree.followeeOf(legacyPath.follow(BRAN))).toBeNull();
   });
 
-  it('fetches profiles, posts and tags, and dates a post by its id', () => {
+  it('fetches profiles, posts, tags and file records, and dates a post or a file record by its id', () => {
     expect(tree.needsBody(legacyPath.profile)).toBe(true);
     expect(tree.needsBody(legacyPath.post(p1))).toBe(true);
     expect(tree.needsBody(legacyPath.tag('TAGID'))).toBe(true);
+    expect(tree.needsBody(legacyPath.file(p1))).toBe(true);
     expect(tree.needsBody(legacyPath.follow(BRAN))).toBe(false);
-    expect(tree.needsBody(legacyPath.file(p1))).toBe(false);
+    expect(tree.needsBody(legacyPath.blob('BLOB1'))).toBe(false);
     expect(tree.timeOfPath(legacyPath.post(p1))).toBe(BigInt(idMicros(p1)));
+    expect(tree.timeOfPath(legacyPath.file(p2))).toBe(BigInt(idMicros(p2)));
     expect(tree.timeOfPath(legacyPath.tag('TAGID'))).toBeNull();
     expect(tree.postPath(p1)).toBe(legacyPath.post(p1));
   });
@@ -210,6 +216,30 @@ describe('legacySocialTree reduce', () => {
     });
   });
 
+  it('reads a file record, with the blob of its own author in the canonical spelling', () => {
+    const blob = legacyBlobUri(ALICE, 'BLOB1');
+
+    expect(reduce(legacyPath.file(p1), legacyFileRecord(` ${blob} `, { content_type: ' image/png ' }))).toEqual({
+      type: 'file',
+      name: 'cat.png',
+      contentType: 'image/png',
+      size: 3,
+      src: blob,
+      createdAt: 1_790_000_000_000_000,
+    });
+  });
+
+  it.each<[string, Record<string, unknown>]>([
+    ['a blob of another author', { src: legacyBlobUri(BRAN, 'BLOB1') }],
+    ['a source that is no blob', { src: 'https://example.com/cat.png' }],
+    ['an unknown type', { content_type: 'image/x-cat' }],
+    ['no name', { name: null }],
+    ['a size that is no count', { size: -1 }],
+    ['a creation time that is no integer', { created_at: '1' }],
+  ])('reads no file record with %s', (_name, extra) => {
+    expect(reduce(legacyPath.file(p1), legacyFileRecord(legacyBlobUri(ALICE, 'BLOB1'), extra))).toBeNull();
+  });
+
   it('reads nothing from a follow, a path it does not name or bytes of no JSON object', () => {
     expect(reduce(legacyPath.follow(BRAN), legacyFollow())).toBeNull();
     expect(reduce(legacyPath.file(p1), legacyProfile('Alice'))).toBeNull();
@@ -224,6 +254,7 @@ describe('legacySocialTree reduce', () => {
       [legacyPath.post(p1), legacyPost({ content: 'x', parent: legacyPostUri(BRAN, p2) })],
       [legacyPath.post(p1), article({ title: 'T', body: 'B' })],
       [legacyPath.tag('T1'), legacyTag(legacyPostUri(BRAN, p1), 'rust')],
+      [legacyPath.file(p1), legacyFileRecord(legacyBlobUri(ALICE, 'BLOB1'))],
     ];
     for (const [path, bytes] of cases) {
       const data = reduce(path, bytes);
@@ -251,7 +282,7 @@ describe('createSocialDomain with the older tree', () => {
       },
       {
         id: 'activity+legacy',
-        paths: [POSTS_PREFIX, TAGS_PREFIX, legacyPath.post(''), legacyPath.tag('')],
+        paths: [POSTS_PREFIX, TAGS_PREFIX, legacyPath.post(''), legacyPath.tag(''), legacyPath.file('')],
         history: 'window',
       },
     ]);
@@ -266,6 +297,18 @@ describe('createSocialDomain with the older tree', () => {
       group: `post+legacy:${p1}`,
       paths: [`${POSTS_PREFIX}${p1}/`, legacyPath.post(p1)],
     });
+    expect(domain.fileLeaf(ALICE, legacyPath.file(p1))).toEqual({
+      author: ALICE,
+      group: `file+legacy:${p1}`,
+      paths: [legacyPath.file(p1)],
+    });
+  });
+
+  it('has a file leaf only where a tree keeps a file record', () => {
+    expect(domain.fileLeaf(ALICE, legacyPath.file('not-an-id'))).toBeNull();
+    expect(domain.fileLeaf(ALICE, legacyPath.post(p1))).toBeNull();
+    expect(domain.fileLeaf(ALICE, '/pub/social/v1/files/0000000000000000000000000A.png')).toBeNull();
+    expect(createSocialDomain().fileLeaf(ALICE, legacyPath.file(p1))).toBeNull();
   });
 
   it('keeps the v1 ids and paths alone without it', () => {

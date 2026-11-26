@@ -22,7 +22,8 @@ const STATIC_PREFIX = 'files';
  * would render as generic file cards for every viewer (D10). A v1 address in the body is not an error:
  * `/v0/files/by_ids` skips it with a server-side warning and answers 200 with the rest (Nexus contract,
  * verified live on the carrier). The callers still never send one: `FileApplication.fetchFiles` and
- * `fetchFilesForPosts` drop every v1 address first, since Nexus has nothing to say about it.
+ * `fetchFilesForPosts` drop every v1 address first, since Nexus has nothing to say about it. The local index answers
+ * the same route from the File records it reads when the deploy reads the older tree, and with nothing otherwise.
  *
  * Sunset: remove this call, with `NexusFileService.fetchFiles` and `FileApplication.fetchFiles*`, when `/v0`
  * gets a removal date or every author has migrated (ADR-0027, _Nexus API version_). The compliance

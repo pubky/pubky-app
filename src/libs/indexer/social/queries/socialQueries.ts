@@ -1,5 +1,6 @@
 import type { SocialView } from '../social.view';
 import { bootstrap } from './bootstrap';
+import { filesByIds, type FilesByIdsParams } from './files';
 import { notifications, type NotificationsParams } from './notifications';
 import {
   postDetails,
@@ -18,6 +19,7 @@ import { UnavailableQueryError } from './queries.errors';
 import type {
   Answer,
   BootstrapJson,
+  FileDetailsJson,
   HotTagJson,
   IngestJson,
   NotificationJson,
@@ -81,6 +83,7 @@ export interface SocialQueries {
   /** Never throws: a part it cannot answer is empty. */
   bootstrap(params: UserRef): Answer<BootstrapJson>;
   ingest(params: UserRef): Answer<IngestJson>;
+  filesByIds(params: FilesByIdsParams): Answer<FileDetailsJson[]>;
 }
 
 /** Stream sources that range over the scope's members. */
@@ -136,5 +139,6 @@ export function createSocialQueries(view: SocialView, context: QueryContext): So
     notifications: (params) => notifications(view, context, params),
     bootstrap: (params) => bootstrap(view, context, params),
     ingest: (params) => ingest(view, params),
+    filesByIds: (params) => filesByIds(view, params),
   };
 }
