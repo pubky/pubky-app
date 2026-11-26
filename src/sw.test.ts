@@ -379,14 +379,22 @@ describe('src/sw.ts', () => {
     const [onFetch] = listeners.get('fetch') ?? [];
     const respondWith = vi.fn();
     const url = `${window.location.origin}/_pubky/avatar/alice?v=3`;
-    cacheStore.match.mockResolvedValueOnce(new Response('cached avatar'));
+    cacheStore.match.mockClear();
+    cacheStore.match.mockResolvedValueOnce(
+      new Response('cached avatar', { headers: { 'Content-Type': 'image/webp' } }),
+    );
 
     onFetch({ request: new Request(url), clientId: 'tab-home', respondWith });
     const response: Response = await respondWith.mock.calls[0][0];
 
+    // The body is checked in `localMedia.test.ts`, which runs in Node: here a body passes from Node's Response through
+    // jsdom's Blob, another realm, and reads back as "[object Blob]".
     expect(caches.open).toHaveBeenCalledWith('pubky-local-media');
+    expect(cacheStore.match).toHaveBeenCalledTimes(1);
     expect(cacheStore.match).toHaveBeenCalledWith(url);
-    expect(await response.text()).toBe('cached avatar');
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe('image/webp');
+    expect(response.headers.get('accept-ranges')).toBe('bytes');
   });
 
   it('leaves every other request to Serwist', () => {

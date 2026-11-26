@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, expect, it, vi } from 'vitest';
 import { ATTACHMENT_MAX_OTHER_SIZE } from '@/config/posts';
 import { LOCAL_MEDIA_MAX_BYTES } from '@/config/pwa';

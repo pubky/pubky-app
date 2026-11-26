@@ -26,10 +26,9 @@ export function parseByteRange(header: string | null, size: number): ByteRange |
     return { start: Math.max(0, size - length), end: size - 1 };
   }
   const start = Number(first);
-  const end = last === '' ? size - 1 : Number(last);
-  if (end < start) return null;
+  if (last !== '' && Number(last) < start) return null;
   if (start >= size) return 'unsatisfiable';
-  return { start, end: Math.min(end, size - 1) };
+  return { start, end: last === '' ? size - 1 : Math.min(Number(last), size - 1) };
 }
 
 /**
