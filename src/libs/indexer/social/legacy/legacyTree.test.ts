@@ -26,6 +26,9 @@ import {
 } from './legacy.fixtures';
 import { LEGACY_ROOT, legacySocialTree as tree, legacyTargetOf } from './legacyTree';
 
+/** A value of the wrong type, as a hostile file would carry. */
+const wrongType = <T>(value: unknown): T => value as T;
+
 const p1 = legacyId(1);
 const p2 = legacyId(2);
 const reduce = (path: string, bytes: Uint8Array) => tree.reduce(ALICE, path, bytes);
@@ -119,7 +122,7 @@ describe('legacySocialTree reduce', () => {
       content: `Hi pk:${BRAN}`,
       parent: legacyPostUri(BRAN, p2),
       embed: buildUri(CLEO, 'post', p2),
-      attachments: [legacyFileUriOf(ALICE, p2), 7 as unknown as string],
+      attachments: [legacyFileUriOf(ALICE, p2), wrongType<string>(7)],
     });
 
     expect(reduce(legacyPath.post(p1), bytes)).toEqual({
