@@ -58,8 +58,9 @@ be structured-cloneable; cursors stay `bigint` and are never part of a key.
 `createCrawler` walks a scope hop by hop from the seed: it resolves each user's homeserver, syncs the
 full-history groups in batches from each user's stored head, and follows the links in the scope group to
 the next hop. Windowed groups start at the homeserver's window start, the newest event older than
-`windowDays`, and grow older only through `backfill`. Records that need their file get it fetched and
-reduced; a file that is gone or fails its hash leaves the record without data until a later event. A
+`windowDays`, and grow older only through `backfill`, which reads pages of `backfillPageLimit` events (100) and
+fetches and commits each page before reading the next, so older history shows up a screen at a time. Records
+that need their file get it fetched and reduced; a file that is gone or fails its hash leaves the record without data until a later event. A
 failing homeserver is skipped for the rest of the sync with exponential backoff, and one whose log went
 backwards (a restore) loses everything stored for it and is synced again.
 

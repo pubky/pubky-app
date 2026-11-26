@@ -11,6 +11,11 @@ export interface CrawlerOptions {
   batchSize: number;
   /** Events per stream request, for the whole batch; a homeserver takes at most 1000. */
   pageLimit: number;
+  /**
+   * Events per `backfill` page. Each page's files are fetched and the page committed before the next is read, so a
+   * small page puts older history on screen in small steps instead of one long wait.
+   */
+  backfillPageLimit: number;
   lookupConcurrency: number;
   bodyConcurrency: number;
   /** Age of the oldest events a windowed group indexes before a backfill. */
@@ -34,6 +39,7 @@ export const DEFAULT_CRAWLER_OPTIONS: Readonly<CrawlerOptions> = Object.freeze({
   hops: 2,
   batchSize: 50,
   pageLimit: 1000,
+  backfillPageLimit: 100,
   lookupConcurrency: 8,
   bodyConcurrency: 16,
   windowDays: 30,
@@ -130,7 +136,10 @@ export interface BackfillResult {
  */
 export interface Crawler {
   syncScope(seed: string, signal?: AbortSignal): Promise<SyncResult>;
-  /** Extends the author's top contiguous coverage of the group backwards by up to `pages` stream pages. */
+  /**
+   * Extends the author's top contiguous coverage of the group backwards by up to `pages` pages of `backfillPageLimit`
+   * events.
+   */
   backfill(author: string, groupId: string, pages: number, signal?: AbortSignal): Promise<BackfillResult>;
   /** Syncs the domain's groups of these users alone: the scope members stay and no link is followed. */
   syncUsers(users: readonly string[], signal?: AbortSignal): Promise<SyncOutcome>;

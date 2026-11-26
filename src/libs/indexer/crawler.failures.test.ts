@@ -181,7 +181,7 @@ describe('syncScope bodies', () => {
 
 describe('backfill', () => {
   it('extends the windowed tail page by page down to the stream start', async () => {
-    const { network, store, crawler } = harness({ pageLimit: 5 });
+    const { network, store, crawler } = harness({ backfillPageLimit: 5 });
     network.addHomeserver('hs1').addUser('alice', 'hs1');
     const old = Array.from({ length: 12 }, (_, i) => network.putJson('alice', postPath((60 - i) * DAY_MS), { i }));
     network.putJson('alice', postPath(2 * DAY_MS), { text: 'recent' });
@@ -199,6 +199,60 @@ describe('backfill', () => {
     expect(await crawler.backfill('alice', ACTIVITY, 10)).toEqual({ tail: CURSOR_ZERO, pages: 2 });
     expect(await served(store, 'alice', 'hs1', ACTIVITY)).toEqual(network.liveOf('alice', [POSTS]));
     expect(await store.readCoverage(scope)).toEqual([{ tail: CURSOR_ZERO, head: network.headOf('hs1') }]);
+  });
+
+  it('reads pages of its own size, fetching and committing each page before the next', async () => {
+    const { network, store, crawler, crawlerOf } = harness({ backfillPageLimit: 4 });
+    network.addHomeserver('hs1').addUser('alice', 'hs1');
+    Array.from({ length: 10 }, (_, i) => network.putJson('alice', postPath((60 - i) * DAY_MS), { i }));
+    network.putJson('alice', postPath(2 * DAY_MS), { text: 'recent' });
+    await crawler.syncScope('alice');
+
+    const limits: number[] = [];
+    const log: string[] = [];
+    const counting: IndexerTransport = {
+      resolveHomeserver: (user) => network.resolveHomeserver(user),
+      readEvents: (request) => {
+        limits.push(request.limit);
+        log.push('read');
+        return network.readEvents(request);
+      },
+      getPublic: (request) => {
+        log.push('get');
+        return network.getPublic(request);
+      },
+      listIndexFiles: () => network.listIndexFiles(),
+      readIndexFile: (name) => network.readIndexFile(name),
+      writeIndexFile: (name, bytes) => network.writeIndexFile(name, bytes),
+      deleteIndexFile: (name) => network.deleteIndexFile(name),
+    };
+    const backfiller = crawlerOf(counting);
+    backfiller.onCommit(() => log.push('commit'));
+
+    await backfiller.backfill('alice', ACTIVITY, 2);
+
+    expect(limits).toEqual([4, 4]);
+    const step = ['read', 'get', 'get', 'get', 'get', 'commit'];
+    expect(log).toEqual([...step, ...step]);
+    expect(await store.readCoverage({ author: 'alice', homeserver: 'hs1', group: ACTIVITY })).toHaveLength(1);
+  });
+
+  it('ends an exactly full page below its lowest cursor, and the empty page after it at the stream start', async () => {
+    const { network, store, crawler } = harness({ backfillPageLimit: 5 });
+    network.addHomeserver('hs1').addUser('alice', 'hs1').addUser('zed', 'hs1');
+    // Someone else's event first, so alice's oldest post is not at cursor 1 and its page ends above zero.
+    network.putJson('zed', postPath(90 * DAY_MS), { text: 'zed' });
+    const old = Array.from({ length: 10 }, (_, i) => network.putJson('alice', postPath((60 - i) * DAY_MS), { i }));
+    network.putJson('alice', postPath(2 * DAY_MS), { text: 'recent' });
+    await crawler.syncScope('alice');
+    const scope = { author: 'alice', homeserver: 'hs1', group: ACTIVITY };
+
+    // The window starts at the newest old post, which lies outside the range: the first page reads it too.
+    expect(await crawler.backfill('alice', ACTIVITY, 2)).toEqual({ tail: old[0] - BigInt(1), pages: 2 });
+    expect(await store.readCoverage(scope)).toHaveLength(1);
+    expect(await crawler.backfill('alice', ACTIVITY, 5)).toEqual({ tail: CURSOR_ZERO, pages: 1 });
+    expect(await store.readCoverage(scope)).toEqual([{ tail: CURSOR_ZERO, head: network.headOf('hs1') }]);
+    expect(await served(store, 'alice', 'hs1', ACTIVITY)).toEqual(network.liveOf('alice', [POSTS]));
   });
 });
 

@@ -552,7 +552,8 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     const homeserver = (await store.readUserHomeserver(author))?.homeserver ?? null;
     if (homeserver === null) return { tail: null, pages: 0 };
     const scope = { author, homeserver, group: group.id };
-    const read = reader(ctx, homeserver, group.paths, options.pageLimit);
+    const limit = options.backfillPageLimit;
+    const read = reader(ctx, homeserver, group.paths, limit);
     for (let done = 0; ; done += 1) {
       // Re-read each time: the new run may join a lower stored range, and reading resumes below it.
       const coverage = await store.readCoverage(scope);
@@ -565,7 +566,8 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
         (low, event) => (low === null || event.cursor < low ? event.cursor : low),
         null,
       );
-      const tail = page.length >= options.pageLimit && lowest !== null ? lowest - ONE : CURSOR_ZERO;
+      // A full page holds every event down to its lowest cursor; a shorter one reached the stream start.
+      const tail = page.length >= limit && lowest !== null ? lowest - ONE : CURSOR_ZERO;
       const run = foldEvents<D>(scope, tail, trusted.tail, page);
       await attachBodies(ctx, [run]);
       await commit({ applyRuns: [run] }, { scopes: [scopeOf(run)], seeds: [] });
