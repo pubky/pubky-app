@@ -71,6 +71,10 @@ like any failed lookup, and an index file call past `indexFileTimeoutMs` (2 min)
 such as a pre-emption or `stop`, settles the operation at once, even while a call hangs. A call that settles after
 its deadline or abort is ignored.
 
+A request answered 429 is retried up to three times, after the wait the homeserver named or, since the SDK passes
+none on, after 1 s doubling per consecutive 429 of that homeserver up to 8 s, reset by its next success. Requests to
+one homeserver already go one at a time.
+
 Each crawl step is one `commit` that applies the runs of the users that moved. A scope's coverage stays
 one range over normal syncs; a gap, such as stored history older than the window start, keeps two.
 

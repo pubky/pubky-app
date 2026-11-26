@@ -83,9 +83,26 @@ describe('syncScope failures', () => {
     const { failedHomeservers } = await crawler.syncScope('alice');
 
     expect(failedHomeservers).toEqual(['hs3']);
-    expect(waits).toEqual([5000, 5000, 5000]);
+    expect(waits).toEqual([1000, 2000, 4000]);
     expect((await store.readHomeserverState('hs3')).failure).toBeNull();
     expect(await served(store, 'bob', 'hs2', ACTIVITY)).toEqual(network.liveOf('bob', [POSTS]));
+  });
+
+  it('doubles the wait per consecutive 429 of a homeserver up to 8 s, until a success resets it', async () => {
+    const { network, store, crawler, waits } = threeHomeservers();
+    network.rateLimit('hs3', 4);
+    await crawler.syncScope('alice');
+    expect(waits).toEqual([1000, 2000, 4000]);
+
+    network.rateLimit('hs3', 1);
+    expect((await crawler.syncScope('alice')).failedHomeservers).toEqual([]);
+    expect(waits.slice(3)).toEqual([8000]);
+    expect(await served(store, 'carol', 'hs3', ACTIVITY)).toEqual(network.liveOf('carol', [POSTS]));
+
+    network.rateLimit('hs3', 1);
+    network.rateLimit('hs2', 2);
+    await crawler.syncScope('alice');
+    expect(waits.slice(4).sort((a, b) => a - b)).toEqual([1000, 1000, 2000]);
   });
 
   it('crawls the homeservers of a hop together, so a stalled one holds up none of the others', async () => {

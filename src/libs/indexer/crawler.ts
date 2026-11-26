@@ -32,7 +32,9 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const WINDOW_START_TTL_MS = DAY_MS;
 const BACKOFF_BASE_MS = 60 * 1000;
 const BACKOFF_MAX_MS = 30 * 60 * 1000;
-const RATE_LIMIT_WAIT_MS = 5 * 1000;
+/** Waits after a 429 that names none: doubling from the first per consecutive 429 of a homeserver, up to the max. */
+const RATE_LIMIT_FIRST_WAIT_MS = 1000;
+const RATE_LIMIT_MAX_WAIT_MS = 8 * 1000;
 const RATE_LIMIT_RETRIES = 3;
 const MICROS_PER_MS = BigInt(1000);
 const ONE = BigInt(1);
@@ -95,6 +97,8 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
   const failed = new Set<string>();
   /** Lookups in flight by user, so operations running together resolve a user once. */
   const lookups = new Map<string, Promise<string | null>>();
+  /** Consecutive 429s per homeserver, across operations, until a request to it succeeds. */
+  const rateLimited = new Map<string, number>();
   /** Records `hydrate` fetched once, by scope, path and cursor. */
   const hydrated = new Set<string>();
   const listeners = new Set<(stats: CrawlerStats) => void>();
@@ -130,16 +134,25 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     for (const listener of commitListeners) listener(change);
   }
 
-  /** Runs a request, retrying it after a 429 up to `RATE_LIMIT_RETRIES` times. */
-  async function attempt<T>(ctx: OperationContext, request: () => Promise<T>): Promise<T> {
+  /**
+   * Runs a request to the homeserver, retrying it after a 429 up to `RATE_LIMIT_RETRIES` times, after the wait the
+   * homeserver asked for or else one that grows with its consecutive 429s.
+   */
+  async function attempt<T>(ctx: OperationContext, homeserver: string, request: () => Promise<T>): Promise<T> {
     for (let retry = 0; ; retry += 1) {
       throwIfAborted(ctx.signal);
       try {
-        return await request();
+        const result = await request();
+        rateLimited.delete(homeserver);
+        return result;
       } catch (error) {
         throwIfAborted(ctx.signal);
-        if (!(error instanceof RateLimitedError) || retry >= RATE_LIMIT_RETRIES) throw error;
-        await wait(error.retryAfterMs ?? RATE_LIMIT_WAIT_MS, ctx.signal);
+        if (!(error instanceof RateLimitedError)) throw error;
+        const streak = rateLimited.get(homeserver) ?? 0;
+        rateLimited.set(homeserver, streak + 1);
+        if (retry >= RATE_LIMIT_RETRIES) throw error;
+        const fallback = Math.min(RATE_LIMIT_FIRST_WAIT_MS * 2 ** streak, RATE_LIMIT_MAX_WAIT_MS);
+        await wait(error.retryAfterMs ?? fallback, ctx.signal);
       }
     }
   }
@@ -156,7 +169,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
 
   function reader(ctx: OperationContext, homeserver: string, paths: string[], limit: number): ReadPage {
     return async (users, reverse) => {
-      const events = await attempt(ctx, () => {
+      const events = await attempt(ctx, homeserver, () => {
         count('streamRequests');
         return call(ctx, homeserver, (signal) =>
           transport.readEvents({ homeserver, users, paths, limit, reverse, signal }),
@@ -237,7 +250,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     author: string,
     record: RecordEntry<D>,
   ): Promise<D | null> {
-    const bytes = await attempt(ctx, () => {
+    const bytes = await attempt(ctx, homeserver, () => {
       count('bodyRequests');
       return call(ctx, homeserver, (signal) => transport.getPublic({ author, path: record.path, signal }));
     });
