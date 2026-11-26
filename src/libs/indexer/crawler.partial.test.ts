@@ -92,13 +92,25 @@ describe('syncUsers', () => {
       ]),
     );
 
-    // With history, the next sync goes on forward from the head, and backfill below the same single range.
+    // Within a page of the newest event, the next sync catches up forward from the head: still one range.
     const fresh = network.putJson('carol', postPath(DAY_MS / 2), { text: 'fresh' });
+    const mark = network.reads.length;
     await crawler.syncUsers(['carol']);
     expect(await store.readCoverage(scope)).toEqual([{ tail: oldCursor - BigInt(1), head: fresh }]);
+    // Only the restore check reads backwards, one event: no window start search.
+    expect(network.reads.slice(mark).filter((read) => read.reverse && read.events.length > 1)).toEqual([]);
 
-    expect(await crawler.backfill('carol', ACTIVITY, 5)).toMatchObject({ tail: CURSOR_ZERO, pages: 1 });
-    expect(await store.readCoverage(scope)).toEqual([{ tail: CURSOR_ZERO, head: fresh }]);
+    // More than a page behind: the newest page, above a gap that backfill closes, after which one range holds all.
+    const burst = Array.from({ length: 5 }, (_, i) => network.putJson('carol', postPath(DAY_MS / 4 - i), { i }));
+    await crawler.syncUsers(['carol']);
+    expect(await store.readCoverage(scope)).toEqual([
+      { tail: oldCursor - BigInt(1), head: fresh },
+      { tail: burst[0], head: burst[4] },
+    ]);
+    expect((await served(store, 'carol', 'hs1', ACTIVITY)).has(kept)).toBe(false);
+
+    await crawler.backfill('carol', ACTIVITY, 5);
+    expect(await store.readCoverage(scope)).toEqual([{ tail: CURSOR_ZERO, head: burst[4] }]);
     expect(await served(store, 'carol', 'hs1', ACTIVITY)).toEqual(network.liveOf('carol', [POSTS]));
   });
 

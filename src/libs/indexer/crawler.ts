@@ -76,6 +76,9 @@ type Counter = 'lookups' | 'streamRequests' | 'bodyRequests' | 'events';
 const headOf = (coverage: Coverage): Cursor | null =>
   coverage.length === 0 ? null : coverage[coverage.length - 1].head;
 
+const highestOf = (events: readonly AuthoredStreamEvent[]): Cursor =>
+  events.reduce((high, event) => (event.cursor > high ? event.cursor : high), CURSOR_ZERO);
+
 /** The tail of the top contiguous range, the only trusted one. */
 const topTailOf = (coverage: Coverage): Cursor | null =>
   coverage.length === 0 ? null : coverage[coverage.length - 1].tail;
@@ -424,24 +427,38 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
   }
 
   /**
-   * The windowed groups of users loaded one by one. A user with no history of a group gets their newest page of it,
-   * read backwards as `backfill` reads: what a profile shows first, with no window start to search for and no range
-   * read twice. A user with history goes on forward from its head, as a scope member does.
+   * The windowed groups of users loaded one by one, newest first, with no window start to search for and no range
+   * read twice. A user whose history ends within a page of their newest event catches up forward from its head;
+   * any other gets their newest page, read backwards as `backfill` reads, and `backfill` closes the gap below it.
    */
   async function syncNewest(ctx: OperationContext, homeserver: string, users: readonly string[]) {
     if (windowGroups.length === 0 || !(await ready(ctx, homeserver))) return;
     await guard(ctx, homeserver, async () => {
       for (const group of windowGroups) {
-        const heads = await storedHeads(homeserver, group, users);
-        const known = users.filter((user) => heads.get(user) !== null);
         for (const user of users) {
-          if (heads.get(user) === null) await readBack(ctx, { author: user, homeserver, group: group.id }, group);
+          const scope = { author: user, homeserver, group: group.id };
+          if (!(await catchUp(ctx, scope, group))) await readPageBelow(ctx, scope, group, null);
         }
-        if (known.length === 0) continue;
-        const start = await windowStartOf(ctx, homeserver, known);
-        await syncGroup(ctx, homeserver, group, known, fromStart(start));
       }
     });
+  }
+
+  /**
+   * Reads one page of `backfillPageLimit` events forward from the scope's head and commits it when it is not full,
+   * the scope then holding everything up to the newest event. False, with nothing committed, for a scope with no
+   * history or one more than a page behind.
+   */
+  async function catchUp(ctx: OperationContext, scope: ScopeKey, group: PathGroup): Promise<boolean> {
+    const head = headOf(await store.readCoverage(scope));
+    if (head === null) return false;
+    const limit = options.backfillPageLimit;
+    const page = await reader(ctx, scope.homeserver, group.paths, limit)([{ user: scope.author, cursor: head }], false);
+    if (page.length >= limit) return false;
+    if (page.length === 0) return true;
+    const run = foldEvents<D>(scope, head, highestOf(page), page);
+    await attachBodies(ctx, [run]);
+    await commitRuns({ applyRuns: [run] }, { scopes: [scopeOf(run)], seeds: [] });
+    return true;
   }
 
   /** Runs `work` for every homeserver at once, so a slow one holds up none of the others; rethrows after all end. */
@@ -624,32 +641,33 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
   }
 
   /**
-   * Reads the page of `backfillPageLimit` events below the scope's top contiguous range, or its newest page when it
-   * has no range, fetches the files the page needs to render and commits it. Its events, `null` when there was
-   * nothing to read: the range reaches the stream start, or the author has no event in the group.
+   * Reads the page of `backfillPageLimit` events below `below`, a tail of the scope, or the newest page when `null`,
+   * fetches the files the page needs to render and commits it. Its events, `null` when the newest page was empty:
+   * the author has no event in the group.
    */
-  async function readBack(ctx: OperationContext, scope: ScopeKey, group: PathGroup): Promise<number | null> {
-    // Read each time: the last run may have joined a lower stored range, and reading resumes below it.
-    const stored = topTailOf(await store.readCoverage(scope));
-    if (stored === CURSOR_ZERO) return null;
+  async function readPageBelow(
+    ctx: OperationContext,
+    scope: ScopeKey,
+    group: PathGroup,
+    below: Cursor | null,
+  ): Promise<number | null> {
     const limit = options.backfillPageLimit;
-    // The tail itself is outside the range, so the read starts one above it; with no range, at the newest event.
+    // The tail itself is outside its range, so the read starts one above it.
     const page = await reader(
       ctx,
       scope.homeserver,
       group.paths,
       limit,
-    )([{ user: scope.author, cursor: stored === null ? null : stored + ONE }], true);
-    if (stored === null && page.length === 0) return null;
+    )([{ user: scope.author, cursor: below === null ? null : below + ONE }], true);
+    if (below === null && page.length === 0) return null;
     const lowest = page.reduce<Cursor | null>(
       (low, event) => (low === null || event.cursor < low ? event.cursor : low),
       null,
     );
-    const highest = page.reduce((high, event) => (event.cursor > high ? event.cursor : high), CURSOR_ZERO);
-    // A full page holds every event down to its lowest cursor; a shorter one reached the stream start. Without a
-    // range, nothing above the newest event read exists yet, so the run ends there.
+    // A full page holds every event down to its lowest cursor; a shorter one reached the stream start. The newest
+    // page ends at the newest event read: nothing above it exists yet.
     const tail = page.length >= limit && lowest !== null ? lowest - ONE : CURSOR_ZERO;
-    const run = foldEvents<D>(scope, tail, stored ?? highest, page);
+    const run = foldEvents<D>(scope, tail, below ?? highestOf(page), page);
     await attachBodies(ctx, [run]);
     await commitRuns({ applyRuns: [run] }, { scopes: [scopeOf(run)], seeds: [] });
     return page.length;
@@ -665,7 +683,11 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     let events = 0;
     let done = 0;
     for (; done < pages; done += 1) {
-      const read = await readBack(ctx, scope, group);
+      // Read each time: the last run may have joined a lower stored range, and reading resumes below it. Without a
+      // range, as after a window that held none of the author's events, it starts at their newest event.
+      const tail = topTailOf(await store.readCoverage(scope));
+      if (tail === CURSOR_ZERO) break;
+      const read = await readPageBelow(ctx, scope, group, tail);
       if (read === null) break;
       events += read;
     }

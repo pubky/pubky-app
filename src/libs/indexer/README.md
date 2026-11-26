@@ -64,8 +64,9 @@ demand (`syncUsers`) with no history of a windowed group starts with one such pa
 profile shows the newest posts first, so it needs neither the window start, a search over up to 1000 events, nor a
 forward read of the range that search already went through. The page's run is `(tail, newest]`, a full page's tail
 just below its lowest cursor, a short one's at the stream start; it holds the page's tombstones like any run, and is
-the scope's only range, so it is trusted. Later syncs of that user go on forward from its head, and backfills below it,
-keeping one range. Records
+the scope's only range, so it is trusted. A later on-demand sync catches up with one forward page from the head while
+the user wrote less than a page since, keeping one range; past that it reads the newest page again, above a gap that
+`backfill` closes, and until then only the range above the gap is served. Neither searches for the window start. Records
 that need their file get it fetched and reduced; a file that is gone or fails its hash leaves the record without data until a later event. A
 homeserver whose request keeps failing is skipped for the rest of the sync with exponential backoff, and one whose
 log went backwards (a restore) loses everything stored for it and is synced again.
