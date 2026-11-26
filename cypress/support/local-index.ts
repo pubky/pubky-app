@@ -60,7 +60,7 @@ export const forbidNexusRequests = () => {
   });
 };
 
-type InjectedConfig = { indexerSources?: string[]; nexusUrl?: string; cdnUrl?: string };
+type InjectedConfig = { indexerSources?: string[]; nexusUrl?: string; cdnUrl?: string; indexerWindowMs?: number };
 
 /** The page's runtime config says the app reads from its local index alone, with no Nexus or CDN origin. */
 export const expectAppWithoutNexus = () => {
@@ -179,6 +179,78 @@ export const seedLocalNetwork = (): Cypress.Chainable<LocalNetwork> => {
   });
 
   return cy.then((): LocalNetwork => ({ ...users, posts }));
+};
+
+/**
+ * How far back the app's index loads recent activity (`PUBKY_RUNTIME_INDEXER_WINDOW_MS`), which the e2e workflow sets
+ * for the history spec alone.
+ */
+export const localIndexWindowMs = (): Cypress.Chainable<number> =>
+  cy.window().then((win) => {
+    const config = Reflect.get(win, '__PUBKY_CONFIG__') as InjectedConfig | undefined;
+    expect(config?.indexerWindowMs, 'local index window (PUBKY_RUNTIME_INDEXER_WINDOW_MS)').to.be.a('number');
+    return Number(config?.indexerWindowMs);
+  });
+
+export const HISTORY_NAMES = { viewer: 'History Viewer', author: 'History Author' } as const;
+
+/** Starts every post text the history spec seeds. */
+export const HISTORY_PREFIX = `history ${runId}`;
+
+// More events than one step of older history reads (100), so the oldest posts lie past the step that opening the
+// profile loads
+const HISTORY_GAP_TAGS = 110;
+// A full first page and two more
+const HISTORY_RECENT_POSTS = 12;
+// Room for the seed process's clock and the browser's to disagree
+const WINDOW_MARGIN_MS = 5_000;
+
+const historyText = (label: string) => `${HISTORY_PREFIX} ${label}`;
+
+export type HistoryNetwork = Record<keyof typeof HISTORY_NAMES, SeededUser> & {
+  /** The author's post texts, newest first. */
+  texts: string[];
+};
+
+/**
+ * Seeds an author the viewer follows, with posts on both sides of the index's window: two oldest posts, more tags
+ * than a step of older history reads, the newest post older than the window, then, once that has aged past the
+ * window, a full page of recent posts and two more. The index's sync then loads the recent posts, opening the
+ * profile loads one step of older history (the edge post and tags), and only a scroll past the edge reaches the
+ * two oldest.
+ */
+export const seedOlderHistory = (windowMs: number): Cypress.Chainable<HistoryNetwork> => {
+  const users = {} as Record<keyof typeof HISTORY_NAMES, SeededUser>;
+  const recent = Cypress._.times(HISTORY_RECENT_POSTS, (index) =>
+    historyText(`recent ${String(index + 1).padStart(2, '0')}`),
+  );
+  const older = [historyText('oldest'), historyText('older')];
+  const edge = historyText('edge');
+
+  (Object.keys(HISTORY_NAMES) as Array<keyof typeof HISTORY_NAMES>).forEach((key) => {
+    seedUserViaApi(HISTORY_NAMES[key], { bio: `Seeded for the local index history (${key})` }).then((user) => {
+      users[key] = user;
+    });
+  });
+  cy.then(() => {
+    followUserViaApi(users.viewer, users.author);
+    createPostViaApi(users.author, older[0]).then((oldest) => {
+      createPostViaApi(users.author, older[1]);
+      tagPostViaApi(
+        users.author,
+        oldest,
+        Cypress._.times(HISTORY_GAP_TAGS, (index) => `gap${String(index).padStart(3, '0')}`),
+      );
+      createPostViaApi(users.author, edge);
+    });
+  });
+  logPhase('waiting for the older posts to age past the window', `(${windowMs} ms)`);
+  cy.wait(windowMs + WINDOW_MARGIN_MS);
+  cy.then(() => {
+    recent.forEach((text) => createPostViaApi(users.author, text));
+  });
+
+  return cy.then((): HistoryNetwork => ({ ...users, texts: [...recent].reverse().concat(edge, older[1], older[0]) }));
 };
 
 const PHASE_LOG_NAME = '[local-index]';
