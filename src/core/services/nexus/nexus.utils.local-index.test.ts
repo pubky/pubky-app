@@ -353,8 +353,8 @@ describe('queryNexus routing by indexer sources', () => {
         expect(indexer.request).toHaveBeenCalledTimes(2);
       });
 
-      it('leaves a head poll as it came, the index naming no older history for it', async () => {
-        const indexer = fakeIndexer(page([]));
+      it('never extends a head poll, even when its answer names older history', async () => {
+        const indexer = fakeIndexer(page([], [olderOf('alice')]));
 
         await queryNexus({ url: uniqueUrl('stream/posts/keys?source=author&author_id=alice&limit=3&end=100') });
 

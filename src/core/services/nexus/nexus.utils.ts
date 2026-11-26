@@ -282,10 +282,11 @@ function hintsToLoad(more: readonly MoreHint[], url: string, unproven: boolean):
 
 const STREAM_PAGE_PATH = new RegExp(`/${NEXUS_API_VERSION}/stream/posts/keys$`);
 
-/** The page size of a post stream page, `null` for any other read. */
-function streamPageLimit(url: string): number | null {
+/** The page size of a post stream page older history can extend, `null` for any other read. */
+function extendablePageLimit(url: string): number | null {
   const parsed = new URL(url, 'http://local.invalid');
-  if (!STREAM_PAGE_PATH.test(parsed.pathname)) return null;
+  // A page bounded by `end` (a head poll) asks for posts newer than a score: it is never a scroll, so never forced.
+  if (!STREAM_PAGE_PATH.test(parsed.pathname) || parsed.searchParams.has('end')) return null;
   const limit = Number(parsed.searchParams.get('limit'));
   return Number.isInteger(limit) && limit > 0 ? limit : null;
 }
@@ -404,7 +405,7 @@ async function askLocalIndex({
       await Promise.allSettled(hints.map((hint) => timedLoad(hint, () => startHintLoad(indexer, hint))));
       response = await indexer.request(request);
     }
-    const pageLimit = method === HttpMethod.GET ? streamPageLimit(url) : null;
+    const pageLimit = method === HttpMethod.GET ? extendablePageLimit(url) : null;
     if (pageLimit !== null) response = await extendStreamPage(indexer, request, response, pageLimit);
     if (response.status === 200) return { kind: 'answer', json: response.json };
     return { kind: 'not_found', known: response.coverage.kind === 'exact' };
