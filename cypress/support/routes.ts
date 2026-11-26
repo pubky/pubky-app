@@ -2,8 +2,11 @@
 // points this at its own array, and listeners already attached to the document follow it.
 let recordedRoutes: string[] | null = null;
 
-// Windows whose history methods and navigation events already report into `recordedRoutes`.
-const instrumented = new WeakSet<Window>();
+// History methods this module installed. A new document has new methods, so it is wrapped again.
+const wrappedHistoryMethods = new WeakSet<object>();
+
+// Documents whose navigation and popstate listeners are already attached.
+const documentsListening = new WeakSet<Document>();
 
 // TypeScript's DOM types do not include the Navigation API yet.
 type CurrentEntryNavigation = {
@@ -16,15 +19,14 @@ const recordUrl = (url: string) => {
   recordedRoutes.push(url);
 };
 
-// Cypress emits `url:changed` only from its own history wrapper, and it skips installing that wrapper
-// when a new document starts loading before the previous one unloads. `currententrychange` alone
-// still recorded nothing in Chrome under Cypress: the signup finished on /home with an empty list.
-// Next's app router calls the live `history.pushState` / `replaceState` (including the copy it
-// installed itself), so wrap whichever functions are there now and record after they return.
-// `popstate` covers back and forward. Recording must not throw: a throw rejects the navigation.
-const installRouteRecorder = (win: Window) => {
-  if (instrumented.has(win)) return;
-  instrumented.add(win);
+// The application iframe keeps one window object for the whole spec, while each load replaces the
+// document and its history methods. Remembering the window therefore skipped every later document,
+// and the signup walk was recorded as nothing. Wrap whatever `pushState` / `replaceState` are
+// installed now, including Next's own patch, which calls the previous function for its own
+// navigations. `window:before:load` runs before the app's scripts, so that patch captures this
+// wrapper. Recording must not throw: a throw rejects the navigation.
+const ensureHistoryWrapped = (win: Window) => {
+  if (!win.history) return;
 
   const record = () => {
     try {
@@ -34,22 +36,37 @@ const installRouteRecorder = (win: Window) => {
     }
   };
 
-  const navigation: CurrentEntryNavigation | undefined = Reflect.get(win, 'navigation');
-  if (navigation) navigation.addEventListener('currententrychange', record);
+  const doc = win.document;
+  if (doc && !documentsListening.has(doc)) {
+    documentsListening.add(doc);
+    const navigation: CurrentEntryNavigation | undefined = Reflect.get(win, 'navigation');
+    if (navigation) navigation.addEventListener('currententrychange', record);
+    win.addEventListener('popstate', record);
+  }
 
-  const { pushState, replaceState } = win.history;
-  win.history.pushState = function pushStateWrapper(this: History, ...args: Parameters<History['pushState']>) {
-    const result = pushState.apply(this, args);
-    record();
-    return result;
-  };
-  win.history.replaceState = function replaceStateWrapper(this: History, ...args: Parameters<History['replaceState']>) {
-    const result = replaceState.apply(this, args);
-    record();
-    return result;
-  };
-  win.addEventListener('popstate', record);
+  for (const method of ['pushState', 'replaceState'] as const) {
+    const current = win.history[method];
+    if (typeof current !== 'function' || wrappedHistoryMethods.has(current)) continue;
+    const wrapped = function (this: History, ...args: Parameters<History['pushState']>) {
+      const result = current.apply(this, args);
+      record();
+      return result;
+    };
+    wrappedHistoryMethods.add(wrapped);
+    win.history[method] = wrapped;
+  }
 };
+
+// Before the app's scripts, on every document, so a load that happens before `recordRoutes` is
+// still wrapped when a test starts recording.
+Cypress.on('window:before:load', (win: Window) => {
+  ensureHistoryWrapped(win);
+});
+
+// A visit in the next test must not append to the previous test's list.
+Cypress.on('test:before:run', () => {
+  recordedRoutes = null;
+});
 
 /**
  * Appends every URL the document reaches from here on to `visited`. A full load (a reload, a
@@ -58,11 +75,11 @@ const installRouteRecorder = (win: Window) => {
  */
 export const recordRoutes = (visited: string[]) => {
   recordedRoutes = visited;
-  cy.on('window:load', (win) => {
-    installRouteRecorder(win);
+  cy.on('window:load', (win: Window) => {
+    ensureHistoryWrapped(win);
     recordUrl(win.location.href);
   });
   cy.window({ log: false }).then((win) => {
-    installRouteRecorder(win);
+    ensureHistoryWrapped(win);
   });
 };
