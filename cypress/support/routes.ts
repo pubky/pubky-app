@@ -72,12 +72,21 @@ Cypress.on('test:before:run', () => {
  * Appends every URL the document reaches from here on to `visited`. A full load (a reload, a
  * `cy.visit`) drops the document's listeners, so the next document is instrumented from its load
  * and that load's URL is recorded.
+ *
+ * The sink is assigned when the command queue reaches this call. Callers such as
+ * `signInWithPubkyRing` invoke `recordRoutes` while they are still queueing the sign-in, and the
+ * history wrapper is already installed, so assigning the sink here would record that sign-in page
+ * into a list the test only starts watching from this point.
  */
 export const recordRoutes = (visited: string[]) => {
-  recordedRoutes = visited;
-  cy.on('window:load', (win: Window) => {
-    ensureHistoryWrapped(win);
-    recordUrl(win.location.href);
+  cy.then(() => {
+    recordedRoutes = visited;
+    // Recording starts with this command, so a reload queued after `recordRoutes` is included.
+    // Commands queued before it have already run, and their page loads are not.
+    cy.on('window:load', (win: Window) => {
+      ensureHistoryWrapped(win);
+      recordUrl(win.location.href);
+    });
   });
   cy.window({ log: false }).then((win) => {
     ensureHistoryWrapped(win);
