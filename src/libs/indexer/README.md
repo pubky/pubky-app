@@ -61,19 +61,23 @@ the next hop. Windowed groups start at the homeserver's window start, the newest
 `windowDays`, and grow older only through `backfill`, which reads pages of `backfillPageLimit` events (100) and
 fetches and commits each page before reading the next, so older history shows up a screen at a time. Records
 that need their file get it fetched and reduced; a file that is gone or fails its hash leaves the record without data until a later event. A
-failing homeserver is skipped for the rest of the sync with exponential backoff, and one whose log went
-backwards (a restore) loses everything stored for it and is synced again.
+homeserver whose request keeps failing is skipped for the rest of the sync with exponential backoff, and one whose
+log went backwards (a restore) loses everything stored for it and is synced again.
 
 Every transport call runs under a deadline of the library's own, timed by the injected `schedule`, so a transport
 whose request never settles cannot stall a crawl: a stream read or file fetch past `requestTimeoutMs` (30 s) has
-its signal aborted and fails its homeserver like any unreachable one, a lookup past `lookupTimeoutMs` (10 s) fails
+its signal aborted and fails like a request to an unreachable homeserver, a lookup past `lookupTimeoutMs` (10 s) fails
 like any failed lookup, and an index file call past `indexFileTimeoutMs` (2 min) fails the load or save. An abort,
 such as a pre-emption or `stop`, settles the operation at once, even while a call hangs. A call that settles after
 its deadline or abort is ignored.
 
-A request answered 429 is retried up to three times, after the wait the homeserver named or, since the SDK passes
-none on, after 1 s doubling per consecutive 429 of that homeserver up to 8 s, reset by its next success. Requests to
-one homeserver already go one at a time.
+A request answered 429, or failed or past its deadline, is retried up to three times, after the wait a 429 named
+or, since the SDK passes none on, after 1 s doubling per consecutive failure of that homeserver up to 8 s, reset by
+its next success. So one slow or failed request on a healthy homeserver costs a retry, never the homeserver. Only a
+request that fails all four times fails it, and then no other request of the operation retries against it, so a
+dead homeserver costs at most four requests per request in flight to it, not one per record. Retries never change what a
+failure leaves behind: a batch commits only once all of its files are fetched, so a failed one commits nothing, its
+users keep their stored coverage, and a later sync reads them again from there.
 
 Each crawl step is one `commit` that applies the runs of the users that moved. A scope's coverage stays
 one range over normal syncs; a gap, such as stored history older than the window start, keeps two.

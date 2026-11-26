@@ -1,23 +1,13 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import {
-  ACTIVITY,
-  DAY_MS,
-  FOLLOWS,
-  GRAPH,
-  harness,
-  NOW,
-  postPath,
-  POSTS,
-  served,
-  servedData,
-} from './crawler.fixtures';
+import { ACTIVITY, DAY_MS, FOLLOWS, GRAPH, harness, postPath, POSTS, served, servedData } from './crawler.fixtures';
+import type { CrawlerOptions } from './crawler.types';
 import { CURSOR_ZERO } from './cursor';
-import { encodeJson } from './fakeNetwork';
-import { IndexerAbortedError } from './indexer.errors';
+import { encodeJson, type FakeNetwork } from './fakeNetwork';
+import { HomeserverUnreachableError, IndexerAbortedError } from './indexer.errors';
 import { mergeRuns } from './merge';
 import { validateRun } from './run';
-import type { IndexerTransport } from './transport.types';
+import type { GetPublicRequest, IndexerTransport } from './transport.types';
 
 const MINUTE_MS = 60 * 1000;
 
@@ -36,15 +26,16 @@ function threeHomeservers() {
 
 describe('syncScope failures', () => {
   it('keeps syncing the others past a dead homeserver, backs off, and retries after retryAt', async () => {
-    const { network, store, crawler, clock } = threeHomeservers();
+    const { network, store, crawler, clock, waits } = threeHomeservers();
     network.setDown('hs2', true);
 
     const first = await crawler.syncScope('alice');
 
     expect(first.failedHomeservers).toEqual(['hs2']);
     expect(first.members.has('bob')).toBe(true);
+    expect(waits).toEqual([1000, 2000, 4000]);
     expect(await served(store, 'carol', 'hs3', ACTIVITY)).toEqual(network.liveOf('carol', [POSTS]));
-    expect((await store.readHomeserverState('hs2')).failure).toEqual({ failures: 1, retryAt: NOW + MINUTE_MS });
+    expect((await store.readHomeserverState('hs2')).failure).toEqual({ failures: 1, retryAt: clock.now + MINUTE_MS });
 
     clock.now += MINUTE_MS;
     await crawler.syncScope('alice');
@@ -163,6 +154,122 @@ describe('syncScope failures', () => {
       ]),
     );
     expect(await served(store, 'alice', 'hs1', GRAPH)).toEqual(network.liveOf('alice', [FOLLOWS]));
+  });
+});
+
+/** The network, with the file fetches `fails` picks failing as unreachable, and every fetch asked logged. */
+function failingGets(network: FakeNetwork, fails: (request: GetPublicRequest) => boolean) {
+  const gets: GetPublicRequest[] = [];
+  const transport: IndexerTransport = {
+    resolveHomeserver: (user) => network.resolveHomeserver(user),
+    readEvents: (request) => network.readEvents(request),
+    getPublic: async (request) => {
+      gets.push(request);
+      if (fails(request)) throw new HomeserverUnreachableError(request.author);
+      return network.getPublic(request);
+    },
+    listIndexFiles: () => network.listIndexFiles(),
+    readIndexFile: (name) => network.readIndexFile(name),
+    writeIndexFile: (name, bytes) => network.writeIndexFile(name, bytes),
+    deleteIndexFile: (name) => network.deleteIndexFile(name),
+  };
+  return { transport, gets };
+}
+
+/** alice on hs1 follows the users, each on hs1 with one post at `path`. */
+function oneHomeserver(users: readonly string[], path: string, options: Partial<CrawlerOptions> = {}) {
+  const setup = harness(options);
+  setup.network.addHomeserver('hs1').addUser('alice', 'hs1');
+  for (const user of users) {
+    setup.network.addUser(user, 'hs1');
+    setup.network.put('alice', `${FOLLOWS}${user}`);
+    setup.network.putJson(user, path, { text: user });
+  }
+  return setup;
+}
+
+describe('syncScope request retries', () => {
+  it('retries a file fetch that fails once, losing nothing and failing no homeserver', async () => {
+    const users = ['u0', 'u1', 'u2'];
+    const path = postPath(DAY_MS);
+    const { network, store, crawlerOf, waits } = oneHomeserver(users, path);
+    let fetches = 0;
+    const flaky = failingGets(network, () => (fetches += 1) === 1);
+
+    const { failedHomeservers } = await crawlerOf(flaky.transport).syncScope('alice');
+
+    expect(failedHomeservers).toEqual([]);
+    expect(waits).toEqual([1000]);
+    expect((await store.readHomeserverState('hs1')).failure).toBeNull();
+    for (const user of users) {
+      expect(await servedData(store, user, 'hs1', ACTIVITY)).toEqual(new Map([[path, { text: user }]]));
+    }
+  });
+
+  it('asks a dead homeserver at most four times per fetch in flight, then nothing while it backs off', async () => {
+    const { network, store, crawlerOf } = harness({ bodyConcurrency: 4 });
+    network.addHomeserver('hs1').addHomeserver('hs2').addUser('alice', 'hs1').addUser('bob', 'hs2');
+    network.put('alice', `${FOLLOWS}bob`);
+    for (let i = 0; i < 40; i += 1) network.putJson('bob', postPath(DAY_MS + i), { text: `bob ${i}` });
+    const dead = failingGets(network, ({ author }) => author === 'bob');
+    const crawler = crawlerOf(dead.transport);
+
+    expect((await crawler.syncScope('alice')).failedHomeservers).toEqual(['hs2']);
+    expect(dead.gets.length).toBeGreaterThanOrEqual(4);
+    expect(dead.gets.length).toBeLessThanOrEqual(4 * 4);
+    expect(await store.readCoverage({ author: 'bob', homeserver: 'hs2', group: ACTIVITY })).toEqual([]);
+
+    const gets = dead.gets.length;
+    const reads = network.reads.length;
+    expect((await crawler.syncScope('alice')).failedHomeservers).toEqual(['hs2']);
+    expect(dead.gets.length).toBe(gets);
+    expect(network.reads.slice(reads).some((read) => read.homeserver === 'hs2')).toBe(false);
+  });
+
+  it('commits nothing of a batch whose fetch keeps failing, and the next sync reads its users from their heads', async () => {
+    const users = ['u0', 'u1', 'u2', 'u3', 'u4'];
+    const first = postPath(2 * DAY_MS);
+    const { network, store, crawlerOf, clock } = oneHomeserver(users, first, { batchSize: 2 });
+    let broken = true;
+    const flaky = failingGets(network, ({ author }) => broken && author === 'u2');
+    const crawler = crawlerOf(flaky.transport);
+    const coverageOf = (user: string) => store.readCoverage({ author: user, homeserver: 'hs1', group: ACTIVITY });
+    const afterBackoff = async () => {
+      clock.now = (await store.readHomeserverState('hs1')).failure?.retryAt ?? clock.now;
+    };
+
+    // Batches [u0, u1], [u2, u3], [u4]: the second fails, and the third is never read.
+    expect((await crawler.syncScope('alice')).failedHomeservers).toEqual(['hs1']);
+    for (const user of ['u0', 'u1']) {
+      expect(await servedData(store, user, 'hs1', ACTIVITY)).toEqual(new Map([[first, { text: user }]]));
+    }
+    for (const user of ['u2', 'u3', 'u4']) expect(await coverageOf(user)).toEqual([]);
+
+    broken = false;
+    await afterBackoff();
+    expect((await crawler.syncScope('alice')).failedHomeservers).toEqual([]);
+    for (const user of users) {
+      expect(await servedData(store, user, 'hs1', ACTIVITY)).toEqual(new Map([[first, { text: user }]]));
+    }
+
+    // Warm, the stored coverage stays where it was, below the event whose file did not come.
+    const stored = await coverageOf('u2');
+    const second = postPath(DAY_MS);
+    network.putJson('u2', second, { text: 'again' });
+    broken = true;
+    expect((await crawler.syncScope('alice')).failedHomeservers).toEqual(['hs1']);
+    expect(await coverageOf('u2')).toEqual(stored);
+    expect((await served(store, 'u2', 'hs1', ACTIVITY)).has(second)).toBe(false);
+
+    broken = false;
+    await afterBackoff();
+    expect((await crawler.syncScope('alice')).failedHomeservers).toEqual([]);
+    expect(await servedData(store, 'u2', 'hs1', ACTIVITY)).toEqual(
+      new Map([
+        [first, { text: 'u2' }],
+        [second, { text: 'again' }],
+      ]),
+    );
   });
 });
 

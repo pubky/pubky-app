@@ -27,8 +27,8 @@ export interface CrawlerOptions {
   /** Users left out of every scope, and with them whoever is reached only through them. */
   excluded: ReadonlySet<string>;
   /**
-   * Deadline of one stream read or file fetch. Past it the call's signal aborts and the homeserver counts as
-   * unreachable, so a transport whose request never settles cannot stall a crawl.
+   * Deadline of one stream read or file fetch. Past it the call's signal aborts and the request fails like one to an
+   * unreachable homeserver, so a transport whose request never settles cannot stall a crawl.
    */
   requestTimeoutMs: number;
   /** Deadline of one homeserver lookup; past it the lookup fails like any other. */
@@ -56,7 +56,7 @@ export interface CrawlerParams<D> {
   domain: Domain<D>;
   /** Wall clock in ms, injected so tests control time. */
   now: () => number;
-  /** Waits before retrying a rate-limited request; a timer by default. Rejects with `IndexerAbortedError` on abort. */
+  /** Waits before retrying a failed request; a timer by default. Rejects with `IndexerAbortedError` on abort. */
   sleep?: (ms: number, signal?: AbortSignal) => Promise<void>;
   /** Timers for request deadlines; `setTimeout` by default. */
   schedule?: Schedule;

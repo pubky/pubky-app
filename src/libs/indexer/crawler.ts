@@ -32,10 +32,10 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const WINDOW_START_TTL_MS = DAY_MS;
 const BACKOFF_BASE_MS = 60 * 1000;
 const BACKOFF_MAX_MS = 30 * 60 * 1000;
-/** Waits after a 429 that names none: doubling from the first per consecutive 429 of a homeserver, up to the max. */
-const RATE_LIMIT_FIRST_WAIT_MS = 1000;
-const RATE_LIMIT_MAX_WAIT_MS = 8 * 1000;
-const RATE_LIMIT_RETRIES = 3;
+/** Waits before a retry the homeserver names none for: doubling per consecutive failure of it, up to the max. */
+const RETRY_FIRST_WAIT_MS = 1000;
+const RETRY_MAX_WAIT_MS = 8 * 1000;
+const RETRIES = 3;
 const MICROS_PER_MS = BigInt(1000);
 const ONE = BigInt(1);
 
@@ -97,8 +97,8 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
   const failed = new Set<string>();
   /** Lookups in flight by user, so operations running together resolve a user once. */
   const lookups = new Map<string, Promise<string | null>>();
-  /** Consecutive 429s per homeserver, across operations, until a request to it succeeds. */
-  const rateLimited = new Map<string, number>();
+  /** Consecutive failed requests per homeserver, 429s included, across operations, until one to it succeeds. */
+  const failing = new Map<string, number>();
   /** Records `hydrate` fetched once, by scope, path and cursor. */
   const hydrated = new Set<string>();
   const listeners = new Set<(stats: CrawlerStats) => void>();
@@ -135,29 +135,32 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
   }
 
   /**
-   * Runs a request to the homeserver, retrying it after a 429 up to `RATE_LIMIT_RETRIES` times, after the wait the
-   * homeserver asked for or else one that grows with its consecutive 429s.
+   * Runs a request to the homeserver, retrying a 429 or a failure up to `RETRIES` times, after the wait a 429 named
+   * or else one that grows with the homeserver's consecutive failures. So one slow or failed request costs a retry,
+   * and only a request that keeps failing fails its homeserver.
    */
   async function attempt<T>(ctx: OperationContext, homeserver: string, request: () => Promise<T>): Promise<T> {
     for (let retry = 0; ; retry += 1) {
       throwIfAborted(ctx.signal);
       try {
         const result = await request();
-        rateLimited.delete(homeserver);
+        failing.delete(homeserver);
         return result;
       } catch (error) {
         throwIfAborted(ctx.signal);
-        if (!(error instanceof RateLimitedError)) throw error;
-        const streak = rateLimited.get(homeserver) ?? 0;
-        rateLimited.set(homeserver, streak + 1);
-        if (retry >= RATE_LIMIT_RETRIES) throw error;
-        const fallback = Math.min(RATE_LIMIT_FIRST_WAIT_MS * 2 ** streak, RATE_LIMIT_MAX_WAIT_MS);
-        await wait(error.retryAfterMs ?? fallback, ctx.signal);
+        if (!(error instanceof RateLimitedError || error instanceof HomeserverUnreachableError)) throw error;
+        const streak = failing.get(homeserver) ?? 0;
+        failing.set(homeserver, streak + 1);
+        if (retry >= RETRIES) throw error;
+        const named = error instanceof RateLimitedError ? error.retryAfterMs : undefined;
+        await wait(named ?? Math.min(RETRY_FIRST_WAIT_MS * 2 ** streak, RETRY_MAX_WAIT_MS), ctx.signal);
+        // Another request of this operation gave up on the homeserver meanwhile: ask it nothing more.
+        if (ctx.failed.has(homeserver)) throw error;
       }
     }
   }
 
-  /** One call to the homeserver under the request deadline; past it the homeserver counts as unreachable. */
+  /** One call to the homeserver under the request deadline; past it the request fails as unreachable. */
   async function call<T>(ctx: OperationContext, homeserver: string, request: (signal: AbortSignal) => Promise<T>) {
     try {
       return await withDeadline(request, options.requestTimeoutMs, schedule, ctx.signal);

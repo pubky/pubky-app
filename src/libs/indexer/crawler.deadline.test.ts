@@ -9,6 +9,8 @@ import type { IndexerTransport } from './transport.types';
 const REQUEST_MS = 30 * 1000;
 const LOOKUP_MS = 10 * 1000;
 const STEP_MS = 1000;
+/** A request and its three retries. */
+const TRIES = 4;
 
 type FakeTime = ReturnType<typeof fakeTime>;
 
@@ -79,10 +81,10 @@ describe('request deadlines', () => {
     const result = await drive(crawler.syncScope('alice'), w.time);
 
     expect(result.failedHomeservers).toEqual(['hs2']);
-    expect(w.time.clock.now - NOW).toBeGreaterThanOrEqual(REQUEST_MS);
-    expect(w.time.clock.now - NOW).toBeLessThan(REQUEST_MS + 2 * STEP_MS);
-    expect(net.signals.length).toBe(1);
-    expect(net.signals[0].aborted).toBe(true);
+    expect(w.time.clock.now - NOW).toBeGreaterThanOrEqual(TRIES * REQUEST_MS);
+    expect(w.time.clock.now - NOW).toBeLessThan(TRIES * REQUEST_MS + 2 * STEP_MS);
+    expect(net.signals.length).toBe(TRIES);
+    expect(net.signals.every((signal) => signal.aborted)).toBe(true);
     expect((await w.store.readHomeserverState('hs2')).failure?.failures).toBe(1);
     expect(await served(w.store, 'carol', 'hs3', ACTIVITY)).toEqual(w.network.liveOf('carol', [POSTS]));
     expect(await served(w.store, 'alice', 'hs1', GRAPH)).toEqual(w.network.liveOf('alice', [FOLLOWS]));
@@ -107,10 +109,26 @@ describe('request deadlines', () => {
     const result = await drive(w.crawlerOf(net.transport).syncScope('alice'), w.time);
 
     expect(result.failedHomeservers).toEqual(['hs2']);
-    expect(net.signals.length).toBe(1);
-    expect(net.signals[0].aborted).toBe(true);
+    expect(net.signals.length).toBe(TRIES);
+    expect(net.signals.every((signal) => signal.aborted)).toBe(true);
     expect((await w.store.readHomeserverState('hs2')).failure?.failures).toBe(1);
     expect(await served(w.store, 'carol', 'hs3', ACTIVITY)).toEqual(w.network.liveOf('carol', [POSTS]));
+    net.settleLate();
+    await settle();
+  });
+
+  it('retries a stream read past its deadline, losing nothing and failing no homeserver', async () => {
+    const w = world();
+    let reads = 0;
+    const net = hanging(w.network, { read: (homeserver) => homeserver === 'hs2' && (reads += 1) === 1 });
+
+    const result = await drive(w.crawlerOf(net.transport).syncScope('alice'), w.time);
+
+    expect(result.failedHomeservers).toEqual([]);
+    expect(net.signals.length).toBe(1);
+    expect(net.signals[0].aborted).toBe(true);
+    expect((await w.store.readHomeserverState('hs2')).failure).toBeNull();
+    expect(await served(w.store, 'bob', 'hs2', ACTIVITY)).toEqual(w.network.liveOf('bob', [POSTS]));
     net.settleLate();
     await settle();
   });
@@ -140,7 +158,7 @@ describe('request deadlines', () => {
     const result = await drive(setup.crawlerOf(net.transport).syncScope('alice'), time);
 
     expect(result.failedHomeservers).toEqual(['hs1']);
-    expect(time.clock.now - NOW).toBeLessThan(5000 + 2 * STEP_MS);
+    expect(time.clock.now - NOW).toBeLessThan(TRIES * 5000 + 2 * STEP_MS);
   });
 
   it('rejects at once when aborted while a call hangs, with no deadline to wait for', async () => {

@@ -21,7 +21,7 @@ import { HomeserverService } from '@/services/homeserver/homeserver';
 
 /**
  * The library throws only its own errors across the transport: a 429 becomes `RateLimitedError` with the
- * homeserver's `retry-after`, anything else `HomeserverUnreachableError`, which the crawl backs off on.
+ * homeserver's `retry-after`, anything else `HomeserverUnreachableError`, which the crawl retries, then backs off on.
  */
 function toIndexerError(homeserver: string, error: unknown): IndexerError {
   if (hasHttpStatus(error, HttpStatusCode.TOO_MANY_REQUESTS)) {
