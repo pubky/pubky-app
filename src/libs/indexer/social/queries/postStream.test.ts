@@ -232,7 +232,7 @@ describe('postStreamKeys over a partly loaded history', () => {
     expect(answer.data.post_keys).toEqual([key(ALICE, article)]);
     expect(answer.coverage).toEqual({
       kind: 'scope',
-      note: `activity loaded only partly, estimated: ${ALICE} since ${iso(3)}`,
+      note: `activity loaded only partly, estimated: ${ALICE} since ${iso(3)}; served only above ${iso(3)}`,
     });
     expect(answer.more).toEqual([{ kind: 'backfill', author: ALICE }]);
     expect(postStreamKeys(partial, { source: 'author_replies', author_id: ALICE }).more).toEqual([
@@ -251,8 +251,29 @@ describe('postStreamKeys over a partly loaded history', () => {
     expect(following(2).data.post_keys).toEqual([key(BRAN, image), key(CLEO, quote)]);
     expect(following(2).coverage.kind).toBe('scope');
     expect(following(2).more).toBeUndefined();
-    expect(following(10).data.post_keys).toEqual([key(BRAN, image), key(CLEO, quote), key(BRAN, repost)]);
     expect(following(10).more).toEqual([{ kind: 'backfill', author: CLEO }]);
+  });
+
+  it('stops a page above the latest loaded start of its authors, never skipping past a partly loaded one', () => {
+    const partial = buildSocialView(withPartialActivity(recordsOf(network), CLEO, BigInt(14)));
+    const following = (params: PostStreamParams) =>
+      postStreamKeys(partial, { source: 'following', observer_id: ALICE, ...params });
+
+    // bran's repost is older than where cleo's loaded history starts: cleo may have posted between, so the page is
+    // short instead, and bran's repost comes once cleo's history reaches below it.
+    expect(following({ limit: 10 }).data.post_keys).toEqual([key(BRAN, image), key(CLEO, quote)]);
+    expect(following({ limit: 10, skip: 1 }).data.post_keys).toEqual([key(CLEO, quote)]);
+    expect(keys({ source: 'following', observer_id: ALICE, limit: 10 })).toContain(key(BRAN, repost));
+    // Oldest first, a page starts below the bound unless `end` keeps it above.
+    expect(following({ order: 'ascending' }).data.post_keys).toEqual([]);
+    expect(following({ order: 'ascending' }).more).toEqual([{ kind: 'backfill', author: CLEO }]);
+    const since = partial.historyOf(CLEO).sinceMs ?? 0;
+    expect(following({ order: 'ascending', end: since + 1 }).data.post_keys).toEqual([
+      key(CLEO, quote),
+      key(BRAN, image),
+    ]);
+    // Engagement says nothing of age: no bound, the page is a ranking of what is loaded.
+    expect(following({ sorting: 'total_engagement', limit: 10 }).data.post_keys).toContain(key(BRAN, repost));
   });
 
   it('hints at a backfill for a page bounded from below only when older posts could still reach that bound', () => {
