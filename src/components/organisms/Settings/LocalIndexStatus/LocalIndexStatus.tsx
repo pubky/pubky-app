@@ -25,6 +25,7 @@ function statusRows(status: RuntimeStatus): Row[] {
   const rows: Row[] = [
     ['State', STATE_LABELS[status.state]],
     ['First sync', status.firstSyncPending ? 'Running' : 'Done'],
+    ['Tags and counts', status.bodiesPending ? 'Loading' : 'Done'],
     ['Last sync', formatTime(status.lastSyncAt)],
     ...stats.usersPerHop.map((users, hop): Row => [`Users at hop ${hop}`, String(users)]),
     ['Homeservers reached', String(stats.homeserversSeen)],

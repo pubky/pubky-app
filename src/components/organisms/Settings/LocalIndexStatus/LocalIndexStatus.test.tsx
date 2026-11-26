@@ -35,6 +35,7 @@ const statusOf = (overrides: Partial<RuntimeStatus> = {}): RuntimeStatus => ({
     events: 980,
   },
   firstSyncPending: false,
+  bodiesPending: false,
   asOf: null,
   ...overrides,
 });
@@ -66,6 +67,7 @@ describe('LocalIndexStatus', () => {
 
     expect(valueOf('State')).toBe('Idle');
     expect(valueOf('First sync')).toBe('Done');
+    expect(valueOf('Tags and counts')).toBe('Done');
     expect(valueOf('Last sync')).toBe('Never');
     expect(valueOf('Users at hop 0')).toBe('1');
     expect(valueOf('Users at hop 2')).toBe('140');
@@ -78,11 +80,19 @@ describe('LocalIndexStatus', () => {
     expect(screen.queryByText('Saved index written')).not.toBeInTheDocument();
 
     act(() =>
-      report(statusOf({ state: 'syncing', firstSyncPending: true, stats: { ...statusOf().stats, events: 1200 } })),
+      report(
+        statusOf({
+          state: 'syncing',
+          firstSyncPending: true,
+          bodiesPending: true,
+          stats: { ...statusOf().stats, events: 1200 },
+        }),
+      ),
     );
 
     expect(valueOf('State')).toBe('Syncing');
     expect(valueOf('First sync')).toBe('Running');
+    expect(valueOf('Tags and counts')).toBe('Loading');
     expect(valueOf('Events')).toBe('1200');
   });
 

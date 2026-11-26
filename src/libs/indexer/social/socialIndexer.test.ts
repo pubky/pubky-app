@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { buildFollow, buildPost, buildUri, buildUser, type BuiltPost } from 'pubky-social-specs';
+import { buildFollow, buildPost, buildTag, buildUri, buildUser, type BuiltPost } from 'pubky-social-specs';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { CrawlerOptions } from '../crawler.types';
 import { FakeNetwork } from '../fakeNetwork';
@@ -159,24 +159,81 @@ describe('createSocialIndexer', () => {
     });
   });
 
-  it('shows a post while the tags on it are still fetched, and its tags once they are in', async () => {
+  it('shows a post, marked syncing, while the tags on it are fetched, and is synced once they are in', async () => {
     const { fixture, network, time, indexerOf } = socialWorld();
     const url = `/v1/post/${ALICE}/${fixture.posts.a1.id}`;
     const held = holdingTags(network);
     const indexer = indexerOf(held.transport);
+    let synced = false;
 
     indexer.start(ALICE);
-    await indexer.whenSynced();
+    void indexer.whenSynced().then(() => {
+      synced = true;
+    });
+    await until(() => indexer.status().lastSyncAt !== null, 'the first sync');
     await time.advance(DEBOUNCE);
 
     expect(held.state.held).toBeGreaterThan(0);
+    expect(indexer.status()).toMatchObject({ state: 'syncing', firstSyncPending: false, bodiesPending: true });
     const pending = await indexer.request({ url, method: 'GET' });
+    expect(pending).toMatchObject({ syncing: true });
     expect(pending.json).toMatchObject({ details: { id: fixture.posts.a1.id }, counts: { tags: 0 }, tags: [] });
+    const early = await indexer.request({ url: `/v1/bootstrap/${ALICE}`, method: 'GET' });
+    expect(early.json).toMatchObject({ indexed: false });
+    expect(synced).toBe(false);
 
     held.state.release();
-    await time.advance(DEBOUNCE);
+    // Settles as the last file commits, with no debounce to wait for.
+    await indexer.whenSynced();
     const filled = await indexer.request({ url, method: 'GET' });
+    expect(filled).toMatchObject({ syncing: false });
     expect(filled.json).toMatchObject({ tags: expect.arrayContaining([expect.objectContaining({ label: 'rust' })]) });
+    expect(indexer.status()).toMatchObject({ state: 'idle', bodiesPending: false });
+  });
+
+  it('marks answers syncing while a later crawl’s tags are fetched, and settled only with them', async () => {
+    const { fixture, network, indexerOf } = socialWorld();
+    const url = `/v1/post/${ALICE}/${fixture.posts.a1.id}`;
+    const tags = { hold: false, waiting: [] as Array<() => void> };
+    const transport: IndexerTransport = {
+      resolveHomeserver: (user) => network.resolveHomeserver(user),
+      readEvents: (request) => network.readEvents(request),
+      getPublic: async (request) => {
+        if (tags.hold && request.path.includes('/tags/')) await new Promise<void>((go) => tags.waiting.push(go));
+        return network.getPublic(request);
+      },
+      listIndexFiles: () => network.listIndexFiles(),
+      readIndexFile: (name) => network.readIndexFile(name),
+      writeIndexFile: (name, bytes) => network.writeIndexFile(name, bytes),
+      deleteIndexFile: (name) => network.deleteIndexFile(name),
+    };
+    const indexer = indexerOf(transport);
+    indexer.start(ALICE);
+    await indexer.whenSynced();
+    const states: string[] = [];
+    indexer.onStatus((status) => states.push(status.state));
+
+    tags.hold = true;
+    const tag = buildTag(BRAN, buildUri(ALICE, 'post', fixture.posts.a1.id), 'go');
+    network.put(BRAN, tag.path, tag.body);
+    await indexer.refresh([BRAN]);
+    await settle();
+
+    expect(tags.waiting).toHaveLength(1);
+    expect(indexer.status()).toMatchObject({ state: 'syncing', bodiesPending: true });
+    expect(await indexer.request({ url, method: 'GET' })).toMatchObject({ syncing: true });
+    expect(states).not.toContain('idle');
+
+    for (const go of tags.waiting.splice(0)) go();
+    const labels = async () => {
+      const answer = await indexer.request({ url, method: 'GET' });
+      // A settled answer holds the tag: until it does, it says it is syncing.
+      if (answer.syncing === false) {
+        expect(answer.json).toMatchObject({ tags: expect.arrayContaining([expect.objectContaining({ label: 'go' })]) });
+      }
+      return answer.syncing === false;
+    };
+    await until(labels, 'a settled answer');
   });
 
   it('serves an author outside the scope once ensured, still outside the scope', async () => {

@@ -28,7 +28,7 @@ export interface QueryContext {
   /** The signed-in user the scope was crawled from, `null` for a visitor: then there is no scope. */
   seed: string | null;
   now: () => number;
-  /** The first scope sync of this run is still running. */
+  /** The first scope sync of this run has not settled, or files of stored records are still to be fetched. */
   syncing?: boolean;
 }
 

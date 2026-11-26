@@ -1369,6 +1369,7 @@ describe('Visual layout variants', () => {
         events: 0,
       },
       firstSyncPending,
+      bodiesPending: false,
       asOf: null,
     });
     const setSources = (sources: string) => {

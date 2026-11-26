@@ -71,8 +71,10 @@ export type CoordinationMessage =
   /** Asks the crawling tab of the seed to run a crawl and answer with `settled`. */
   | { type: 'request'; seed: string; id: string; request: CrawlRequest }
   | { type: 'settled'; id: string; error: string | null; backfill?: BackfillResult }
-  /** The sender finished a scope sync of the seed at `at` (ms). */
-  | { type: 'synced'; seed: string; at: number };
+  /** The sender finished a scope sync of the seed at `at` (ms), its fill still to come when `bodiesPending`. */
+  | { type: 'synced'; seed: string; at: number; bodiesPending: boolean }
+  /** The crawling tab's fill of the seed's scope began to run or be due, or ended. */
+  | { type: 'bodies'; seed: string; pending: boolean };
 
 /** How runtimes in several tabs share one store: one crawls, the others listen. */
 export interface Coordination {
@@ -97,6 +99,7 @@ export interface SavedIndexStatus {
 }
 
 export interface RuntimeStatus {
+  /** `syncing` while this tab runs a crawl or a fill, or has one due. */
   state: RuntimeState;
   seed: string | null;
   /** When the last scope sync of this tab finished without error (ms). */
@@ -110,6 +113,12 @@ export interface RuntimeStatus {
    * tab's next sync.
    */
   firstSyncPending: boolean;
+  /**
+   * True while stored records lack a file the crawling tab is going to fetch: its fill runs, or is due after the
+   * crawl running now. Until then answers that count or list what those records add, such as tags, may still grow.
+   * A tab that does not crawl hears it from the crawling one.
+   */
+  bodiesPending: boolean;
   /**
    * When the data behind the answers was last synced (ms): the newest of this run's scope syncs, in any tab, the
    * previous session's last one kept in the store, and the loaded index files; `null` when none is known.
@@ -133,10 +142,10 @@ export interface RuntimeParams<D> {
 }
 
 /**
- * Keeps a seed's scope synced into the store. Every crawl goes through one queue, so crawler operations never
- * overlap. Requests run before a scope sync and pre-empt a running one, which resumes after them from what it
- * committed; a scope sync pre-empted three times in a row runs its next pass to the end first. With coordination
- * only the tab holding the lock crawls; the others send it their requests and report the changes it announces.
+ * Keeps a seed's scope synced into the store. Requests run one at a time, and the scope sync beside them: at every
+ * homeserver the requests' calls go first, so a request never waits for a scope sync and never aborts one. With
+ * coordination only the tab holding the lock crawls; the others send it their requests and report the changes it
+ * announces.
  */
 export interface IndexerRuntime {
   /**

@@ -12,7 +12,10 @@ export interface NexusRequest {
 
 /** How fresh the view behind an answer is. `SocialIndexer.request` always sets both; a bare router sets neither. */
 export interface AnswerFreshness {
-  /** The first scope sync of this run has not finished: the scope may still be partial. */
+  /**
+   * The index is still taking in what the answer may depend on: the first scope sync of this run has not settled, or
+   * files of stored records, such as tags, are still to be fetched.
+   */
   syncing?: boolean;
   /** When the last scope sync behind the view completed (ms), `null` when unknown. */
   asOf?: number | null;

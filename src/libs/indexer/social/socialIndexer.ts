@@ -144,7 +144,11 @@ export interface SocialIndexer {
    * makes it resolve once that attempt is over, with `status().stats.seed` saying which.
    */
   ready(): Promise<void>;
-  /** Resolves once the first scope sync of this run has settled, failed included, and the view holds what it committed. */
+  /**
+   * Resolves the first time answers say `syncing: false`: the first scope sync of this run has settled, failed
+   * included, the files it left for later are fetched, and the view holds all of it. A visitor's resolves once the
+   * files the store lacked are fetched.
+   */
   whenSynced(): Promise<void>;
   /** Answers once `ready`; rejects with `IndexerNotStartedError` before `start` or after `stop`. */
   request(request: NexusRequest): Promise<NexusResponse>;
@@ -324,6 +328,11 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
   let routed: { view: SocialView; syncing: boolean; router: NexusRouter } | null = null;
   let viewError: Error | null = null;
   let firstSyncSettled = false;
+  /** Whether the runtime had nothing left to bring while the current view was built. */
+  let viewComplete = false;
+  /** Whether the runtime had nothing left to bring at its last status, and how often it got there. */
+  let runtimeComplete = false;
+  let completions = 0;
   /** What was loaded on demand, least recently ensured first. */
   const ensuredUsers = new Map<string, string>();
   const ensuredPosts = new Map<string, LeafRequest>();
@@ -342,6 +351,9 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
   let rebuilding: Promise<void> | null = null;
   let again = false;
   const listeners = new Set<(change: SocialChange) => void>();
+
+  /** Nothing the answers depend on is still to come: the first sync settled and no file is pending. */
+  const isComplete = (status: RuntimeStatus) => firstSyncSettled && !status.bodiesPending;
 
   let markReady: () => void = () => undefined;
   let readyPromise = new Promise<void>((resolve) => {
@@ -501,6 +513,7 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
       const forSeed = seed;
       if (!started) break;
       const settled = firstSyncSettled;
+      const completion = runtimeComplete ? completions : -1;
       const changed = pendingAuthors;
       const activity = pendingActivity;
       pendingAuthors = new Set();
@@ -526,8 +539,10 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
         current = view;
         currentMemberships = memberships;
         viewError = null;
+        // Complete only when nothing arrived since the build began: what did is in the view built next.
+        viewComplete = runtimeComplete && completion === completions;
         if (hasScope || settled) markReady();
-        if (settled) markSynced();
+        if (viewComplete) markSynced();
         if (changed.size > 0) {
           const change: SocialChange = { authors: [...changed], membersChanged, kinds };
           for (const listener of listeners) listener(change);
@@ -562,11 +577,17 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
     void requestRebuild(change.scopes.map(({ author }) => author));
   });
 
-  // A first sync that failed still makes the view ready, empty or not, rather than leaving requests waiting.
   runtime.onStatus((status) => {
-    if (firstSyncSettled || status.state === 'stopped' || status.seed !== seed || status.firstSyncPending) return;
-    firstSyncSettled = true;
-    void requestRebuild([]);
+    if (status.state === 'stopped' || status.seed !== seed) return;
+    // A first sync that failed still makes the view ready, empty or not, rather than leaving requests waiting.
+    const firstSettles = !firstSyncSettled && !status.firstSyncPending;
+    if (firstSettles) firstSyncSettled = true;
+    const completes = !runtimeComplete && isComplete(status);
+    runtimeComplete = isComplete(status);
+    if (!runtimeComplete) viewComplete = false;
+    if (completes) completions += 1;
+    // The view built next holds everything the runtime brought.
+    if (firstSettles || completes) void requestRebuild([]);
   });
 
   /** Waits for a load and for what it pushed out to be forgotten, then for the view. */
@@ -688,6 +709,8 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
       }
       // A visitor has no scope to sync.
       firstSyncSettled = next === null;
+      viewComplete = false;
+      runtimeComplete = false;
       syncedPromise = new Promise<void>((resolve) => {
         markSynced = resolve;
       });
@@ -735,7 +758,7 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
       await readyPromise;
       if (!started) throw new IndexerNotStartedError();
       if (mismatch !== null) throw mismatch;
-      const syncing = !firstSyncSettled;
+      const syncing = !viewComplete || !isComplete(runtime.status());
       if (routed === null || routed.view !== current || routed.syncing !== syncing) {
         const queries = createSocialQueries(current, { seed, now, syncing });
         routed = { view: current, syncing, router: createNexusRouter(queries) };

@@ -72,16 +72,18 @@ homeserver whose request keeps failing is skipped for the rest of the sync with 
 log went backwards (a restore) loses everything stored for it and is synced again.
 
 Requests to a homeserver queue in the crawler, at most `homeserverConcurrency` (6) in flight at once across every
-operation, foreground first, so the order is the crawler's and not the browser's: a browser runs 6 connections per host
-over HTTP/1.1 and queues the rest where nothing can reorder them. Background requests, those of `hydrate`, start only
-while no foreground one waits and leave one slot free, so a foreground request arriving beside them starts at once. A
-request that started always runs to its end: on HTTP/1.1 an aborted request costs its connection.
+operation, so the order is the crawler's and not the browser's: a browser runs 6 connections per host over HTTP/1.1
+and queues the rest where nothing can reorder them. Three priorities share the queue: foreground for what someone
+waits for, background for a scope sync, idle for `hydrate`. A request starts only while none of a higher priority
+waits, and a background or idle one leaves one slot free, so a foreground request arriving beside them starts at once.
+A request that started always runs to its end: on HTTP/1.1 an aborted request costs its connection. Operations may run
+together, even over the same scopes: each commits whole runs, which merge in any order.
 
 Every transport call runs under a deadline of the library's own, timed by the injected `schedule`, so a transport
 whose request never settles cannot stall a crawl: a stream read or file fetch past `requestTimeoutMs` (30 s) has
 its signal aborted and fails like a request to an unreachable homeserver, a lookup past `lookupTimeoutMs` (10 s) fails
 like any failed lookup, and an index file call past `indexFileTimeoutMs` (2 min) fails the load or save. An abort,
-such as a pre-emption or `stop`, settles the operation at once, even while a call hangs. A call that settles after
+such as a `stop`, settles the operation at once, even while a call hangs. A call that settles after
 its deadline or abort is ignored.
 
 A request answered 429, or failed or past its deadline, is retried up to three times, after the wait a 429 named
@@ -136,9 +138,13 @@ whose file, has a tombstone inside a trusted range is a definite not-found, what
 A scope sync commits each hop's members as it reaches them, and the seed as a member as soon as its graph (profile and
 follows) is in, before its activity is read. So `ready()` resolves as soon as the view holds the seed's own scopes:
 from the store, a loaded file, or the first sync's seed graph, the seed's posts following within the sync and their tags after it; a seed that does not resolve or whose
-homeserver fails resolves it too, `status().stats.seed` saying which. `whenSynced()` waits for the run's first scope
-sync. Until then answers say `syncing: true` and the bootstrap `indexed: false`, which makes the app ask again later.
-`request` before `start` or after `stop` rejects with `IndexerNotStartedError`.
+homeserver fails resolves it too, `status().stats.seed` saying which. `status().firstSyncPending` turns false when the
+first scope sync settles: every post, profile and follow of the scope is in. Answers still say `syncing: true`, and
+the bootstrap `indexed: false`, while files a tag or a count depends on are known to be missing, `status().bodiesPending`:
+the fill after a crawl runs or is due. So an answer never claims to be settled while the index knows it lacks part of
+it. `whenSynced()` resolves the first time answers say `syncing: false`: the first sync settled, its files are in and
+the view holds them. A status that says a fill ended comes after every change it made, so a view rebuilt on that
+status holds all of it. `request` before `start` or after `stop` rejects with `IndexerNotStartedError`.
 
 `start(null)` is visitor mode, for someone signed out: no scope sync, no saved index and no tab coordination, but
 `ensureUser`, `ensurePost` and `request` work. A profile, a user's stream, a post and its loaded thread answer from
@@ -164,17 +170,16 @@ reached only through them from the view's members at once, and from the scope at
 the newest sync time known: this run's, the previous session's kept in the store, or a loaded file's. `onChange` gives
 `{ authors, membersChanged, kinds }`. The owner of a `createBrowserCoordination` closes it; the runtime never does.
 
-`createIndexerRuntime` (`indexer.ts`) is that loop for any domain: one queue for every crawl, and with
-coordination only the tab holding the lock crawls. Requests never overlap and go ahead of the scope sync: one
-arriving during a scope sync aborts it at its next safe point, and the sync resumes after it from what it
-committed. Leaf requests are the exception: the ones waiting, or asked in the same turn, run together as one crawl
-(`syncLeaves`), which resolves each author once and checks each homeserver once. A lookup already in flight for a
-user is shared by every operation that needs it. A scope sync pre-empted three times in a row runs its next pass to
-the end before yielding again.
+`createIndexerRuntime` (`indexer.ts`) is that loop for any domain, and with coordination only the tab holding the lock
+crawls. Requests run one at a time, and the scope sync beside them: at every homeserver a request's calls go ahead of
+the sync's, so a request never waits for a scope sync to end and never aborts one, and the sync is never started over.
+Leaf requests run together: the ones waiting, or asked in the same turn, make one crawl (`syncLeaves`), which resolves
+each author once and checks each homeserver once. A lookup already in flight for a user is shared by every operation
+that needs it. A tab that steps down lets its crawls end before it hands the lock on; `stop` aborts them.
 
 The files crawls leave for later are fetched by a fill (`hydrate`) that starts once no crawl runs and then runs beside
-the crawls that follow, its requests behind theirs at every homeserver. Nothing pre-empts it, so it never aborts a
-request: a crawl's request takes a free slot or the next one a fill request frees. It commits each file as it arrives,
+the crawls that follow, its requests behind theirs at every homeserver, so it never aborts a request: a crawl's
+request takes a free slot or the next one a fill request frees. It commits each file as it arrives,
 setting the data only on a record still stored at that cursor, so a crawl that replaced the record, a restore that
 dropped its homeserver or a `forget` meanwhile wins. Only a stop or a step down aborts it. A fill that could not finish,
 on a failing homeserver, waits for the next crawl instead of looping. The first fill after a start, and the first after

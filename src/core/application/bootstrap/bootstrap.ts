@@ -62,8 +62,8 @@ export class BootstrapApplication {
       return { unread: 0, lastRead: userLastRead, lastPolledTimestamp: undefined };
     onProgress?.('bootstrapFetched'); // Step 3 complete (60%)
 
-    // With the local source the local index answers the bootstrap, and `indexed: false` means its first sync is
-    // still running: there is no Nexus to tell and nothing to retry, the cached streams rebuild on its changes.
+    // With the local source the local index answers the bootstrap, and `indexed: false` means it is still syncing:
+    // there is no Nexus to tell and nothing to retry, the cached streams rebuild on its changes.
     if (!bootstrapData.indexed && !hasLocalIndexSource()) {
       // Tell Nexus this user exists (best-effort, never rejects; see NexusBootstrapService.ingest).
       void NexusBootstrapService.ingest(pubky);

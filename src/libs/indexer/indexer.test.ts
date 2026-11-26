@@ -170,7 +170,7 @@ describe('createIndexerRuntime loop', () => {
 });
 
 describe('createIndexerRuntime queue', () => {
-  it('runs requests ahead of the scope sync and of the periodic sync, one crawl at a time', async () => {
+  it('runs requests one at a time, each beside the scope sync and the periodic sync', async () => {
     const w = world();
     const { runtime, state } = runtimeOf(w);
 
@@ -179,8 +179,7 @@ describe('createIndexerRuntime queue', () => {
     expect(runtime.ensureUser('carol')).toBe(carol);
     await settle();
     await carol;
-    // The first sync yields before its first read and resumes after carol.
-    expect(crawlOrder(state.reads)).toEqual(['carol', 'scope']);
+    expect(scopeSyncs(state.reads)).toBe(1);
     expect(runtime.status().lastSyncAt).toBe(NOW);
 
     const mark = state.reads.length;
@@ -190,7 +189,8 @@ describe('createIndexerRuntime queue', () => {
     const carolAgain = runtime.refresh(['carol']);
     await settle();
     await Promise.all([dave, carolAgain]);
-    expect(crawlOrder(state.reads.slice(mark))).toEqual(['dave', 'carol', 'scope']);
+    expect(crawlOrder(state.reads.slice(mark)).filter((label) => label !== 'scope')).toEqual(['dave', 'carol']);
+    expect(scopeSyncs(state.reads)).toBe(2);
 
     const before = state.reads.length;
     await runtime.ensureUser('carol');
@@ -199,10 +199,9 @@ describe('createIndexerRuntime queue', () => {
     const later = state.reads.length;
     await runtime.ensureUser('carol');
     expect(crawlOrder(state.reads.slice(later))).toEqual(['carol']);
-    expect(state.peak).toBe(1);
   });
 
-  it('lets a request pre-empt a scope sync, which resumes after it and ends as an undisturbed sync', async () => {
+  it('runs a request beside a scope sync stuck in a read, aborting nothing, and the sync ends undisturbed', async () => {
     const network = new GatedNetwork();
     const w = world(network);
     const { runtime, state } = runtimeOf(w);
@@ -211,14 +210,15 @@ describe('createIndexerRuntime queue', () => {
     await settle();
     expect(network.holding).toBe(true);
 
-    const carol = runtime.ensureUser('carol').then(() => runtime.status().lastSyncAt);
-    expect(await carol).toBeNull();
-    await settle();
+    await runtime.ensureUser('carol');
 
-    expect(network.holding).toBe(false);
+    // The scope sync's read still hangs: the request went past it and took nothing from it.
+    expect(network.holding).toBe(true);
+    expect(runtime.status().lastSyncAt).toBeNull();
+    network.letThrough();
+    await settle();
     expect(runtime.status()).toMatchObject({ state: 'idle', lastSyncAt: NOW, lastError: null });
-    expect(crawlOrder(state.reads)).toEqual(['scope', 'carol', 'scope']);
-    expect(state.peak).toBe(1);
+    expect(scopeSyncs(state.reads)).toBe(1);
 
     const undisturbed = world();
     const quiet = runtimeOf(undisturbed);
@@ -228,34 +228,37 @@ describe('createIndexerRuntime queue', () => {
     expect(await servedBy(w, 'alice')).toEqual(await servedBy(undisturbed, 'alice'));
   });
 
-  it('runs a scope sync pre-empted three times in a row to its end before the next request', async () => {
+  it('ends the scope sync it started under a stream of requests, never starting it again', async () => {
+    const w = world();
+    const { runtime, state } = runtimeOf(w);
+    runtime.start('alice');
+
+    let requests = 0;
+    while (runtime.status().lastSyncAt === null && requests < 50) {
+      await runtime.refresh([OUTSIDERS[requests % 2]]);
+      requests += 1;
+    }
+
+    expect(runtime.status().lastSyncAt).toBe(NOW);
+    expect(requests).toBeLessThan(10);
+    expect(scopeSyncs(state.reads)).toBe(1);
+  });
+
+  it('aborts the running scope sync on stop, rejecting what waits for it', async () => {
     const network = new GatedNetwork();
     const w = world(network);
-    const { runtime, state } = runtimeOf(w);
+    const { runtime } = runtimeOf(w);
     network.hold('bob');
     runtime.start('alice');
     await settle();
-    for (let i = 0; i < 3; i += 1) {
-      network.hold('bob');
-      await runtime.refresh(['carol']);
-      await settle();
-      expect(network.holding).toBe(true);
-    }
+    const waiting = runtime.refresh();
+    expect(network.holding).toBe(true);
 
-    let fourthDone = false;
-    const fourth = runtime.refresh(['carol']).then(() => {
-      fourthDone = true;
-    });
-    await settle();
-    expect(fourthDone).toBe(false);
-    expect(runtime.status().lastSyncAt).toBeNull();
+    runtime.stop();
 
-    network.letThrough();
+    await expect(waiting).rejects.toThrow('aborted');
     await settle();
-    await fourth;
-    expect(runtime.status().lastSyncAt).toBe(NOW);
-    expect(crawlOrder(state.reads)).toEqual(['scope', 'carol', 'scope', 'carol', 'scope', 'carol', 'scope', 'carol']);
-    expect(state.peak).toBe(1);
+    expect(network.holding).toBe(false);
   });
 
   it('rejects a request queued when the runtime stops, and one made before it starts', async () => {
@@ -301,7 +304,7 @@ describe('createIndexerRuntime requests that never settle', () => {
       options: { savedIndex },
     });
 
-  it('pre-empts a scope sync stuck in a read, then stops and starts again, waiting for no deadline', async () => {
+  it('runs a request beside a scope sync stuck in a read, then stops and starts again, waiting for no deadline', async () => {
     const w = world();
     const { transport, hung } = deafTo(w, 'alice');
     const runtime = runtimeWith(w, transport);
@@ -313,12 +316,12 @@ describe('createIndexerRuntime requests that never settle', () => {
     await runtime.ensureUser('carol');
     expect((await w.store.listScopes()).some((scope) => scope.author === 'carol')).toBe(true);
     await settle();
-    expect(hung.reads).toBe(2);
+    expect(hung.reads).toBe(1);
 
     runtime.stop();
     runtime.start('alice');
     await settle();
-    expect(hung.reads).toBe(3);
+    expect(hung.reads).toBe(2);
     expect(w.time.clock.now).toBe(NOW);
     runtime.stop();
   });
@@ -503,7 +506,7 @@ describe('createIndexerRuntime changes', () => {
 });
 
 describe('createIndexerRuntime visibility', () => {
-  it('starts nothing while paused and catches up on resume, requests first', async () => {
+  it('starts nothing while paused and catches up on resume', async () => {
     const w = world();
     const { runtime, state } = runtimeOf(w);
 
@@ -516,10 +519,12 @@ describe('createIndexerRuntime visibility', () => {
     await w.time.advance(2 * INTERVAL);
     expect(crawlOrder(state.reads)).toEqual(['scope']);
 
+    const mark = state.reads.length;
     runtime.resume();
     await settle();
     await carol;
-    expect(crawlOrder(state.reads)).toEqual(['scope', 'carol', 'scope']);
+    expect(new Set(crawlOrder(state.reads.slice(mark)))).toEqual(new Set(['carol', 'scope']));
+    expect(scopeSyncs(state.reads)).toBe(2);
 
     // Synced just now: a resume waits out the rest of the interval.
     runtime.pause();

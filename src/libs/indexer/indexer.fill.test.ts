@@ -16,7 +16,8 @@ import { FakeNetwork } from './fakeNetwork';
 import { createIndexerRuntime } from './indexer';
 import { HomeserverUnreachableError } from './indexer.errors';
 import { createMemoryStore } from './memoryStore';
-import { fakeTime, settle } from './runtime.fixtures';
+import { createTabs, fakeTime, settle } from './runtime.fixtures';
+import type { Coordination, RuntimeStatus } from './runtime.types';
 import { scopeId } from './store.helpers';
 import type { IndexerTransport } from './transport.types';
 
@@ -28,7 +29,7 @@ const BOB = { author: 'bob', homeserver: 'hs1', group: ACTIVITY };
  * alice follows bob; bob posted and tagged twice, carol posted. Tag fetches can be held until `open`, each one also
  * ending when its signal fires as a fetch does, or failed as unreachable.
  */
-function world() {
+function world(coordination?: Coordination) {
   const network = new FakeNetwork().addHomeserver('hs1');
   for (const user of ['alice', 'bob', 'carol']) network.addUser(user, 'hs1');
   network.put('alice', `${FOLLOWS}bob`);
@@ -77,22 +78,87 @@ function world() {
   };
   const store = createMemoryStore<Post>();
   const time = fakeTime(NOW);
-  const runtime = createIndexerRuntime({
-    transport,
-    store,
-    domain: taggedDomain,
-    now: () => time.clock.now,
-    schedule: time.schedule,
-  });
+  /** Another runtime on the same network and store, as another tab. */
+  const runtimeOn = (tab?: Coordination) =>
+    createIndexerRuntime({
+      transport,
+      store,
+      domain: taggedDomain,
+      now: () => time.clock.now,
+      schedule: time.schedule,
+      coordination: tab,
+    });
+  const runtime = runtimeOn(coordination);
   const changes: StoreChange[] = [];
   runtime.onChange((change) => changes.push(change));
   /** Whether a change reported since the last call named bob's activity. */
   const bobChanged = () => changes.splice(0).some(({ scopes }) => scopes.some((s) => scopeId(s) === scopeId(BOB)));
   const bob = () => servedData(store, 'bob', 'hs1', ACTIVITY);
-  return { post, tags, open, store, time, runtime, bobChanged, bob };
+  return { post, tags, open, store, time, runtime, runtimeOn, bobChanged, bob };
 }
 
 describe('createIndexerRuntime fill', () => {
+  it('reports the fill of a first sync as pending from the sync’s end to its own, never idle in between', async () => {
+    const { tags, open, runtime } = world();
+    const seen: RuntimeStatus[] = [];
+    runtime.onStatus((status) => seen.push(status));
+    tags.hold = true;
+
+    runtime.start('alice');
+    await settle();
+
+    expect(tags.held.size).toBe(2);
+    const synced = seen.filter(({ lastSyncAt }) => lastSyncAt !== null);
+    expect(synced.length).toBeGreaterThan(0);
+    for (const status of synced) expect(status).toMatchObject({ state: 'syncing', bodiesPending: true });
+    expect(runtime.status()).toMatchObject({ state: 'syncing', firstSyncPending: false, bodiesPending: true });
+
+    open();
+    await settle();
+    expect(runtime.status()).toMatchObject({ state: 'idle', bodiesPending: false });
+    expect(seen.filter(({ state }) => state === 'idle').every(({ bodiesPending }) => !bodiesPending)).toBe(true);
+  });
+
+  it('reports every change of the fill before the status that says it ended', async () => {
+    const { open, tags, runtime, bobChanged } = world();
+    tags.hold = true;
+    runtime.start('alice');
+    await settle();
+    bobChanged();
+    const changedWhenDone: boolean[] = [];
+    runtime.onStatus((status) => {
+      if (!status.bodiesPending) changedWhenDone.push(bobChanged());
+    });
+
+    open();
+    await settle();
+
+    // No debounce period passed: the fill's commits were reported when it ended.
+    expect(changedWhenDone[0]).toBe(true);
+  });
+
+  it('aborts the fill when its tab steps down; the other tab hears it pending and fills the rest', async () => {
+    const tabs = createTabs();
+    const first = world(tabs.join());
+    const second = first.runtimeOn(tabs.join());
+    first.tags.hold = true;
+    first.runtime.start('alice');
+    second.start('alice');
+    await settle();
+    expect(first.tags.held.size).toBe(2);
+    expect(second.status()).toMatchObject({ firstSyncPending: false, bodiesPending: true });
+
+    first.runtime.pause();
+    await settle();
+    expect(first.tags.aborted).toBe(2);
+
+    first.open();
+    await settle();
+    expect((await first.bob()).get(`${TAGS}t1`)).toEqual({ text: 't1' });
+    expect(second.status()).toMatchObject({ state: 'idle', bodiesPending: false });
+    expect(first.runtime.status()).toMatchObject({ bodiesPending: false });
+  });
+
   it('settles a visit once the posts are in, then fetches the tags, reporting both commits', async () => {
     const { post, tags, open, time, runtime, bobChanged, bob } = world();
     runtime.start(null);

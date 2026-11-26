@@ -170,7 +170,7 @@ describe('createBrowserCoordination', () => {
     if (coordination === null) throw new Error('expected coordination');
     const heard: CoordinationMessage[] = [];
     coordination.subscribe((message) => heard.push(message));
-    const synced: CoordinationMessage = { type: 'synced', seed: 'alice', at: 1 };
+    const synced: CoordinationMessage = { type: 'synced', seed: 'alice', at: 1, bodiesPending: false };
 
     deliver(synced);
     coordination.close();

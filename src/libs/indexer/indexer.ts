@@ -19,11 +19,6 @@ import type { ScopeKey } from './store.types';
 import type { IndexerTransport } from './transport.types';
 
 const LOCK_PREFIX = 'pubky-indexer:';
-/**
- * A scope sync pre-empted this many times in a row runs its next pass to the end. The requests queued when it was
- * pre-empted the last time still go first; later ones wait for the pass.
- */
-const MAX_PREEMPTIONS = 3;
 
 const asError = (error: unknown): Error => (error instanceof Error ? error : new Error(String(error)));
 
@@ -95,18 +90,19 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
   /** Whether this runtime may crawl: always while running alone, only while holding the lock otherwise. */
   let leading = false;
   let controller = new AbortController();
+  /** The request running, or the saved index being read; one at a time. */
   let running: Promise<void> | null = null;
-  /** Aborts the running scope sync so that a request goes first; `null` while none runs or may yield. */
-  let preempt: AbortController | null = null;
-  /** Whether the running work reads the saved index, which a fill waits for. */
+  /** The scope sync running beside the requests, its requests behind theirs at every homeserver. */
+  let scoping: Promise<void> | null = null;
+  /** Whether the running work reads the saved index, which a scope sync and a fill wait for. */
   let loading = false;
   /** The fill running beside the crawls, and what stops it. */
   let filling: Promise<void> | null = null;
   let stopFill: AbortController | null = null;
-  /** Scope syncs pre-empted since one last ran to its end. */
-  let preempted = 0;
-  /** Requests that pre-empted the last allowed time, still run ahead of the pass that may not yield. */
-  let aheadOfForced = 0;
+  /** Whether the crawling tab said its fill runs or is due, for a tab that does not crawl. */
+  let heardBodiesPending = false;
+  /** What this tab last told the others about its fill, `null` before it told them anything. */
+  let toldBodiesPending: boolean | null = null;
   /** Requests for one user, leaf or backfill, in arrival order. */
   let queue: Task[] = [];
   /** Requests for a whole scope sync: the next one to start settles them all. */
@@ -144,10 +140,19 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
   const changeListeners = new Set<(change: StoreChange) => void>();
   const statusListeners = new Set<(status: RuntimeStatus) => void>();
 
+  const canCrawl = () => started && !paused && leading;
+
+  /** A fill runs, is due, or follows the crawl running now, which left records without their file. */
+  const fillAhead = () =>
+    filling !== null || scanDue || fillDue || ((running !== null || scoping !== null) && crawler.unfilled() > 0);
+
+  /** Whether stored records lack a file the crawling tab is going to fetch, as this tab knows. */
+  const bodiesPending = () => started && (shared === null || leading ? fillAhead() : heardBodiesPending);
+
   const status = (): RuntimeStatus => ({
     state: !started
       ? 'stopped'
-      : running !== null || filling !== null
+      : running !== null || scoping !== null || filling !== null || (canCrawl() && fillAhead())
         ? 'syncing'
         : lastError !== null
           ? 'error'
@@ -157,11 +162,16 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     lastError,
     stats: crawler.stats(),
     firstSyncPending,
+    bodiesPending: bodiesPending(),
     asOf,
     ...(options.savedIndex ? { savedIndex: { ...saved } } : {}),
   });
   const emitStatus = () => {
     const snapshot = status();
+    if (shared !== null && leading && seed !== null && toldBodiesPending !== snapshot.bodiesPending) {
+      toldBodiesPending = snapshot.bodiesPending;
+      shared.post({ type: 'bodies', seed, pending: snapshot.bodiesPending });
+    }
     for (const listener of statusListeners) listener(snapshot);
   };
   crawler.subscribe(emitStatus);
@@ -171,6 +181,12 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     const change = pendingChange;
     pendingChange = null;
     if (change !== null) for (const listener of changeListeners) listener(change);
+  }
+
+  /** Reports the changes now, so that a status saying a fill ended follows every change it made. */
+  function flushNow() {
+    cancelFlush?.();
+    flushChange();
   }
 
   function noteChange(change: StoreChange) {
@@ -269,8 +285,6 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
       });
   }
 
-  const canCrawl = () => started && !paused && leading;
-
   function scheduleSync(delay: number) {
     cancelTimer?.();
     cancelTimer = null;
@@ -336,146 +350,137 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     else queue.push(task);
   }
 
-  /** Puts the waiters of a pre-empted sync back first; a tab that stopped crawling hands its own on instead. */
-  function requeue(waiters: Task[]) {
-    if (shared === null || leading) {
-      scopeDue = [...waiters, ...scopeDue];
-      return;
-    }
-    for (const task of waiters) if (!task.remote) forward(task);
-  }
-
-  /**
-   * Never rejects. A pre-empted sync settles nothing: what it committed stays valid, and the next pass continues
-   * from the stored coverage, so it refetches only each batch's newest events.
-   */
-  async function syncScope(waiters: Task[], current: string, signal: AbortSignal, outer: AbortSignal) {
+  /** Never rejects. A stopped sync settles its waiters with the abort; what it committed stays valid. */
+  async function syncScope(current: string): Promise<void> {
+    periodicDue = false;
+    const waiters = scopeDue;
+    scopeDue = [];
+    const { signal } = controller;
     try {
       await crawler.syncScope(current, signal);
     } catch (error) {
-      if (signal.aborted && !outer.aborted) {
-        preempted += 1;
-        if (preempted >= MAX_PREEMPTIONS) aheadOfForced = queue.length;
-        periodicDue = true;
-        requeue(waiters);
-        return;
+      if (!signal.aborted) {
+        lastError = asError(error);
+        firstSyncPending = false;
       }
-      if (!signal.aborted) lastError = asError(error);
-      if (!outer.aborted) firstSyncPending = false;
-      preempted = 0;
       for (const task of waiters) task.reject(error);
       // A failed sync keeps the interval too.
       scheduleSync(options.syncIntervalMs);
       return;
+    } finally {
+      // Its storage may answer by now, such as an account's once its session is restored.
+      loadDue = loadDue || loadAgain;
+      loadAgain = false;
     }
     lastSyncAt = now();
     lastError = null;
     firstSyncPending = false;
     noteAsOf(lastSyncAt);
-    shared?.post({ type: 'synced', seed: current, at: lastSyncAt });
+    shared?.post({ type: 'synced', seed: current, at: lastSyncAt, bodiesPending: fillAhead() });
     // Best effort: without it the next session knows no time until its own first sync.
     void store.writeMeta?.(syncedKey(current), String(lastSyncAt)).catch(() => undefined);
-    preempted = 0;
     for (const task of waiters) task.resolve();
     scheduleSync(options.syncIntervalMs);
     save(false);
-  }
-
-  function startScopeSync(current: string): Promise<void> {
-    periodicDue = false;
-    // Its storage may answer by now, such as an account's once its session is restored.
-    loadDue = loadDue || loadAgain;
-    loadAgain = false;
-    const waiters = scopeDue;
-    scopeDue = [];
-    const outer = controller.signal;
-    preempt = preempted < MAX_PREEMPTIONS ? new AbortController() : null;
-    return syncScope(waiters, current, preempt?.signal ?? outer, outer);
   }
 
   /**
    * Starts fetching the files that crawls left to fetch, and with a scan due those any stored record lacks, once no
    * crawl runs and the saved index is read. The fill then runs beside the crawls that follow: at each homeserver their
    * requests go before its own, and it commits each file as it arrives, so it never aborts a request or holds up a
-   * crawl, and only a stop or a step down aborts it.
+   * crawl, and only a stop or a step down aborts it. Whether it started.
    */
-  function startFill(): void {
-    if (filling !== null || loading || loadDue || !(scanDue || fillDue)) return;
+  function startFill(): boolean {
+    if (filling !== null || loading || loadDue || !(scanDue || fillDue)) return false;
     const scan = scanDue;
     scanDue = false;
     fillDue = false;
     const stopper = new AbortController();
     stopFill = stopper;
-    const run = async () => {
+    /** Whether it committed a file. */
+    const run = async (): Promise<boolean> => {
       try {
-        await crawler.hydrate(scan ? await store.listScopes() : [], undefined, stopper.signal);
+        const { fetched } = await crawler.hydrate(scan ? await store.listScopes() : [], undefined, stopper.signal);
+        return fetched > 0;
       } catch (error) {
         if (!stopper.signal.aborted) {
           lastError = asError(error);
-          return;
+          return true;
         }
         // Due again for whichever run crawls next.
         scanDue = scanDue || scan;
         fillDue = true;
+        return true;
       }
     };
-    filling = run().then(() => {
+    filling = run().then((committed) => {
       filling = null;
       stopFill = null;
-      emitStatus();
+      // A view rebuilt on the status that says the fill ended then holds every file it brought.
+      if (committed) flushNow();
       pump();
+      emitStatus();
     });
-    emitStatus();
+    return true;
   }
 
   /** What runs now, settled once all of it is; `null` when nothing does. */
   function busy(): Promise<void> | null {
-    const work = [running, filling, saving].filter((item): item is Promise<void> => item !== null);
+    const work = [running, scoping, filling, saving].filter((item): item is Promise<void> => item !== null);
     return work.length === 0 ? null : Promise.all(work).then(() => undefined);
   }
 
+  /** Starts what comes after a crawl before telling anyone it ended, so no status falls between the two. */
+  function afterCrawl(): void {
+    // A fill that could not finish waits for the next crawl, never looping over a failing homeserver.
+    if (crawler.unfilled() > 0) fillDue = true;
+    pump();
+    emitStatus();
+  }
+
+  /** The next request, after a start the saved index first; `null` when none waits. */
+  function nextRequest(current: string | null): Promise<void> | null {
+    if (loadDue && current !== null) {
+      loadDue = false;
+      loading = true;
+      return loadIndex(current);
+    }
+    const task = queue.shift();
+    if (task === undefined) return null;
+    // Leaves are small and independent: the ones waiting run together, so a page's post and profiles load at once.
+    if (task.request.kind === 'leaf') return executeLeaves(takeLeaves(task), controller.signal);
+    return execute(task, current, controller.signal);
+  }
+
   /**
-   * Starts the next crawl: after a start the saved index first, then requests, then a scope sync, unless the scope
-   * sync was pre-empted too often: then only the requests that pre-empted it go first. With none to start, a fill. A
-   * request arriving during a scope sync that may yield aborts it at its next safe point.
+   * Starts the next request, one at a time, and the scope sync beside it once the saved index is read: at every
+   * homeserver the request's calls go first, so neither waits for the other to end and nothing is aborted. With no
+   * crawl running, a fill.
    */
   function pump() {
     const current = seed;
     if (!canCrawl()) return;
-    const scopeWanted = current !== null && (periodicDue || scopeDue.length > 0);
-    if (running !== null) {
-      if (queue.length > 0) preempt?.abort();
-      return;
-    }
-    const forced = scopeWanted && preempted >= MAX_PREEMPTIONS && aheadOfForced === 0;
-    let work: Promise<void>;
-    if (loadDue && current !== null) {
-      loadDue = false;
-      loading = true;
-      work = loadIndex(current);
-    } else {
-      const task = forced ? undefined : queue.shift();
-      // Leaves are small and independent: the ones waiting run together, so a page's post and profiles load at once.
-      const batch = task?.request.kind === 'leaf' ? takeLeaves(task) : null;
-      if (task !== undefined && aheadOfForced > 0) aheadOfForced = Math.max(0, aheadOfForced - (batch?.length ?? 1));
-      if (batch !== null) work = executeLeaves(batch, controller.signal);
-      else if (task !== undefined) work = execute(task, current, controller.signal);
-      else if (scopeWanted && current !== null) work = startScopeSync(current);
-      else {
-        startFill();
-        return;
+    let began = false;
+    if (running === null) {
+      const work = nextRequest(current);
+      if (work !== null) {
+        began = true;
+        running = work.then(() => {
+          running = null;
+          loading = false;
+          afterCrawl();
+        });
       }
     }
-    running = work.then(() => {
-      running = null;
-      preempt = null;
-      loading = false;
-      // A fill that could not finish waits for the next crawl, never looping over a failing homeserver.
-      if (crawler.unfilled() > 0) fillDue = true;
-      emitStatus();
-      pump();
-    });
-    emitStatus();
+    if (scoping === null && !loading && !loadDue && current !== null && (periodicDue || scopeDue.length > 0)) {
+      began = true;
+      scoping = syncScope(current).then(() => {
+        scoping = null;
+        afterCrawl();
+      });
+    }
+    if (running === null && scoping === null && startFill()) began = true;
+    if (began) emitStatus();
   }
 
   function forward(task: Task) {
@@ -503,6 +508,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
 
   function lead() {
     leading = true;
+    toldBodiesPending = null;
     if (shared !== null && seed !== null) {
       shared.post({ type: 'leader', seed });
       for (const task of forwarded.values()) enqueue(task);
@@ -560,7 +566,8 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
       queue = [];
       scopeDue = [];
     }
-    // Only the crawling tab fetches; the next one fills what this one left.
+    // Only the crawling tab fetches; the next one fills what this one left, and says so.
+    heardBodiesPending = fillAhead();
     stopFill?.abort();
     const release = releaseLock;
     releaseLock = null;
@@ -588,7 +595,14 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
       case 'synced':
         if (message.seed !== seed) return;
         firstSyncPending = false;
+        heardBodiesPending = message.bodiesPending;
         noteAsOf(message.at);
+        emitStatus();
+        return;
+      case 'bodies':
+        if (message.seed !== seed) return;
+        heardBodiesPending = message.pending;
+        flushNow();
         emitStatus();
         return;
       case 'settled': {
@@ -680,7 +694,6 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     if (!started) return;
     started = false;
     controller.abort();
-    preempt?.abort();
     stopFill?.abort();
     stepDown();
     unsubscribe?.();
@@ -710,8 +723,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
       lastError = null;
       firstSyncPending = next !== null;
       asOf = null;
-      preempted = 0;
-      aheadOfForced = 0;
+      heardBodiesPending = false;
       loadDue = options.savedIndex && next !== null;
       loadAgain = false;
       scanDue = true;
