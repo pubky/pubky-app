@@ -73,8 +73,8 @@ export type CoordinationMessage =
   | { type: 'settled'; id: string; error: string | null; backfill?: BackfillResult }
   /** The sender finished a scope sync of the seed at `at` (ms), its fill still to come when `bodiesPending`. */
   | { type: 'synced'; seed: string; at: number; bodiesPending: boolean }
-  /** The crawling tab's fill of the seed's scope began to run or be due, or ended. */
-  | { type: 'bodies'; seed: string; pending: boolean };
+  /** What the crawling tab's stored records lack changed: files pending, and the homeservers failing with some. */
+  | { type: 'bodies'; seed: string; pending: boolean; failing: string[] };
 
 /** How runtimes in several tabs share one store: one crawls, the others listen. */
 export interface Coordination {
@@ -114,11 +114,17 @@ export interface RuntimeStatus {
    */
   firstSyncPending: boolean;
   /**
-   * True while stored records lack a file the crawling tab is going to fetch: its fill runs, or is due after the
-   * crawl running now. Until then answers that count or list what those records add, such as tags, may still grow.
-   * A tab that does not crawl hears it from the crawling one.
+   * True while stored records lack a file the crawling tab knows of: its fill runs or is due, or a fill ended with
+   * files still missing on a failing homeserver (`bodiesFailing`), which the fill after the next crawl tries again.
+   * Until then answers that count or list what those records add, such as tags, may still grow, so answers never say
+   * they are settled. A tab that does not crawl hears it from the crawling one.
    */
   bodiesPending: boolean;
+  /**
+   * The homeservers the last fill could not reach, failing or backing off, while files of theirs are missing: what
+   * keeps `bodiesPending` true once no fill runs. Empty when nothing is missing.
+   */
+  bodiesFailing: string[];
   /**
    * When the data behind the answers was last synced (ms): the newest of this run's scope syncs, in any tab, the
    * previous session's last one kept in the store, and the loaded index files; `null` when none is known.

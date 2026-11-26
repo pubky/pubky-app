@@ -39,6 +39,17 @@ const syncedKey = (seed: string) => `syncedAt:${seed}`;
 const leafKey = (author: string, group: string) => JSON.stringify(['leaf', author, group]);
 const backfillKey = (author: string, group: string) => JSON.stringify(['backfill', author, group]);
 
+/** Whether stored records lack files, and the homeservers that keep the missing ones from a fill. */
+interface Bodies {
+  pending: boolean;
+  failing: readonly string[];
+}
+
+const NO_BODIES: Bodies = Object.freeze({ pending: false, failing: Object.freeze([]) });
+
+const sameBodies = (a: Bodies, b: Bodies) =>
+  a.pending === b.pending && a.failing.length === b.failing.length && a.failing.every((hs, i) => b.failing[i] === hs);
+
 /** What a crawl settles with: a backfill its step, any other crawl nothing. */
 type Settled = BackfillResult | undefined;
 
@@ -99,10 +110,12 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
   /** The fill running beside the crawls, and what stops it. */
   let filling: Promise<void> | null = null;
   let stopFill: AbortController | null = null;
-  /** Whether the crawling tab said its fill runs or is due, for a tab that does not crawl. */
-  let heardBodiesPending = false;
-  /** What this tab last told the others about its fill, `null` before it told them anything. */
-  let toldBodiesPending: boolean | null = null;
+  /** What the crawling tab said of the files it lacks, for a tab that does not crawl. */
+  let heardBodies: Bodies = NO_BODIES;
+  /** What this tab last told the others of the files it lacks, `null` before it told them anything. */
+  let toldBodies: Bodies | null = null;
+  /** The homeservers the last fill could not reach while files of theirs were missing. */
+  let fillFailing: string[] = [];
   /** Requests for one user, leaf or backfill, in arrival order. */
   let queue: Task[] = [];
   /** Requests for a whole scope sync: the next one to start settles them all. */
@@ -142,35 +155,47 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
 
   const canCrawl = () => started && !paused && leading;
 
-  /** A fill runs, is due, or follows the crawl running now, which left records without their file. */
-  const fillAhead = () =>
-    filling !== null || scanDue || fillDue || ((running !== null || scoping !== null) && crawler.unfilled() > 0);
+  /** A fill runs or is due. */
+  const fillAhead = () => filling !== null || scanDue || fillDue;
 
-  /** Whether stored records lack a file the crawling tab is going to fetch, as this tab knows. */
-  const bodiesPending = () => started && (shared === null || leading ? fillAhead() : heardBodiesPending);
+  /**
+   * What this tab knows its stored records lack: a file a fill runs or is due for, or one still missing after a fill,
+   * on the homeservers that fill could not reach.
+   */
+  const ownBodies = (): Bodies => {
+    const missing = crawler.unfilled() > 0;
+    return { pending: fillAhead() || missing, failing: missing ? [...fillFailing] : [] };
+  };
 
-  const status = (): RuntimeStatus => ({
-    state: !started
-      ? 'stopped'
-      : running !== null || scoping !== null || filling !== null || (canCrawl() && fillAhead())
-        ? 'syncing'
-        : lastError !== null
-          ? 'error'
-          : 'idle',
-    seed,
-    lastSyncAt,
-    lastError,
-    stats: crawler.stats(),
-    firstSyncPending,
-    bodiesPending: bodiesPending(),
-    asOf,
-    ...(options.savedIndex ? { savedIndex: { ...saved } } : {}),
-  });
+  const bodies = (): Bodies => (!started ? NO_BODIES : shared === null || leading ? ownBodies() : heardBodies);
+
+  const status = (): RuntimeStatus => {
+    const { pending, failing } = bodies();
+    return {
+      state: !started
+        ? 'stopped'
+        : running !== null || scoping !== null || filling !== null || (canCrawl() && fillAhead())
+          ? 'syncing'
+          : lastError !== null
+            ? 'error'
+            : 'idle',
+      seed,
+      lastSyncAt,
+      lastError,
+      stats: crawler.stats(),
+      firstSyncPending,
+      bodiesPending: pending,
+      bodiesFailing: [...failing],
+      asOf,
+      ...(options.savedIndex ? { savedIndex: { ...saved } } : {}),
+    };
+  };
   const emitStatus = () => {
     const snapshot = status();
-    if (shared !== null && leading && seed !== null && toldBodiesPending !== snapshot.bodiesPending) {
-      toldBodiesPending = snapshot.bodiesPending;
-      shared.post({ type: 'bodies', seed, pending: snapshot.bodiesPending });
+    const told: Bodies = { pending: snapshot.bodiesPending, failing: snapshot.bodiesFailing };
+    if (shared !== null && leading && seed !== null && (toldBodies === null || !sameBodies(toldBodies, told))) {
+      toldBodies = told;
+      shared.post({ type: 'bodies', seed, pending: told.pending, failing: [...told.failing] });
     }
     for (const listener of statusListeners) listener(snapshot);
   };
@@ -382,7 +407,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     lastError = null;
     firstSyncPending = false;
     noteAsOf(lastSyncAt);
-    shared?.post({ type: 'synced', seed: current, at: lastSyncAt, bodiesPending: fillAhead() });
+    shared?.post({ type: 'synced', seed: current, at: lastSyncAt, bodiesPending: ownBodies().pending });
     // Best effort: without it the next session knows no time until its own first sync.
     void store.writeMeta?.(syncedKey(current), String(lastSyncAt)).catch(() => undefined);
     for (const task of waiters) task.resolve();
@@ -406,7 +431,11 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     /** Whether it committed a file. */
     const run = async (): Promise<boolean> => {
       try {
-        const { fetched } = await crawler.hydrate(scan ? await store.listScopes() : [], stopper.signal);
+        const { fetched, failedHomeservers } = await crawler.hydrate(
+          scan ? await store.listScopes() : [],
+          stopper.signal,
+        );
+        fillFailing = failedHomeservers;
         return fetched > 0;
       } catch (error) {
         if (!stopper.signal.aborted) {
@@ -516,7 +545,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
 
   function lead() {
     leading = true;
-    toldBodiesPending = null;
+    toldBodies = null;
     if (shared !== null && seed !== null) {
       shared.post({ type: 'leader', seed });
       for (const task of forwarded.values()) enqueue(task);
@@ -575,7 +604,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
       scopeDue = [];
     }
     // Only the crawling tab fetches; the next one fills what this one left, and says so.
-    heardBodiesPending = fillAhead();
+    heardBodies = ownBodies();
     stopFill?.abort();
     const release = releaseLock;
     releaseLock = null;
@@ -603,13 +632,13 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
       case 'synced':
         if (message.seed !== seed) return;
         firstSyncPending = false;
-        heardBodiesPending = message.bodiesPending;
+        heardBodies = { ...heardBodies, pending: message.bodiesPending };
         noteAsOf(message.at);
         emitStatus();
         return;
       case 'bodies':
         if (message.seed !== seed) return;
-        heardBodiesPending = message.pending;
+        heardBodies = { pending: message.pending, failing: [...message.failing] };
         flushNow();
         emitStatus();
         return;
@@ -732,7 +761,8 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
       lastError = null;
       firstSyncPending = next !== null;
       asOf = null;
-      heardBodiesPending = false;
+      heardBodies = NO_BODIES;
+      fillFailing = [];
       loadDue = options.savedIndex && next !== null;
       loadAgain = false;
       scanDue = true;

@@ -35,6 +35,7 @@ const statusOf = (overrides: Partial<RuntimeStatus> = {}): RuntimeStatus => ({
   },
   firstSyncPending: true,
   bodiesPending: false,
+  bodiesFailing: [],
   asOf: null,
   ...overrides,
 });

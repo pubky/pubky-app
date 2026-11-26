@@ -36,6 +36,7 @@ const statusOf = (overrides: Partial<RuntimeStatus> = {}): RuntimeStatus => ({
   },
   firstSyncPending: false,
   bodiesPending: false,
+  bodiesFailing: [],
   asOf: null,
   ...overrides,
 });
@@ -94,6 +95,10 @@ describe('LocalIndexStatus', () => {
     expect(valueOf('First sync')).toBe('Running');
     expect(valueOf('Tags and counts')).toBe('Loading');
     expect(valueOf('Events')).toBe('1200');
+
+    act(() => report(statusOf({ bodiesPending: true, bodiesFailing: ['hs-a', 'hs-b'] })));
+    expect(valueOf('State')).toBe('Idle');
+    expect(valueOf('Tags and counts')).toBe('Waiting for 2 failing homeservers');
   });
 
   it('shows the last sync time, the last error and the saved index when present', () => {

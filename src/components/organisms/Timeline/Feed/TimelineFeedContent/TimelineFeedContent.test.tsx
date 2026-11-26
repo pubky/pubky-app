@@ -1370,6 +1370,7 @@ describe('Visual layout variants', () => {
       },
       firstSyncPending,
       bodiesPending: false,
+      bodiesFailing: [],
       asOf: null,
     });
     const setSources = (sources: string) => {

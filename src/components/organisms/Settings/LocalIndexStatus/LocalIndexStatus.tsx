@@ -20,12 +20,22 @@ const formatTime = (ms: number | null): string => (ms === null ? 'Never' : new D
 
 type Row = [label: string, value: string];
 
+/** Files that wait on a failing homeserver are retried after the next sync, so they read apart from a fill running. */
+function bodiesLabel({ bodiesPending, bodiesFailing }: RuntimeStatus): string {
+  if (bodiesFailing.length > 0) {
+    return bodiesFailing.length === 1
+      ? 'Waiting for 1 failing homeserver'
+      : `Waiting for ${bodiesFailing.length} failing homeservers`;
+  }
+  return bodiesPending ? 'Loading' : 'Done';
+}
+
 function statusRows(status: RuntimeStatus): Row[] {
   const { stats, savedIndex } = status;
   const rows: Row[] = [
     ['State', STATE_LABELS[status.state]],
     ['First sync', status.firstSyncPending ? 'Running' : 'Done'],
-    ['Tags and counts', status.bodiesPending ? 'Loading' : 'Done'],
+    ['Tags and counts', bodiesLabel(status)],
     ['Last sync', formatTime(status.lastSyncAt)],
     ...stats.usersPerHop.map((users, hop): Row => [`Users at hop ${hop}`, String(users)]),
     ['Homeservers reached', String(stats.homeserversSeen)],

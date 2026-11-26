@@ -280,6 +280,8 @@ describe('createIndexerRuntime fill', () => {
       ]),
     );
     expect((await store.readHomeserverState('hs1')).failure).not.toBeNull();
+    // Nothing runs, yet the files are missing: never settled, and the homeserver keeping them is named.
+    expect(runtime.status()).toMatchObject({ state: 'idle', bodiesPending: true, bodiesFailing: ['hs1'] });
     const asked = tags.asked;
     await time.advance(2 * MINUTE_MS);
     expect(tags.asked).toBe(asked);
@@ -288,6 +290,7 @@ describe('createIndexerRuntime fill', () => {
     await runtime.ensureUser('carol');
     await settle();
     expect((await bob()).get(`${TAGS}t2`)).toEqual({ text: 't2' });
+    expect(runtime.status()).toMatchObject({ state: 'idle', bodiesPending: false, bodiesFailing: [] });
   });
 
   it('fetches the files a scope sync leaves while the sync still runs', async () => {

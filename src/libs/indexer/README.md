@@ -185,9 +185,11 @@ beside it; a seed that does not resolve or whose
 homeserver fails resolves it too, `status().stats.seed` saying which. `status().firstSyncPending` turns false when the
 first scope sync settles: every post, profile and follow of the scope is in. Answers still say `syncing: true`, and
 the bootstrap `indexed: false`, while files a tag or a count depends on are known to be missing, `status().bodiesPending`:
-the fill after a crawl runs or is due. So an answer never claims to be settled while the index knows it lacks part of
-it. `whenSynced()` resolves the first time answers say `syncing: false`: the first sync settled, its files are in and
-the view holds them. A status that says a fill ended comes after every change it made, so a view rebuilt on that
+the fill after a crawl runs or is due, or a fill ended with files still missing on a homeserver it could not reach,
+which `status().bodiesFailing` names. So an answer never claims to be settled while the index knows it lacks part of
+it. Not looping is a separate decision: a fill that could not finish waits for the next crawl, and the status says
+`idle` meanwhile, since nothing runs. `whenSynced()` resolves the first time answers say `syncing: false`: the first
+sync settled, its files are in and the view holds them, so it waits for a failing homeserver's files. A status that says a fill ended comes after every change it made, so a view rebuilt on that
 status holds all of it. `request` before `start` or after `stop` rejects with `IndexerNotStartedError`.
 
 `start(null)` is visitor mode, for someone signed out: no scope sync, no saved index and no tab coordination, but
@@ -227,7 +229,7 @@ behind a request someone waits for, so it never aborts a request: a request take
 request frees. A fill that brought files is followed by another while crawls left more. It commits each file as it arrives,
 setting the data only on a record still stored at that cursor, so a crawl that replaced the record, a restore that
 dropped its homeserver or a `forget` meanwhile wins. Only a stop or a step down aborts it. A fill that could not finish,
-on a failing homeserver, waits for the next crawl instead of looping. The first fill after a start, and the first after
+on a failing homeserver, waits for the next crawl instead of looping, its files still counted as pending. The first fill after a start, and the first after
 a saved index loaded, also looks through every stored scope, since a session that closed before its fill, or a file,
 can leave records without data.
 

@@ -155,7 +155,7 @@ export interface SocialIndexer {
   /**
    * Resolves the first time answers say `syncing: false`: the first scope sync of this run has settled, failed
    * included, the files it left for later are fetched, and the view holds all of it. A visitor's resolves once the
-   * files the store lacked are fetched.
+   * files the store lacked are fetched. While a homeserver holding some of those files fails, it waits for them.
    */
   whenSynced(): Promise<void>;
   /** Answers once `ready`; rejects with `IndexerNotStartedError` before `start` or after `stop`. */
