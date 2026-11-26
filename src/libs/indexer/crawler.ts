@@ -62,6 +62,12 @@ interface OperationContext {
   failed: Set<string>;
 }
 
+/** A write older than the window: its cursor and the time its path names. */
+interface OldWrite {
+  cursor: Cursor;
+  time: bigint;
+}
+
 const contextOf = (signal?: AbortSignal, priority: Priority = 'foreground'): OperationContext => ({
   signal,
   priority,
@@ -78,6 +84,9 @@ const headOf = (coverage: Coverage): Cursor | null =>
 
 const highestOf = (events: readonly AuthoredStreamEvent[]): Cursor =>
   events.reduce((high, event) => (event.cursor > high ? event.cursor : high), CURSOR_ZERO);
+
+const lowestOf = (events: readonly AuthoredStreamEvent[]): Cursor | null =>
+  events.reduce<Cursor | null>((low, event) => (low === null || event.cursor < low ? event.cursor : low), null);
 
 /** The tail of the top contiguous range, the only trusted one. */
 const topTailOf = (coverage: Coverage): Cursor | null =>
@@ -349,45 +358,62 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     );
   }
 
+  const microsBefore = (ms: number) => BigInt(Math.floor(now() - ms)) * MICROS_PER_MS;
+
   /**
-   * The highest cursor of a write older than the window, read backwards over the windowed paths one batch at a
-   * time. Only a write dates its cursor: a delete of an old path can happen any time later. Zero when none has one:
-   * the users' history is younger than the window.
-   *
-   * The cursor is the homeserver's, but the users only sample it: a seed whose last old post is a year old would set
-   * a year-wide window for everyone after it. So the search goes on through the batches until a write within a tenth
-   * of the window from its edge settles it, and only a settled start is kept for the homeserver; any other serves
-   * this call alone, and the next call, with other users, searches again.
+   * The newest write in the page older than the window. Only a write dates its cursor: a delete of an old path can
+   * happen any time later.
    */
-  async function windowStartOf(ctx: OperationContext, homeserver: string, users: readonly string[]) {
+  function olderThanWindow(page: readonly AuthoredStreamEvent[]): OldWrite | null {
+    const cutoff = microsBefore(options.windowDays * DAY_MS);
+    return page.reduce<OldWrite | null>((found, event) => {
+      const time = event.type === 'PUT' ? domain.timeOfPath(event.path) : null;
+      const older = time !== null && time < cutoff;
+      return older && (found === null || event.cursor > found.cursor) ? { cursor: event.cursor, time } : found;
+    }, null);
+  }
+
+  /**
+   * Keeps a write found older than the window as the homeserver's window start once it settles it: within a tenth of
+   * the window from its edge. The users only sample the homeserver's cursor, so a seed whose last old post is a year
+   * old would otherwise set a year-wide window for everyone after it.
+   */
+  async function settleWindowStart(ctx: OperationContext, homeserver: string, found: OldWrite): Promise<boolean> {
+    const windowMs = options.windowDays * DAY_MS;
+    if (found.time < microsBefore(windowMs + windowMs / 10)) return false;
+    const known = ctx.windowStart.get(homeserver);
+    if (known !== undefined && known >= found.cursor) return true;
+    await store.patchHomeserverState(homeserver, { windowStart: { cursor: found.cursor, foundAt: now() } });
+    ctx.windowStart.set(homeserver, found.cursor);
+    return true;
+  }
+
+  /** The homeserver's settled window start this operation found or the store keeps while fresh, else `null`. */
+  async function knownWindowStart(ctx: OperationContext, homeserver: string): Promise<Cursor | null> {
     const known = ctx.windowStart.get(homeserver);
     if (known !== undefined) return known;
     const { windowStart } = await store.readHomeserverState(homeserver);
-    if (windowStart !== null && now() - windowStart.foundAt < WINDOW_START_TTL_MS) {
-      ctx.windowStart.set(homeserver, windowStart.cursor);
-      return windowStart.cursor;
-    }
-    const windowMs = options.windowDays * DAY_MS;
-    const microsBefore = (ms: number) => BigInt(Math.floor(now() - ms)) * MICROS_PER_MS;
-    const cutoff = microsBefore(windowMs);
-    const settled = microsBefore(windowMs + windowMs / 10);
-    const olderThanWindow = (page: AuthoredStreamEvent[]) =>
-      page.reduce<{ cursor: Cursor; time: bigint } | null>((found, event) => {
-        const time = event.type === 'PUT' ? domain.timeOfPath(event.path) : null;
-        const older = time !== null && time < cutoff;
-        return older && (found === null || event.cursor > found.cursor) ? { cursor: event.cursor, time } : found;
-      }, null);
+    if (windowStart === null || now() - windowStart.foundAt >= WINDOW_START_TTL_MS) return null;
+    ctx.windowStart.set(homeserver, windowStart.cursor);
+    return windowStart.cursor;
+  }
+
+  /**
+   * The highest cursor of a write older than the window, read backwards over the windowed paths one batch at a
+   * time. Zero when none has one: the users' history is younger than the window. The search goes on through the
+   * batches until a write settles it; an unsettled one serves this call alone, and the next call searches again.
+   */
+  async function windowStartOf(ctx: OperationContext, homeserver: string, users: readonly string[]) {
+    const known = await knownWindowStart(ctx, homeserver);
+    if (known !== null) return known;
     const read = reader(ctx, homeserver, windowPaths, options.pageLimit);
-    let best: { cursor: Cursor; time: bigint } | null = null;
+    let best: OldWrite | null = null;
     for (const batch of chunks(users, options.batchSize)) {
       const found = await readBackward(batch, options.pageLimit, read, olderThanWindow);
       if (found !== null && (best === null || found.cursor > best.cursor)) best = found;
-      if (best !== null && best.time >= settled) break;
+      if (best !== null && (await settleWindowStart(ctx, homeserver, best))) return best.cursor;
     }
-    if (best === null || best.time < settled) return best?.cursor ?? CURSOR_ZERO;
-    await store.patchHomeserverState(homeserver, { windowStart: { cursor: best.cursor, foundAt: now() } });
-    ctx.windowStart.set(homeserver, best.cursor);
-    return best.cursor;
+    return best?.cursor ?? CURSOR_ZERO;
   }
 
   /** Crawls the group for the users batch by batch, each from the tail `tailOf` gives for its stored head. */
@@ -415,15 +441,173 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     });
   }
 
-  /** The tail a windowed read starts from: the stored head, or the window start past a gap or without one. */
-  const fromStart = (start: Cursor) => (head: Cursor | null) => (head === null || head < start ? start : head);
-
+  /**
+   * Keeps each user's windowed groups covered from their newest event down to the window start. A user with history
+   * from the window start on catches up forward from its head. One with none, or with only older history, or whose
+   * top range starts above the window start, as after a sync that stopped halfway, is read newest first below it, so
+   * what a feed shows first arrives first. Without a known window start, as in a first sync, that read stops at the
+   * first write older than the window, and no search for the start runs.
+   */
   async function syncWindow(ctx: OperationContext, homeserver: string, users: readonly string[]) {
     if (windowGroups.length === 0 || !(await ready(ctx, homeserver))) return;
     await guard(ctx, homeserver, async () => {
-      const start = await windowStartOf(ctx, homeserver, users);
-      for (const group of windowGroups) await syncGroup(ctx, homeserver, group, users, fromStart(start));
+      for (const group of windowGroups) {
+        const coverage = new Map<string, Coverage>();
+        for (const user of users) {
+          coverage.set(user, await store.readCoverage({ author: user, homeserver, group: group.id }));
+        }
+        const known = users.filter((user) => headOf(coverage.get(user) ?? []) !== null);
+        const start =
+          known.length > 0 ? await windowStartOf(ctx, homeserver, known) : await knownWindowStart(ctx, homeserver);
+        const current = (user: string) => {
+          const head = headOf(coverage.get(user) ?? []);
+          return head !== null && (start === null || head >= start);
+        };
+        await syncGroup(ctx, homeserver, group, known.filter(current), fromHead);
+        const below = new Map<string, Cursor | null>();
+        for (const user of users) {
+          const tail = topTailOf(coverage.get(user) ?? []);
+          if (!current(user)) below.set(user, null);
+          else if (start !== null && tail !== null && tail > start) below.set(user, tail);
+        }
+        for (const batch of chunks([...below], options.batchSize)) {
+          await readWindowBelow(ctx, homeserver, group, new Map(batch), start);
+        }
+      }
     });
+  }
+
+  /**
+   * Reads a batch's windowed group backwards from each user's bound, their newest event for `null`, down to `floor`,
+   * or without one down to the newest write older than the window, which may settle the homeserver's window start.
+   * Every page is committed as it is read, newest events first.
+   */
+  async function readWindowBelow(
+    ctx: OperationContext,
+    homeserver: string,
+    group: PathGroup,
+    bounds: ReadonlyMap<string, Cursor | null>,
+    floor: Cursor | null,
+  ) {
+    const limit = options.pageLimit;
+    const read = reader(ctx, homeserver, group.paths, limit);
+    /** Per user, the head of the range still to commit. */
+    const tops = new Map<string, Cursor>();
+    let page = await read(
+      [...bounds].map(([user, bound]) => ({ user, cursor: bound === null ? null : bound + ONE })),
+      true,
+    );
+    const newest = page.length === 0 ? null : highestOf(page);
+    for (const [user, bound] of bounds) {
+      // A user read from the newest event with none in the page has no event in the group at all.
+      const top = bound ?? newest;
+      if (top !== null && (floor === null || top > floor)) tops.set(user, top);
+    }
+    const newestEvent = page.find((event) => event.cursor === newest) ?? null;
+    // Taken and set with no await between, so batches read together never write an older mark over a newer one.
+    const highWater = newestOf(ctx.highWater.get(homeserver) ?? null, newestEvent);
+    ctx.highWater.set(homeserver, highWater);
+    let state: StoreBatch<D>['homeserverStates'] = [{ homeserver, patch: { highWater, failure: null } }];
+    while (tops.size > 0) {
+      let stop = floor;
+      const old = stop === null ? olderThanWindow(page) : null;
+      if (old !== null) {
+        stop = old.cursor;
+        await settleWindowStart(ctx, homeserver, old);
+      }
+      const lowest = lowestOf(page);
+      // A full page holds every event of every user down to its lowest cursor; a shorter one reached the stream start.
+      const reached = page.length < limit || lowest === null || (stop !== null && lowest <= stop);
+      const tail = reached ? (stop ?? CURSOR_ZERO) : lowest - ONE;
+      await commitBelow(
+        ctx,
+        homeserver,
+        group,
+        tops,
+        tail,
+        page.filter((event) => event.cursor > tail),
+        state,
+      );
+      state = undefined;
+      if (reached) return;
+      for (const [user, top] of tops) if (top > tail) tops.set(user, tail);
+      page = await read(
+        [...tops].map(([user, top]) => ({ user, cursor: top + ONE })),
+        true,
+      );
+    }
+  }
+
+  /**
+   * Commits a backwards read: per user its events in `(tail, top]`, in slices of `backfillPageLimit` events, newest
+   * first. A slice commits once its files to render and every newer slice are in, so the top range only grows
+   * downwards and a failure keeps every slice above it; the files of all slices are fetched together.
+   */
+  async function commitBelow(
+    ctx: OperationContext,
+    homeserver: string,
+    group: PathGroup,
+    tops: ReadonlyMap<string, Cursor>,
+    tail: Cursor,
+    events: readonly AuthoredStreamEvent[],
+    state?: StoreBatch<D>['homeserverStates'],
+  ) {
+    const newestFirst = [...events].sort((a, b) => (a.cursor > b.cursor ? -1 : 1));
+    const slices: Run<D>[][] = [];
+    let high: Cursor | null = null;
+    for (let i = 0; i === 0 || i < newestFirst.length; i += options.backfillPageLimit) {
+      const slice = newestFirst.slice(i, i + options.backfillPageLimit);
+      const last = i + options.backfillPageLimit >= newestFirst.length;
+      const low = last ? tail : slice[slice.length - 1].cursor - ONE;
+      const runs: Run<D>[] = [];
+      for (const [author, top] of tops) {
+        const head = high === null || top < high ? top : high;
+        if (head <= low) continue;
+        const own = slice.filter((event) => event.author === author);
+        runs.push(foldEvents<D>({ author, homeserver, group: group.id }, low, head, own));
+      }
+      slices.push(runs);
+      high = low;
+    }
+    const records = slices.flatMap((runs, index) =>
+      runs.flatMap((run) =>
+        run.entries.flatMap((entry) =>
+          entry.kind === 'record' && domain.needsBody(entry.path) === 'render' ? [{ index, run, record: entry }] : [],
+        ),
+      ),
+    );
+    const pending = slices.map((_, index) => records.filter((item) => item.index === index).length);
+    let next = 0;
+    let stopped = false;
+    const errors: unknown[] = [];
+    let committing = Promise.resolve();
+    const flush = () => {
+      // Once a fetch failed, a fetch still in flight that ends later commits nothing after this call is over.
+      while (!stopped && next < slices.length && pending[next] === 0) {
+        const runs = slices[next];
+        const batch: StoreBatch<D> = { applyRuns: runs, ...(next === 0 && state ? { homeserverStates: state } : {}) };
+        next += 1;
+        // A slice whose newer one failed is not committed: it would sit below a gap.
+        committing = committing
+          .then(() => (errors.length === 0 ? commitRuns(batch, { scopes: runs.map(scopeOf), seeds: [] }) : undefined))
+          .catch((error: unknown) => {
+            errors.push(error);
+          });
+      }
+    };
+    flush();
+    try {
+      await mapLimit(records, options.homeserverConcurrency, async ({ index, run, record }) => {
+        const data = await bodyOf(ctx, homeserver, run.author, record);
+        if (data !== null) record.data = data;
+        pending[index] -= 1;
+        flush();
+      });
+    } finally {
+      stopped = true;
+      await committing;
+    }
+    if (errors.length > 0) throw errors[0];
   }
 
   /**
@@ -661,16 +845,11 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
       limit,
     )([{ user: scope.author, cursor: below === null ? null : below + ONE }], true);
     if (below === null && page.length === 0) return null;
-    const lowest = page.reduce<Cursor | null>(
-      (low, event) => (low === null || event.cursor < low ? event.cursor : low),
-      null,
-    );
+    const lowest = lowestOf(page);
     // A full page holds every event down to its lowest cursor; a shorter one reached the stream start. The newest
     // page ends at the newest event read: nothing above it exists yet.
     const tail = page.length >= limit && lowest !== null ? lowest - ONE : CURSOR_ZERO;
-    const run = foldEvents<D>(scope, tail, below ?? highestOf(page), page);
-    await attachBodies(ctx, [run]);
-    await commitRuns({ applyRuns: [run] }, { scopes: [scopeOf(run)], seeds: [] });
+    await commitBelow(ctx, scope.homeserver, group, new Map([[scope.author, below ?? highestOf(page)]]), tail, page);
     return page.length;
   }
 

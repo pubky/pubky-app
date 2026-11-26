@@ -189,7 +189,9 @@ describe('createIndexerRuntime queue', () => {
     const carolAgain = runtime.refresh(['carol']);
     await settle();
     await Promise.all([dave, carolAgain]);
-    expect(crawlOrder(state.reads.slice(mark)).filter((label) => label !== 'scope')).toEqual(['dave', 'carol']);
+    // The scope sync's reads may fall between a request's own: only the requests' reads must not interleave.
+    const requests = state.reads.slice(mark).filter(({ users }) => users.length === 1 && OUTSIDERS.includes(users[0]));
+    expect(crawlOrder(requests)).toEqual(['dave', 'carol']);
     expect(scopeSyncs(state.reads)).toBe(2);
 
     const before = state.reads.length;

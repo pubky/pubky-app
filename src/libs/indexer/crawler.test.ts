@@ -87,7 +87,7 @@ describe('syncScope scope', () => {
         return network.resolveHomeserver(user);
       },
       readEvents: async (request) => {
-        const aliceActivity = !request.reverse && request.paths.includes(POSTS) && request.users[0].user === 'alice';
+        const aliceActivity = request.paths.includes(POSTS) && request.users[0].user === 'alice';
         if (aliceActivity && bobLookedUpByAliceActivity === null) {
           for (let turn = 0; turn < 20 && !bobLookedUp; turn += 1)
             await new Promise((resolve) => setTimeout(resolve, 0));

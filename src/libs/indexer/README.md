@@ -57,9 +57,16 @@ be structured-cloneable; cursors stay `bigint` and are never part of a key.
 
 `createCrawler` walks a scope hop by hop from the seed: it resolves each user's homeserver, syncs the
 full-history groups in batches from each user's stored head, and follows the links in the scope group to
-the next hop. Windowed groups start at the homeserver's window start, the newest event older than
+the next hop. Windowed groups reach back to the homeserver's window start, the newest write older than
 `windowDays`, and grow older only through `backfill`, which reads pages of `backfillPageLimit` events (100) and
-fetches and commits each page before reading the next, so older history shows up a screen at a time. A user loaded on
+fetches and commits each page before reading the next, so older history shows up a screen at a time. A user in scope
+with history from the window start on catches up forward from its head. Any other, such as everyone in a first sync,
+is read newest first, a batch at a time, from their newest event down to the window start, or without one known down
+to the batch's newest write older than the window, which may settle it for the homeserver: no search for the start
+runs before the read. That read commits the way `backfill` does, in slices of `backfillPageLimit` events, newest first,
+each once its files to render are in, the files of a whole read fetched together. So a feed's newest page is in after
+its own files, not after the window's, and the top range only grows downwards. A user whose top range still starts
+above the window start, as after a sync that failed halfway, is read the same way below it at the next sync. A user loaded on
 demand (`syncUsers`) with no history of a windowed group starts with one such page from their newest event instead: a
 profile shows the newest posts first, so it needs neither the window start, a search over up to 1000 events, nor a
 forward read of the range that search already went through. The page's run is `(tail, newest]`, a full page's tail
@@ -91,8 +98,9 @@ or, since the SDK passes none on, after 1 s doubling per consecutive failure of 
 its next success. So one slow or failed request on a healthy homeserver costs a retry, never the homeserver. Only a
 request that fails all four times fails it, and then no other request of the operation retries against it, so a
 dead homeserver costs at most four requests per request in flight to it, not one per record. Retries never change what a
-failure leaves behind: a batch commits only once the files it needs to render are fetched, so a failed one commits
-nothing, its users keep their stored coverage, and a later sync reads them again from there. A `later` file that
+failure leaves behind: a batch, or a slice of a newest-first read, commits only once the files it needs to render are
+fetched, so a failed one commits nothing, its users keep their stored coverage, the slices above it included, and a
+later sync reads them again from there. A `later` file that
 keeps failing fails its homeserver the same way and leaves its record without data, for a later `hydrate`.
 
 The domain says when a record's file is fetched (`needsBody`). A `render` record, such as a post or a profile, gets
