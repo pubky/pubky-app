@@ -37,7 +37,8 @@ vi.mock('@/services/homeserver/homeserver', () => ({
       mocks.saved.push(url);
     },
     getBytesIfExists: async () => null,
-    listAll: async () => [...mocks.saved],
+    listAll: async ({ baseDirectory }: { baseDirectory: string }) =>
+      mocks.saved.filter((url) => url.startsWith(baseDirectory)),
   },
 }));
 vi.mock('@/services/locks/locks', () => ({
@@ -100,8 +101,11 @@ describe('usePayToUnlock, second attempt after a 451', () => {
   ])('shows the region notice both times when the Lock Server %s', async (_label, lookup) => {
     const first = renderOpening();
     await waitFor(() => expect(first.result.current.stage).toBe('region-blocked'));
-    // The first attempt saved its bundle id before the Lock Server refused it.
-    expect(mocks.saved).toEqual([`pubky://reader1/priv/social/purchases/LOCK1/${BUNDLE}.json`]);
+    // The first attempt saved its bundle id under both roots (#3206) before the Lock Server refused it.
+    expect(mocks.saved).toEqual([
+      `pubky://reader1/priv/social/purchases/LOCK1/${BUNDLE}.json`,
+      `pubky://reader1/priv/app.pubky/v1/locks/purchases/LOCK1/${BUNDLE}.json`,
+    ]);
     first.unmount();
 
     mocks.lookupVerificationTask.mockResolvedValue(lookup);
@@ -114,9 +118,9 @@ describe('usePayToUnlock, second attempt after a 451', () => {
     expect(second.stages).not.toContain('retry');
     expect(second.stages).not.toContain('install');
     expect(mocks.toast).not.toHaveBeenCalled();
-    // Nothing was minted or written again: the one saved id stays for a supported region.
+    // Nothing was minted or written again: the one saved id (two files) stays for a supported region.
     expect(mocks.generateBundleId).toHaveBeenCalledTimes(1);
-    expect(mocks.saved).toHaveLength(1);
+    expect(mocks.saved).toHaveLength(2);
   });
 
   it('does not submit again when the lookup of the saved id was refused', async () => {
@@ -149,7 +153,7 @@ describe('usePayToUnlock, second attempt after a 451', () => {
 
   // The "could not be checked" screen stays for what it was made for: a lookup that really failed.
   it('still shows "could not be checked" when the lookup of the saved id fails for another reason', async () => {
-    mocks.saved.push(`pubky://reader1/priv/social/purchases/LOCK1/${BUNDLE}.json`);
+    mocks.saved.push(`pubky://reader1/priv/app.pubky/v1/locks/purchases/LOCK1/${BUNDLE}.json`);
     mocks.lookupVerificationTask.mockRejectedValue(new Error('Lock Server unreachable'));
 
     const view = renderOpening();

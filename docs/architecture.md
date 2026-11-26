@@ -54,7 +54,9 @@ Modules are imported directly through the path aliases in `tsconfig.json`. Keep 
 - Mutate stores for UI state
 - Use `subscribe*` only for long-lived live stream subscriptions; keep SDK lifecycle details below the controller boundary
 - **NEVER** call services directly
-- **NEVER** perform IO
+- **NEVER** perform IO. One exception: a per-browser localStorage record that must survive logout is read and
+  written by its controller through a never-throwing helper in `src/libs/<domain>/` (the social v1 migration
+  record, #3140 and ADR-0026; the Locks reader files copy record, #3206)
 
 ### Coordinators (`src/core/coordinators/`)
 

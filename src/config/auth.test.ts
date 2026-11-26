@@ -1,6 +1,12 @@
 import { ENGINE_CAPS, MIGRATION_CAPS } from 'pubky-social-specs';
 import { describe, expect, it } from 'vitest';
-import { APP_CAPABILITIES, LOCKS_CAPABILITIES, SHOP_CAPABILITIES, SOCIAL_V1_APP_CAPABILITIES } from '@/config/auth';
+import {
+  APP_CAPABILITIES,
+  LOCKS_CAPABILITIES,
+  LOCKS_READER_COPY_CAPABILITIES,
+  SHOP_CAPABILITIES,
+  SOCIAL_V1_APP_CAPABILITIES,
+} from '@/config/auth';
 import { getHomeserverCapabilities, HOMESERVER_CAPABILITIES } from '@/config/network';
 import { hasCapabilities } from '@/libs/auth/capabilities';
 
@@ -41,6 +47,11 @@ describe('social v1 capabilities', () => {
   ])('covers what pubky-social-specs declares for %s', (_, required) => {
     expect(hasCapabilities(HOMESERVER_CAPABILITIES.split(','), required.split(','))).toBe(true);
     expect(hasCapabilities(getHomeserverCapabilities().split(','), required.split(','))).toBe(true);
+  });
+
+  it('pins what the Locks reader file copy needs, which every requested grant covers', () => {
+    expect(LOCKS_READER_COPY_CAPABILITIES).toEqual(['/priv/social/:r', '/priv/app.pubky/v1/:rw']);
+    expect(hasCapabilities(HOMESERVER_CAPABILITIES.split(','), [...LOCKS_READER_COPY_CAPABILITIES])).toBe(true);
   });
 
   it('is not covered by a grant from before the port', () => {

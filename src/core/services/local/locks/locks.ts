@@ -6,6 +6,7 @@ import { isAppError } from '@/libs/error/error.utils';
 import { withPubkyPrefix } from '@/libs/utils/utils';
 import { LockModel } from '@/models/locks/locks';
 import type { LockModelSchema } from '@/models/locks/locks.schema';
+import { GuardedContentParser } from '@/pipes/locks/locks.parser';
 import type { LockFile, ReplicatedPost, TUnlockedListItem } from '@/services/locks/locks.types';
 
 export class LocalLocksService {
@@ -44,6 +45,14 @@ export class LocalLocksService {
     try {
       await db.transaction('rw', LockModel.table, async () => {
         const existing = await LockModel.findById(lockId);
+        // A read of the social root that ends after the copy updated this row must not put the old URLs back (#3206).
+        if (
+          existing?.post &&
+          GuardedContentParser.replicaRoot(post) === 'social' &&
+          GuardedContentParser.replicaRoot(existing.post) === 'app'
+        ) {
+          return;
+        }
         await LockModel.upsert({
           ...existing,
           id: lockId,
