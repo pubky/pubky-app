@@ -581,6 +581,13 @@ narrower card (as Apple's players are, `getMinFrameWidth`). Any other post frame
 image the site's logo), shows no description (Pinakes' "Blocked by the site."), and the resource page's Details say
 so in one plain line ("instagram.com didn't share this post's details.", `getBlockedNote`) in place of a `blocked`
 row.
+This press is a fallback. A post from another network (X, Mastodon, Bluesky, Instagram) is normally drawn from its
+card, with nothing to press and nothing loaded from its site. The press is there when the card has no post to draw,
+most often because the site refused Pinakes' read (Instagram, for one, sends every read from an address it rate-limits
+to its sign-in page): the app reads no other site's post itself (X aside, above), and loads nothing from the site before the
+press, so the site gets the viewer's address only once they ask for the post. Each card has its own press; no choice is
+remembered for a site. Pinakes reads a refused link again after 1, 2 and 4 days, then every 7 days; once the site
+answers, the card has the post's text and the next read of it draws the post like an X post, with no press.
 A YouTube, Vimeo or X link Pinakes does not know (a post's embed or a link in its text) is sent to Pinakes once its
 box is near the screen (`usePinakesCard`'s `resolveOnView`: `POST /v1/resolve` from the viewer's browser, so it counts
 against the viewer's own Pinakes budget; once per link per page load, a refusal kept, never a `pubky://` or pubky.app
