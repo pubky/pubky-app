@@ -35,6 +35,7 @@ import { Logger } from '@/libs/logger/logger';
 import { parseArticleContent } from '@/libs/post/articleContent';
 import { isArticleCoverContentType, resolveArticleCover, settleArticleSlotZero } from '@/libs/post/articleCover';
 import { collectAttachmentRefIndexes } from '@/libs/post/articleInlineMedia';
+import { getTrackedLinksAsTyped, type TrackedLink } from '@/libs/post/linkRules';
 import { getComposerEmbedUrl, getComposerEmbedUrls, getEditEmbedSeed } from '@/libs/post/postEmbedUrl';
 import { isPubkyIdentifier, stripPubkyPrefix } from '@/libs/utils/utils';
 import { isViewerExcludedWotStream } from '@/models/stream/post/postStream.types';
@@ -335,6 +336,29 @@ export function usePostInput({
     applyMentionToState(insertion);
   };
 
+  // Replace [start, end) of the textarea's text the way the browser edits it, so the edit is one
+  // undo step. `document.execCommand` is deprecated but is still the only DOM API that both
+  // replaces the current selection and pushes onto the undo stack. `setRangeText` does not create
+  // an undo entry in Chromium, so it is only the fallback for environments without execCommand
+  // (jsdom in tests), with an input event so React syncs its controlled value.
+  const replaceInTextarea = (textarea: HTMLTextAreaElement, start: number, end: number, text: string) => {
+    textarea.focus();
+    textarea.setSelectionRange(start, end);
+
+    if (typeof document !== 'undefined' && typeof document.execCommand === 'function') {
+      try {
+        if (document.execCommand('insertText', false, text)) {
+          return;
+        }
+      } catch {
+        // Some environments stub execCommand with a throwing function; fall through.
+      }
+    }
+
+    textarea.setRangeText(text, start, end, 'end');
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+  };
+
   // Paste handler for a valid pubky key. Returns true when the paste was handled
   // (the caller should preventDefault), false when the caller should let the
   // native paste run — which is the case when the normalized mention would
@@ -343,12 +367,8 @@ export function usePostInput({
   // Two things have to hold when we do handle it:
   //   1. Selection is honored — the mention replaces [selectionStart, selectionEnd).
   //   2. The edit is undoable — going through the browser's native insertion API
-  //      rather than assigning React state puts the edit on the undo stack.
-  //
-  // `document.execCommand` is deprecated but is still the only DOM API that both
-  // replaces the current selection and pushes onto the undo stack. `setRangeText`
-  // does not create an undo entry in Chromium, so the fallback below is limited
-  // to environments without execCommand (jsdom in tests).
+  //      rather than assigning React state puts the edit on the undo stack
+  //      (`replaceInTextarea`).
   const insertPastedMention = (userId: string): boolean => {
     const textarea = textareaRef.current;
 
@@ -381,24 +401,28 @@ export function usePostInput({
       return false;
     }
 
-    textarea.focus();
-    textarea.setSelectionRange(start, end);
-
-    if (typeof document !== 'undefined' && typeof document.execCommand === 'function') {
-      try {
-        if (document.execCommand('insertText', false, inserted)) {
-          return true;
-        }
-      } catch {
-        // Some environments stub execCommand with a throwing function; fall through.
-      }
-    }
-
-    // Fallback for environments without execCommand: replace the range in the DOM
-    // and dispatch an input event so React syncs its controlled value.
-    textarea.setRangeText(inserted, start, end, 'end');
-    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    replaceInTextarea(textarea, start, end, inserted);
     return true;
+  };
+
+  // Drop the tracking parameters of the links a change just completed (`getTrackedLinksAsTyped`),
+  // after the change has rendered and as an edit of its own, so one undo brings the link back as it
+  // was pasted. Skipped when the text changed again in between.
+  const cleanTrackedLinks = (value: string, caret: number, links: TrackedLink[]) => {
+    const removed = links.reduce((n, l) => (l.index < caret ? n + l.lastIndex - l.index - l.clean.length : n), 0);
+    const nextCaret = caret - removed;
+    requestAnimationFrame(() => {
+      const textarea = textareaRef.current;
+      if (textarea && textarea.value !== value) return;
+      if (textarea) {
+        // Last first, so the earlier ranges stay where they are.
+        for (const link of links) replaceInTextarea(textarea, link.index, link.lastIndex, link.clean);
+        textarea.setSelectionRange(nextCaret, nextCaret);
+      }
+      const clean = links.reduce((text, l) => text.slice(0, l.index) + l.clean + text.slice(l.lastIndex), value);
+      setContent(clean);
+      setCaret(nextCaret);
+    });
   };
   // Mention autocomplete
   const {
@@ -731,10 +755,16 @@ export function usePostInput({
         setContent(value);
         // Typing moves the caret without a selection event; mention detection
         // needs it before the next render (#1959)
-        setCaret(e.target.selectionStart ?? value.length);
+        const caret = e.target.selectionStart ?? value.length;
+        setCaret(caret);
+        // A pasted link, or one a space ends, then loses its tracking parameters, so the user sees
+        // the link the post will carry.
+        const tracked = getTrackedLinksAsTyped(content, value, caret);
+        if (tracked.length > 0) cleanTrackedLinks(value, caret, tracked);
       }
     },
-    [setContent],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- cleanTrackedLinks reads only the ref and stable setters
+    [content, setContent],
   );
 
   // Wrapper to apply validation when emoji is inserted

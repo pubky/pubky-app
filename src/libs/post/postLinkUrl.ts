@@ -76,6 +76,18 @@ export function getLinkUrls(content: string): string[] {
 }
 
 /**
+ * Every link in the content as `getLinkUrls` finds it, with where it is written: from `index` up to
+ * `lastIndex` (a protocol-less link without the `http://` its `url` adds).
+ */
+export function getLinkRanges(content: string): { index: number; lastIndex: number; url: string }[] {
+  return (
+    getLinkify()
+      .match(content)
+      ?.map(({ index, lastIndex, url }) => ({ index, lastIndex, url })) ?? []
+  );
+}
+
+/**
  * A URI with a scheme other than the web's (`isbn:…`, `geo:…`, `doi:…`): a token that starts the
  * text, follows whitespace or an opening bracket or quote, and opens with a scheme of two or more
  * characters and a colon. `10:30` and `C:\…` are not one.

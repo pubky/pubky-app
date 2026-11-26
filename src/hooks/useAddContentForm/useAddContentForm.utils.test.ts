@@ -36,6 +36,17 @@ describe('parseAddContentInput', () => {
     expect(parseAddContentInput(`  ${value} `)).toEqual({ type: 'link', uri: value });
   });
 
+  it('reads a link without its tracking parameters', () => {
+    expect(parseAddContentInput('https://www.youtube.com/watch?v=P65ZQL_m9zs&si=Ab1cD2&feature=shared')).toEqual({
+      type: 'link',
+      uri: 'https://www.youtube.com/watch?v=P65ZQL_m9zs',
+    });
+    expect(parseAddContentInput('https://example.com/a?id=7&utm_source=x&fbclid=y')).toEqual({
+      type: 'link',
+      uri: 'https://example.com/a?id=7',
+    });
+  });
+
   it('spells a capitalised scheme in lower case', () => {
     expect(parseAddContentInput('Https://www.youtube.com/watch?v=P65ZQL_m9zs')).toEqual({
       type: 'link',

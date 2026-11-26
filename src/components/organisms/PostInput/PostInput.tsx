@@ -34,6 +34,7 @@ import { getComposerDissolveVariants } from '@/libs/motion/composerMotion';
 import { parseArticleContent } from '@/libs/post/articleContent';
 import { resolveArticleCover } from '@/libs/post/articleCover';
 import { deserializeArticleBody } from '@/libs/post/articleInlineMedia';
+import { removeTrackingInText } from '@/libs/post/linkRules';
 import { areLockAttachmentsWithinLimit, hasSvgAttachment } from '@/libs/post/lockAttachments';
 import { getLockTeaserMaxLength, isLockTeaserWithinLimit } from '@/libs/post/lockTeaser';
 import { canSubmitPost, cn, getEnforcedCharacterCount, resolveUserDisplayName } from '@/libs/utils/utils';
@@ -441,10 +442,11 @@ export function PostInput({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- seeds once per mount from the editSeed snapshot (#2877): editPostId is fixed for the mount and the composer setters are stable
   }, []);
 
-  // Pre-fill content from share target or other external sources
+  // Pre-fill content from share target or other external sources, its links without tracking
+  // parameters (a shared link often carries the sharing app's)
   useEffect(() => {
     if (initialContent && !isEdit) {
-      setContent(initialContent);
+      setContent(removeTrackingInText(initialContent));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only run on mount
   }, []);

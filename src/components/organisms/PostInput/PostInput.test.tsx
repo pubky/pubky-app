@@ -1687,6 +1687,17 @@ describe('PostInput', () => {
     expect(mockHandleFilesAdded).toHaveBeenCalledWith([initialFile]);
   });
 
+  it('prefills a shared link without its tracking parameters', () => {
+    render(
+      <PostInput
+        variant={POST_INPUT_VARIANT.POST}
+        initialContent="https://www.youtube.com/watch?v=P65ZQL_m9zs&si=Ab1cD2&feature=shared"
+      />,
+    );
+
+    expect(mockSetContent).toHaveBeenCalledWith('https://www.youtube.com/watch?v=P65ZQL_m9zs');
+  });
+
   it('parses edit article json content and updates article state', () => {
     render(
       <PostInput

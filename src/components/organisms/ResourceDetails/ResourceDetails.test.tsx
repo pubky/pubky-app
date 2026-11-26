@@ -406,7 +406,8 @@ describe('ResourceDetails', () => {
       renderDetails(bookFixture.uri);
 
       const actions = screen.getByTestId('resource-actions');
-      expect(actions).toHaveAttribute('data-uri', 'isbn:9780140328721');
+      // Written to the ISBN's page as Pinakes publishes it.
+      expect(actions).toHaveAttribute('data-uri', 'https://openlibrary.org/isbn/9780140328721');
       expect(actions).toHaveAttribute('data-link-url', 'none');
       expect(actions).toHaveAttribute('data-title', 'Fantastic Mr. Fox');
     });
@@ -441,7 +442,7 @@ describe('ResourceDetails', () => {
       renderDetails(bookFixture.uri);
 
       const actions = screen.getByTestId('resource-actions');
-      expect(actions).toHaveAttribute('data-uri', 'isbn:9780140328721');
+      expect(actions).toHaveAttribute('data-uri', 'https://openlibrary.org/isbn/9780140328721');
       expect(actions).toHaveAttribute('data-post-uri', bookFixture.also_on[0].uri);
     });
 
@@ -914,7 +915,8 @@ describe('ResourceDetails', () => {
     expect(within(skeleton).queryByTestId('resource-card-source')).not.toBeInTheDocument();
     expect(within(skeleton).queryByRole('link')).not.toBeInTheDocument();
     const actions = within(skeleton).getByTestId('resource-actions');
-    expect(actions).toHaveAttribute('data-uri', 'isbn:0000000000');
+    // Written to the ISBN's page while the card loads, as once it is known.
+    expect(actions).toHaveAttribute('data-uri', 'https://openlibrary.org/isbn/9780000000002');
     expect(actions).toHaveAttribute('data-post-uri', 'none');
     expect(actions).toHaveAttribute('data-link-url', 'none');
   });
@@ -1174,14 +1176,18 @@ describe('ResourceDetails', () => {
       );
     });
 
-    it.each(['isbn:0000000000', 'geo:47.3769,8.5417'])('shows %s as written, as text, with the footer on it', (uri) => {
+    it.each([
+      ['isbn:0000000000', 'https://openlibrary.org/isbn/9780000000002'],
+      ['geo:47.3769,8.5417', 'geo:47.3769,8.5417'],
+    ])('shows %s as written, as text, with the footer on it', (uri, target) => {
       read = settled(null);
       renderDetails(uri);
 
       expect(screen.getByTestId('resource-link-card-title')).toHaveTextContent(uri);
       expect(screen.queryByRole('link')).not.toBeInTheDocument();
       const actions = screen.getByTestId('resource-actions');
-      expect(actions).toHaveAttribute('data-uri', uri);
+      // An identifier with a page is written to it.
+      expect(actions).toHaveAttribute('data-uri', target);
       // No web address to post about or copy.
       expect(actions).toHaveAttribute('data-post-uri', 'none');
       expect(actions).toHaveAttribute('data-link-url', 'none');

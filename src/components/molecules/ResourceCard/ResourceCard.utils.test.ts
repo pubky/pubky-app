@@ -634,8 +634,8 @@ describe('getResourceTarget', () => {
       const { uri } = getResourceTarget(null, link);
       for (const card of cards) expect(getResourceTarget(card, link).uri).toBe(uri);
     }
-    // The fold keeps the query: no parameter is dropped.
-    expect(getResourceTarget(null, links[1]).uri).toBe('https://example.com/a?utm_source=x');
+    // The tracking parameters Pinakes lists are dropped; the rest of the query stays.
+    expect(getResourceTarget(null, links[1]).uri).toBe('https://example.com/a');
     // Credentials are never written.
     expect(getResourceTarget(null, links[2]).uri).toBe('https://example.com/b');
   });
@@ -645,6 +645,8 @@ describe('getResourceTarget', () => {
     const MEMPOOL = 'https://mempool.space/block/000000000000000000012345';
     const ISBN = 'isbn:9780140328721';
     const BOOK = 'https://openlibrary.org/isbn/9780140328721';
+    // An identifier the app could write that has no page (`getIdentifierPage`).
+    const URN = 'urn:x-test:1';
 
     it('acts on the link as written when it is a web link, the card’s identifier read along first', () => {
       expect(getResourceTarget({ uri: BLOCK, refs: ['https://blockstream.info/block/1', MEMPOOL] }, MEMPOOL)).toEqual({
@@ -673,11 +675,11 @@ describe('getResourceTarget', () => {
       });
     });
 
-    it('writes a web link of the card folded: no credentials, no spaces', () => {
-      const refs = ['https://user:pw@Example.com/a', ' https://example.com/b'];
-      expect(getResourceTarget({ uri: ISBN, refs }, ISBN).uri).toBe('https://example.com/a');
-      expect(getResourceTarget({ uri: ISBN, refs: refs.slice(1) }, ISBN).uri).toBe('https://example.com/b');
-      expect(getResourceTarget({ uri: ISBN, refs: ['https://exam ple.com/c'] }, ISBN).uri).toBe(ISBN);
+    it('writes a web link of the card folded: no credentials, no spaces, no tracking', () => {
+      const refs = ['https://user:pw@Example.com/a?utm_source=x', ' https://example.com/b'];
+      expect(getResourceTarget({ uri: URN, refs }, URN).uri).toBe('https://example.com/a');
+      expect(getResourceTarget({ uri: URN, refs: refs.slice(1) }, URN).uri).toBe('https://example.com/b');
+      expect(getResourceTarget({ uri: URN, refs: ['https://exam ple.com/c'] }, URN).uri).toBe(URN);
     });
 
     it('writes any link the fold takes as folded, card or not, even one a browser would not open', () => {
@@ -691,13 +693,42 @@ describe('getResourceTarget', () => {
     });
 
     it('acts on the card’s link when nothing of it is on the web, else on the link as written', () => {
-      expect(getResourceTarget({ uri: ISBN, refs: [], open_in: [] }, ISBN)).toEqual({ uri: ISBN, spellings: [] });
-      expect(getResourceTarget({ uri: ISBN, refs: ['doi:10.1/x'] }, 'doi:10.1/x')).toEqual({
-        uri: ISBN,
+      expect(getResourceTarget({ uri: URN, refs: [], open_in: [] }, URN)).toEqual({ uri: URN, spellings: [] });
+      expect(getResourceTarget({ uri: URN, refs: ['doi:10.1/x'] }, 'doi:10.1/x')).toEqual({
+        uri: URN,
         spellings: ['doi:10.1/x'],
       });
       // `btc:` is no link the app writes: the link as written when it is one.
       expect(getResourceTarget({ uri: BLOCK, refs: [] }, ISBN).uri).toBe(ISBN);
+    });
+
+    it('acts on the identifier’s page Pinakes publishes, whichever Pinakes answered', () => {
+      const open_in = [{ client: 'web', url: 'https://openlibrary.org/books/OL7353617M' }];
+      expect(getResourceTarget({ uri: ISBN, refs: ['https://example.com/a'], open_in }, ISBN)).toEqual({
+        uri: BOOK,
+        spellings: [ISBN, 'https://openlibrary.org/books/OL7353617M', 'https://example.com/a'],
+      });
+      expect(getResourceTarget({ uri: ISBN, refs: [] }, ISBN).uri).toBe(BOOK);
+      const tx = 'a1075db55d416d3ca199f55b6084e2115b9345e16c5cf302fc80e9d5fbf5d48d';
+      expect(
+        getResourceTarget({ uri: `btc:tx/${tx}`, refs: [`https://blockstream.info/tx/${tx}`] }, `btc:tx/${tx}`).uri,
+      ).toBe(`https://mempool.space/tx/${tx}`);
+      expect(
+        getResourceTarget(
+          { uri: 'wikidata:Q42', refs: ['https://en.wikipedia.org/wiki/Douglas_Adams'] },
+          'wikidata:Q42',
+        ).uri,
+      ).toBe('https://www.wikidata.org/wiki/Q42');
+    });
+
+    it('keeps the card’s web links for an identifier with no page (mbid:, imdb:, barcodes, podcast keys)', () => {
+      const mbid = 'mbid:b1a9c0e9-d987-4042-ae91-78d6a3267d69';
+      const recording = 'https://musicbrainz.org/recording/b1a9c0e9-d987-4042-ae91-78d6a3267d69';
+      expect(getResourceTarget({ uri: mbid, refs: [recording] }, mbid).uri).toBe(recording);
+      const open_in = [{ client: 'web', url: 'https://www.imdb.com/title/tt0111161/' }];
+      expect(getResourceTarget({ uri: 'imdb:tt0111161', refs: [], open_in }, 'imdb:tt0111161').uri).toBe(
+        'https://www.imdb.com/title/tt0111161/',
+      );
     });
 
     it('keeps a Pubky object on its own address, unless the link as written is a web link', () => {
@@ -718,7 +749,25 @@ describe('getResourceTarget', () => {
   it('acts on the link as written without a card', () => {
     expect(getResourceTarget(null, SHARE)).toEqual({ uri: SHARE, spellings: [] });
     expect(getResourceTarget(undefined, SHARE)).toEqual({ uri: SHARE, spellings: [] });
-    expect(getResourceTarget(null, 'isbn:9780140328721')).toEqual({ uri: 'isbn:9780140328721', spellings: [] });
+    // An identifier as written acts on its page, as with a card.
+    expect(getResourceTarget(null, 'isbn:9780140328721')).toEqual({
+      uri: 'https://openlibrary.org/isbn/9780140328721',
+      spellings: ['isbn:9780140328721'],
+    });
+    expect(getResourceTarget(null, 'urn:x-test:1')).toEqual({ uri: 'urn:x-test:1', spellings: [] });
+  });
+
+  it('writes a link without its tracking parameters, the link as written read along', () => {
+    const tracked = `${TIDAL}?utm_source=share&u=1`;
+    expect(getResourceTarget({ uri: TIDAL, refs: [] }, tracked)).toEqual({
+      uri: `${TIDAL}?u=1`,
+      spellings: [TIDAL, tracked],
+    });
+    const spotify = 'https://open.spotify.com/track/6LgJvl0Xdtc73RJ1mmpotq';
+    expect(getResourceTarget(null, `${spotify}?si=4f1e2d3c`)).toEqual({
+      uri: spotify,
+      spellings: [`${spotify}?si=4f1e2d3c`],
+    });
   });
 
   it('reads at most MAX_LINK_SPELLINGS other spellings', () => {

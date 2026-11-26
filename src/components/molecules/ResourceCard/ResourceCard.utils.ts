@@ -1,5 +1,6 @@
 import { getResourceRoute } from '@/app/routes';
 import { foldWebLink, isExternalParentUri } from '@/libs/post/externalParent';
+import { getIdentifierPage, removeTracking } from '@/libs/post/linkRules';
 import { getPubkyAppTarget } from '@/libs/pubkyApp/pubkyAppTarget';
 import { getSafeExternalUrl } from '@/libs/utils/safeExternalUrl';
 import { getUrlHostLabel } from '@/libs/utils/urlToIcon';
@@ -276,10 +277,13 @@ export function isWritableResourceUri(uri: string): boolean {
 
 /**
  * `link` as a web link the app writes, or `null` when it is none: folded the way every writer stores
- * it (`foldWebLink`: no credentials, no fragment, scheme and host in lower case), whatever else reads it.
+ * it (`foldWebLink`: no credentials, no fragment, scheme and host in lower case), whatever else reads it,
+ * and without the query parameters Pinakes drops as tracking (`removeTracking`), so a public write never
+ * carries the sharer's tracking id.
  */
 function getWebWriteUri(link: string | null | undefined): string | null {
-  return link ? foldWebLink(link) : null;
+  const folded = link ? foldWebLink(link) : null;
+  return folded ? removeTracking(folded) : null;
 }
 
 /** The page Pinakes gives for a card whose own link is no web link, when the app may write it. */
@@ -300,21 +304,26 @@ function getOpenableWriteUri(link: string | null | undefined): string | null {
  * read along as the same link's (`spellings`): Nexus keeps each spelling apart, Pinakes folds them
  * into one card.
  *
- * Where the user had a link, `uri` is the same whether a Pinakes answered or not, and whichever did:
+ * `uri` is the same whether a Pinakes answered or not, and whichever did:
  * - the link as written (a post's link, a pasted link, a link's page) when it is a web link, folded
- *   the way every writer stores it (`foldWebLink`); never the card's own link instead, which Pinakes
- *   may have from a fetch (`rel=canonical`, a redirect);
- * - else (a search row of an identifier, the identifier's own page) a web link of the card: its own
- *   `uri`, the first web link people wrote for it (`refs`, where their tags are), the page Pinakes
- *   gives for it (`open_in`). A Pubky object's `pubky://` address is its own, readable by any client:
- *   no other link stands in for it;
+ *   the way every writer stores it (`foldWebLink`) and without its tracking parameters
+ *   (`removeTracking`); never the card's own link instead, which Pinakes may have from a fetch
+ *   (`rel=canonical`, a redirect);
+ * - else (a search row of an identifier, the identifier's own page) the identifier's page as Pinakes
+ *   publishes it (`getIdentifierPage`: `wikidata:`, `isbn:`, `doi:`, `btc:`, a source's own scheme, …),
+ *   from the card's `uri` (without a card, the identifier as written), built into the app;
+ * - for an identifier with no such page (`mbid:`, `imdb:`, `upc:`, `gtin:`, `podcast:…`), a web link of
+ *   the card: its own `uri`, the first web link people wrote for it (`refs`, where their tags are),
+ *   the page Pinakes gives for it (`open_in`). A Pubky object's `pubky://` address is its own,
+ *   readable by any client: no other link stands in for it;
  * - with no such link, the card's `uri` when the app can write it (`isExternalParentUri`), else the
  *   link as written.
  *
  * `spellings` are the card's `uri` when it is not `uri` (first, so tags already on it keep showing),
- * then that page (`open_in`), the link as written, the card's `refs` and `aliases`: each once, at
- * most `MAX_LINK_SPELLINGS`, never one with credentials. Without a card, the link as written when the fold
- * changed it.
+ * then that page (`open_in`), the link as written, the page of the identifier as written (where it
+ * was written before its card was known), the card's `refs` and `aliases`: each once, at most
+ * `MAX_LINK_SPELLINGS`, never one with credentials. Without a card, the link as written when the fold
+ * or its page changed it.
  */
 export function getResourceTarget(
   card:
@@ -328,17 +337,29 @@ export function getResourceTarget(
   const asWritten = getWebWriteUri(written);
   // A spelling with credentials is never read along: they would go out with the read.
   const readable = (link: string, uri: string) => Boolean(link) && link !== uri && !CREDENTIALS.test(link);
-  if (!card)
-    return { uri: asWritten ?? written, spellings: [written].filter((link) => readable(link, asWritten ?? written)) };
+  if (!card) {
+    const uri = asWritten ?? getWebWriteUri(getIdentifierPage(written)) ?? written;
+    return { uri, spellings: [written].filter((link) => readable(link, uri)) };
+  }
   const known = card.uri.startsWith('pubky://') ? [] : [card.uri, ...card.refs];
   const uri =
     asWritten ??
+    getWebWriteUri(getIdentifierPage(card.uri)) ??
     known.map(getOpenableWriteUri).find((link) => link !== null) ??
     getOpenInWriteUri(card) ??
     (isExternalParentUri(card.uri) || !isExternalParentUri(written) ? (getWebWriteUri(card.uri) ?? card.uri) : written);
   const page = getOpenInWriteUri(card);
+  // The page written for the identifier before its card was known.
+  const writtenPage = getWebWriteUri(getIdentifierPage(written));
   const spellings = [
-    ...new Set([card.uri, ...(page ? [page] : []), written, ...card.refs, ...(card.aliases ?? [])]),
+    ...new Set([
+      card.uri,
+      ...(page ? [page] : []),
+      written,
+      ...(writtenPage ? [writtenPage] : []),
+      ...card.refs,
+      ...(card.aliases ?? []),
+    ]),
   ].filter((link) => readable(link, uri));
   return { uri, spellings: spellings.slice(0, MAX_LINK_SPELLINGS) };
 }
