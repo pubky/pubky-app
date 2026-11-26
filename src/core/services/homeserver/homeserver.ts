@@ -86,6 +86,39 @@ function closedUserEventStream(): ReadableStream<THomeserverUserEvent> {
   });
 }
 
+/**
+ * The body's bytes, refused with `tooLarge()` once they would pass `maxBytes`: up front when `Content-Length` says so,
+ * else while reading. The count runs either way, since a compressed body decodes to more than its stated length.
+ */
+async function readBodyAtMost(response: Response, maxBytes: number, tooLarge: () => Error): Promise<Uint8Array> {
+  const stated = Number(response.headers.get('content-length') ?? Number.NaN);
+  if (stated > maxBytes) {
+    void response.body?.cancel().catch(() => undefined);
+    throw tooLarge();
+  }
+  if (response.body === null) return new Uint8Array(0);
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      void reader.cancel().catch(() => undefined);
+      throw tooLarge();
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
+}
+
 export class HomeserverService {
   private constructor() {}
 
@@ -1205,7 +1238,7 @@ export class HomeserverService {
   static async readPublicEventPage({ signal, ...page }: THomeserverEventPageParams): Promise<THomeserverStreamEvent[]> {
     const operation = HOMESERVER_INDEX_READ_OPERATIONS.readEvents;
     const url = buildEventStreamPageUrl(page);
-    return await this.withReadDeadline(signal, async (deadline) => {
+    return await this.withReadDeadline(signal, INDEXER_READ_TIMEOUT_MS, async (deadline) => {
       try {
         const response = await this.getPubkySdk().client.fetch(url, {
           method: HttpMethod.GET,
@@ -1224,12 +1257,30 @@ export class HomeserverService {
   }
 
   /**
-   * The bytes of a public file, for the local index; `null` on a 404. Always anonymous, the signed-in user's own
-   * files included, and bounded by `INDEXER_READ_TIMEOUT_MS`.
+   * The bytes of a public file, for the local index and its media; `null` on a 404. Always anonymous, the signed-in
+   * user's own files included, and aborted after `timeoutMs`. A file over `maxBytes` is refused with a
+   * `PAYLOAD_TOO_LARGE` error without reading its body when the response states its length, else as soon as the bytes
+   * read pass the limit, so a large file never sits in memory whole.
    */
-  static async getPublicFileBytes({ url, signal }: { url: string; signal?: AbortSignal }): Promise<Uint8Array | null> {
+  static async getPublicFileBytes({
+    url,
+    maxBytes,
+    timeoutMs,
+    signal,
+  }: {
+    url: string;
+    maxBytes: number;
+    timeoutMs: number;
+    signal?: AbortSignal;
+  }): Promise<Uint8Array | null> {
     const operation = HOMESERVER_INDEX_READ_OPERATIONS.readFile;
-    return await this.withReadDeadline(signal, async (deadline) => {
+    const tooLarge = () =>
+      Err.client(ClientErrorCode.PAYLOAD_TOO_LARGE, `The file is larger than ${maxBytes} bytes`, {
+        service: ErrorService.Homeserver,
+        operation,
+        context: { url, maxBytes },
+      });
+    return await this.withReadDeadline(signal, timeoutMs, async (deadline) => {
       try {
         const response = await this.getPubkySdk().client.fetch(resolvePubky(url), {
           method: HttpMethod.GET,
@@ -1238,16 +1289,17 @@ export class HomeserverService {
         });
         if (response.status === HttpStatusCode.NOT_FOUND) return null;
         if (!response.ok) throw httpResponseToError(response, ErrorService.Homeserver, operation, url);
-        return new Uint8Array(await response.arrayBuffer());
+        return await readBodyAtMost(response, maxBytes, tooLarge);
       } catch (error) {
         return handleError({ error, additionalContext: { operation, url } });
       }
     });
   }
 
-  /** Runs `read` with a signal that aborts with the caller's or after `INDEXER_READ_TIMEOUT_MS`. */
+  /** Runs `read` with a signal that aborts with the caller's or after `timeoutMs`. */
   private static async withReadDeadline<T>(
     signal: AbortSignal | undefined,
+    timeoutMs: number,
     read: (deadline: AbortSignal) => Promise<T>,
   ): Promise<T> {
     // By hand: older Safari has no `AbortSignal.any`.
@@ -1257,7 +1309,7 @@ export class HomeserverService {
     else signal?.addEventListener('abort', forward, { once: true });
     const timer = setTimeout(
       () => controller.abort(new DOMException('The index read timed out', 'TimeoutError')),
-      INDEXER_READ_TIMEOUT_MS,
+      timeoutMs,
     );
     try {
       return await read(controller.signal);

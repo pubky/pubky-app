@@ -1,5 +1,11 @@
-import { INDEXER_FILE_NAME_PATTERN, INDEXER_FILES_PATH } from '@/config/indexer';
+import {
+  INDEXER_FILE_NAME_PATTERN,
+  INDEXER_FILES_PATH,
+  INDEXER_READ_TIMEOUT_MS,
+  INDEXER_RECORD_MAX_BYTES,
+} from '@/config/indexer';
 import { isAppError } from '@/libs/error/error';
+import { ClientErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory } from '@/libs/error/error.types';
 import { getRetryAfter, hasHttpStatus } from '@/libs/error/error.utils';
 import { HttpStatusCode } from '@/libs/http/http.types';
@@ -107,8 +113,15 @@ export function createIndexerTransport(owner: Pubky | null): IndexerTransport {
     },
     async getPublic({ author, path, signal }) {
       try {
-        return await HomeserverService.getPublicFileBytes({ url: `pubky://${author}${path}`, signal });
+        return await HomeserverService.getPublicFileBytes({
+          url: `pubky://${author}${path}`,
+          maxBytes: INDEXER_RECORD_MAX_BYTES,
+          timeoutMs: INDEXER_READ_TIMEOUT_MS,
+          signal,
+        });
       } catch (error) {
+        // Too large for a record: read as a missing file, so the homeserver is not backed off.
+        if (isAppError(error) && error.code === ClientErrorCode.PAYLOAD_TOO_LARGE) return null;
         // The transport is not told the author's homeserver; the author names the failing one well enough.
         throw toIndexerError(author, error);
       }

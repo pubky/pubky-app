@@ -2910,6 +2910,8 @@ describe('HomeserverService', () => {
         );
       }
 
+      const LIMITS = { maxBytes: 1024, timeoutMs: 20_000 };
+
       it('resolves a user’s homeserver anonymously and reads an absent record as null', async () => {
         mockState.getHomeserverOf.mockResolvedValueOnce({ z32: () => HOMESERVER_Z32 }).mockResolvedValueOnce(undefined);
 
@@ -3034,8 +3036,14 @@ describe('HomeserverService', () => {
           .mockResolvedValueOnce(new Response(encoder.encode('{"name":"alice"}'), { status: 200 }))
           .mockResolvedValueOnce(new Response('', { status: 404 }));
 
-        const bytes = await HomeserverService.getPublicFileBytes({ url: 'pubky://user/pub/social/v1/profile.json' });
-        const missing = await HomeserverService.getPublicFileBytes({ url: 'pubky://user/pub/social/v1/gone.json' });
+        const bytes = await HomeserverService.getPublicFileBytes({
+          url: 'pubky://user/pub/social/v1/profile.json',
+          ...LIMITS,
+        });
+        const missing = await HomeserverService.getPublicFileBytes({
+          url: 'pubky://user/pub/social/v1/gone.json',
+          ...LIMITS,
+        });
 
         expect(new TextDecoder().decode(bytes ?? new Uint8Array())).toBe('{"name":"alice"}');
         expect(missing).toBeNull();
@@ -3049,12 +3057,100 @@ describe('HomeserverService', () => {
       it('rejects a failed file read with an error kept out of Sentry', async () => {
         mockState.clientFetch.mockResolvedValue(new Response('', { status: 503 }));
 
-        const error = (await HomeserverService.getPublicFileBytes({ url: 'pubky://alice/pub/social/v1/a.json' }).catch(
-          (caught: unknown) => caught,
-        )) as AppError;
+        const error = (await HomeserverService.getPublicFileBytes({
+          url: 'pubky://alice/pub/social/v1/a.json',
+          ...LIMITS,
+        }).catch((caught: unknown) => caught)) as AppError;
 
         expect(error).toMatchObject({ service: ErrorService.Homeserver, category: ErrorCategory.Server });
         expect(shouldDropAppErrorFromSentry(error)).toBe(true);
+      });
+
+      /** A 200 whose body is `chunks`, counting the chunks the reader pulled, with `Content-Length` when given. */
+      function chunkedResponse(chunks: Uint8Array[], contentLength?: number) {
+        const state = { pulled: 0, cancelled: false };
+        const body = new ReadableStream<Uint8Array>({
+          pull(controller) {
+            if (state.pulled === chunks.length) {
+              controller.close();
+              return;
+            }
+            controller.enqueue(chunks[state.pulled]);
+            state.pulled += 1;
+          },
+          cancel() {
+            state.cancelled = true;
+          },
+        });
+        const headers = contentLength === undefined ? undefined : { 'content-length': String(contentLength) };
+        return { response: new Response(body, { status: 200, headers }), state };
+      }
+
+      it('refuses a file whose stated length is over the cap without reading its body', async () => {
+        const { response, state } = chunkedResponse([new Uint8Array(8)], 8);
+        mockState.clientFetch.mockResolvedValue(response);
+
+        const error = (await HomeserverService.getPublicFileBytes({
+          url: 'pubky://alice/pub/social/v1/files/big.mp4',
+          maxBytes: 4,
+          timeoutMs: 1000,
+        }).catch((caught: unknown) => caught)) as AppError;
+
+        expect(error).toMatchObject({ service: ErrorService.Homeserver, code: ClientErrorCode.PAYLOAD_TOO_LARGE });
+        expect(shouldDropAppErrorFromSentry(error)).toBe(true);
+        expect(state.pulled).toBeLessThanOrEqual(1);
+        expect(state.cancelled).toBe(true);
+      });
+
+      it('stops reading a file without a stated length once its bytes pass the cap', async () => {
+        const chunks = Array.from({ length: 10 }, () => new Uint8Array(3));
+        const { response, state } = chunkedResponse(chunks);
+        mockState.clientFetch.mockResolvedValue(response);
+
+        const error = await HomeserverService.getPublicFileBytes({
+          url: 'pubky://alice/pub/social/v1/files/big.mp4',
+          maxBytes: 7,
+          timeoutMs: 1000,
+        }).catch((caught: unknown) => caught);
+
+        expect(error).toMatchObject({ code: ClientErrorCode.PAYLOAD_TOO_LARGE });
+        expect(state.pulled).toBeLessThan(chunks.length);
+        expect(state.cancelled).toBe(true);
+      });
+
+      it('reads a file at the cap whole, chunk by chunk', async () => {
+        const { response } = chunkedResponse([new Uint8Array([1, 2]), new Uint8Array([3, 4])]);
+        mockState.clientFetch.mockResolvedValue(response);
+
+        const bytes = await HomeserverService.getPublicFileBytes({
+          url: 'pubky://alice/pub/social/v1/files/a.png',
+          maxBytes: 4,
+          timeoutMs: 1000,
+        });
+
+        expect([...(bytes ?? [])]).toEqual([1, 2, 3, 4]);
+      });
+
+      it('aborts a file read past the deadline the caller gives', async () => {
+        vi.useFakeTimers();
+        try {
+          fetchAwaitingHeaders();
+          const reading = HomeserverService.getPublicFileBytes({
+            url: 'pubky://alice/pub/social/v1/files/a.mp4',
+            maxBytes: 10,
+            timeoutMs: 60_000,
+          }).catch((caught: unknown) => caught);
+
+          await vi.advanceTimersByTimeAsync(59_999);
+          const [, init] = mockState.clientFetch.mock.calls[0] as [string, RequestInit];
+          expect(init.signal?.aborted).toBe(false);
+          await vi.advanceTimersByTimeAsync(1);
+
+          expect(init.signal?.aborted).toBe(true);
+          expect(await reading).toMatchObject({ service: ErrorService.Homeserver });
+        } finally {
+          vi.useRealTimers();
+        }
       });
 
       it('leaves the same failure on the app’s own public reads reportable', async () => {

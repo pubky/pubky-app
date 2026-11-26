@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { INDEXER_READ_TIMEOUT_MS, INDEXER_RECORD_MAX_BYTES } from '@/config/indexer';
 import { ClientErrorCode, RateLimitErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -112,8 +113,19 @@ describe('createIndexerTransport', () => {
       await expect(transport.getPublic({ author: 'alice', path: '/pub/x' })).resolves.toBeNull();
       expect(HomeserverService.getPublicFileBytes).toHaveBeenCalledWith({
         url: 'pubky://alice/pub/social/v1/profile.json',
+        maxBytes: INDEXER_RECORD_MAX_BYTES,
+        timeoutMs: INDEXER_READ_TIMEOUT_MS,
         signal: undefined,
       });
+    });
+
+    it('reads a file over the record cap as missing, without failing its homeserver', async () => {
+      vi.mocked(HomeserverService.getPublicFileBytes).mockRejectedValueOnce(
+        Err.client(ClientErrorCode.PAYLOAD_TOO_LARGE, 'too large', params),
+      );
+
+      await expect(transport.getPublic({ author: 'alice', path: '/pub/social/v1/posts/x' })).resolves.toBeNull();
+      expect(INDEXER_RECORD_MAX_BYTES).toBe(1024 * 1024);
     });
   });
 

@@ -1,7 +1,8 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from 'vitest';
+import { INDEXER_READ_TIMEOUT_MS } from '@/config/indexer';
 import { ATTACHMENT_MAX_OTHER_SIZE } from '@/config/posts';
-import { LOCAL_MEDIA_MAX_BYTES } from '@/config/pwa';
+import { LOCAL_MEDIA_CLIENT_TIMEOUT_MS, LOCAL_MEDIA_MAX_BYTES, LOCAL_MEDIA_READ_TIMEOUT_MS } from '@/config/pwa';
 import { asOpaque } from '@/test-utils/type-assertions';
 import {
   buildLocalAvatarPath,
@@ -165,6 +166,7 @@ describe('local media paths', () => {
     expect(isLocalMediaMessage({ type: 'CLIENT_ANNOUNCE' })).toBe(false);
     expect(isLocalMediaAnswer(found('x'))).toBe(true);
     expect(isLocalMediaAnswer({ status: 'none' })).toBe(true);
+    expect(isLocalMediaAnswer({ status: 'tooLarge' })).toBe(true);
     expect(isLocalMediaAnswer({ status: 'found', bytes: 'x', contentType: 'image/png' })).toBe(false);
     expect(isLocalMediaAnswer(null)).toBe(false);
   });
@@ -235,6 +237,7 @@ describe('respondLocalMedia', () => {
   it.each([
     [{ status: 'none' } as const, 404],
     [{ status: 'failed' } as const, 502],
+    [{ status: 'tooLarge' } as const, 507],
     [null, 504],
   ])('responds to the answer %j with %i and caches nothing', async (answer, status) => {
     const { response, cache } = respond(`/_pubky/avatar/${ALICE}`, { answer: Promise.resolve(answer) });
@@ -341,6 +344,11 @@ describe('respondLocalMedia with byte ranges', () => {
 
   it('caps files at the largest a v1 file may hold', () => {
     expect(LOCAL_MEDIA_MAX_BYTES).toBe(ATTACHMENT_MAX_OTHER_SIZE);
+  });
+
+  it('waits for a page longer than the page may take to read the file', () => {
+    expect(LOCAL_MEDIA_CLIENT_TIMEOUT_MS).toBeGreaterThan(LOCAL_MEDIA_READ_TIMEOUT_MS);
+    expect(LOCAL_MEDIA_READ_TIMEOUT_MS).toBeGreaterThan(INDEXER_READ_TIMEOUT_MS);
   });
 });
 

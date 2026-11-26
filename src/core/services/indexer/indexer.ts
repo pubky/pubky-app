@@ -1,5 +1,6 @@
 import { liveQuery } from 'dexie';
 import { INDEXER_DATABASE_PREFIX, INDEXER_VISITOR_DATABASE } from '@/config/indexer';
+import { LOCAL_MEDIA_MAX_BYTES, LOCAL_MEDIA_READ_TIMEOUT_MS } from '@/config/pwa';
 import { browserApis, type BrowserCoordination, createBrowserCoordination } from '@/libs/indexer/browserCoordination';
 import { createIdbStore, type IdbIndexStore } from '@/libs/indexer/idbStore';
 import type { RuntimeStatus } from '@/libs/indexer/runtime.types';
@@ -117,7 +118,12 @@ export class IndexerService {
     const stopServingMedia = serveLocalMedia({
       profile: (user) => indexer.view().profile(user),
       ensureProfile: (user) => indexer.ensureProfile(user),
-      readFile: (uri) => HomeserverService.getPublicFileBytes({ url: uri }),
+      readFile: (uri) =>
+        HomeserverService.getPublicFileBytes({
+          url: uri,
+          maxBytes: LOCAL_MEDIA_MAX_BYTES,
+          timeoutMs: LOCAL_MEDIA_READ_TIMEOUT_MS,
+        }),
     });
     const stopReporting = indexer.onStatus((status) => this.publishStatus(status));
     const startedAt = Date.now();

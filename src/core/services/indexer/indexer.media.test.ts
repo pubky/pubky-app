@@ -1,6 +1,9 @@
 import { buildFile } from 'pubky-social-specs';
 import { fakeOwner } from 'pubky-social-specs/testing';
 import { describe, expect, it, vi } from 'vitest';
+import { ClientErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { ErrorService } from '@/libs/error/error.types';
 import type { LocalMediaAnswer } from '@/libs/pwa/localMedia';
 import { answerLocalMedia, type LocalMediaSources } from './indexer.media';
 
@@ -92,6 +95,18 @@ describe('answerLocalMedia', () => {
     sources.readFile.mockRejectedValueOnce(new Error('unreachable'));
 
     expect(await answerLocalMedia({ kind: 'avatar', user: ALICE }, sources)).toEqual({ status: 'failed' });
+  });
+
+  it('answers tooLarge when the file is over the size the worker serves', async () => {
+    const sources = fakeSources({ profiles: { [ALICE]: { image: AVATAR.url } } });
+    sources.readFile.mockRejectedValueOnce(
+      Err.client(ClientErrorCode.PAYLOAD_TOO_LARGE, 'too large', {
+        service: ErrorService.Homeserver,
+        operation: 'test',
+      }),
+    );
+
+    expect(await answerLocalMedia({ kind: 'avatar', user: ALICE }, sources)).toEqual({ status: 'tooLarge' });
   });
 
   it('hands over a copy of the bytes, so transferring it leaves the read buffer alone', async () => {

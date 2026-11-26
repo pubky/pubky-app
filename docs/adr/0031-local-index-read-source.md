@@ -55,7 +55,9 @@ default, today's behavior), `local`, or `local,nexus`. Without `nexus` the Nexus
   the cache with the index database (`docs/pwa.md`, _Local media_). The worker makes the resized image variants
   itself, to the widths and fit rule of the Nexus CDN, from the one cached original, so feeds do not download
   full-size uploads. It answers byte ranges from the cached file, which Safari needs to play video and audio, and
-  refuses files over 100 MiB, the v1 file limit, since a first read holds the whole file in memory.
+  refuses files over 100 MiB, the v1 file limit, since a first read holds the whole file in memory. The page refuses
+  such a file before reading it, from its stated length or as soon as the bytes read pass the limit, and the worker
+  waits longer than the page's media read deadline, which is longer than a record read's.
 - **Server.** The Next.js server has no index: without `nexus`, page metadata, mention names and preview images
   (`fetchWithValidation`, the mention lookup) make no request and render the generic fallback a failed fetch
   renders. A Nexus URL built without a configured one gets the origin `https://nexus.invalid`, which never resolves

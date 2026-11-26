@@ -1,5 +1,7 @@
 import { buildUri } from 'pubky-social-specs';
 import { LOCAL_MEDIA_CACHE } from '@/config/pwa';
+import { isAppError } from '@/libs/error/error';
+import { ClientErrorCode } from '@/libs/error/error.codes';
 import type { UserData } from '@/libs/indexer/social/social.types';
 import { Logger } from '@/libs/logger/logger';
 import { isLocalMediaMessage, type LocalMediaAnswer, type LocalMediaRequest } from '@/libs/pwa/localMedia';
@@ -11,7 +13,10 @@ export interface LocalMediaSources {
   profile(user: string): Pick<UserData, 'image'> | null;
   /** Loads a user's profile alone into the view, without their posts. */
   ensureProfile(user: string): Promise<void>;
-  /** A public homeserver file's bytes, `null` when the homeserver has none. */
+  /**
+   * A public homeserver file's bytes, `null` when the homeserver has none. Rejects with `PAYLOAD_TOO_LARGE` for a file
+   * over `LOCAL_MEDIA_MAX_BYTES`, without reading it whole.
+   */
   readFile(uri: string): Promise<Uint8Array | null>;
 }
 
@@ -49,6 +54,7 @@ export async function answerLocalMedia(
     if (bytes === null) return { status: 'none' };
     return { status: 'found', bytes: bytes.slice().buffer, contentType: details.content_type };
   } catch (error) {
+    if (isAppError(error) && error.code === ClientErrorCode.PAYLOAD_TOO_LARGE) return { status: 'tooLarge' };
     // Unreachable homeservers are routine; the read's own operation keeps them out of Sentry.
     Logger.debug('Local media read failed', { media, error });
     return { status: 'failed' };

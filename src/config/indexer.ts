@@ -17,6 +17,12 @@ export const INDEXER_FILE_NAME_PATTERN = /^[A-Za-z0-9._~-]+$/;
  */
 export const INDEXER_READ_TIMEOUT_MS = 20_000;
 
+/**
+ * The largest file the crawl reads. Every file it needs is a small JSON record, a few hundred bytes, so anything over
+ * 1 MiB is no record and is treated like a missing file instead of being read into memory.
+ */
+export const INDEXER_RECORD_MAX_BYTES = 1024 * 1024;
+
 /** Each account keeps its index in its own IndexedDB database, named by this prefix and its public key. */
 export const INDEXER_DATABASE_PREFIX = 'pubky-index-';
 

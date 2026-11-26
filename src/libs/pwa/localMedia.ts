@@ -20,9 +20,15 @@ import {
 /** What a local media path names: a user's avatar, or one file of an owner's public media. */
 export type LocalMediaRequest = { kind: 'avatar'; user: string } | { kind: 'file'; owner: string; name: string };
 
-/** A page's answer: the bytes, `none` when there is nothing to serve, `failed` when the read failed. */
+/**
+ * A page's answer: the bytes, `none` when there is nothing to serve, `failed` when the read failed, `tooLarge` when the
+ * file is over the size the worker serves and was not read.
+ */
 export type LocalMediaAnswer =
-  { status: 'found'; bytes: ArrayBuffer; contentType: string } | { status: 'none' } | { status: 'failed' };
+  | { status: 'found'; bytes: ArrayBuffer; contentType: string }
+  | { status: 'none' }
+  | { status: 'failed' }
+  | { status: 'tooLarge' };
 
 /** What the worker posts to a page, with the port to answer on. */
 export type LocalMediaMessage = { type: typeof SW_LOCAL_MEDIA_REQUEST; request: LocalMediaRequest };
@@ -99,6 +105,7 @@ export const isLocalMediaAnswer = (data: unknown): data is LocalMediaAnswer =>
   isRecord(data) &&
   (data.status === 'none' ||
     data.status === 'failed' ||
+    data.status === 'tooLarge' ||
     (data.status === 'found' && data.bytes instanceof ArrayBuffer && typeof data.contentType === 'string'));
 
 const PDF_CONTENT_TYPE = 'application/pdf';
@@ -183,7 +190,7 @@ async function loadLocalMedia(
     if (answer === null) return 504;
     if (answer.status === 'none') return 404;
     if (answer.status === 'failed') return 502;
-    if (answer.bytes.byteLength > maxBytes) return 507;
+    if (answer.status === 'tooLarge' || answer.bytes.byteLength > maxBytes) return 507;
     // Through a Response, so the Blob comes from the same realm as the Response that later carries it
     original = { blob: await new Response(answer.bytes).blob(), contentType: answer.contentType };
     if (target.originalKey !== null) await store(cache, target.originalKey, original, maxEntries);
