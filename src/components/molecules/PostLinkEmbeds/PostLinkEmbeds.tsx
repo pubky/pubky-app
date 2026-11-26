@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { usePauseMediaOutsideViewport } from '@/hooks/usePauseMediaOutsideViewport/usePauseMediaOutsideViewport';
 import { getFirstLinkUrl } from '@/libs/post/postLinkUrl';
+import { getThirdPartyEmbeds } from '@/libs/runtime-config/runtime-config';
 import { useIsNestedPostPreview } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import type { ParseUrlForLinkEmbedResult, PostLinkEmbedsProps } from './PostLinkEmbeds.types';
 import { Generic } from './Providers/Generic/ProviderGeneric';
@@ -57,6 +58,8 @@ const parseContentForLinkEmbed = (content: string, allowInApp: boolean): ParseUr
     if (inAppEmbed) {
       return allowInApp ? { embed: inAppEmbed, provider: InApp } : { embed: null, provider: null };
     }
+    // Every other embed loads from the linked site.
+    if (!getThirdPartyEmbeds()) return { embed: null, provider: null };
 
     const parsedUrl = new URL(url);
     const hostname = parsedUrl.hostname.toLowerCase();

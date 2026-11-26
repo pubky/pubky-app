@@ -219,6 +219,8 @@ export const getProfileLocalEditTtlMs = (): number => getRuntimeConfig().profile
 export const getIndexerSources = (): readonly IndexerSource[] => getRuntimeConfig().indexerSources;
 /** The local index's window of recent activity, `undefined` for the index's own default. */
 export const getIndexerWindowMs = (): number | undefined => getRuntimeConfig().indexerWindowMs;
+/** Whether a post's first link may render as a third-party embed or link preview (`PUBKY_RUNTIME_THIRD_PARTY_EMBEDS`). */
+export const getThirdPartyEmbeds = (): boolean => getRuntimeConfig().thirdPartyEmbeds;
 export const getModerationId = (): string | undefined => getRuntimeConfig().moderationId;
 export const getModeratedTags = (): string[] => getRuntimeConfig().moderatedTags;
 export const getExchangeRateApi = (): string => getRuntimeConfig().exchangeRateApi;

@@ -196,6 +196,7 @@ export const APP_RUNTIME_DEFAULTS = {
   // Bounded indexing grace period, matching the existing tag-mutation default, not an SLA.
   profileLocalEditTtlMs: 300_000,
   indexerSources: ['nexus'],
+  thirdPartyEmbeds: true,
   moderationId: 'nto4u7kkagk5hfjk4wgueemzy61nssic811hid1ty9u81uatmqzy',
   moderatedTags: ['nudity'],
   exchangeRateApi: 'https://api1.blocktank.to/api/fx/rates/btc',
@@ -309,6 +310,11 @@ export const runtimeConfigValueSchema = networkConfigValueSchema.extend({
    * the index's own default.
    */
   indexerWindowMs: positiveIntValue.optional(),
+  /**
+   * Whether a post's first link renders as a third-party embed (YouTube, Vimeo, X) or a link preview, which the
+   * browser loads from that site. Off, the link stays plain text and the page contacts no one for it.
+   */
+  thirdPartyEmbeds: z.boolean().default(APP_RUNTIME_DEFAULTS.thirdPartyEmbeds),
   moderationId: pubkyValue.optional(),
   moderatedTags: z.array(nonEmptyStringValue).default([...APP_RUNTIME_DEFAULTS.moderatedTags]),
   exchangeRateApi: urlValue.default(APP_RUNTIME_DEFAULTS.exchangeRateApi),
@@ -414,6 +420,7 @@ export const runtimeEnvInputSchema = z
     profileLocalEditTtlMs: optionalPositiveIntFromString,
     indexerSources: indexerSourcesFromString,
     indexerWindowMs: optionalPositiveIntFromString,
+    thirdPartyEmbeds: optionalBooleanFromString,
     moderationId: optionalTrimmedString,
     moderatedTags: optionalStringArrayFromString('MODERATED_TAGS'),
     exchangeRateApi: optionalUrlFromString,
@@ -528,6 +535,7 @@ export const runtimeEnvInputSchemaWithDefaults = z
     profileLocalEditTtlMs: optionalPositiveIntFromString,
     indexerSources: indexerSourcesFromString,
     indexerWindowMs: optionalPositiveIntFromString,
+    thirdPartyEmbeds: optionalBooleanFromString,
     moderationId: optionalTrimmedString,
     moderatedTags: optionalStringArrayFromString('MODERATED_TAGS'),
     exchangeRateApi: optionalUrlFromString,
@@ -621,6 +629,7 @@ export const PUBKY_RUNTIME_ENV_NAMES: Record<keyof RuntimeConfig, string> = {
   profileLocalEditTtlMs: 'PUBKY_RUNTIME_PROFILE_LOCAL_EDIT_TTL_MS',
   indexerSources: 'PUBKY_RUNTIME_INDEXER_SOURCES',
   indexerWindowMs: 'PUBKY_RUNTIME_INDEXER_WINDOW_MS',
+  thirdPartyEmbeds: 'PUBKY_RUNTIME_THIRD_PARTY_EMBEDS',
   moderationId: 'PUBKY_RUNTIME_MODERATION_ID',
   moderatedTags: 'PUBKY_RUNTIME_MODERATED_TAGS',
   exchangeRateApi: 'PUBKY_RUNTIME_EXCHANGE_RATE_API',

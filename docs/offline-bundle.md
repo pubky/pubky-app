@@ -22,6 +22,7 @@ PUBKY_RUNTIME_INDEXER_SOURCES=local \
 PUBKY_RUNTIME_HOMEGATE_URL=https://homegate.staging.pubky.app \
 PUBKY_RUNTIME_PKARR_RELAYS='["https://pkarr.pubky.app","https://pkarr.pubky.org"]' \
 PUBKY_RUNTIME_DEFAULT_HTTP_RELAY=https://httprelay.staging.pubky.app/inbox \
+PUBKY_RUNTIME_THIRD_PARTY_EMBEDS=false \
 npm run build
 mkdir -p pubky-app-offline && cp -r out pubky-app-offline/app
 cp offline-bundle/{serve.py,serve.mjs,routes.json,README.txt} pubky-app-offline/
@@ -88,8 +89,10 @@ Beyond that, as the app is used:
 
 - the HTTP relay, for signing in with Pubky Ring;
 - Homegate, only while signing up;
-- whatever a post itself links: images in articles, YouTube and Vimeo embeds, and the tweet API host and
-  `pbs.twimg.com` for a linked tweet.
+- an image an article hotlinks from another site.
+
+The bundle is built with `PUBKY_RUNTIME_THIRD_PARTY_EMBEDS=false`, so a linked YouTube or Vimeo video or tweet
+stays a plain link and loads nothing from that site.
 
 Nothing is loaded from a CDN, and the font is part of the build.
 
@@ -101,6 +104,7 @@ Nothing is loaded from a CDN, and the font is part of the build.
 | Report post                            | Opens an email to the support address with the post link                                                |
 | Copyright takedown form                | The page shows the support address instead of the form                                                  |
 | Link previews for web pages            | Not shown; links render as plain links                                                                  |
+| YouTube, Vimeo and X embeds            | Plain links (`PUBKY_RUNTIME_THIRD_PARTY_EMBEDS=false`)                                                  |
 | The Shop                               | Hidden                                                                                                  |
 | Locks (paid posts)                     | Off: no Lock server or Paykit configured, and both need app server routes                               |
 | Continue with Google (Passport)        | Off: unset, and it needs an HTTPS origin                                                                |
