@@ -56,7 +56,8 @@ export function FilterPostsBar({ value, onValueChange, validationMessage }: Filt
             size="icon"
             aria-label="Clear filter"
             data-cy="profile-filter-posts-clear"
-            className="-mr-2 size-8 shrink-0 border-none p-0 text-muted-foreground shadow-none"
+            // Forced-colors mode drops the box-shadow focus ring, so draw an outline in that mode instead.
+            className="-mr-2 size-8 shrink-0 border-none p-0 text-muted-foreground shadow-none forced-colors:focus-visible:outline-2 forced-colors:focus-visible:outline-solid"
             onClick={clearValue}
           >
             <X className="size-4" aria-hidden="true" />
