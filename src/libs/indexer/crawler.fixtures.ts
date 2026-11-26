@@ -33,7 +33,7 @@ export const testDomain: Domain<Post> = {
   ],
   scopeGroup: GRAPH,
   linksOf: (live) => [...live.keys()].map((path) => path.slice(FOLLOWS.length)),
-  needsBody: (path) => path.startsWith(POSTS),
+  needsBody: (path) => (path.startsWith(POSTS) ? 'render' : null),
   reduce: (_author, _path, bytes) => {
     try {
       const value: unknown = JSON.parse(new TextDecoder().decode(bytes));
@@ -47,6 +47,22 @@ export const testDomain: Domain<Post> = {
     return match === null ? null : BigInt(match[1]);
   },
   matchesHash: (bytes, hash) => contentHash(bytes) === hash,
+};
+
+export const TAGS = '/tags/';
+
+/**
+ * The test domain with tags among the activity: a tag's file is fetched after its run commits. Payloads read back
+ * from a saved index keep their data.
+ */
+export const taggedDomain: Domain<Post> = {
+  ...testDomain,
+  groups: [
+    { id: GRAPH, paths: [FOLLOWS], history: 'full' },
+    { id: ACTIVITY, paths: [POSTS, TAGS], history: 'window' },
+  ],
+  needsBody: (path) => (path.startsWith(POSTS) ? 'render' : path.startsWith(TAGS) ? 'later' : null),
+  reviveData: (_author, _path, value) => (isPost(value) ? value : null),
 };
 
 /** The path of a post created `ageMs` before `NOW`, its id being the creation time in microseconds. */

@@ -10,6 +10,13 @@ export interface PathGroup {
   history: 'full' | 'window';
 }
 
+/**
+ * When a record's file is fetched. `render`: before its run commits, for a record that what it belongs to cannot be
+ * shown without, such as a post or a profile. `later`: after the run commits, for a record that only adds to what is
+ * shown already, such as a tag to a post's counts. An answer the index calls exact may rest on `render` records only.
+ */
+export type BodyNeed = 'render' | 'later';
+
 /** What the crawler needs to know about the data it indexes. `D` is the parsed payload of a record. */
 export interface Domain<D> {
   groups: PathGroup[];
@@ -17,8 +24,8 @@ export interface Domain<D> {
   scopeGroup: string;
   /** `entries` are the scope's merged entries, tombstones included, when the caller has them. */
   linksOf(live: ReadonlyMap<string, RecordEntry<D>>, entries?: ReadonlyMap<string, Entry<D>>): string[];
-  /** True when the record needs its file fetched to be useful. */
-  needsBody(path: string): boolean;
+  /** When the record's file is fetched, `null` for a record useful without it. */
+  needsBody(path: string): BodyNeed | null;
   /** Parses and validates a fetched file. `null` means invalid: the record is kept without data. */
   reduce(author: string, path: string, bytes: Uint8Array): D | null;
   /**

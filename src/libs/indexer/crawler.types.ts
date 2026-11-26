@@ -12,8 +12,8 @@ export interface CrawlerOptions {
   /** Events per stream request, for the whole batch; a homeserver takes at most 1000. */
   pageLimit: number;
   /**
-   * Events per `backfill` page. Each page's files are fetched and the page committed before the next is read, so a
-   * small page puts older history on screen in small steps instead of one long wait.
+   * Events per `backfill` page. Each page's files to render are fetched and the page committed before the next is
+   * read, so a small page puts older history on screen in small steps instead of one long wait.
    */
   backfillPageLimit: number;
   lookupConcurrency: number;
@@ -155,11 +155,15 @@ export interface Crawler {
    */
   syncLeaves(leaves: readonly LeafRequest[], signal?: AbortSignal): Promise<LeavesOutcome>;
   /**
-   * Fetches the files of served records that need one and have no data, such as records read from a saved index,
-   * in the domain's groups of the seed's scope members, newest cursor first, at most `limit`. A record is tried
-   * once per crawler: one whose file stays gone or invalid is not fetched again until a later event replaces it.
+   * Fetches the files of served records that need one and have no data, newest cursor first, at most `limit`, and
+   * commits each as it arrives. It looks in `scopes`, such as every stored scope after a start or the scopes of a
+   * saved index, and in the scopes left unfilled: those a crawl committed with `later` records, and those a call
+   * could not finish, on a failing homeserver or past the limit. A record is tried once per crawler: one whose file
+   * stays gone or invalid is not fetched again until a later event replaces it.
    */
-  hydrate(seed: string, limit?: number, signal?: AbortSignal): Promise<HydrateResult>;
+  hydrate(scopes?: Iterable<ScopeKey>, limit?: number, signal?: AbortSignal): Promise<HydrateResult>;
+  /** How many scopes the next `hydrate` looks in without being given any. */
+  unfilled(): number;
   /** Replaces the `excluded` option from the next `syncScope` on. */
   setExcluded(users: Iterable<string>): void;
   stats(): CrawlerStats;

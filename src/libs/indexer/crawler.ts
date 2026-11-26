@@ -101,6 +101,8 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
   const failing = new Map<string, number>();
   /** Records `hydrate` fetched once, by scope, path and cursor. */
   const hydrated = new Set<string>();
+  /** Scopes that may hold records without the file they need, by scope id, for the next `hydrate`. */
+  const unfilled = new Map<string, ScopeKey>();
   const listeners = new Set<(stats: CrawlerStats) => void>();
   const commitListeners = new Set<(change: StoreChange) => void>();
 
@@ -265,11 +267,11 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     return domain.reduce(author, record.path, bytes);
   }
 
-  /** Sets `data` on the records of fresh runs that need their file. */
+  /** Sets `data` on the records of fresh runs that need their file to render. */
   async function attachBodies(ctx: OperationContext, runs: readonly Run<D>[]): Promise<void> {
     const records = runs.flatMap((run) =>
       run.entries.flatMap((entry) =>
-        entry.kind === 'record' && domain.needsBody(entry.path)
+        entry.kind === 'record' && domain.needsBody(entry.path) === 'render'
           ? [{ homeserver: run.homeserver, author: run.author, record: entry }]
           : [],
       ),
@@ -278,6 +280,16 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
       const data = await bodyOf(ctx, homeserver, author, record);
       if (data !== null) record.data = data;
     });
+  }
+
+  /** Commits fresh runs and leaves the files of their `later` records to the next `hydrate`. */
+  async function commitRuns(batch: StoreBatch<D>, change: StoreChange): Promise<void> {
+    await commit(batch, change);
+    for (const run of batch.applyRuns ?? []) {
+      if (run.entries.some((entry) => entry.kind === 'record' && domain.needsBody(entry.path) === 'later')) {
+        unfilled.set(scopeId(run), scopeOf(run));
+      }
+    }
   }
 
   /** Reads one batch forward from its tails and commits the run of each user that moved, with the new high water. */
@@ -301,7 +313,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     const highWater = newestOf(ctx.highWater.get(homeserver) ?? null, newest);
     ctx.highWater.set(homeserver, highWater);
     const scopes = runs.filter((run) => changesServed(run, stored.get(run.author) ?? null)).map(scopeOf);
-    await commit(
+    await commitRuns(
       { applyRuns: runs, homeserverStates: [{ homeserver, patch: { highWater, failure: null } }] },
       { scopes, seeds: [] },
     );
@@ -590,28 +602,27 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
       const tail = page.length >= limit && lowest !== null ? lowest - ONE : CURSOR_ZERO;
       const run = foldEvents<D>(scope, tail, stored ?? highest, page);
       await attachBodies(ctx, [run]);
-      await commit({ applyRuns: [run] }, { scopes: [scopeOf(run)], seeds: [] });
+      await commitRuns({ applyRuns: [run] }, { scopes: [scopeOf(run)], seeds: [] });
       events += page.length;
     }
   }
 
-  async function hydrate(seed: string, limit = Infinity, signal?: AbortSignal): Promise<HydrateResult> {
+  async function hydrate(
+    scopes: Iterable<ScopeKey> = [],
+    limit = Infinity,
+    signal?: AbortSignal,
+  ): Promise<HydrateResult> {
     const ctx = contextOf(signal);
-    const members = await store.readScopeMembers(seed);
-    const users = new Set([seed, ...members.keys()]);
+    for (const scope of scopes) unfilled.set(scopeId(scope), scopeOf(scope));
     const missing: Array<{ scope: ScopeKey; record: RecordEntry<D>; key: string }> = [];
-    for (const user of users) {
+    const scanned = [...unfilled];
+    for (const [, scope] of scanned) {
       throwIfAborted(signal);
-      const homeserver = (await store.readUserHomeserver(user))?.homeserver ?? null;
-      if (homeserver === null) continue;
-      for (const group of domain.groups) {
-        const scope = { author: user, homeserver, group: group.id };
-        const { live } = await store.readScope(scope);
-        for (const record of live.values()) {
-          const key = `${scopeId(scope)}\u0000${record.path}\u0000${record.cursor}`;
-          if (record.data !== undefined || !domain.needsBody(record.path) || hydrated.has(key)) continue;
-          missing.push({ scope, record, key });
-        }
+      const { live } = await store.readScope(scope);
+      for (const record of live.values()) {
+        const key = `${scopeId(scope)}\u0000${record.path}\u0000${record.cursor}`;
+        if (record.data !== undefined || domain.needsBody(record.path) === null || hydrated.has(key)) continue;
+        missing.push({ scope, record, key });
       }
     }
     missing.sort((a, b) => (a.record.cursor > b.record.cursor ? -1 : a.record.cursor < b.record.cursor ? 1 : 0));
@@ -622,33 +633,35 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     }
     let fetched = 0;
     let tried = 0;
-    for (const [homeserver, items] of byHomeserver) {
-      if (ctx.failed.has(homeserver)) continue;
+    await eachHomeserver(byHomeserver, async (homeserver, items) => {
+      if (ctx.failed.has(homeserver)) return;
       const { failure } = await store.readHomeserverState(homeserver);
       if (failure !== null && failure.retryAt > now()) {
         markFailed(ctx, homeserver);
-        continue;
+        return;
       }
       // A failing homeserver leaves its records untried, for a later call.
       await guard(ctx, homeserver, async () => {
-        const runs: Run<D>[] = [];
-        await mapLimit(items, options.bodyConcurrency, async ({ scope, record }) => {
+        await mapLimit(items, options.bodyConcurrency, async ({ scope, record, key }) => {
           const data = await bodyOf(ctx, scope.homeserver, scope.author, record);
+          hydrated.add(key);
+          tried += 1;
           if (data === null) return;
-          // The one event at this cursor: a run of it alone lies inside the stored coverage and changes no range.
-          runs.push({
+          // Committed at once, so a pre-empted call keeps every file it got. The one event at this cursor: a run of it
+          // alone lies inside the stored coverage and changes no range.
+          const run: Run<D> = {
             ...scopeOf(scope),
             tail: record.cursor - ONE,
             head: record.cursor,
             entries: [{ ...record, data }],
-          });
+          };
+          await commit({ applyRuns: [run] }, { scopes: [scopeOf(scope)], seeds: [] });
+          fetched += 1;
         });
-        if (runs.length > 0) await commit({ applyRuns: runs }, { scopes: runs.map(scopeOf), seeds: [] });
-        for (const { key } of items) hydrated.add(key);
-        fetched += runs.length;
-        tried += items.length;
       });
-    }
+    });
+    const untried = new Set(missing.filter(({ key }) => !hydrated.has(key)).map(({ scope }) => scopeId(scope)));
+    for (const [id] of scanned) if (!untried.has(id)) unfilled.delete(id);
     return { fetched, remaining: missing.length - tried };
   }
 
@@ -659,6 +672,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     syncLeaf,
     syncLeaves,
     hydrate,
+    unfilled: () => unfilled.size,
     setExcluded(users) {
       excluded = new Set(users);
     },

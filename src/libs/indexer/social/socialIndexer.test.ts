@@ -78,6 +78,30 @@ function holding(network: FakeNetwork, users: readonly string[]) {
   return { transport, state };
 }
 
+/** The network as a transport that holds every tag file fetch until `release` runs. */
+function holdingTags(network: FakeNetwork) {
+  const state = { held: 0, release: (): void => undefined };
+  const opened = new Promise<void>((resolve) => {
+    state.release = resolve;
+  });
+  const transport: IndexerTransport = {
+    resolveHomeserver: (user) => network.resolveHomeserver(user),
+    readEvents: (request) => network.readEvents(request),
+    getPublic: async (request) => {
+      if (request.path.includes('/tags/')) {
+        state.held += 1;
+        await opened;
+      }
+      return network.getPublic(request);
+    },
+    listIndexFiles: () => network.listIndexFiles(),
+    readIndexFile: (name) => network.readIndexFile(name),
+    writeIndexFile: (name, bytes) => network.writeIndexFile(name, bytes),
+    deleteIndexFile: (name) => network.deleteIndexFile(name),
+  };
+  return { transport, state };
+}
+
 /** Every indexer a test made: each one checks its updated views against full builds. */
 const made: SocialIndexer[] = [];
 
@@ -133,6 +157,26 @@ describe('createSocialIndexer', () => {
     expect(next.json).toMatchObject({
       post_keys: [key(BRAN, fresh), key(BRAN, image), key(CLEO, quote), key(BRAN, repost)],
     });
+  });
+
+  it('shows a post while the tags on it are still fetched, and its tags once they are in', async () => {
+    const { fixture, network, time, indexerOf } = socialWorld();
+    const url = `/v1/post/${ALICE}/${fixture.posts.a1.id}`;
+    const held = holdingTags(network);
+    const indexer = indexerOf(held.transport);
+
+    indexer.start(ALICE);
+    await indexer.whenSynced();
+    await time.advance(DEBOUNCE);
+
+    expect(held.state.held).toBeGreaterThan(0);
+    const pending = await indexer.request({ url, method: 'GET' });
+    expect(pending.json).toMatchObject({ details: { id: fixture.posts.a1.id }, counts: { tags: 0 }, tags: [] });
+
+    held.state.release();
+    await time.advance(DEBOUNCE);
+    const filled = await indexer.request({ url, method: 'GET' });
+    expect(filled.json).toMatchObject({ tags: expect.arrayContaining([expect.objectContaining({ label: 'rust' })]) });
   });
 
   it('serves an author outside the scope once ensured, still outside the scope', async () => {

@@ -40,7 +40,7 @@ describe('createCrawler hydrate', () => {
     const { paths, synced, store, crawler } = await setup();
     const [first, second, third] = paths;
 
-    expect(await crawler.hydrate('alice', 2)).toEqual({ fetched: 2, remaining: 1 });
+    expect(await crawler.hydrate([SCOPE], 2)).toEqual({ fetched: 2, remaining: 1 });
     expect(await servedData(store, 'alice', 'hs1', ACTIVITY)).toEqual(
       new Map([
         [third, { text: third }],
@@ -48,7 +48,8 @@ describe('createCrawler hydrate', () => {
         [first, undefined],
       ]),
     );
-    expect(await crawler.hydrate('alice')).toEqual({ fetched: 1, remaining: 0 });
+    // The scope past the limit stays left to fill.
+    expect(await crawler.hydrate()).toEqual({ fetched: 1, remaining: 0 });
     expect(await store.exportRuns(SCOPE)).toEqual(await synced.exportRuns(SCOPE));
   });
 
@@ -56,9 +57,9 @@ describe('createCrawler hydrate', () => {
     const { network, paths, store, crawler } = await setup();
     network.overrideFile('alice', paths[0], null);
 
-    expect(await crawler.hydrate('alice')).toEqual({ fetched: 2, remaining: 0 });
+    expect(await crawler.hydrate([SCOPE])).toEqual({ fetched: 2, remaining: 0 });
     const requests = crawler.stats().bodyRequests;
-    expect(await crawler.hydrate('alice')).toEqual({ fetched: 0, remaining: 0 });
+    expect(await crawler.hydrate([SCOPE])).toEqual({ fetched: 0, remaining: 0 });
     expect(crawler.stats().bodyRequests).toBe(requests);
     expect((await servedData(store, 'alice', 'hs1', ACTIVITY)).get(paths[0])).toBeUndefined();
   });
@@ -67,6 +68,6 @@ describe('createCrawler hydrate', () => {
     const { network, crawler } = await setup();
     network.setDown('hs1', true);
 
-    expect(await crawler.hydrate('alice')).toEqual({ fetched: 0, remaining: 3 });
+    expect(await crawler.hydrate([SCOPE])).toEqual({ fetched: 0, remaining: 3 });
   });
 });

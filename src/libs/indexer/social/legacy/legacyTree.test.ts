@@ -68,13 +68,13 @@ describe('legacySocialTree paths', () => {
     expect(socialV1Tree.followeeOf(legacyPath.follow(BRAN))).toBeNull();
   });
 
-  it('fetches profiles, posts, tags and file records, and dates a post or a file record by its id', () => {
-    expect(tree.needsBody(legacyPath.profile)).toBe(true);
-    expect(tree.needsBody(legacyPath.post(p1))).toBe(true);
-    expect(tree.needsBody(legacyPath.tag('TAGID'))).toBe(true);
-    expect(tree.needsBody(legacyPath.file(p1))).toBe(true);
-    expect(tree.needsBody(legacyPath.follow(BRAN))).toBe(false);
-    expect(tree.needsBody(legacyPath.blob('BLOB1'))).toBe(false);
+  it('fetches profiles, posts and file records to render, tags later, and dates a post or a file record by its id', () => {
+    expect(tree.needsBody(legacyPath.profile)).toBe('render');
+    expect(tree.needsBody(legacyPath.post(p1))).toBe('render');
+    expect(tree.needsBody(legacyPath.tag('TAGID'))).toBe('later');
+    expect(tree.needsBody(legacyPath.file(p1))).toBe('render');
+    expect(tree.needsBody(legacyPath.follow(BRAN))).toBeNull();
+    expect(tree.needsBody(legacyPath.blob('BLOB1'))).toBeNull();
     expect(tree.timeOfPath(legacyPath.post(p1))).toBe(BigInt(idMicros(p1)));
     expect(tree.timeOfPath(legacyPath.file(p2))).toBe(BigInt(idMicros(p2)));
     expect(tree.timeOfPath(legacyPath.tag('TAGID'))).toBeNull();
@@ -351,7 +351,7 @@ describe('createSocialDomain with the older tree', () => {
   it('hands each path to its own tree', () => {
     expect(domain.reduce(ALICE, legacyPath.profile, legacyProfile('Alice'))).toMatchObject({ name: 'Alice' });
     expect(domain.reduce(ALICE, legacyPath.profile, new TextEncoder().encode('{'))).toBeNull();
-    expect(domain.needsBody(legacyPath.post(p1))).toBe(true);
+    expect(domain.needsBody(legacyPath.post(p1))).toBe('render');
     expect(domain.timeOfPath(legacyPath.post(p1))).toBe(BigInt(idMicros(p1)));
     expect(domain.reduce(ALICE, '/pub/other.app/profile.json', legacyProfile('Alice'))).toBeNull();
   });

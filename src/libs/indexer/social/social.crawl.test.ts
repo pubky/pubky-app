@@ -25,6 +25,8 @@ describe('the social domain behind the crawler', () => {
     const crawler = createCrawler({ transport: network, store, domain, now: () => T0 + DAY_MS });
 
     const { members, failedHomeservers } = await crawler.syncScope(ALICE);
+    // The tags' files follow the commits.
+    expect(await crawler.hydrate()).toMatchObject({ remaining: 0 });
     const records: AuthorRecords[] = [];
     for (const [author, hop] of members) {
       const homeserver = (await store.readUserHomeserver(author))?.homeserver ?? null;

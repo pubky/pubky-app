@@ -13,7 +13,7 @@ import {
   type User,
 } from 'pubky-social-specs';
 import type { LeafRequest } from '../crawler.types';
-import type { Domain } from '../domain.types';
+import type { BodyNeed, Domain } from '../domain.types';
 import type { Entry } from '../indexer.types';
 import { parseMentions } from './mentions';
 import type {
@@ -352,7 +352,10 @@ export const socialV1Tree: SocialTree = Object.freeze({
   owns: (path: string) => path.startsWith(SOCIAL_ROOT),
   followeeOf: followeeOfPath,
   keyOf,
-  needsBody: (path: string) => path === PROFILE_PATH || path.startsWith(TAGS_PREFIX) || postIdOfPath(path) !== null,
+  needsBody: (path: string): BodyNeed | null => {
+    if (path.startsWith(TAGS_PREFIX)) return 'later';
+    return path === PROFILE_PATH || postIdOfPath(path) !== null ? 'render' : null;
+  },
   reduce,
   reviveData: (author: string, path: string, value: unknown) => reviveAs(keyOf(author, path), value),
   // A version's own id, not the post's: an edit of an old post is written now.
@@ -419,7 +422,7 @@ export function createSocialDomain(legacyTree?: SocialTree): SocialDomain {
       const tree = treeOf([entries ?? live]);
       return [...live.keys()].flatMap((path) => tree.followeeOf(path) ?? []);
     },
-    needsBody: (path) => treeAt(path)?.needsBody(path) ?? false,
+    needsBody: (path) => treeAt(path)?.needsBody(path) ?? null,
     reduce: (author, path, bytes) => {
       // Someone else's bytes can be anything; nothing in them may stop a crawl.
       try {

@@ -1,4 +1,5 @@
 import { idMicros, type KnownPostKind, parseOwner, validMimeTypes } from 'pubky-social-specs';
+import type { BodyNeed } from '../../domain.types';
 import { parseMentions } from '../mentions';
 import { canonicalUri, reviveAs, targetOf } from '../social.domain';
 import type {
@@ -275,11 +276,10 @@ export const legacySocialTree: SocialTree = Object.freeze({
   owns: (path: string) => path.startsWith(LEGACY_ROOT),
   followeeOf,
   keyOf: (_author: string, path: string) => keyOf(path),
-  needsBody: (path: string) =>
-    path === PROFILE_PATH ||
-    leafAfter(TAGS_PREFIX, path) !== null ||
-    postIdOf(path) !== null ||
-    fileIdOf(path) !== null,
+  needsBody: (path: string): BodyNeed | null => {
+    if (leafAfter(TAGS_PREFIX, path) !== null) return 'later';
+    return path === PROFILE_PATH || postIdOf(path) !== null || fileIdOf(path) !== null ? 'render' : null;
+  },
   reduce,
   reviveData: (_author: string, path: string, value: unknown) => reviveAs(keyOf(path), value),
   // A post's or file record's own id: an edit rewrote a post in place and left no time of its own, so an edit of an old

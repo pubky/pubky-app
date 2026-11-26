@@ -243,17 +243,17 @@ describe('reviveData', () => {
 });
 
 describe('needsBody', () => {
-  it('fetches profiles, post versions and tags only', () => {
+  it('fetches profiles and post versions to render, tags later, and nothing else', () => {
     const media = buildFile(ALICE, { bytes: new Uint8Array([1]), type: 'image/png' });
 
-    expect(domain.needsBody(PROFILE_PATH)).toBe(true);
-    expect(domain.needsBody(posts.a1.path)).toBe(true);
-    expect(domain.needsBody(posts.articleEdit.path)).toBe(true);
-    expect(domain.needsBody(tagWrite(CLEO, 0).path)).toBe(true);
-    expect(domain.needsBody(buildFollow(ALICE, BRAN).path)).toBe(false);
-    expect(domain.needsBody(media.path)).toBe(false);
-    expect(domain.needsBody(`${POSTS_PREFIX}${posts.a1.id}`)).toBe(false);
-    expect(domain.needsBody(`${POSTS_PREFIX}not-an-id/x.json`)).toBe(false);
+    expect(domain.needsBody(PROFILE_PATH)).toBe('render');
+    expect(domain.needsBody(posts.a1.path)).toBe('render');
+    expect(domain.needsBody(posts.articleEdit.path)).toBe('render');
+    expect(domain.needsBody(tagWrite(CLEO, 0).path)).toBe('later');
+    expect(domain.needsBody(buildFollow(ALICE, BRAN).path)).toBeNull();
+    expect(domain.needsBody(media.path)).toBeNull();
+    expect(domain.needsBody(`${POSTS_PREFIX}${posts.a1.id}`)).toBeNull();
+    expect(domain.needsBody(`${POSTS_PREFIX}not-an-id/x.json`)).toBeNull();
   });
 });
 

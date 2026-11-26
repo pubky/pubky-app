@@ -130,10 +130,12 @@ describe('createSocialIndexer with the older tree', () => {
   });
 
   it('resolves references across trees to the same post', async () => {
-    const { indexerOf, posts } = world();
+    const { time, indexerOf, posts } = world();
     const indexer = indexerOf(true);
     indexer.start(ALICE);
     await indexer.whenSynced();
+    // The tags' files follow the sync.
+    await time.advance(DEBOUNCE);
     const view = indexer.view();
 
     expect(view.repliesTo(BRAN, posts.b1.id).map(({ postId }) => postId)).toEqual([posts.reply.id]);

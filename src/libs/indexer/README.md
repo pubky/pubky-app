@@ -76,8 +76,19 @@ or, since the SDK passes none on, after 1 s doubling per consecutive failure of 
 its next success. So one slow or failed request on a healthy homeserver costs a retry, never the homeserver. Only a
 request that fails all four times fails it, and then no other request of the operation retries against it, so a
 dead homeserver costs at most four requests per request in flight to it, not one per record. Retries never change what a
-failure leaves behind: a batch commits only once all of its files are fetched, so a failed one commits nothing, its
-users keep their stored coverage, and a later sync reads them again from there.
+failure leaves behind: a batch commits only once the files it needs to render are fetched, so a failed one commits
+nothing, its users keep their stored coverage, and a later sync reads them again from there. A `later` file that
+keeps failing fails its homeserver the same way and leaves its record without data, for a later `hydrate`.
+
+The domain says when a record's file is fetched (`needsBody`). A `render` record, such as a post or a profile, gets
+its file before its run commits, since what it belongs to cannot be shown without it. A `later` one, such as a tag,
+only adds to what is shown already, so its run commits without it and `hydrate` fetches it afterwards, committing
+each file as a run of its one event, inside the stored coverage. In between the record is stored without data, the
+same state a saved index loads, and the view skips it: a post shows before the tags on it, which join it and its
+counts a moment later. Only `render` records back an answer the index calls exact, a post, a profile or a proof that
+one is absent; tags and counts are always answered for the scope, so a pending tag is never claimed as known. The
+crawler keeps the scopes it committed `later` records to, and those a `hydrate` could not finish, for the next
+`hydrate`.
 
 Each crawl step is one `commit` that applies the runs of the users that moved. A scope's coverage stays
 one range over normal syncs; a gap, such as stored history older than the window start, keeps two.
@@ -111,7 +122,7 @@ whose file, has a tombstone inside a trusted range is a definite not-found, what
 
 A scope sync commits each hop's members as it reaches them, and the seed as a member as soon as its graph (profile and
 follows) is in, before its activity is read. So `ready()` resolves as soon as the view holds the seed's own scopes:
-from the store, a loaded file, or the first sync's seed graph, the seed's posts and tags following within the sync; a seed that does not resolve or whose
+from the store, a loaded file, or the first sync's seed graph, the seed's posts following within the sync and their tags after it; a seed that does not resolve or whose
 homeserver fails resolves it too, `status().stats.seed` saying which. `whenSynced()` waits for the run's first scope
 sync. Until then answers say `syncing: true` and the bootstrap `indexed: false`, which makes the app ask again later.
 `request` before `start` or after `stop` rejects with `IndexerNotStartedError`.
@@ -147,6 +158,13 @@ committed. Leaf requests are the exception: the ones waiting, or asked in the sa
 (`syncLeaves`), which resolves each author once and checks each homeserver once. A lookup already in flight for a
 user is shared by every operation that needs it. A scope sync pre-empted three times in a row runs its next pass to
 the end before yielding again.
+
+The files crawls leave for later are fetched when nothing else waits: after each crawl that left some, the runtime
+runs a fill (`hydrate`), which any other crawl, a request or a scope sync, pre-empts. A fill commits each file as it
+arrives, so a pre-empted one loses only the files in flight and goes on at the next idle moment; it needs no
+starvation guard. A fill that could not finish, on a failing homeserver, waits for the next crawl instead of
+looping. The first fill after a start, and the first after a saved index loaded, also looks through every stored
+scope, since a session that closed before its fill, or a file, can leave records without data.
 
 ## Older social tree
 
@@ -190,7 +208,8 @@ each public key once, the members with their homeservers, each homeserver's high
 of the domain's groups, records with their data and whole hash, so a device that loads it shows the feed with no
 body fetch. A record without data keeps 16 bytes of hash, and version 1 files, pointers only, still load. The file
 is untrusted input: the domain's `reviveData` checks each payload (the social domain wants exactly what `reduce`
-makes), and a refused one, or any without the hook, loads without data for `hydrate` to fetch. Visited users and
+makes), and a refused one, or any without the hook, loads without data for `hydrate` to fetch. A record whose file
+was still to fetch when the file was written is saved without data the same way. Visited users and
 leaf scopes are no members' domain groups, so what the user opened is never written. With `sealer` the gzip bytes are
 sealed before writing and opened after reading; a file that does not open is ignored.
 

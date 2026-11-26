@@ -1,4 +1,5 @@
 import type { KnownPostKind } from 'pubky-social-specs';
+import type { BodyNeed } from '../domain.types';
 import type { Cursor, RecordEntry } from '../indexer.types';
 
 /** What a reference points at: a post, a user, or anything outside the social tree, kept as written. */
@@ -109,7 +110,8 @@ export interface SocialTree {
   followeeOf(path: string): string | null;
   /** What the path names, `null` for a path of no record the tree reads. */
   keyOf(author: string, path: string): SocialRecordKey | null;
-  needsBody(path: string): boolean;
+  /** When the record's file is fetched: posts, profiles and file records to render, tags later. */
+  needsBody(path: string): BodyNeed | null;
   /** Reads a fetched file, `null` when it is invalid. May throw on any input. */
   reduce(author: string, path: string, bytes: Uint8Array): SocialData | null;
   /** The payload when it is exactly what `reduce` makes for the path, else `null`. */
