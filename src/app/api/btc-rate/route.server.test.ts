@@ -5,7 +5,7 @@ import { ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
-import { GET } from './route';
+import { GET } from './route.server';
 
 const rate = { satUsd: 0.0005, btcUsd: 50_000, lastUpdatedAt: new Date('2026-09-18T00:00:00.000Z') };
 

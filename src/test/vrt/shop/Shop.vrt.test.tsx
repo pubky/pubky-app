@@ -8,7 +8,7 @@ import { matchVrtFrameScreenshot, preloadImages, renderForVRT, VRT_ROOT_TESTID }
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook, mockSettingsStore } from '@/test-utils/stores';
 import { Header } from '@/organisms/Header/Header';
-import ShopLayout from '@/app/shop/layout';
+import ShopLayout from '@/app/shop/layout.server';
 
 // Render real App desktop/mobile chrome around deterministic Shop fixture content.
 const routeState = vi.hoisted(() => ({

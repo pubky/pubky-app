@@ -1,6 +1,7 @@
 'use client';
 
-import { useParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
+import { matchPostRoute } from '@/app/routes';
 import { buildCompositeId } from '@/models/models.utils';
 import { PostPageShell } from '@/organisms/PostPageShell/PostPageShell';
 
@@ -11,12 +12,14 @@ import { PostPageShell } from '@/organisms/PostPageShell/PostPageShell';
  * without remounting when only the post id segment changes. The intercepted
  * `(.)post` route under `(feeds)` does not use this layout — it wraps content
  * via {@link SinglePost} instead.
+ *
+ * The ids come from the URL path, never `useParams`: the static export renders this layout under
+ * placeholder params.
  */
 export default function PostDetailLayout({ children }: { children: React.ReactNode }) {
-  const params = useParams();
-  const userId = params.userId as string;
-  const postId = params.postId as string;
-  const compositeId = buildCompositeId({ pubky: userId, id: postId });
+  const route = matchPostRoute(usePathname());
+  if (!route) return children;
+  const compositeId = buildCompositeId({ pubky: route.userId, id: route.postId });
 
   return <PostPageShell postId={compositeId}>{children}</PostPageShell>;
 }

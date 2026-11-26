@@ -6,7 +6,7 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import type { Pubky } from '@/models/models.types';
 import { REPORT_REASON_MAX_LENGTH } from '@/pipes/report/report.constants';
-import { GET, OPTIONS, POST } from './route';
+import { GET, OPTIONS, POST } from './route.server';
 
 const testData = {
   userPubky: 'o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo' as Pubky,

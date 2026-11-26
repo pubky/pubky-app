@@ -288,15 +288,45 @@ export function matchProfileRoute(pathname: string): { pubky: string } | null {
   return { pubky: segments[1] };
 }
 
+/**
+ * Matches any page under the dynamic profile route, `/profile/[pubky]` or `/profile/[pubky]/[tab]`,
+ * and returns the raw `[pubky]` segment, or `null` for any other shape. Only meaningful inside that
+ * route, where the own-profile pages (`/profile/followers`, ...) have already won.
+ */
+export function matchDynamicProfileRoute(pathname: string): { pubky: string } | null {
+  const segments = pathname.split('/').filter(Boolean);
+  if (segments[0] !== 'profile' || segments.length < 2 || segments.length > 3) {
+    return null;
+  }
+  return { pubky: segments[1] };
+}
+
 /** `/post/[userId]/[postId]` — browsable without auth; uses explore header chrome for guests. */
 export function isPostRoute(pathname: string): boolean {
   return matchPostRoute(pathname) !== null;
 }
 
+/** Matches `/feed/[id]` exactly and returns its id; `null` for the missing base route and deeper descendants. */
+export function matchCustomFeedRoute(pathname: string): { id: string } | null {
+  const segments = pathname.split('/').filter(Boolean);
+  if (segments[0] !== 'feed' || segments.length !== 2) {
+    return null;
+  }
+  return { id: segments[1] };
+}
+
 /** `/feed/[id]` exactly — excludes the missing base route and deeper descendants. */
 export function isCustomFeedRoute(pathname: string): boolean {
+  return matchCustomFeedRoute(pathname) !== null;
+}
+
+/** Matches `/invite/[inviteCode]` and returns the raw code, or `null` for any other path. */
+export function matchInviteRoute(pathname: string): { inviteCode: string } | null {
   const segments = pathname.split('/').filter(Boolean);
-  return segments[0] === 'feed' && segments.length === 2;
+  if (segments[0] !== 'invite' || segments.length !== 2) {
+    return null;
+  }
+  return { inviteCode: segments[1] };
 }
 
 export function isCoreExploreRoute(pathname: string): boolean {

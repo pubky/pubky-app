@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import ProfileImage from './opengraph-image';
+import ProfileImage from './opengraph-image.server';
 
 const PUBKY = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
 const NEXUS = 'https://nexus.staging.pubky.app/v1/user';

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as metadataConfig from '@/config/metadata';
-import { generateMetadata } from './page';
+import { generateMetadata } from './page.server';
 
 const SELLER = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
 const PATH = ['marketplace', 'listing', SELLER, 'handmade-bag_1'];

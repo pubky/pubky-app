@@ -6,7 +6,7 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
-import { GET, OPTIONS, POST } from './route';
+import { GET, OPTIONS, POST } from './route.server';
 
 const testData = {
   nameOwner: 'John Doe',

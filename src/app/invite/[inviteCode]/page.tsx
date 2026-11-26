@@ -1,18 +1,10 @@
-import { redirect } from 'next/navigation';
-import { ONBOARDING_ROUTES } from '@/app/routes';
-import { formatInviteCode } from '@/libs/utils/utils';
+import { placeholderParams } from '@/libs/static-export/placeholderParams';
+import { InviteRedirect } from './InviteRedirect';
 
-interface InvitePageProps {
-  params: Promise<{
-    inviteCode: string;
-  }>;
+export function generateStaticParams() {
+  return placeholderParams('inviteCode');
 }
 
-export default async function InvitePage({ params }: InvitePageProps) {
-  const { inviteCode } = await params;
-  const formattedInviteCode = formatInviteCode(inviteCode);
-  const searchParams = new URLSearchParams();
-  searchParams.set('inviteCode', formattedInviteCode);
-
-  redirect(`${ONBOARDING_ROUTES.INSTALL}?${searchParams.toString()}`);
+export default function InvitePage() {
+  return <InviteRedirect />;
 }

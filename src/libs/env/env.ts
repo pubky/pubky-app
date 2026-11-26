@@ -33,6 +33,13 @@ const envSchema = z.object({
   // Build-intrinsic release value (package version locally; Git SHA in Docker CI).
   NEXT_PUBLIC_APP_VERSION: z.string(),
 
+  // Build-intrinsic artifact kind: `true` for the static export (the offline bundle), which has no app server.
+  NEXT_PUBLIC_STATIC_EXPORT: z
+    .string()
+    .default('false')
+    .transform((val) => val === 'true')
+    .pipe(z.boolean()),
+
   // Test environment variable (optional)
   VITEST: z.string().optional(),
 
@@ -132,6 +139,7 @@ function parseEnv(): z.infer<typeof envSchema> {
     NEXT_PUBLIC_DB_VERSION: process.env.NEXT_PUBLIC_DB_VERSION,
     NEXT_PUBLIC_DEBUG_MODE: process.env.NEXT_PUBLIC_DEBUG_MODE,
     NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION,
+    NEXT_PUBLIC_STATIC_EXPORT: process.env.NEXT_PUBLIC_STATIC_EXPORT,
     VITEST: process.env.VITEST,
     HOMESERVER_ADMIN_URL: process.env.HOMESERVER_ADMIN_URL,
     HOMESERVER_ADMIN_PASSWORD: process.env.HOMESERVER_ADMIN_PASSWORD,

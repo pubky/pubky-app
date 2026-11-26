@@ -59,6 +59,14 @@ function isProductionBuildPhase(): boolean {
   return process.env.NEXT_PHASE === PHASE_PRODUCTION_BUILD;
 }
 
+/**
+ * The static export (the offline bundle) has no server: its build bakes the config into the HTML,
+ * so that build must parse strictly instead of filling gaps with staging defaults.
+ */
+function isConfigBakedAtBuild(): boolean {
+  return process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
+}
+
 /** Collect the raw `PUBKY_RUNTIME_*` string values keyed by config field name. */
 function readRuntimeEnvInput(): Record<string, string | undefined> {
   const input: Record<string, string | undefined> = {};
@@ -80,7 +88,7 @@ function parseLenientConfig(): RuntimeConfig {
 export function readServerConfig(): RuntimeConfig {
   // Deployed/required mode: strict parse — ALL required network values must be set and valid.
   // Partial deploy config fails loudly instead of silently resolving to staging defaults.
-  if (isRuntimeConfigRequired() && !isProductionBuildPhase()) {
+  if (isRuntimeConfigRequired() && (!isProductionBuildPhase() || isConfigBakedAtBuild())) {
     const result = runtimeEnvInputSchema.safeParse(readRuntimeEnvInput());
     if (!result.success) {
       throw new Error(`Runtime config is incomplete or invalid. ${REQUIRED_NETWORK_ENV_MESSAGE}`, {
@@ -142,7 +150,7 @@ export function escapeForInlineScript(json: string): string {
 
 /**
  * Build the inline script body that publishes the resolved config to the browser.
- * Called from the dynamic root layout at request time (server only).
+ * Called from the root layout at request time, or once at build time for the static export (server only).
  */
 export function serializeRuntimeConfig(): string {
   const config = getRuntimeConfig();

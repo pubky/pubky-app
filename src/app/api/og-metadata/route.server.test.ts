@@ -6,7 +6,7 @@ import { AuthErrorCode, ClientErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
-import { GET } from './route';
+import { GET } from './route.server';
 
 const createRequest = (url: string) => {
   const searchParams = new URLSearchParams({ url });

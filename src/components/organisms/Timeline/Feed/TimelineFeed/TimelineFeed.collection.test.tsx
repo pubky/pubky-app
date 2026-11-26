@@ -9,12 +9,11 @@ import { LAYOUT } from '@/stores/home/home.types';
 import { TimelineFeed } from './TimelineFeed';
 
 // Isolated test for the COLLECTION variant wrapper (`CollectionTimelineFeed`),
-// which resolves its stream id from the `/collections/[userId]/[postId]` route
-// params via `useParams()` (mirroring how `ProfileTimelineFeed` reads context).
-// The broad `TimelineFeed.test.tsx` mocks `useParams` to a fixed value, so this
-// lives in its own file where we can drive the params per-test.
+// which resolves its stream id from the `/collections/[userId]/[postId]` URL path.
+// The broad `TimelineFeed.test.tsx` mocks `usePathname` to a fixed value, so this
+// lives in its own file where we can drive the path per-test.
 
-const mockUseParams = vi.hoisted(() => vi.fn());
+const mockUsePathname = vi.hoisted(() => vi.fn());
 const mockUseFeedLayoutResolution = vi.hoisted(() => vi.fn());
 const mockAuthState = vi.hoisted(() => ({ currentUserPubky: null as string | null, session: null as object | null }));
 const mockUsePostDetails = vi.hoisted(() =>
@@ -25,7 +24,7 @@ const mockUsePostDetails = vi.hoisted(() =>
 );
 
 vi.mock('next/navigation', () => ({
-  useParams: mockUseParams,
+  usePathname: mockUsePathname,
 }));
 
 vi.mock('@/hooks/useFeedLayoutResolution/useFeedLayoutResolution', () => ({
@@ -81,8 +80,8 @@ describe('CollectionTimelineFeed (COLLECTION variant)', () => {
     capturedProps.length = 0;
   });
 
-  it('resolves the stream id from route params via buildCollectionItemsStreamId', () => {
-    mockUseParams.mockReturnValue({ userId: 'author-1', postId: 'post-1' });
+  it('resolves the stream id from the route path via buildCollectionItemsStreamId', () => {
+    mockUsePathname.mockReturnValue('/collections/author-1/post-1');
 
     render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} />);
 
@@ -95,16 +94,16 @@ describe('CollectionTimelineFeed (COLLECTION variant)', () => {
     expect(mockUseFeedLayoutResolution).toHaveBeenCalledWith(TIMELINE_FEED_VARIANT.COLLECTION, LAYOUT.CARDS);
   });
 
-  it('leaves the stream id undefined until both params are present', () => {
-    mockUseParams.mockReturnValue({ userId: 'author-1' });
+  it('leaves the stream id undefined until both ids are in the path', () => {
+    mockUsePathname.mockReturnValue('/collections/author-1');
 
     render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} />);
 
     expect(lastProps().streamId).toBeUndefined();
   });
 
-  it('leaves the stream id undefined when params are unavailable', () => {
-    mockUseParams.mockReturnValue(null);
+  it('leaves the stream id undefined when the path is unavailable', () => {
+    mockUsePathname.mockReturnValue(null);
 
     render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} />);
 
@@ -112,7 +111,7 @@ describe('CollectionTimelineFeed (COLLECTION variant)', () => {
   });
 
   it('forwards the collection-scoped List selection and uses List post styling', () => {
-    mockUseParams.mockReturnValue({ userId: 'author-1', postId: 'post-1' });
+    mockUsePathname.mockReturnValue('/collections/author-1/post-1');
     mockUseFeedLayoutResolution.mockReturnValue({
       ...cardsLayoutResolution(),
       requestedLayout: LAYOUT.LIST,
@@ -128,7 +127,7 @@ describe('CollectionTimelineFeed (COLLECTION variant)', () => {
   });
 
   it('forwards the collection-scoped Visual selection and threads the hidden-items notice', () => {
-    mockUseParams.mockReturnValue({ userId: 'author-1', postId: 'post-1' });
+    mockUsePathname.mockReturnValue('/collections/author-1/post-1');
     mockUseFeedLayoutResolution.mockReturnValue({
       ...cardsLayoutResolution(),
       requestedLayout: LAYOUT.VISUAL,
@@ -161,7 +160,7 @@ describe('CollectionTimelineFeed (COLLECTION variant)', () => {
     const uriFor = (pubky: string, postId: string) => `pubky://${pubky}/pub/pubky.app/posts/${postId}`;
 
     it('hands viewers the envelope membership as composite ids so the feed can mirror changes in place', () => {
-      mockUseParams.mockReturnValue({ userId: 'author-1', postId: 'post-1' });
+      mockUsePathname.mockReturnValue('/collections/author-1/post-1');
       mockAuthState.currentUserPubky = 'viewer-1';
       mockAuthState.session = {};
       mockUsePostDetails.mockReturnValue(envelope([uriFor('author-2', 'item-b'), uriFor('author-1', 'item-a')]));
@@ -172,7 +171,7 @@ describe('CollectionTimelineFeed (COLLECTION variant)', () => {
     });
 
     it('leaves the membership undefined while the envelope is still resolving', () => {
-      mockUseParams.mockReturnValue({ userId: 'author-1', postId: 'post-1' });
+      mockUsePathname.mockReturnValue('/collections/author-1/post-1');
 
       render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} />);
 
@@ -180,7 +179,7 @@ describe('CollectionTimelineFeed (COLLECTION variant)', () => {
     });
 
     it('hands the owner the same local membership as other viewers', () => {
-      mockUseParams.mockReturnValue({ userId: 'author-1', postId: 'post-1' });
+      mockUsePathname.mockReturnValue('/collections/author-1/post-1');
       mockAuthState.currentUserPubky = 'author-1';
       mockAuthState.session = {};
       mockUsePostDetails.mockReturnValue(envelope([uriFor('author-1', 'item-a')]));
@@ -191,7 +190,7 @@ describe('CollectionTimelineFeed (COLLECTION variant)', () => {
     });
 
     it('hands a signed-out viewer the membership too (the public TTL refreshes their envelope)', () => {
-      mockUseParams.mockReturnValue({ userId: 'author-1', postId: 'post-1' });
+      mockUsePathname.mockReturnValue('/collections/author-1/post-1');
       mockUsePostDetails.mockReturnValue(envelope([uriFor('author-1', 'item-a')]));
 
       render(<TimelineFeed variant={TIMELINE_FEED_VARIANT.COLLECTION} />);
@@ -200,7 +199,7 @@ describe('CollectionTimelineFeed (COLLECTION variant)', () => {
     });
 
     it('maps only well-formed item URIs, dropping duplicates', () => {
-      mockUseParams.mockReturnValue({ userId: 'author-1', postId: 'post-1' });
+      mockUsePathname.mockReturnValue('/collections/author-1/post-1');
       mockAuthState.currentUserPubky = 'viewer-1';
       mockAuthState.session = {};
       mockUsePostDetails.mockReturnValue(

@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, usePathname } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { APP_ROUTES } from '@/app/routes';
+import { APP_ROUTES, matchCustomFeedRoute } from '@/app/routes';
 import { FeedController } from '@/controllers/feed/feed';
 import { Logger } from '@/libs/logger/logger';
 import type { FeedModelSchema } from '@/models/feed/feed.schema';
@@ -11,7 +11,8 @@ import type { FeedModelSchema } from '@/models/feed/feed.schema';
 export function useCustomFeed(): FeedModelSchema | undefined {
   const pathname = usePathname();
   const isFeedRoute = pathname.startsWith(APP_ROUTES.FEED);
-  const { id } = useParams<{ id: string }>();
+  // From the path, never `useParams`, which reports the static export's placeholder.
+  const id = matchCustomFeedRoute(pathname)?.id;
 
   // Latch the last known feed id so that intercepted post navigation
   // (URL → /post/...) does not clear it and reset downstream stream state.

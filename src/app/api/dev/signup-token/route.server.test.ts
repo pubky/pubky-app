@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { GET } from './route';
+import { GET } from './route.server';
 
 // Mock global fetch
 const mockFetch = vi.fn();

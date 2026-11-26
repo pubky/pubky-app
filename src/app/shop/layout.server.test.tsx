@@ -10,7 +10,7 @@ import {
   type NetworkRuntimeConfig,
   PUBKY_RUNTIME_ENV_NAMES,
 } from '@/libs/runtime-config/runtime-config.schema';
-import ShopLayout from './layout';
+import ShopLayout from './layout.server';
 
 // ShopEmbed owns the frame lifecycle; this suite covers the production route boundary.
 vi.mock('@/organisms/ShopEmbed/ShopEmbed', () => ({ ShopEmbed: () => <iframe title="Pubky Shop" /> }));

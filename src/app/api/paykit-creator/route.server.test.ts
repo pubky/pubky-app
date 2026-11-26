@@ -6,7 +6,7 @@ import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import { MOCK_LOCK_AUTHOR_PUBKY } from '@/test-utils/locks';
-import { GET } from './route';
+import { GET } from './route.server';
 
 const request = (query: Record<string, string>) =>
   new NextRequest(`http://localhost/api/paykit-creator?${new URLSearchParams(query)}`);

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import PostImage from './opengraph-image';
+import PostImage from './opengraph-image.server';
 
 const PUBKY = 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy';
 const POST_ID = '0035NGP297YG0';

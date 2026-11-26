@@ -27,7 +27,10 @@ import {
   isPublicExploreRoute,
   LEGAL_ROUTES,
   LOGO_LANDING_ROUTES,
+  matchCustomFeedRoute,
+  matchDynamicProfileRoute,
   matchesAllowedRoute,
+  matchInviteRoute,
   matchPostRoute,
   matchProfileRoute,
   matchSingleCollectionRoute,
@@ -422,6 +425,43 @@ describe('matchSingleCollectionRoute', () => {
     expect(matchSingleCollectionRoute('/home')).toBeNull();
     expect(matchSingleCollectionRoute(`/post/${pubky}/${postId}`)).toBeNull();
   });
+});
+
+describe('matchCustomFeedRoute', () => {
+  it('returns the id of a single custom feed', () => {
+    expect(matchCustomFeedRoute('/feed/feed-abc123')).toEqual({ id: 'feed-abc123' });
+  });
+
+  it.each(['/feed', '/feed/feed-abc123/extra', '/home'])('returns null for %s', (pathname) => {
+    expect(matchCustomFeedRoute(pathname)).toBeNull();
+  });
+});
+
+describe('matchInviteRoute', () => {
+  it('returns the raw invite code', () => {
+    expect(matchInviteRoute('/invite/abcd-efgh-ijkl')).toEqual({ inviteCode: 'abcd-efgh-ijkl' });
+  });
+
+  it.each(['/invite', '/invite/abcd/extra', '/onboarding/install'])('returns null for %s', (pathname) => {
+    expect(matchInviteRoute(pathname)).toBeNull();
+  });
+});
+
+describe('matchDynamicProfileRoute', () => {
+  const pubky = PUBKY_52_STAGING_FIXTURE;
+
+  it('returns the raw segment of a profile and of its tabs', () => {
+    expect(matchDynamicProfileRoute(`/profile/${pubky}`)).toEqual({ pubky });
+    expect(matchDynamicProfileRoute(`/profile/${pubky}/followers`)).toEqual({ pubky });
+    expect(matchDynamicProfileRoute(`/profile/pk%3A${pubky}`)).toEqual({ pubky: `pk%3A${pubky}` });
+  });
+
+  it.each(['/profile', `/profile/${PUBKY_52_STAGING_FIXTURE}/followers/extra`, '/home'])(
+    'returns null for %s',
+    (pathname) => {
+      expect(matchDynamicProfileRoute(pathname)).toBeNull();
+    },
+  );
 });
 
 describe('matchPostRoute', () => {

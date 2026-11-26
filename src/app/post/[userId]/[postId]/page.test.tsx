@@ -4,26 +4,26 @@ import type { ReactElement } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Logger } from '@/libs/logger/logger';
 import { POST_COVER_DESKTOP_MEDIA, POST_COVER_MOBILE_MEDIA } from '@/libs/post/postCoverVariant';
-import { SinglePostPage } from '@/templates/Post/SinglePost/SinglePostPage';
 import PostPage, { generateMetadata } from './page';
+import { SinglePostRoute } from './SinglePostRoute';
 
 /**
- * The page returns `[preload link?, SinglePostPage]`, so the post element is the
+ * The page returns `[preload link?, SinglePostRoute]`, so the post element is the
  * child that is not the image preload.
  */
-const getPostElement = (element: ReactElement): ReactElement<{ postId: string }> => {
+const getPostElement = (element: ReactElement): ReactElement => {
   const children = (element.props as { children: ReactElement[] }).children;
-  const post = children.find((child) => child?.type === SinglePostPage);
-  if (!post) throw new Error('PostPage did not render SinglePostPage');
-  return post as ReactElement<{ postId: string }>;
+  const post = children.find((child) => child?.type === SinglePostRoute);
+  if (!post) throw new Error('PostPage did not render SinglePostRoute');
+  return post;
 };
 
 vi.mock('@/templates/Post/SinglePost/SinglePost', () => ({
   SinglePost: ({ postId }: { postId: string }) => <div data-testid="single-post">{postId}</div>,
 }));
 
-vi.mock('@/templates/Post/SinglePost/SinglePostPage', () => ({
-  SinglePostPage: ({ postId }: { postId: string }) => <div data-testid="single-post-page" data-post-id={postId} />,
+vi.mock('./SinglePostRoute', () => ({
+  SinglePostRoute: () => <div data-testid="single-post-route" />,
 }));
 
 // Preserve the rest of next/navigation; only stub permanentRedirect (which
@@ -236,7 +236,7 @@ describe('PostPage (collection redirect)', () => {
     });
 
     expect(permanentRedirect).not.toHaveBeenCalled();
-    expect(getPostElement(element).props.postId).toBe('o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy:post-1');
+    expect(getPostElement(element)).toBeDefined();
   });
 
   it('renders the post (no redirect) when the kind lookup fails', async () => {
@@ -247,7 +247,7 @@ describe('PostPage (collection redirect)', () => {
     });
 
     expect(permanentRedirect).not.toHaveBeenCalled();
-    expect(getPostElement(element).props.postId).toBe('o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy:post-1');
+    expect(getPostElement(element)).toBeDefined();
     expect(document.querySelector('link[rel="preload"]')).toBeNull();
   });
 });

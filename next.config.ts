@@ -1,9 +1,13 @@
+import { withSentryConfig } from '@sentry/nextjs/config';
+import withSerwistInit from '@serwist/next';
 import type { NextConfig } from 'next';
 import { z } from 'zod';
-import withSerwistInit from '@serwist/next';
-import { withSentryConfig } from '@sentry/nextjs/config';
 import packageJson from './package.json';
 import { excludeChunksCarrying } from './src/libs/pwa/precacheExclude';
+
+// The offline bundle: a static export with no app server, served from 127.0.0.1 (docs/offline-bundle.md).
+const isStaticExport = process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
+const PAGE_EXTENSIONS = ['tsx', 'ts', 'jsx', 'js'];
 
 const nextConfig: NextConfig = {
   env: {
@@ -17,12 +21,17 @@ const nextConfig: NextConfig = {
   // is disabled below. Docker builds inject Debug IDs and optionally upload maps when Sentry
   // build credentials are provided; public builds without those credentials skip upload.
   // See docs/sentry.md + ADR 0018.
-  productionBrowserSourceMaps: true,
+  // The offline bundle ships no maps: nothing uploads them, and they would triple the zip.
+  productionBrowserSourceMaps: !isStaticExport,
   experimental: {
     serverSourceMaps: true,
   },
   // Only use standalone output when building for Docker (set NEXT_STANDALONE=true)
   ...(process.env.NEXT_STANDALONE === 'true' && { output: 'standalone' }),
+  // Route handlers, metadata images and pages that need a request are named `*.server.ts(x)`, so
+  // the static export leaves them out and every other build sees today's routes.
+  pageExtensions: isStaticExport ? PAGE_EXTENSIONS : [...PAGE_EXTENSIONS, 'server.tsx', 'server.ts'],
+  ...(isStaticExport && { output: 'export', images: { unoptimized: true } }),
   async rewrites() {
     // Development convenience only. Deployed containers use their reverse proxy so the
     // Shop upstream can change at deploy time without rebuilding the App image.
@@ -44,6 +53,8 @@ const nextConfig: NextConfig = {
     return [{ source: '/shop-embed/:path*', destination: `${new URL(origin).origin}/shop-embed/:path*` }];
   },
   async redirects() {
+    // A static export cannot redirect; the offline bundle's launcher serves these two paths itself.
+    if (isStaticExport) return [];
     return [
       // /profile/[pubky] is the canonical other-user posts view (see app/profile/[pubky]/page.tsx).
       // The legacy /profile/[pubky]/posts route is kept as a 308 permanent redirect so existing
