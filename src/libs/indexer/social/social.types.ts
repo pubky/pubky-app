@@ -67,6 +67,43 @@ export interface TagData {
 /** The payload of a social record. Follows carry none: the path says everything. */
 export type SocialData = UserData | PostData | TagData;
 
+/** What a record is in its author's tree, whichever tree's path spells it. */
+export type SocialRecordKey =
+  | { kind: 'profile' }
+  | { kind: 'follow'; followee: string }
+  | { kind: 'post'; postId: string; editId: string }
+  | { kind: 'tag' };
+
+/**
+ * One layout of the social records on a homeserver: where they live and how its files read into the shapes above.
+ * Two trees never share a path, and the data of either names posts and users by author and id, so references
+ * resolve across trees.
+ */
+export interface SocialTree {
+  /** Names the tree in the ids of the groups that read it beside another. */
+  id: string;
+  /** Path prefixes of the follows and the profile, read in full. */
+  graphPaths: readonly string[];
+  /** Path prefixes of the posts and tags, read within the window. */
+  activityPaths: readonly string[];
+  profilePath: string;
+  /** The path prefix of every version of one post. */
+  postPath(postId: string): string;
+  /** Whether the path lies in the tree. */
+  owns(path: string): boolean;
+  /** The followee of a follow path, `null` for any other path. */
+  followeeOf(path: string): string | null;
+  /** What the path names, `null` for a path of no record the tree reads. */
+  keyOf(author: string, path: string): SocialRecordKey | null;
+  needsBody(path: string): boolean;
+  /** Reads a fetched file, `null` when it is invalid. May throw on any input. */
+  reduce(author: string, path: string, bytes: Uint8Array): SocialData | null;
+  /** The payload when it is exactly what `reduce` makes for the path, else `null`. */
+  reviveData(author: string, path: string, value: unknown): SocialData | null;
+  /** When the write at the path happened, in microseconds, when the path says so, else `null`. */
+  timeOfPath(path: string): bigint | null;
+}
+
 /** How much of one group's history is loaded: the trusted range of its merged runs. */
 export interface GroupHistory {
   /** Whether the trusted range reaches back to the start of the author's event stream. */
@@ -105,4 +142,6 @@ export interface AuthorRecords {
   loose?: ReadonlyMap<string, RecordEntry<SocialData>>;
   deleted?: Deletions;
   history: { graph: GroupHistory; activity: GroupHistory };
+  /** The tree the records were read from, social v1 when absent. Every path of the maps above is one of its own. */
+  tree?: SocialTree;
 }

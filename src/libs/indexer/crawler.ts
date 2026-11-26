@@ -448,8 +448,8 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     for (const user of frontier) {
       const homeserver = homeserverOf.get(user) ?? null;
       if (homeserver === null) continue;
-      const { live } = await store.readScope({ author: user, homeserver, group: scopeGroupId });
-      for (const link of domain.linksOf(live)) {
+      const { live, entries } = await store.readScope({ author: user, homeserver, group: scopeGroupId });
+      for (const link of domain.linksOf(live, entries)) {
         if (members.size >= options.maxUsers) return next;
         if (members.has(link) || skipped.has(link)) continue;
         members.set(link, hop);

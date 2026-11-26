@@ -1,7 +1,7 @@
 import { idMicros } from 'pubky-social-specs';
 import type { Cursor, RecordEntry } from '../indexer.types';
-import { followeeOfPath, locate, PROFILE_PATH } from './social.domain';
-import type { AuthorRecords, SocialData, SocialTarget, TagData, UserData } from './social.types';
+import { socialV1Tree } from './social.domain';
+import type { AuthorRecords, SocialData, SocialTarget, SocialTree, TagData, UserData } from './social.types';
 import type { SocialPost } from './social.view';
 import type { TimeSample } from './timeTable';
 
@@ -67,13 +67,17 @@ export interface AuthorPart {
 }
 
 /** The newest live version of each post of the author, skipped when that version has no data. */
-function postsOf(author: string, records: ReadonlyMap<string, RecordEntry<SocialData>>): SocialPost[] {
+function postsOf(
+  tree: SocialTree,
+  author: string,
+  records: ReadonlyMap<string, RecordEntry<SocialData>>,
+): SocialPost[] {
   const newest = new Map<string, { editId: string; record: RecordEntry<SocialData> }>();
   for (const [path, record] of records) {
-    const at = locate(author, path);
-    if (at === null || at.kind !== 'post' || at.editId === undefined) continue;
-    const current = newest.get(at.id);
-    if (current === undefined || at.editId > current.editId) newest.set(at.id, { editId: at.editId, record });
+    const key = tree.keyOf(author, path);
+    if (key === null || key.kind !== 'post') continue;
+    const current = newest.get(key.postId);
+    if (current === undefined || key.editId > current.editId) newest.set(key.postId, { editId: key.editId, record });
   }
   const posts: SocialPost[] = [];
   for (const [postId, { editId, record }] of newest) {
@@ -86,23 +90,27 @@ function postsOf(author: string, records: ReadonlyMap<string, RecordEntry<Social
 }
 
 /** Every post version is a sample: its edit id holds the time it was written. */
-function samplesOf(author: string, records: ReadonlyMap<string, RecordEntry<SocialData>>, into: TimeSample[]): void {
+function samplesOf(
+  tree: SocialTree,
+  author: string,
+  records: ReadonlyMap<string, RecordEntry<SocialData>>,
+  into: TimeSample[],
+): void {
   for (const [path, record] of records) {
-    const at = locate(author, path);
-    if (at !== null && at.kind === 'post' && at.editId !== undefined) {
-      into.push({ cursor: record.cursor, ms: msOf(at.editId) });
-    }
+    const key = tree.keyOf(author, path);
+    if (key !== null && key.kind === 'post') into.push({ cursor: record.cursor, ms: msOf(key.editId) });
   }
 }
 
 export function authorPartOf(records: AuthorRecords): AuthorPart {
   const { author, membership } = records;
+  const tree = records.tree ?? socialV1Tree;
   const loose = records.loose ?? NO_RECORDS;
-  const stored = records.graph.get(PROFILE_PATH);
+  const stored = records.graph.get(tree.profilePath);
   const profile = stored?.data?.type === 'user' ? stored.data : null;
   const byId = new Map<string, SocialPost>();
   // A post in an author's stream wins over the same post loaded alone.
-  for (const post of postsOf(author, loose)) byId.set(post.postId, post);
+  for (const post of postsOf(tree, author, loose)) byId.set(post.postId, post);
   const samples: TimeSample[] = [];
   const base = {
     records,
@@ -112,20 +120,20 @@ export function authorPartOf(records: AuthorRecords): AuthorPart {
     samples,
   };
   if (membership === 'referenced') {
-    samplesOf(author, loose, samples);
+    samplesOf(tree, author, loose, samples);
     return { ...base, following: NONE, followCursors: new Map(), posts: NONE, tags: NONE };
   }
-  samplesOf(author, records.activity, samples);
-  samplesOf(author, loose, samples);
+  samplesOf(tree, author, records.activity, samples);
+  samplesOf(tree, author, loose, samples);
   const following: string[] = [];
   const followCursors = new Map<string, Cursor>();
   for (const [path, record] of records.graph) {
-    const followee = followeeOfPath(path);
+    const followee = tree.followeeOf(path);
     if (followee === null) continue;
     following.push(followee);
     followCursors.set(followee, record.cursor);
   }
-  const posts = postsOf(author, records.activity);
+  const posts = postsOf(tree, author, records.activity);
   for (const post of posts) byId.set(post.postId, post);
   const tags: AuthoredTag[] = [];
   for (const record of records.activity.values()) {

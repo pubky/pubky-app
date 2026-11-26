@@ -12,14 +12,18 @@ import {
   tryDecodeObject,
   type User,
 } from 'pubky-social-specs';
+import type { LeafRequest } from '../crawler.types';
 import type { Domain } from '../domain.types';
+import type { Entry } from '../indexer.types';
 import { parseMentions } from './mentions';
 import type {
   AttachmentData,
   CollectionItemData,
   PostData,
   SocialData,
+  SocialRecordKey,
   SocialTarget,
+  SocialTree,
   TagData,
   UserData,
   UserLinkData,
@@ -298,39 +302,124 @@ function isTagData(value: Fields): value is Fields & TagData {
   );
 }
 
-/** The payload when it is exactly what `reduce` would make for the path, else `null`. */
-function reviveData(author: string, path: string, value: unknown): SocialData | null {
-  const at = locate(author, path);
-  if (at === null || at.root !== 'public' || !isFields(value)) return null;
-  if (at.kind === 'user') return isUserData(value) ? value : null;
-  if (at.kind === 'post' && at.editId !== undefined) return isPostData(value, at.id, at.editId) ? value : null;
-  if (at.kind === 'tag') return isTagData(value) ? value : null;
+/** The payload when it has exactly the shape `reduce` makes for a record of this key, else `null`. Any tree's. */
+export function reviveAs(key: SocialRecordKey | null, value: unknown): SocialData | null {
+  if (key === null || !isFields(value)) return null;
+  if (key.kind === 'profile') return isUserData(value) ? value : null;
+  if (key.kind === 'post') return isPostData(value, key.postId, key.editId) ? value : null;
+  if (key.kind === 'tag') return isTagData(value) ? value : null;
   return null;
 }
 
-/** The social v1 public tree: follows and the profile in full, posts and tags within the window. */
-export function createSocialDomain(): Domain<SocialData> {
+const PROFILE_KEY: SocialRecordKey = Object.freeze({ kind: 'profile' });
+const TAG_KEY: SocialRecordKey = Object.freeze({ kind: 'tag' });
+
+/** What a v1 path names in the author's public tree. */
+function keyOf(author: string, path: string): SocialRecordKey | null {
+  if (path === PROFILE_PATH) return PROFILE_KEY;
+  const followee = followeeOfPath(path);
+  if (followee !== null) return { kind: 'follow', followee };
+  const at = locate(author, path);
+  if (at === null || at.root !== 'public') return null;
+  if (at.kind === 'post' && at.editId !== undefined) return { kind: 'post', postId: at.id, editId: at.editId };
+  return at.kind === 'tag' ? TAG_KEY : null;
+}
+
+/** The social v1 public tree. */
+export const socialV1Tree: SocialTree = Object.freeze({
+  id: 'v1',
+  graphPaths: Object.freeze([FOLLOWS_PREFIX, PROFILE_PATH]),
+  activityPaths: Object.freeze([POSTS_PREFIX, TAGS_PREFIX]),
+  profilePath: PROFILE_PATH,
+  postPath: (postId: string) => `${POSTS_PREFIX}${postId}/`,
+  owns: (path: string) => path.startsWith(SOCIAL_ROOT),
+  followeeOf: followeeOfPath,
+  keyOf,
+  needsBody: (path: string) => path === PROFILE_PATH || path.startsWith(TAGS_PREFIX) || postIdOfPath(path) !== null,
+  reduce,
+  reviveData: (author: string, path: string, value: unknown) => reviveAs(keyOf(author, path), value),
+  // A version's own id, not the post's: an edit of an old post is written now.
+  timeOfPath: (path: string) => {
+    const editId = editIdOfPath(path);
+    return editId === null ? null : BigInt(idMicros(editId));
+  },
+});
+
+/** The social domain with what the social indexer needs beyond the crawler's part. */
+export interface SocialDomain extends Domain<SocialData> {
+  /** The trees read, social v1 first. */
+  readonly trees: readonly SocialTree[];
+  /** The group of the follows and profiles, which scopes the crawl. */
+  readonly graphGroup: string;
+  /** The group of the posts and tags, read within the window. */
+  readonly activityGroup: string;
+  /** The leaf group of a profile loaded alone. */
+  readonly profileGroup: string;
+  /** The leaf scope holding a user's profile alone. */
+  profileLeaf(user: string): LeafRequest;
+  /** The leaf scope holding every version of one post. */
+  postLeaf(author: string, postId: string): LeafRequest;
+  /**
+   * The one tree an author is read through, from any of their scopes' entries. Social v1 once it holds a profile event
+   * of the author, a tombstone included, since a move never goes back and the move copies the older tree; the older
+   * tree while only it holds their records; social v1 when neither does.
+   */
+  treeOf(scopes: Iterable<ReadonlyMap<string, Entry<SocialData>>>): SocialTree;
+}
+
+/**
+ * The social v1 public tree: follows and the profile in full, posts and tags within the window. With `legacyTree`,
+ * that tree is read too, for the authors who have not moved to social v1 (`treeOf`). Its groups then take other ids,
+ * so stored history or a saved index read without it never passes for history read with it.
+ */
+export function createSocialDomain(legacyTree?: SocialTree): SocialDomain {
+  const trees: readonly SocialTree[] = legacyTree === undefined ? [socialV1Tree] : [socialV1Tree, legacyTree];
+  const named = (group: string) => (legacyTree === undefined ? group : `${group}+${legacyTree.id}`);
+  const graphGroup = named(SOCIAL_GRAPH);
+  const activityGroup = named(SOCIAL_ACTIVITY);
+  const profileGroup = named('profile');
+  const postGroup = named('post');
+  const treeAt = (path: string): SocialTree | null => trees.find((tree) => tree.owns(path)) ?? null;
+  const treeOf = (scopes: Iterable<ReadonlyMap<string, Entry<SocialData>>>): SocialTree => {
+    if (legacyTree === undefined) return socialV1Tree;
+    let legacy = false;
+    for (const entries of scopes) {
+      if (entries.has(socialV1Tree.profilePath)) return socialV1Tree;
+      if (!legacy) for (const path of entries.keys()) if (legacyTree.owns(path)) legacy = true;
+    }
+    return legacy ? legacyTree : socialV1Tree;
+  };
   return {
     groups: [
-      { id: SOCIAL_GRAPH, paths: [FOLLOWS_PREFIX, PROFILE_PATH], history: 'full' },
-      { id: SOCIAL_ACTIVITY, paths: [POSTS_PREFIX, TAGS_PREFIX], history: 'window' },
+      { id: graphGroup, paths: trees.flatMap((tree) => tree.graphPaths), history: 'full' },
+      { id: activityGroup, paths: trees.flatMap((tree) => tree.activityPaths), history: 'window' },
     ],
-    scopeGroup: SOCIAL_GRAPH,
-    linksOf: (live) => [...live.keys()].flatMap((path) => followeeOfPath(path) ?? []),
-    needsBody: (path) => path === PROFILE_PATH || path.startsWith(TAGS_PREFIX) || postIdOfPath(path) !== null,
+    scopeGroup: graphGroup,
+    linksOf: (live, entries) => {
+      const tree = treeOf([entries ?? live]);
+      return [...live.keys()].flatMap((path) => tree.followeeOf(path) ?? []);
+    },
+    needsBody: (path) => treeAt(path)?.needsBody(path) ?? false,
     reduce: (author, path, bytes) => {
       // Someone else's bytes can be anything; nothing in them may stop a crawl.
       try {
-        return reduce(author, path, bytes);
+        return treeAt(path)?.reduce(author, path, bytes) ?? null;
       } catch {
         return null;
       }
     },
-    // A version's own id, not the post's: an edit of an old post is written now.
-    timeOfPath: (path) => {
-      const editId = editIdOfPath(path);
-      return editId === null ? null : BigInt(idMicros(editId));
-    },
-    reviveData,
+    timeOfPath: (path) => treeAt(path)?.timeOfPath(path) ?? null,
+    reviveData: (author, path, value) => treeAt(path)?.reviveData(author, path, value) ?? null,
+    trees,
+    graphGroup,
+    activityGroup,
+    profileGroup,
+    profileLeaf: (user) => ({ author: user, group: profileGroup, paths: trees.map((tree) => tree.profilePath) }),
+    postLeaf: (author, postId) => ({
+      author,
+      group: `${postGroup}:${postId}`,
+      paths: trees.map((tree) => tree.postPath(postId)),
+    }),
+    treeOf,
   };
 }

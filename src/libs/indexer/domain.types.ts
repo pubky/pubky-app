@@ -1,4 +1,4 @@
-import type { RecordEntry } from './indexer.types';
+import type { Entry, RecordEntry } from './indexer.types';
 
 /**
  * A set of path prefixes crawled together. `full` keeps an author's whole history; `window` starts at the
@@ -15,7 +15,8 @@ export interface Domain<D> {
   groups: PathGroup[];
   /** The group, with `full` history, whose live records name the users an author links to. */
   scopeGroup: string;
-  linksOf(live: ReadonlyMap<string, RecordEntry<D>>): string[];
+  /** `entries` are the scope's merged entries, tombstones included, when the caller has them. */
+  linksOf(live: ReadonlyMap<string, RecordEntry<D>>, entries?: ReadonlyMap<string, Entry<D>>): string[];
   /** True when the record needs its file fetched to be useful. */
   needsBody(path: string): boolean;
   /** Parses and validates a fetched file. `null` means invalid: the record is kept without data. */

@@ -1,6 +1,6 @@
 import { IndexerError } from '../indexer.errors';
 import type { Cursor, RecordEntry } from '../indexer.types';
-import { locate } from './social.domain';
+import { socialV1Tree } from './social.domain';
 import type { AuthorRecords, SocialData, SocialTarget } from './social.types';
 import type { SocialView } from './social.view';
 
@@ -30,12 +30,12 @@ function subjects(records: readonly AuthorRecords[], views: readonly SocialView[
     users.add(target.author);
     if (target.kind === 'post') addPost(target.author, target.postId);
   };
-  for (const { author, graph, activity, loose, deleted } of records) {
+  for (const { author, graph, activity, loose, deleted, tree = socialV1Tree } of records) {
     users.add(author);
     for (const map of [graph, activity, loose ?? NO_RECORDS]) {
       for (const path of map.keys()) {
-        const at = locate(author, path);
-        if (at?.kind === 'post') addPost(author, at.id);
+        const key = tree.keyOf(author, path);
+        if (key?.kind === 'post') addPost(author, key.postId);
       }
     }
     for (const postId of deleted?.posts ?? []) addPost(author, postId);

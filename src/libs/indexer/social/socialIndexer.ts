@@ -9,13 +9,10 @@ import type { IndexStore, ScopeKey } from '../store.types';
 import type { IndexerTransport } from '../transport.types';
 import { createNexusRouter, type NexusRequest, type NexusResponse, type NexusRouter } from './nexusRouter';
 import { createSocialQueries } from './queries/socialQueries';
-import { createSocialDomain, locate, POSTS_PREFIX, PROFILE_PATH, SOCIAL_ACTIVITY, SOCIAL_GRAPH } from './social.domain';
-import type { AuthorRecords, GroupHistory, Membership, SocialData } from './social.types';
+import { createSocialDomain, SOCIAL_ACTIVITY, SOCIAL_GRAPH, type SocialDomain } from './social.domain';
+import type { AuthorRecords, GroupHistory, Membership, SocialData, SocialTree } from './social.types';
 import { findViewMismatch, ViewMismatchError } from './social.verify';
 import { buildSocialState, buildSocialView, type SocialState, type SocialView, updateSocialState } from './social.view';
-
-const POST_GROUP_PREFIX = 'post:';
-const PROFILE_GROUP = 'profile';
 
 /**
  * What one tab keeps loaded on demand. Past a limit the least recently ensured item leaves the view and its scopes
@@ -53,6 +50,11 @@ export interface SocialIndexerParams {
   /** Its owner closes it: the indexer never does. */
   coordination?: Coordination | null;
   options?: Partial<RuntimeOptions & SocialLimits & SocialViewOptions>;
+  /**
+   * An older tree to read as well, for the authors who have not moved to social v1: each author is read through one
+   * tree (`SocialDomain.treeOf`). Off without it.
+   */
+  legacyTree?: SocialTree;
 }
 
 /** What changed, for narrow invalidation: follows, posts and tags, or profiles. */
@@ -120,7 +122,8 @@ export interface SocialIndexer {
    */
   setExcluded(users: Iterable<string>): void;
   /**
-   * Loads up to `pages` pages of the author's older history of the group. Rate limited per author and group unless
+   * Loads up to `pages` pages of the author's older history of the group, `SOCIAL_GRAPH` or `SOCIAL_ACTIVITY` whatever
+   * trees are read. Rate limited per author and group unless
    * `force` (`backfillMinIntervalMs`). Resolves once the view holds the step, at once when the step committed
    * nothing; rejects when the step fails.
    */
@@ -143,12 +146,10 @@ export interface SocialIndexer {
   onStatus(listener: (status: RuntimeStatus) => void): () => void;
 }
 
-/** The leaf scope holding a user's profile alone. */
-export const profileLeaf = (user: string): LeafRequest => ({
-  author: user,
-  group: PROFILE_GROUP,
-  paths: [PROFILE_PATH],
-});
+const V1_DOMAIN = createSocialDomain();
+
+/** The leaf scope holding a user's profile alone, with social v1 alone. */
+export const profileLeaf = (user: string): LeafRequest => V1_DOMAIN.profileLeaf(user);
 
 /** Moves `key` to the most recent end and returns the values pushed out past `max`, least recent first. */
 function touch<V>(items: Map<string, V>, key: string, value: V, max: number): V[] {
@@ -163,12 +164,8 @@ function touch<V>(items: Map<string, V>, key: string, value: V, max: number): V[
   return out;
 }
 
-/** The leaf scope holding every version of one post. */
-export const postLeaf = (author: string, postId: string): LeafRequest => ({
-  author,
-  group: `${POST_GROUP_PREFIX}${postId}`,
-  paths: [`${POSTS_PREFIX}${postId}/`],
-});
+/** The leaf scope holding every version of one post, with social v1 alone. */
+export const postLeaf = (author: string, postId: string): LeafRequest => V1_DOMAIN.postLeaf(author, postId);
 
 const NOTHING: MergedRuns<SocialData> = { entries: new Map(), live: new Map(), coverage: [], trusted: null };
 
@@ -187,7 +184,7 @@ const isTrusted = ({ trusted }: MergedRuns<SocialData>, { cursor }: Entry<Social
   trusted !== null && cursor > trusted.tail && cursor <= trusted.head;
 
 /** The posts whose every version's newest entry over these scopes of one author is a trusted tombstone. */
-function deletedPosts(author: string, scopes: readonly MergedRuns<SocialData>[]): Set<string> {
+function deletedPosts(tree: SocialTree, author: string, scopes: readonly MergedRuns<SocialData>[]): Set<string> {
   const newest = new Map<string, { cursor: Cursor; proof: boolean }>();
   for (const scope of scopes) {
     for (const [path, entry] of scope.entries) {
@@ -200,9 +197,9 @@ function deletedPosts(author: string, scopes: readonly MergedRuns<SocialData>[])
   }
   const verdicts = new Map<string, boolean>();
   for (const [path, { proof }] of newest) {
-    const at = locate(author, path);
-    if (at === null || at.kind !== 'post' || at.editId === undefined) continue;
-    verdicts.set(at.id, (verdicts.get(at.id) ?? true) && proof);
+    const key = tree.keyOf(author, path);
+    if (key === null || key.kind !== 'post') continue;
+    verdicts.set(key.postId, (verdicts.get(key.postId) ?? true) && proof);
   }
   return new Set([...verdicts].flatMap(([postId, deleted]) => (deleted ? [postId] : [])));
 }
@@ -231,8 +228,18 @@ const inputsOf = ({ homeserver, membership, hop, graph, activity, leaves }: Load
 const sameInputs = (a: readonly unknown[], b: readonly unknown[]) =>
   a.length === b.length && a.every((input, i) => input === b[i]);
 
-function authorRecords(author: string, loaded: Loaded): AuthorRecords {
+/** The records the tree owns, the same map when it is the only tree read. */
+function ownRecords(
+  domain: SocialDomain,
+  tree: SocialTree,
+  records: ReadonlyMap<string, RecordEntry<SocialData>>,
+): ReadonlyMap<string, RecordEntry<SocialData>> {
+  return domain.trees.length === 1 ? records : new Map([...records].filter(([path]) => tree.owns(path)));
+}
+
+function authorRecords(domain: SocialDomain, author: string, loaded: Loaded): AuthorRecords {
   const { homeserver, membership, hop, graph, activity, leaves } = loaded;
+  const tree = domain.treeOf([graph.entries, activity.entries, ...leaves.map(({ entries }) => entries)]);
   const loose = new Map<string, RecordEntry<SocialData>>();
   for (const leaf of leaves) {
     for (const [path, record] of leaf.live) {
@@ -240,21 +247,23 @@ function authorRecords(author: string, loaded: Loaded): AuthorRecords {
       if (stored === undefined || record.cursor > stored.cursor) loose.set(path, record);
     }
   }
-  const profile = graph.entries.get(PROFILE_PATH);
-  return {
+  const profile = graph.entries.get(tree.profilePath);
+  const records: AuthorRecords = {
     author,
     homeserver,
     membership,
     hop,
-    graph: graph.live,
-    activity: activity.live,
-    loose,
+    graph: ownRecords(domain, tree, graph.live),
+    activity: ownRecords(domain, tree, activity.live),
+    loose: ownRecords(domain, tree, loose),
     deleted: {
-      posts: deletedPosts(author, [activity, ...leaves]),
+      posts: deletedPosts(tree, author, [activity, ...leaves]),
       profile: profile !== undefined && profile.kind === 'tombstone' && isTrusted(graph, profile),
     },
     history: { graph: historyOf(graph), activity: historyOf(activity) },
   };
+  if (domain.trees.length > 1) records.tree = tree;
+  return records;
 }
 
 const sameList = (a: readonly string[], b: readonly string[]) => a.length === b.length && a.every((x, i) => x === b[i]);
@@ -283,7 +292,8 @@ const membershipsOf = (loaded: ReadonlyMap<string, Loaded>) =>
 export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer {
   const { store, now } = params;
   const limits: SocialLimits = { ...DEFAULT_SOCIAL_LIMITS, ...params.options };
-  const domain = createSocialDomain();
+  const domain = createSocialDomain(params.legacyTree);
+  const { graphGroup, activityGroup, profileGroup } = domain;
   const runtime = createIndexerRuntime({ ...params, domain });
   const verifyView = params.options?.verifyView ?? false;
   const emptyState = buildSocialState([]);
@@ -363,9 +373,8 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
     if (loaded.has(author)) return;
     const homeserver = await homeserverOf(author);
     if (homeserver === null) return;
-    const graph = await served({ author, homeserver, group: SOCIAL_GRAPH });
-    const activity =
-      membership === 'referenced' ? NOTHING : await served({ author, homeserver, group: SOCIAL_ACTIVITY });
+    const graph = await served({ author, homeserver, group: graphGroup });
+    const activity = membership === 'referenced' ? NOTHING : await served({ author, homeserver, group: activityGroup });
     loaded.set(author, { homeserver, membership, hop, graph, activity, leaves: [] });
   }
 
@@ -393,8 +402,8 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
       await load(loaded, leaf.author, 'referenced', null);
       const target = loaded.get(leaf.author);
       if (target === undefined || target.membership !== 'referenced' || target.homeserver !== homeserver) continue;
-      const stored = target.graph.entries.get(PROFILE_PATH);
-      const fresh = scope.entries.get(PROFILE_PATH);
+      const stored = target.graph.entries.get(domain.treeOf([target.graph.entries]).profilePath);
+      const fresh = scope.entries.get(domain.treeOf([scope.entries]).profilePath);
       if (fresh !== undefined && (stored === undefined || fresh.cursor > stored.cursor)) target.graph = scope;
     }
   }
@@ -404,9 +413,9 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
     pendingForgotten = [];
     for (const scope of forgotten) {
       // An activity scope may stay empty for a user who is loaded; the graph says.
-      if (scope.group === SOCIAL_ACTIVITY || (await store.readCoverage(scope)).length > 0) continue;
-      if (scope.group === SOCIAL_GRAPH) ensuredUsers.delete(scope.author);
-      else if (scope.group === PROFILE_GROUP) ensuredProfiles.delete(scope.author);
+      if (scope.group === activityGroup || (await store.readCoverage(scope)).length > 0) continue;
+      if (scope.group === graphGroup) ensuredUsers.delete(scope.author);
+      else if (scope.group === profileGroup) ensuredProfiles.delete(scope.author);
       else ensuredPosts.delete(JSON.stringify([scope.author, scope.group]));
     }
   }
@@ -421,7 +430,7 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
       const next: string[] = [];
       for (const user of frontier) {
         const graph = loaded.get(user)?.graph;
-        for (const link of graph === undefined ? [] : domain.linksOf(graph.live)) {
+        for (const link of graph === undefined ? [] : domain.linksOf(graph.live, graph.entries)) {
           if (reached.has(link) || excluded.has(link) || loaded.get(link)?.membership !== 'member') continue;
           reached.add(link);
           next.push(link);
@@ -439,7 +448,7 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
     const inputs = inputsOf(loaded);
     const known = built.get(author);
     if (known !== undefined && sameInputs(known.inputs, inputs)) return known.records;
-    const records = authorRecords(author, loaded);
+    const records = authorRecords(domain, author, loaded);
     built.set(author, { inputs, records });
     return records;
   }
@@ -535,7 +544,7 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
     for (const scope of change.scopes) {
       const id = scopeId(scope);
       changeCounts.set(id, (changeCounts.get(id) ?? 0) + 1);
-      if (scope.group !== SOCIAL_GRAPH && scope.group !== PROFILE_GROUP) pendingActivity = true;
+      if (scope.group !== graphGroup && scope.group !== profileGroup) pendingActivity = true;
     }
     void requestRebuild(change.scopes.map(({ author }) => author));
   });
@@ -569,10 +578,11 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
     options?: { force?: boolean },
   ): Promise<BackfillOutcome> {
     const before = new Set(current.postsBy(author).map(({ postId }) => postId));
-    const step = await runtime.backfill(author, group, pages, options);
+    const stored = group === SOCIAL_ACTIVITY ? activityGroup : group === SOCIAL_GRAPH ? graphGroup : group;
+    const step = await runtime.backfill(author, stored, pages, options);
     // Changes reach the view debounced; a rebuild of its own makes the step visible before this resolves.
     if (step !== null && step.pages > 0) await requestRebuild([]);
-    const tail = step === null ? await storedTail(author, group) : step.tail;
+    const tail = step === null ? await storedTail(author, stored) : step.tail;
     const complete = tail === CURSOR_ZERO;
     return {
       status: step === null ? 'skipped' : 'ran',
@@ -591,12 +601,12 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
   }
 
   function ensurePostAlone(author: string, postId: string): Promise<void> {
-    const leaf = postLeaf(author, postId);
+    const leaf = domain.postLeaf(author, postId);
     return ensureLeaf(ensuredPosts, JSON.stringify([author, leaf.group]), leaf, limits.maxLoosePosts);
   }
 
   function ensureProfile(user: string): Promise<void> {
-    return ensureLeaf(ensuredProfiles, user, profileLeaf(user), limits.maxProfiles);
+    return ensureLeaf(ensuredProfiles, user, domain.profileLeaf(user), limits.maxProfiles);
   }
 
   /** Never rejects: the post loads without it. */
@@ -624,10 +634,10 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
     if (post === null) return;
     for (const target of [post.data.parent, post.data.embed]) {
       if (target === null || target.kind !== 'post' || current.post(target.author, target.postId) !== null) continue;
-      const leaf = postLeaf(target.author, target.postId);
+      const leaf = domain.postLeaf(target.author, target.postId);
       prefetchLeaf(ensuredPosts, JSON.stringify([target.author, leaf.group]), leaf, limits.maxLoosePosts);
       if (current.profile(target.author) === null) {
-        prefetchLeaf(ensuredProfiles, target.author, profileLeaf(target.author), limits.maxProfiles);
+        prefetchLeaf(ensuredProfiles, target.author, domain.profileLeaf(target.author), limits.maxProfiles);
       }
     }
   }
