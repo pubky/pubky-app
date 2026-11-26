@@ -466,7 +466,7 @@ describe('Settings — locks — visual regression', () => {
   it('renders locks not set up at desktop viewport', async () => {
     locksState.status = 'not-set-up';
     const screen = await renderSettingsTab(SETTINGS_ROUTES.LOCKS, <Locks />, VRT_VIEWPORT_DESKTOP);
-    await expect.element(screen.getByText('Enable Locks to earn from your content.')).toBeVisible();
+    await expect.element(screen.getByText('Enable Locks to earn money from your content.')).toBeVisible();
     await matchVrtFrameScreenshot('settings-locks-not-set-up-desktop');
   });
 });
