@@ -208,12 +208,12 @@ describe('backfill', () => {
     const scope = { author: 'alice', homeserver: 'hs1', group: ACTIVITY };
     const once = await crawler.backfill('alice', ACTIVITY, 1);
 
-    expect(once).toEqual({ tail: old[7] - BigInt(1), pages: 1 });
+    expect(once).toEqual({ tail: old[7] - BigInt(1), pages: 1, events: 5 });
     // Each page joins the top range, so the coverage stays one range.
     expect(await store.readCoverage(scope)).toHaveLength(1);
     expect(await served(store, 'alice', 'hs1', ACTIVITY)).toEqual(network.liveOf('alice', [POSTS], old[7] - BigInt(1)));
 
-    expect(await crawler.backfill('alice', ACTIVITY, 10)).toEqual({ tail: CURSOR_ZERO, pages: 2 });
+    expect(await crawler.backfill('alice', ACTIVITY, 10)).toEqual({ tail: CURSOR_ZERO, pages: 2, events: 7 });
     expect(await served(store, 'alice', 'hs1', ACTIVITY)).toEqual(network.liveOf('alice', [POSTS]));
     expect(await store.readCoverage(scope)).toEqual([{ tail: CURSOR_ZERO, head: network.headOf('hs1') }]);
   });
@@ -265,9 +265,9 @@ describe('backfill', () => {
     const scope = { author: 'alice', homeserver: 'hs1', group: ACTIVITY };
 
     // The window starts at the newest old post, which lies outside the range: the first page reads it too.
-    expect(await crawler.backfill('alice', ACTIVITY, 2)).toEqual({ tail: old[0] - BigInt(1), pages: 2 });
+    expect(await crawler.backfill('alice', ACTIVITY, 2)).toEqual({ tail: old[0] - BigInt(1), pages: 2, events: 10 });
     expect(await store.readCoverage(scope)).toHaveLength(1);
-    expect(await crawler.backfill('alice', ACTIVITY, 5)).toEqual({ tail: CURSOR_ZERO, pages: 1 });
+    expect(await crawler.backfill('alice', ACTIVITY, 5)).toEqual({ tail: CURSOR_ZERO, pages: 1, events: 0 });
     expect(await store.readCoverage(scope)).toEqual([{ tail: CURSOR_ZERO, head: network.headOf('hs1') }]);
     expect(await served(store, 'alice', 'hs1', ACTIVITY)).toEqual(network.liveOf('alice', [POSTS]));
   });

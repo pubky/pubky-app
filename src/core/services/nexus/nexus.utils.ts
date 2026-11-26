@@ -251,7 +251,7 @@ const isOneEntityRead = (url: string): boolean =>
  * `force` skips the index's rate limit on an author's older history. A stream page asks for it once per scroll, and
  * a load skipped there would serve a short page, which ends the feed.
  */
-function startHintLoad(indexer: SocialIndexer, hint: MoreHint, force: boolean): Promise<void> {
+function startHintLoad(indexer: SocialIndexer, hint: MoreHint, force: boolean): Promise<unknown> {
   switch (hint.kind) {
     case 'user':
       return indexer.ensureUser(hint.user);

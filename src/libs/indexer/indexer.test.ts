@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { ACTIVITY, DAY_MS, FOLLOWS, GRAPH, NOW, type Post, postPath, POSTS, testDomain } from './crawler.fixtures';
 import type { StoreChange } from './crawler.types';
+import { CURSOR_ZERO } from './cursor';
 import { FakeNetwork } from './fakeNetwork';
 import { createIndexerRuntime } from './indexer';
 import { RequestTimeoutError } from './indexer.errors';
@@ -358,24 +359,50 @@ describe('createIndexerRuntime requests that never settle', () => {
 });
 
 describe('createIndexerRuntime backfill', () => {
-  it('backfills an author’s group at most once per interval unless forced', async () => {
-    const w = world();
+  /** alice follows bob, whose two oldest posts lie outside the window. */
+  function windowedWorld(): World {
+    const network = new FakeNetwork();
+    network.addHomeserver('hs1').addUser('alice', 'hs1').addUser('bob', 'hs1');
+    network.put('alice', `${FOLLOWS}bob`);
+    network.putJson('bob', postPath(90 * DAY_MS), { text: 'oldest' });
+    network.putJson('bob', postPath(60 * DAY_MS), { text: 'old' });
+    network.putJson('bob', postPath(DAY_MS), { text: 'recent' });
+    return { network, store: createMemoryStore<Post>(), time: fakeTime(NOW) };
+  }
+
+  it('settles a step with what it read, shares a running one, and skips with null within the interval', async () => {
+    const w = windowedWorld();
     const { runtime } = runtimeOf(w);
     runtime.start('alice');
     await settle();
 
     const first = runtime.backfill('bob', ACTIVITY, 1);
-    expect(runtime.backfill('bob', ACTIVITY, 2)).toBe(first);
-    await first;
-    expect(runtime.backfill('bob', ACTIVITY, 1)).toBe(first);
+    const joined = runtime.backfill('bob', ACTIVITY, 2, { force: true });
+    const step = await first;
+    expect(step).toEqual({ tail: CURSOR_ZERO, pages: 1, events: 2 });
+    expect(await joined).toEqual(step);
+    expect(await runtime.backfill('bob', ACTIVITY, 1)).toBeNull();
 
-    const forced = runtime.backfill('bob', ACTIVITY, 1, { force: true });
-    expect(forced).not.toBe(first);
-    await forced;
+    expect(await runtime.backfill('bob', ACTIVITY, 1, { force: true })).toEqual({
+      tail: CURSOR_ZERO,
+      pages: 0,
+      events: 0,
+    });
     await w.time.advance(30 * 1000);
-    const later = runtime.backfill('bob', ACTIVITY, 1);
-    expect(later).not.toBe(forced);
-    await later;
+    expect(await runtime.backfill('bob', ACTIVITY, 1)).not.toBeNull();
+  });
+
+  it('settles a step the crawling tab ran with that step', async () => {
+    const w = windowedWorld();
+    const tabs = createTabs();
+    const first = runtimeOf(w, tabs.join());
+    const second = runtimeOf(w, tabs.join());
+    first.runtime.start('alice');
+    second.runtime.start('alice');
+    await settle();
+
+    expect(await second.runtime.backfill('bob', ACTIVITY, 1)).toEqual({ tail: CURSOR_ZERO, pages: 1, events: 2 });
+    expect(second.state.reads).toEqual([]);
   });
 });
 

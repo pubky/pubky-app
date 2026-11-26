@@ -563,16 +563,17 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     if (group === undefined) throw new InvalidIndexInputError(`unknown group ${groupId}`);
     const ctx = contextOf(signal);
     const homeserver = (await store.readUserHomeserver(author))?.homeserver ?? null;
-    if (homeserver === null) return { tail: null, pages: 0 };
+    if (homeserver === null) return { tail: null, pages: 0, events: 0 };
     const scope = { author, homeserver, group: group.id };
     const limit = options.backfillPageLimit;
     const read = reader(ctx, homeserver, group.paths, limit);
+    let events = 0;
     for (let done = 0; ; done += 1) {
       // Re-read each time: the new run may join a lower stored range, and reading resumes below it.
       const coverage = await store.readCoverage(scope);
       const trusted = coverage.length === 0 ? null : coverage[coverage.length - 1];
-      if (trusted === null) return { tail: null, pages: done };
-      if (done >= pages || trusted.tail === CURSOR_ZERO) return { tail: trusted.tail, pages: done };
+      if (trusted === null) return { tail: null, pages: done, events };
+      if (done >= pages || trusted.tail === CURSOR_ZERO) return { tail: trusted.tail, pages: done, events };
       // The tail itself is outside the range, so read from one above it.
       const page = await read([{ user: author, cursor: trusted.tail + ONE }], true);
       const lowest = page.reduce<Cursor | null>(
@@ -584,6 +585,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
       const run = foldEvents<D>(scope, tail, trusted.tail, page);
       await attachBodies(ctx, [run]);
       await commit({ applyRuns: [run] }, { scopes: [scopeOf(run)], seeds: [] });
+      events += page.length;
     }
   }
 

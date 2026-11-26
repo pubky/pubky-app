@@ -1,5 +1,5 @@
 import type { Schedule } from './concurrency';
-import type { CrawlerOptions, CrawlerStats, LeafRequest, StoreChange } from './crawler.types';
+import type { BackfillResult, CrawlerOptions, CrawlerStats, LeafRequest, StoreChange } from './crawler.types';
 import type { Domain } from './domain.types';
 import type { IndexStore } from './store.types';
 import type { IndexerTransport } from './transport.types';
@@ -70,7 +70,7 @@ export type CoordinationMessage =
   | { type: 'leader'; seed: string }
   /** Asks the crawling tab of the seed to run a crawl and answer with `settled`. */
   | { type: 'request'; seed: string; id: string; request: CrawlRequest }
-  | { type: 'settled'; id: string; error: string | null }
+  | { type: 'settled'; id: string; error: string | null; backfill?: BackfillResult }
   /** The sender finished a scope sync of the seed at `at` (ms). */
   | { type: 'synced'; seed: string; at: number };
 
@@ -157,10 +157,11 @@ export interface IndexerRuntime {
   ensureUser(user: string): Promise<void>;
   ensureLeaf(leaf: LeafRequest): Promise<void>;
   /**
-   * Shares a call while one for the same author and group is pending, and settles at once, doing nothing, within
-   * `backfillMinIntervalMs` after one finished, unless `force`: each finished backfill moves further back.
+   * Shares a call while one for the same author and group is pending, and settles at once with `null`, doing nothing,
+   * within `backfillMinIntervalMs` after one finished, unless `force`: each finished backfill moves further back.
+   * Otherwise settles with the step, once committed.
    */
-  backfill(author: string, group: string, pages: number, options?: { force?: boolean }): Promise<void>;
+  backfill(author: string, group: string, pages: number, options?: { force?: boolean }): Promise<BackfillResult | null>;
   /**
    * Deletes what `ensureUser` or `ensureLeaf` loaded and lets the next such call load it again. The domain groups of
    * the seed's scope members are kept. Every tab hears it as a change listing the scopes in `forgotten`.

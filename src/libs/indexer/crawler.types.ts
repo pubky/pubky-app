@@ -127,7 +127,10 @@ export interface HydrateResult {
 export interface BackfillResult {
   /** The tail of the top contiguous coverage afterwards, `null` when the scope has none. */
   tail: Cursor | null;
+  /** Pages read and committed: none means the store is as it was. */
   pages: number;
+  /** Stream events those pages held. */
+  events: number;
 }
 
 /**

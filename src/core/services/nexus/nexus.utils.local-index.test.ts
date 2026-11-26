@@ -7,7 +7,7 @@ import type { NexusResponse } from '@/libs/indexer/social/nexusRouter';
 import { InvalidQueryError, UnavailableQueryError } from '@/libs/indexer/social/queries/queries.errors';
 import type { MoreHint } from '@/libs/indexer/social/queries/queries.types';
 import type { History, SocialView } from '@/libs/indexer/social/social.view';
-import type { SocialIndexer } from '@/libs/indexer/social/socialIndexer';
+import type { BackfillOutcome, SocialIndexer } from '@/libs/indexer/social/socialIndexer';
 import { NEXUS_LOCAL_INDEX_OPERATION } from '@/libs/observability/sentry.constants';
 import { shouldDropAppErrorFromSentry } from '@/libs/observability/sentry.utils';
 import { resetRuntimeConfigForTests } from '@/libs/runtime-config/runtime-config';
@@ -33,6 +33,9 @@ const page = (keys: string[], more?: MoreHint[]): NexusResponse =>
 const olderOf = (author: string): MoreHint => ({ kind: 'backfill', author });
 const keysOf = (from: number, count: number) => Array.from({ length: count }, (_, i) => `alice:${from + i}`);
 
+/** A step that read a page of older history short of the start. */
+const STEP: BackfillOutcome = { status: 'ran', complete: false, events: 100, posts: 1, sinceMs: 50 };
+
 /** A view whose authors' loaded history starts at these times, unknown for anyone else. */
 const viewSince = (since: Record<string, number> = {}) =>
   asOpaque<SocialView>({
@@ -49,7 +52,7 @@ function fakeIndexer(...responses: Array<NexusResponse | Error>) {
     request,
     ensureUser: vi.fn<SocialIndexer['ensureUser']>().mockResolvedValue(undefined),
     ensurePost: vi.fn<SocialIndexer['ensurePost']>().mockResolvedValue(undefined),
-    backfill: vi.fn<SocialIndexer['backfill']>().mockResolvedValue(undefined),
+    backfill: vi.fn<SocialIndexer['backfill']>().mockResolvedValue(STEP),
     view: vi.fn<SocialIndexer['view']>().mockReturnValue(viewSince()),
   };
   vi.spyOn(IndexerService, 'current').mockReturnValue(asOpaque<SocialIndexer>(indexer));

@@ -199,6 +199,37 @@ describe('createSocialIndexer', () => {
     expect(known.more).toBeUndefined();
   });
 
+  it('resolves a backfill once the view holds the step, before the debounced change, saying what it did', async () => {
+    const { fixture, network, indexerOf } = socialWorld({ hops: 1, windowDays: 0.5 });
+    // Every write is older than the window, so alice's posts all lie below the window start.
+    const later = at(14, () => buildPost(ALICE, { content: 'Written last' }));
+    network.put(ALICE, later.path, later.body);
+    const indexer = indexerOf();
+    indexer.start(ALICE);
+    await indexer.whenSynced();
+    const url = authorStream(ALICE);
+    const before = await indexer.request({ url, method: 'GET' });
+    expect((before.json as { post_keys: string[] }).post_keys).not.toContain(key(ALICE, fixture.posts.a1));
+    expect(before.more).toEqual([{ kind: 'backfill', author: ALICE }]);
+    const known = indexer.view().postsBy(ALICE).length;
+
+    const outcome = await indexer.backfill(ALICE, SOCIAL_ACTIVITY, 1);
+
+    // No clock advance: the change event is still pending, the view already holds the step.
+    const after = await indexer.request({ url, method: 'GET' });
+    expect((after.json as { post_keys: string[] }).post_keys).toContain(key(ALICE, fixture.posts.a1));
+    expect(after.more).toBeUndefined();
+    expect(outcome).toMatchObject({ status: 'ran', complete: true, sinceMs: null });
+    expect(outcome.events).toBeGreaterThan(0);
+    expect(outcome.posts).toBe(indexer.view().postsBy(ALICE).length - known);
+    expect(outcome.posts).toBeGreaterThan(0);
+
+    const skipped = { status: 'skipped', complete: true, events: 0, posts: 0, sinceMs: null };
+    expect(await indexer.backfill(ALICE, SOCIAL_ACTIVITY, 1)).toEqual(skipped);
+    const empty = { ...skipped, status: 'ran' };
+    expect(await indexer.backfill(ALICE, SOCIAL_ACTIVITY, 1, { force: true })).toEqual(empty);
+  });
+
   it('is ready from a store a previous session filled, without calling the transport', async () => {
     const { fixture, indexerOf } = socialWorld();
     const { image, quote, repost } = fixture.posts;

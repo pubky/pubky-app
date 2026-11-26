@@ -72,6 +72,23 @@ export interface SocialChange {
   kinds: SocialChangeKind[];
 }
 
+/** What one `backfill` call did, read from the view once it holds the step. */
+export interface BackfillOutcome {
+  /**
+   * `skipped` when the rate limit left the call out (`backfillMinIntervalMs`), reading nothing; `ran` otherwise, the
+   * step shared with a call still running for the same author and group included.
+   */
+  status: 'ran' | 'skipped';
+  /** Whether the author's history of the group now reaches the start of their stream. */
+  complete: boolean;
+  /** Stream events the step added. */
+  events: number;
+  /** Posts of the author the view holds now and did not when the call was made. */
+  posts: number;
+  /** The estimated time from which the history is loaded, `null` when complete or unknown. */
+  sinceMs: number | null;
+}
+
 /** The social runtime with its view kept current, answering the central indexer's requests locally. */
 export interface SocialIndexer {
   /**
@@ -102,8 +119,12 @@ export interface SocialIndexer {
    * only through them.
    */
   setExcluded(users: Iterable<string>): void;
-  /** Rate limited per author and group unless `force` (`backfillMinIntervalMs`). */
-  backfill(author: string, group: string, pages: number, options?: { force?: boolean }): Promise<void>;
+  /**
+   * Loads up to `pages` pages of the author's older history of the group. Rate limited per author and group unless
+   * `force` (`backfillMinIntervalMs`). Resolves once the view holds the step, at once when the step committed
+   * nothing; rejects when the step fails.
+   */
+  backfill(author: string, group: string, pages: number, options?: { force?: boolean }): Promise<BackfillOutcome>;
   /** An empty view until the first build. */
   view(): SocialView;
   /**
@@ -533,6 +554,35 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
     return Promise.all([load, forgotten]).then(() => requestRebuild([]));
   }
 
+  /** The tail of the author's top contiguous coverage of the group in the store, `null` when none. */
+  async function storedTail(author: string, group: string): Promise<Cursor | null> {
+    const homeserver = await homeserverOf(author);
+    if (homeserver === null) return null;
+    const coverage = await store.readCoverage({ author, homeserver, group });
+    return coverage.length === 0 ? null : coverage[coverage.length - 1].tail;
+  }
+
+  async function backfill(
+    author: string,
+    group: string,
+    pages: number,
+    options?: { force?: boolean },
+  ): Promise<BackfillOutcome> {
+    const before = new Set(current.postsBy(author).map(({ postId }) => postId));
+    const step = await runtime.backfill(author, group, pages, options);
+    // Changes reach the view debounced; a rebuild of its own makes the step visible before this resolves.
+    if (step !== null && step.pages > 0) await requestRebuild([]);
+    const tail = step === null ? await storedTail(author, group) : step.tail;
+    const complete = tail === CURSOR_ZERO;
+    return {
+      status: step === null ? 'skipped' : 'ran',
+      complete,
+      events: step === null ? 0 : step.events,
+      posts: current.postsBy(author).filter(({ postId }) => !before.has(postId)).length,
+      sinceMs: complete || tail === null ? null : current.timeOf(author, tail),
+    };
+  }
+
   function ensureLeaf(items: Map<string, LeafRequest>, key: string, leaf: LeafRequest, max: number): Promise<void> {
     const known = items.has(key);
     const evicted = touch(items, key, leaf, max);
@@ -645,7 +695,7 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
       runtime.setExcluded(excluded);
       void requestRebuild([]);
     },
-    backfill: (author, group, pages, options) => runtime.backfill(author, group, pages, options),
+    backfill,
     view: () => current,
     ready: () => readyPromise,
     whenSynced: () => syncedPromise,

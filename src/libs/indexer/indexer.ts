@@ -1,6 +1,6 @@
 import { timerSchedule, withDeadline } from './concurrency';
 import { createCrawler } from './crawler';
-import { DEFAULT_CRAWLER_OPTIONS, type LeafRequest, type StoreChange } from './crawler.types';
+import { type BackfillResult, DEFAULT_CRAWLER_OPTIONS, type LeafRequest, type StoreChange } from './crawler.types';
 import { MAX_CURSOR } from './cursor';
 import { IndexerAbortedError, IndexerError, IndexerNotStartedError } from './indexer.errors';
 import {
@@ -42,17 +42,26 @@ const userKey = (user: string) => JSON.stringify(['user', user]);
 /** The meta key of the seed's last scope sync, which the next session starts from. */
 const syncedKey = (seed: string) => `syncedAt:${seed}`;
 const leafKey = (author: string, group: string) => JSON.stringify(['leaf', author, group]);
+const backfillKey = (author: string, group: string) => JSON.stringify(['backfill', author, group]);
+
+/** What a crawl settles with: a backfill its step, any other crawl nothing. */
+type Settled = BackfillResult | undefined;
+
+/** Stands in for the step of a crawling tab that settled a backfill without one. */
+const NO_STEP: BackfillResult = Object.freeze({ tail: null, pages: 0, events: 0 });
+
+const done = (settled: Promise<Settled>): Promise<void> => settled.then(() => undefined);
 
 interface Task {
   request: CrawlRequest;
-  resolve: () => void;
+  resolve: (settled?: Settled) => void;
   reject: (error: unknown) => void;
   /** Asked by another tab, which asks the next crawling tab again if this one steps down. */
   remote: boolean;
 }
 
 interface Ensured {
-  promise: Promise<void>;
+  promise: Promise<Settled>;
   settledAt: number | null;
 }
 
@@ -258,7 +267,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     }, delay);
   }
 
-  async function crawl(request: CrawlRequest, current: string | null, signal: AbortSignal): Promise<void> {
+  async function crawl(request: CrawlRequest, current: string | null, signal: AbortSignal): Promise<Settled> {
     switch (request.kind) {
       case 'scope':
         if (current !== null) await crawler.syncScope(current, signal);
@@ -270,16 +279,14 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
         await crawler.syncLeaf(request.leaf, signal);
         return;
       case 'backfill':
-        await crawler.backfill(request.author, request.group, request.pages, signal);
-        return;
+        return crawler.backfill(request.author, request.group, request.pages, signal);
     }
   }
 
   /** Never rejects: the outcome goes to the task, and a failure to the status. */
   async function execute(task: Task, current: string | null, signal: AbortSignal): Promise<void> {
     try {
-      await crawl(task.request, current, signal);
-      task.resolve();
+      task.resolve(await crawl(task.request, current, signal));
     } catch (error) {
       if (!signal.aborted) lastError = asError(error);
       task.reject(error);
@@ -423,7 +430,8 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
   function remoteTask(id: string, request: CrawlRequest): Task {
     return {
       request,
-      resolve: () => shared?.post({ type: 'settled', id, error: null }),
+      resolve: (settled) =>
+        shared?.post({ type: 'settled', id, error: null, ...(settled === undefined ? {} : { backfill: settled }) }),
       // An abort means this tab stopped; the asking tab asks the next crawling tab instead.
       reject: (error) => {
         if (!(error instanceof IndexerAbortedError)) {
@@ -526,16 +534,16 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
         const task = forwarded.get(message.id);
         if (task === undefined) return;
         forwarded.delete(message.id);
-        if (message.error === null) task.resolve();
+        if (message.error === null) task.resolve(message.backfill);
         else task.reject(new IndexerError(message.error));
         return;
       }
     }
   }
 
-  function submit(request: CrawlRequest): Promise<void> {
+  function submit(request: CrawlRequest): Promise<Settled> {
     if (!started) return Promise.reject(new IndexerNotStartedError());
-    return new Promise<void>((resolve, reject) => {
+    return new Promise<Settled>((resolve, reject) => {
       const task: Task = { request, resolve, reject, remote: false };
       if (shared === null || leading) {
         enqueue(task);
@@ -549,7 +557,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
   }
 
   /** Shares the call with a pending one of the same key, or one finished less than `ttlMs` ago. */
-  function ensure(key: string, request: CrawlRequest, ttlMs: number): Promise<void> {
+  function ensure(key: string, request: CrawlRequest, ttlMs: number): Promise<Settled> {
     const known = ensured.get(key);
     if (known !== undefined && (known.settledAt === null || now() - known.settledAt < ttlMs)) return known.promise;
     const promise = submit(request);
@@ -663,23 +671,29 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
       emitStatus();
     },
     refresh(users) {
-      if (users !== undefined) return submit({ kind: 'users', users: [...users] });
+      if (users !== undefined) return done(submit({ kind: 'users', users: [...users] }));
       // Visitor mode has no scope to sync.
-      return started && seed === null ? Promise.resolve() : submit({ kind: 'scope' });
+      return started && seed === null ? Promise.resolve() : done(submit({ kind: 'scope' }));
     },
-    ensureUser: (user) => ensure(userKey(user), { kind: 'users', users: [user] }, options.ensureTtlMs),
+    ensureUser: (user) => done(ensure(userKey(user), { kind: 'users', users: [user] }, options.ensureTtlMs)),
     ensureLeaf: (leaf) =>
-      ensure(
-        leafKey(leaf.author, leaf.group),
-        { kind: 'leaf', leaf: { author: leaf.author, group: leaf.group, paths: [...leaf.paths] } },
-        options.ensureTtlMs,
+      done(
+        ensure(
+          leafKey(leaf.author, leaf.group),
+          { kind: 'leaf', leaf: { author: leaf.author, group: leaf.group, paths: [...leaf.paths] } },
+          options.ensureTtlMs,
+        ),
       ),
-    backfill: (author, group, pages, backfillOptions) =>
-      ensure(
-        JSON.stringify(['backfill', author, group]),
-        { kind: 'backfill', author, group, pages },
-        backfillOptions?.force === true ? 0 : options.backfillMinIntervalMs,
-      ),
+    backfill(author, group, pages, backfillOptions) {
+      const key = backfillKey(author, group);
+      const known = ensured.get(key);
+      const force = backfillOptions?.force === true;
+      const recent =
+        known !== undefined && known.settledAt !== null && now() - known.settledAt < options.backfillMinIntervalMs;
+      if (!force && recent) return Promise.resolve(null);
+      // A step still running is shared, forced or not; a finished one is never reused.
+      return ensure(key, { kind: 'backfill', author, group, pages }, 0).then((step) => step ?? NO_STEP);
+    },
     forget,
     setExcluded: (users) => crawler.setExcluded(users),
     onChange(listener) {
