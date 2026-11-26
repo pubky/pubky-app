@@ -260,10 +260,10 @@ recognizes the exact `AuthenticationError` message `Authentication error: The pr
 was cancelled.` from `restoreSession(export)`. This means no live cookie was found; it is not a generic network-error
 exception. Keep both contracts covered by the real-SDK tests in `session-store.contract.test.ts` on SDK updates.
 
-### Locks SDK 0.1.0 region classification exception
+### Locks SDK 0.1.1-rc5 region classification exception
 
 `isLockServerRegionBlocked` in `src/core/services/locks/locks.utils.ts` is a second narrow exception to message-free
-classification. The pinned `@synonymdev/locks-sdk` 0.1.0 browser/WASM binding exposes HTTP viewer failures as an
+classification. The pinned `@synonymdev/locks-sdk` 0.1.1-rc5 browser/WASM binding exposes HTTP viewer failures as an
 `Error` named `InvalidInput`, with no structured status field. Only the exact message
 `Lock Server viewer request failed with HTTP 451` identifies the region restriction on proof submission.
 `LocksService.submitProof` converts that raw SDK error to `{ regionBlocked: true }` before constructing any

@@ -43,7 +43,7 @@ const toBase64 = (bytes: Uint8Array) => btoa(Array.from(bytes, (byte) => String.
 const fromBase64 = (value: string) => Uint8Array.from(atob(value), (char) => char.charCodeAt(0));
 
 /**
- * The pinned SDK 0.1.0 rejects with a plain, unreported `Error` named after its error kind, and
+ * The pinned SDK 0.1.1-rc5 rejects with a plain, unreported `Error` named after its error kind, and
  * `LocksService` maps that itself (`toLocksError`, `isLockServerRegionBlocked`, the lookup 404). An
  * `Err.*` here would be reported twice and would never match the region-refusal contract. This raw
  * `Error` is a documented exception to the `Err.*` rule (`docs/error-handling.md`).

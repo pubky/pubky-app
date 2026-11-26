@@ -46,7 +46,7 @@ function stubTransport(
   return submissions;
 }
 
-describe('pinned Locks SDK 0.1.0 region error contract', () => {
+describe('pinned Locks SDK 0.1.1-rc5 region error contract', () => {
   it('exposes HTTP 451 as an InvalidInput Error with the exact viewer-request message', async () => {
     const submissions = stubTransport(451);
     const options = new LocksOptions().addPkarrRelay(PKARR_RELAY);
@@ -136,7 +136,7 @@ describe('pinned Locks SDK 0.1.0 region error contract', () => {
 
 // The second tap on the same lock looks the saved bundle id up before it submits anything. The pinned SDK
 // sends that lookup as its own POST, and a region refusal reaches it with the same error as the submission.
-describe('pinned Locks SDK 0.1.0 region error contract for the saved bundle id lookup', () => {
+describe('pinned Locks SDK 0.1.1-rc5 region error contract for the saved bundle id lookup', () => {
   it('exposes HTTP 451 on the lookup as the same InvalidInput Error the submission raises', async () => {
     const lookups = stubTransport(451, '{}', lookupRoute);
     const options = new LocksOptions().addPkarrRelay(PKARR_RELAY);
@@ -187,7 +187,7 @@ describe('pinned Locks SDK 0.1.0 region error contract for the saved bundle id l
 
 // The modal's not-payable screen depends on `failure_message` reaching the service through the real SDK. The SDK accepts
 // any non-empty wording, so this block cannot catch the Lock Server rewording it. Same body as a real staging response.
-describe('pinned Locks SDK 0.1.0 failed task contract', () => {
+describe('pinned Locks SDK 0.1.1-rc5 failed task contract', () => {
   const COMPLETED_AT = '2026-10-08T09:52:51.22186Z';
   const OUTCOMES = [
     ['reader is not payable', true],

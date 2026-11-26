@@ -51,7 +51,7 @@ Controller naming encodes IO: `fetch*` network only, `get*` local only, `getMany
 ## Non-negotiables
 
 - Errors: `Err.*` factories (`src/libs/error/error.factories.ts`), never raw `Error`. Factories log and capture, so never
-  log-then-throw. Only the documented pinned SDK boundary checks may classify by message, including Locks SDK 0.1.0
+  log-then-throw. Only the documented pinned SDK boundary checks may classify by message, including Locks SDK 0.1.1-rc5
   `InvalidInput` + exact viewer HTTP 451; the optional `ClientRegionService.fetchCountry` availability probe uses
   non-reporting raw `fetch`; the only two uncaptured-`AppError` sites are `HomeserverService.migrateToSocialV1` (a failed
   migrator chunk load, thrown for the gate's once-per-(account, code)-per-page capture) and

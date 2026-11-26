@@ -53,7 +53,7 @@ function stubTransport(deleteStatus = 204) {
   return requests;
 }
 
-describe('pinned Locks SDK 0.1.0 guarded resource delete contract', () => {
+describe('pinned Locks SDK 0.1.1-rc5 guarded resource delete contract', () => {
   it('deletes a resource at the same Lock Server path it was registered under', async () => {
     const requests = stubTransport();
 
