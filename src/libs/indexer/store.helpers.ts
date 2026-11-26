@@ -4,7 +4,14 @@ import { InvalidIndexInputError } from './indexer.errors';
 import type { Coverage, Cursor, Entry, MergedRuns, Range, RecordEntry, Run } from './indexer.types';
 import { replaces, sameEvent } from './merge';
 import { assertValidRun, comparePaths } from './run';
-import type { HomeserverState, ScopeKey, StoreBatch } from './store.types';
+import {
+  EMPTY_HOMESERVER_STATE,
+  type HomeserverPatch,
+  type HomeserverState,
+  type ReadAt,
+  type ScopeKey,
+  type StoreBatch,
+} from './store.types';
 
 // Rules every `IndexStore` applies the same way, so the stores differ only in where they keep the data.
 
@@ -85,11 +92,36 @@ export function evictCoverage(coverage: readonly Range[], cutoff: Cursor): Cover
     .map(({ tail, head }) => ({ tail: tail >= cutoff ? tail : cutoff, head }));
 }
 
-/** `current` with the fields `patch` sets; a field left out keeps its value. */
-export function patchedState(current: Readonly<HomeserverState>, patch: Partial<HomeserverState>): HomeserverState {
+/** A stored homeserver state in the current shape, `EMPTY_HOMESERVER_STATE` for none. */
+export function homeserverStateOf(stored: Partial<HomeserverState> | undefined): HomeserverState {
   return {
-    highWater: patch.highWater !== undefined ? patch.highWater : current.highWater,
+    highWater: stored?.highWater ?? null,
+    epoch: stored?.epoch ?? EMPTY_HOMESERVER_STATE.epoch,
+    windowStart: stored?.windowStart ?? null,
+    failure: stored?.failure ?? null,
+  };
+}
+
+/** `current` with the fields `patch` sets; a field left out keeps its value, and the mark only rises. */
+export function patchedState(current: Readonly<HomeserverState>, patch: HomeserverPatch): HomeserverState {
+  const { highWater } = patch;
+  const rises = highWater !== undefined && (current.highWater === null || highWater.cursor > current.highWater.cursor);
+  return {
+    highWater: rises ? highWater : current.highWater,
+    epoch: current.epoch,
     windowStart: patch.windowStart !== undefined ? patch.windowStart : current.windowStart,
     failure: patch.failure !== undefined ? patch.failure : current.failure,
   };
 }
+
+/** The state a deletion leaves: the next epoch, no mark, no window start. */
+export const deletedState = (current: Readonly<HomeserverState>): HomeserverState => ({
+  highWater: null,
+  epoch: current.epoch + 1,
+  windowStart: null,
+  failure: current.failure,
+});
+
+/** Whether every epoch the batch read under is still current. */
+export const readsCurrent = (readAt: readonly ReadAt[] | undefined, epochOf: (homeserver: string) => number) =>
+  (readAt ?? []).every(({ homeserver, epoch }) => epochOf(homeserver) === epoch);

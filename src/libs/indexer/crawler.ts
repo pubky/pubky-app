@@ -35,7 +35,7 @@ import type { Coverage, Cursor, RecordEntry, Run } from './indexer.types';
 import { readBackward, readForward, type ReadPage } from './paging';
 import { foldEvents } from './run';
 import { scopeId, scopeOf } from './store.helpers';
-import type { HighWater, ScopeKey, StoreBatch } from './store.types';
+import type { HighWater, ReadAt, ScopeKey, StoreBatch } from './store.types';
 import type { AuthoredStreamEvent } from './transport.types';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -56,7 +56,10 @@ interface OperationContext {
   priority: Priority;
   /** Each homeserver's restore check, shared by the reads of the operation that run together. */
   checked: Map<string, Promise<boolean>>;
-  highWater: Map<string, HighWater | null>;
+  /** The epoch of each homeserver its reads are made under, stated by every commit of what they read. */
+  epochs: Map<string, number>;
+  /** The newest event read from each homeserver. */
+  highWater: Map<string, HighWater>;
   windowStart: Map<string, Cursor>;
   /** Homeservers failed or backing off, skipped for the rest of the operation. */
   failed: Set<string>;
@@ -79,6 +82,7 @@ const contextOf = (signal?: AbortSignal, priority: Priority = 'foreground'): Ope
   signal,
   priority,
   checked: new Map(),
+  epochs: new Map(),
   highWater: new Map(),
   windowStart: new Map(),
   failed: new Set(),
@@ -106,10 +110,20 @@ const changesServed = (run: Run<unknown>, storedHead: Cursor | null): boolean =>
 const sameMembers = (a: ReadonlyMap<string, number>, b: ReadonlyMap<string, number>): boolean =>
   a.size === b.size && [...b].every(([user, hop]) => a.get(user) === hop);
 
-const newestOf = (current: HighWater | null, event: AuthoredStreamEvent | null): HighWater | null =>
-  event !== null && (current === null || event.cursor > current.cursor)
-    ? { cursor: event.cursor, author: event.author }
-    : current;
+/** What a commit of the operation's reads of the homeserver states: their epoch. */
+const readAtOf = (ctx: OperationContext, homeserver: string): { readAt?: ReadAt[] } => {
+  const epoch = ctx.epochs.get(homeserver);
+  return epoch === undefined ? {} : { readAt: [{ homeserver, epoch }] };
+};
+
+/** What a commit of runs read from the homeserver states: their epoch, the newest event read, a success. */
+const readStateOf = (ctx: OperationContext, homeserver: string) => {
+  const highWater = ctx.highWater.get(homeserver);
+  return {
+    ...readAtOf(ctx, homeserver),
+    homeserverStates: [{ homeserver, patch: { ...(highWater === undefined ? {} : { highWater }), failure: null } }],
+  };
+};
 
 export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
   const { transport, store, domain, now } = params;
@@ -235,6 +249,14 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
         );
       });
       count('events', events.length);
+      const newest = events.reduce<AuthoredStreamEvent | null>(
+        (high, event) => (high === null || event.cursor > high.cursor ? event : high),
+        null,
+      );
+      const known = ctx.highWater.get(homeserver);
+      if (newest !== null && (known === undefined || newest.cursor > known.cursor)) {
+        ctx.highWater.set(homeserver, { cursor: newest.cursor, author: newest.author });
+      }
       return events;
     };
   }
@@ -267,19 +289,13 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
    * log, a restore or a rebuild, can answer with something older; then everything stored for it goes.
    */
   async function detectRestore(ctx: OperationContext, homeserver: string, highWater: HighWater | null) {
-    ctx.highWater.set(homeserver, highWater);
     if (highWater === null) return;
     const newest = await reader(ctx, homeserver, allPaths, 1)([{ user: highWater.author, cursor: null }], true);
     if (newest.length > 0 && newest[0].cursor >= highWater.cursor) return;
     const scopes = (await store.listScopes()).filter((scope) => scope.homeserver === homeserver);
-    await commit(
-      {
-        deleteHomeservers: [homeserver],
-        homeserverStates: [{ homeserver, patch: { highWater: null, windowStart: null } }],
-      },
-      { scopes, seeds: [] },
-    );
-    ctx.highWater.set(homeserver, null);
+    await commit({ ...readAtOf(ctx, homeserver), deleteHomeservers: [homeserver] }, { scopes, seeds: [] });
+    // Read again: the deletion that started it may be another operation's, which found the restore first.
+    ctx.epochs.set(homeserver, (await store.readHomeserverState(homeserver)).epoch);
     ctx.windowStart.delete(homeserver);
   }
 
@@ -293,6 +309,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     }
     let check = ctx.checked.get(homeserver);
     if (check === undefined) {
+      ctx.epochs.set(homeserver, state.epoch);
       check = guard(ctx, homeserver, () => detectRestore(ctx, homeserver, state.highWater));
       ctx.checked.set(homeserver, check);
     }
@@ -360,7 +377,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     stored: ReadonlyMap<string, Cursor | null>,
   ) {
     const read = reader(ctx, homeserver, group.paths, options.pageLimit);
-    const { heads, events, newest } = await readForward(tails, options.pageLimit, read);
+    const { heads, events } = await readForward(tails, options.pageLimit, read);
     const runs: Run<D>[] = [];
     for (const [author, tail] of tails) {
       const head = heads.get(author) ?? tail;
@@ -368,14 +385,8 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
       runs.push(foldEvents<D>({ author, homeserver, group: group.id }, tail, head, events.get(author) ?? []));
     }
     await attachBodies(ctx, runs);
-    // Taken and set with no await between, so batches read together never write an older mark over a newer one.
-    const highWater = newestOf(ctx.highWater.get(homeserver) ?? null, newest);
-    ctx.highWater.set(homeserver, highWater);
     const scopes = runs.filter((run) => changesServed(run, stored.get(run.author) ?? null)).map(scopeOf);
-    await commitRuns(
-      { applyRuns: runs, homeserverStates: [{ homeserver, patch: { highWater, failure: null } }] },
-      { scopes, seeds: [] },
-    );
+    await commitRuns({ applyRuns: runs, ...readStateOf(ctx, homeserver) }, { scopes, seeds: [] });
   }
 
   const microsBefore = (ms: number) => BigInt(Math.floor(now() - ms)) * MICROS_PER_MS;
@@ -403,7 +414,13 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     if (found.time < microsBefore(windowMs + windowMs / 10)) return false;
     const known = ctx.windowStart.get(homeserver);
     if (known !== undefined && known >= found.cursor) return true;
-    await store.patchHomeserverState(homeserver, { windowStart: { cursor: found.cursor, foundAt: now() } });
+    await commit(
+      {
+        ...readAtOf(ctx, homeserver),
+        homeserverStates: [{ homeserver, patch: { windowStart: { cursor: found.cursor, foundAt: now() } } }],
+      },
+      { scopes: [], seeds: [] },
+    );
     ctx.windowStart.set(homeserver, found.cursor);
     return true;
   }
@@ -540,9 +557,6 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
         true,
       );
       const newest = page.length === 0 ? null : highestOf(page);
-      // Taken and set with no await between, so reads together never keep an older mark over a newer one.
-      const newestEvent = page.find((event) => event.cursor === newest) ?? null;
-      ctx.highWater.set(homeserver, newestOf(ctx.highWater.get(homeserver) ?? null, newestEvent));
       const tops = new Map<string, Cursor>();
       for (const [user, bound] of users) {
         // A user read from the newest event with none in the page has no event in the group at all.
@@ -563,7 +577,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     };
     if (bounds.size === 0) return;
     const batches = await Promise.all(chunks([...bounds], options.batchSize).map(readFirst));
-    for (let round = 0; ; round += 1) {
+    for (;;) {
       const reading = batches.filter((batch) => !batch.reached && batch.tops.size > 0);
       const cut = reading.reduce<Cursor | null>((high, { low }) => (high === null || low > high ? low : high), null);
       const parts: Below[] = [];
@@ -580,7 +594,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
       }
       const next = reading.find(({ low }) => low === cut);
       const settled = await Promise.allSettled([
-        commitBelow(ctx, homeserver, group, parts, round === 0),
+        commitBelow(ctx, homeserver, group, parts),
         next === undefined ? Promise.resolve() : readMore(next),
       ]);
       for (const outcome of settled) if (outcome.status === 'rejected') throw outcome.reason;
@@ -591,16 +605,9 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
   /**
    * Commits backwards reads of one homeserver as one stream: their events in slices of `backfillPageLimit`, newest
    * first. A slice commits once its files to render and every newer slice are in, so the top range only grows
-   * downwards and a failure keeps every slice above it; the files of all slices are fetched together. With
-   * `highWater` the first slice also stores the homeserver's high-water mark.
+   * downwards and a failure keeps every slice above it; the files of all slices are fetched together.
    */
-  async function commitBelow(
-    ctx: OperationContext,
-    homeserver: string,
-    group: PathGroup,
-    parts: readonly Below[],
-    highWater: boolean,
-  ) {
+  async function commitBelow(ctx: OperationContext, homeserver: string, group: PathGroup, parts: readonly Below[]) {
     const newestFirst = parts.flatMap(({ events }) => events).sort((a, b) => (a.cursor > b.cursor ? -1 : 1));
     const slices: Run<D>[][] = [];
     let high: Cursor | null = null;
@@ -637,19 +644,15 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
       // Once a fetch failed, a fetch still in flight that ends later commits nothing after this call is over.
       while (!stopped && next < slices.length && pending[next] === 0) {
         const runs = slices[next];
-        const first = next === 0;
         next += 1;
         // A slice whose newer one failed is not committed: it would sit below a gap.
         committing = committing
           .then(() => {
             if (errors.length > 0) return undefined;
-            // Read when it commits, so a mark another read stored meanwhile is never set back.
-            const mark = ctx.highWater.get(homeserver) ?? null;
-            const state =
-              highWater && first
-                ? { homeserverStates: [{ homeserver, patch: { highWater: mark, failure: null } }] }
-                : {};
-            return commitRuns({ applyRuns: runs, ...state }, { scopes: runs.map(scopeOf), seeds: [] });
+            return commitRuns(
+              { applyRuns: runs, ...readStateOf(ctx, homeserver) },
+              { scopes: runs.map(scopeOf), seeds: [] },
+            );
           })
           .catch((error: unknown) => {
             errors.push(error);
@@ -702,7 +705,10 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     if (page.length === 0) return true;
     const run = foldEvents<D>(scope, head, highestOf(page), page);
     await attachBodies(ctx, [run]);
-    await commitRuns({ applyRuns: [run] }, { scopes: [scopeOf(run)], seeds: [] });
+    await commitRuns(
+      { applyRuns: [run], ...readStateOf(ctx, scope.homeserver) },
+      { scopes: [scopeOf(run)], seeds: [] },
+    );
     return true;
   }
 
@@ -925,7 +931,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     // page ends at the newest event read: nothing above it exists yet.
     const tail = page.length >= limit && lowest !== null ? lowest - ONE : CURSOR_ZERO;
     const tops = new Map([[scope.author, below ?? highestOf(page)]]);
-    await commitBelow(ctx, scope.homeserver, group, [{ tops, tail, events: page }], false);
+    await commitBelow(ctx, scope.homeserver, group, [{ tops, tail, events: page }]);
     return page.length;
   }
 
@@ -936,6 +942,9 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     const homeserver = (await store.readUserHomeserver(author))?.homeserver ?? null;
     if (homeserver === null) return { tail: null, pages: 0, events: 0 };
     const scope = { author, homeserver, group: group.id };
+    // Like every read, under the epoch the restore check confirms, so a page read before a restore is never kept.
+    if (!(await ready(ctx, homeserver)))
+      return { tail: topTailOf(await store.readCoverage(scope)), pages: 0, events: 0 };
     let events = 0;
     let done = 0;
     for (; done < pages; done += 1) {
@@ -984,6 +993,10 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
           if (scanned.get(id) === mark) continue;
           throwIfAborted(signal);
           scanned.set(id, mark);
+          // Taken before the records are, so a fill of a record read before a restore commits nothing.
+          if (!ctx.epochs.has(scope.homeserver)) {
+            ctx.epochs.set(scope.homeserver, (await store.readHomeserverState(scope.homeserver)).epoch);
+          }
           const { live } = await store.readScope(scope);
           for (const record of live.values()) {
             const key = `${id}\u0000${record.path}\u0000${record.cursor}`;
@@ -1052,7 +1065,10 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
       // Committed at once, so a stopped call keeps every file it got. Crawls run beside it: one that replaced,
       // forgot or dropped the record meanwhile wins, and the data is set on nothing.
       await commit(
-        { recordData: [{ scope: scopeOf(scope), path: record.path, cursor: record.cursor, data }] },
+        {
+          ...readAtOf(ctx, scope.homeserver),
+          recordData: [{ scope: scopeOf(scope), path: record.path, cursor: record.cursor, data }],
+        },
         { scopes: [scopeOf(scope)], seeds: [] },
       );
       fetched += 1;

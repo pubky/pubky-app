@@ -2,8 +2,11 @@ import type { Coverage, Entry } from './indexer.types';
 import {
   applyRun,
   assertValidBatch,
+  deletedState,
   evictCoverage,
+  homeserverStateOf,
   patchedState,
+  readsCurrent,
   runsOfScope,
   scopeId,
   scopeOf,
@@ -11,7 +14,6 @@ import {
   withData,
 } from './store.helpers';
 import {
-  EMPTY_HOMESERVER_STATE,
   type HomeserverState,
   type IndexStore,
   type ScopeKey,
@@ -59,6 +61,8 @@ export function createMemoryStore<D>(): IndexStore<D> {
   async function commit(batch: StoreBatch<D>): Promise<void> {
     const copy = structuredClone(batch);
     assertValidBatch(copy);
+    const stateOfHomeserver = (homeserver: string) => homeserverStateOf(homeserverStates.get(homeserver));
+    if (!readsCurrent(copy.readAt, (homeserver) => stateOfHomeserver(homeserver).epoch)) return;
 
     // Only a run that disagrees with a stored entry can still throw; the journal undoes what came before it.
     const writes = journal();
@@ -101,9 +105,12 @@ export function createMemoryStore<D>(): IndexStore<D> {
       throw error;
     }
 
+    for (const homeserver of copy.deleteHomeservers ?? []) {
+      homeserverStates.set(homeserver, deletedState(stateOfHomeserver(homeserver)));
+    }
     for (const { user, value } of copy.userHomeservers ?? []) userHomeservers.set(user, value);
     for (const { homeserver, patch } of copy.homeserverStates ?? []) {
-      homeserverStates.set(homeserver, patchedState(homeserverStates.get(homeserver) ?? EMPTY_HOMESERVER_STATE, patch));
+      homeserverStates.set(homeserver, patchedState(stateOfHomeserver(homeserver), patch));
     }
     for (const { seed, members } of copy.scopeMembers ?? []) scopeMembers.set(seed, new Map(members));
   }
@@ -124,8 +131,7 @@ export function createMemoryStore<D>(): IndexStore<D> {
     deleteHomeserver: (homeserver) => commit({ deleteHomeservers: [homeserver] }),
     readUserHomeserver: async (user) => structuredClone(userHomeservers.get(user) ?? null),
     writeUserHomeserver: (user, value) => commit({ userHomeservers: [{ user, value }] }),
-    readHomeserverState: async (homeserver) =>
-      structuredClone(homeserverStates.get(homeserver) ?? { ...EMPTY_HOMESERVER_STATE }),
+    readHomeserverState: async (homeserver) => structuredClone(homeserverStateOf(homeserverStates.get(homeserver))),
     patchHomeserverState: (homeserver, patch) => commit({ homeserverStates: [{ homeserver, patch }] }),
     readScopeMembers: async (seed) => new Map(scopeMembers.get(seed) ?? []),
     writeScopeMembers: (seed, members) => commit({ scopeMembers: [{ seed, members }] }),

@@ -31,16 +31,33 @@ export interface FailureState {
 }
 
 export interface HomeserverState {
+  /** Only ever rises within an epoch. */
   highWater: HighWater | null;
+  /** Counts the homeserver's deletions: what was read before one is not read under the epoch after it. */
+  epoch: number;
   windowStart: WindowStart | null;
   failure: FailureState | null;
 }
 
 export const EMPTY_HOMESERVER_STATE: Readonly<HomeserverState> = Object.freeze({
   highWater: null,
+  epoch: 0,
   windowStart: null,
   failure: null,
 });
+
+/** A high-water mark older than the stored one keeps the stored. Fields left out keep their stored value. */
+export interface HomeserverPatch {
+  highWater?: HighWater;
+  windowStart?: WindowStart | null;
+  failure?: FailureState | null;
+}
+
+/** The homeserver epoch a batch's reads of it were made under. */
+export interface ReadAt {
+  homeserver: string;
+  epoch: number;
+}
 
 /** The data of the record a scope stores for `path` at `cursor`. */
 export interface RecordData<D> {
@@ -55,7 +72,15 @@ export interface RecordData<D> {
  * homeservers, homeserver state patches and scope members.
  */
 export interface StoreBatch<D> {
-  /** Drops every scope stored under these homeservers. */
+  /**
+   * The epochs the batch's reads were made under. Unless each is still its homeserver's epoch, the batch changes
+   * nothing: what it read may predate a deletion.
+   */
+  readAt?: ReadAt[];
+  /**
+   * Drops every scope stored under these homeservers and starts a new epoch for each, without a high-water mark or a
+   * window start.
+   */
   deleteHomeservers?: string[];
   /** Forgets each scope's entries and coverage at or below the cutoff. */
   evictions?: Array<{ scope: ScopeKey; cutoff: Cursor }>;
@@ -67,8 +92,7 @@ export interface StoreBatch<D> {
    */
   recordData?: RecordData<D>[];
   userHomeservers?: Array<{ user: string; value: UserHomeserver }>;
-  /** Fields left out keep their stored value. */
-  homeserverStates?: Array<{ homeserver: string; patch: Partial<HomeserverState> }>;
+  homeserverStates?: Array<{ homeserver: string; patch: HomeserverPatch }>;
   /** Replaces the users in scope of a seed, each with its hop distance. */
   scopeMembers?: Array<{ seed: string; members: ReadonlyMap<string, number> }>;
 }
@@ -93,13 +117,14 @@ export interface IndexStore<D> {
   evictBelow(scope: ScopeKey, cutoff: Cursor): Promise<void>;
   /** Every scope with coverage. */
   listScopes(): Promise<ScopeKey[]>;
+  /** The same as committing `deleteHomeservers: [homeserver]`. */
   deleteHomeserver(homeserver: string): Promise<void>;
   /** `null` when the user was never resolved. */
   readUserHomeserver(user: string): Promise<UserHomeserver | null>;
   writeUserHomeserver(user: string, value: UserHomeserver): Promise<void>;
   /** `EMPTY_HOMESERVER_STATE` for a homeserver never written. */
   readHomeserverState(homeserver: string): Promise<HomeserverState>;
-  patchHomeserverState(homeserver: string, patch: Partial<HomeserverState>): Promise<void>;
+  patchHomeserverState(homeserver: string, patch: HomeserverPatch): Promise<void>;
   /** An empty map for a seed never written. */
   readScopeMembers(seed: string): Promise<Map<string, number>>;
   writeScopeMembers(seed: string, members: ReadonlyMap<string, number>): Promise<void>;

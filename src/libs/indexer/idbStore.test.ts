@@ -8,6 +8,7 @@ import { benchIndexStore, type BenchPayload } from './idbStore.bench';
 import type { MergedRuns, Run } from './indexer.types';
 import { mergeRuns } from './merge';
 import { c, describeIndexStoreContract, META, type Payload, rec, runOf, runWith, tomb } from './store.contract';
+import { EMPTY_HOMESERVER_STATE } from './store.types';
 
 let databases = 0;
 const nextName = () => {
@@ -142,7 +143,7 @@ describe('createIdbStore', () => {
       homeserverStates: [
         {
           homeserver: 'hs1',
-          patch: { highWater: { cursor: MAX_CURSOR, author: 'alice' }, windowStart: { cursor: big, foundAt: 6 } },
+          patch: { highWater: { cursor: MAX_CURSOR, author: 'alice' } },
         },
       ],
       scopeMembers: [{ seed: 'alice', members: new Map([['alice', 0]]) }],
@@ -167,9 +168,8 @@ describe('createIdbStore', () => {
     expect(await second.listScopes()).toEqual([META]);
     expect(await second.readUserHomeserver('alice')).toEqual({ homeserver: 'hs1', resolvedAt: 5 });
     expect(await second.readHomeserverState('hs1')).toEqual({
+      ...EMPTY_HOMESERVER_STATE,
       highWater: { cursor: MAX_CURSOR, author: 'alice' },
-      windowStart: { cursor: big, foundAt: 6 },
-      failure: null,
     });
     expect(await second.readScopeMembers('alice')).toEqual(new Map([['alice', 0]]));
   });

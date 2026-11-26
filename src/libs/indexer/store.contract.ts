@@ -351,23 +351,89 @@ export function describeIndexStoreContract<S extends IndexStore<Payload>>(
 
       await store.patchHomeserverState('hs1', { highWater: { cursor: c(9), author: 'alice' } });
       await store.patchHomeserverState('hs1', { failure: { failures: 1, retryAt: 60 } });
-      await store.patchHomeserverState('hs2', { windowStart: { cursor: c(3), foundAt: 7 } });
-      await store.commit({
-        homeserverStates: [
-          { homeserver: 'hs1', patch: { failure: null } },
-          { homeserver: 'hs1', patch: { windowStart: { cursor: c(4), foundAt: 8 } } },
-        ],
-      });
+      await store.patchHomeserverState('hs2', { failure: { failures: 2, retryAt: 70 } });
+      await store.commit({ homeserverStates: [{ homeserver: 'hs1', patch: { failure: null } }] });
 
       expect(await store.readHomeserverState('hs1')).toEqual({
+        ...EMPTY_HOMESERVER_STATE,
         highWater: { cursor: c(9), author: 'alice' },
-        windowStart: { cursor: c(4), foundAt: 8 },
-        failure: null,
       });
       expect(await store.readHomeserverState('hs2')).toEqual({
         ...EMPTY_HOMESERVER_STATE,
-        windowStart: { cursor: c(3), foundAt: 7 },
+        failure: { failures: 2, retryAt: 70 },
       });
+    });
+
+    it('only ever raises the high-water mark, whatever order the patches come in', async () => {
+      const store = fresh();
+
+      await store.patchHomeserverState('hs1', { highWater: { cursor: c(9), author: 'alice' } });
+      await store.commit({
+        homeserverStates: [
+          { homeserver: 'hs1', patch: { highWater: { cursor: c(4), author: 'bob' } } },
+          { homeserver: 'hs1', patch: { highWater: { cursor: c(9), author: 'carol' } } },
+        ],
+      });
+      expect((await store.readHomeserverState('hs1')).highWater).toEqual({ cursor: c(9), author: 'alice' });
+
+      await store.patchHomeserverState('hs1', { highWater: { cursor: c(12), author: 'bob' } });
+      expect((await store.readHomeserverState('hs1')).highWater).toEqual({ cursor: c(12), author: 'bob' });
+    });
+
+    it('starts a new epoch without a mark when it deletes a homeserver, keeping its failures', async () => {
+      const store = fresh();
+      await store.applyRuns([runOf(0, 2), runOf(0, 3, { ...META, homeserver: 'hs2' })]);
+      await store.patchHomeserverState('hs1', {
+        highWater: { cursor: c(9), author: 'alice' },
+        failure: { failures: 1, retryAt: 60 },
+      });
+
+      await store.deleteHomeserver('hs1');
+      await store.commit({
+        deleteHomeservers: ['hs1'],
+        homeserverStates: [{ homeserver: 'hs1', patch: { highWater: { cursor: c(2), author: 'bob' } } }],
+      });
+
+      expect(await store.readHomeserverState('hs1')).toEqual({
+        ...EMPTY_HOMESERVER_STATE,
+        highWater: { cursor: c(2), author: 'bob' },
+        epoch: 2,
+        failure: { failures: 1, retryAt: 60 },
+      });
+      expect(await store.readHomeserverState('hs2')).toEqual(EMPTY_HOMESERVER_STATE);
+      expect(await store.listScopes()).toEqual([{ ...META, homeserver: 'hs2' }]);
+    });
+
+    it('changes nothing for a batch read under an epoch that is no longer current', async () => {
+      const store = fresh();
+      const hs2: RunMeta = { ...META, homeserver: 'hs2' };
+      await store.applyRuns([runOf(0, 2), runOf(0, 2, hs2)]);
+      await store.deleteHomeserver('hs1');
+      const stale: StoreBatch<Payload> = {
+        readAt: [
+          { homeserver: 'hs1', epoch: 0 },
+          { homeserver: 'hs2', epoch: 0 },
+        ],
+        deleteHomeservers: ['hs2'],
+        applyRuns: [runOf(2, 4), runOf(2, 4, hs2)],
+        recordData: [{ scope: hs2, path: 'a', cursor: c(2), data: { n: 7 } }],
+        userHomeservers: [{ user: 'alice', value: { homeserver: 'hs1', resolvedAt: 5 } }],
+        homeserverStates: [{ homeserver: 'hs1', patch: { highWater: { cursor: c(4), author: 'alice' } } }],
+        scopeMembers: [{ seed: 'alice', members: new Map([['alice', 0]]) }],
+      };
+
+      await store.commit(stale);
+
+      await expectScopeOf(store, META, []);
+      await expectScopeOf(store, hs2, [runOf(0, 2, hs2)]);
+      expect(await store.readUserHomeserver('alice')).toBeNull();
+      expect(await store.readHomeserverState('hs1')).toEqual({ ...EMPTY_HOMESERVER_STATE, epoch: 1 });
+      expect(await store.readHomeserverState('hs2')).toEqual(EMPTY_HOMESERVER_STATE);
+      expect(await store.readScopeMembers('alice')).toEqual(new Map());
+
+      await store.commit({ ...stale, readAt: [{ homeserver: 'hs1', epoch: 1 }], deleteHomeservers: [] });
+      await expectScopeOf(store, META, [runOf(2, 4)]);
+      expect((await store.readHomeserverState('hs1')).highWater).toEqual({ cursor: c(4), author: 'alice' });
     });
 
     it('stores user homeservers and scope members per key, the last write winning', async () => {

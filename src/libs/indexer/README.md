@@ -47,7 +47,9 @@ heads and tails alone. `store.contract.ts` checks this equivalence after every s
 
 The store also keeps each user's resolved homeserver, per-homeserver crawl state and the members of
 each scope. `commit` applies a whole batch atomically, and values are copied in and out, so callers
-never share objects with the store. `createMemoryStore` keeps it in memory, for tests and short-lived
+never share objects with the store. A homeserver's high-water mark only rises, and deleting a homeserver
+starts a new epoch for it: a batch names the epochs it read under, and changes nothing once one of them
+is over, so what an operation read before another one dropped the homeserver never comes back. `createMemoryStore` keeps it in memory, for tests and short-lived
 use. `createIdbStore` keeps it in IndexedDB through Dexie, each `commit` in one read-write transaction.
 Entries are keyed by scope then path, so a scope is one range of the primary key, and a run reads and
 writes only the rows of its own paths. Payloads and cursors are stored by structured clone, so `D` must
@@ -80,7 +82,9 @@ the user wrote less than a page since, keeping one range; past that it reads the
 `backfill` closes, and until then only the range above the gap is served. Neither searches for the window start. Records
 that need their file get it fetched and reduced; a file that is gone or fails its hash leaves the record without data until a later event. A
 homeserver whose request keeps failing is skipped for the rest of the sync with exponential backoff, and one whose
-log went backwards (a restore) loses everything stored for it and is synced again.
+log went backwards (a restore) loses everything stored for it and is synced again. Every operation, `backfill` and
+`hydrate` included, reads a homeserver under the epoch it found, so a restore one operation finds also voids what
+the others read before it.
 
 Requests to a homeserver queue in the crawler, at most `homeserverConcurrency` (6) in flight at once across every
 operation, so the order is the crawler's and not the browser's: a browser runs 6 connections per host over HTTP/1.1

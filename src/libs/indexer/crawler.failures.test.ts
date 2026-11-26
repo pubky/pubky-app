@@ -369,9 +369,10 @@ describe('backfill', () => {
 
     await backfiller.backfill('alice', ACTIVITY, 2);
 
-    expect(limits).toEqual([4, 4]);
+    // The restore check reads the newest event of the high-water author first.
+    expect(limits).toEqual([1, 4, 4]);
     const step = ['read', 'get', 'get', 'get', 'get', 'commit'];
-    expect(log).toEqual([...step, ...step]);
+    expect(log).toEqual(['read', ...step, ...step]);
     expect(await store.readCoverage({ author: 'alice', homeserver: 'hs1', group: ACTIVITY })).toHaveLength(1);
   });
 

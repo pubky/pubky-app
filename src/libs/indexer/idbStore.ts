@@ -4,15 +4,17 @@ import type { BulkScopeReader } from './readScopes';
 import {
   applyRun,
   assertValidBatch,
+  deletedState,
   evictCoverage,
+  homeserverStateOf,
   patchedState,
+  readsCurrent,
   runsOfScope,
   scopeOf,
   scopeState,
   withData,
 } from './store.helpers';
 import {
-  EMPTY_HOMESERVER_STATE,
   type HomeserverState,
   type IndexStore,
   type ScopeKey,
@@ -151,10 +153,17 @@ export function createIdbStore<D>(databaseName: string): IdbIndexStore<D> {
 
     // One transaction for the whole batch, so a throw or a crash leaves all of it or none.
     await db.transaction('rw', tables, async () => {
+      const stateOfHomeserver = async (homeserver: string) =>
+        homeserverStateOf((await homeserverStates.get(homeserver))?.state);
+      const epochs = new Map<string, number>();
+      for (const { homeserver } of copy.readAt ?? [])
+        epochs.set(homeserver, (await stateOfHomeserver(homeserver)).epoch);
+      if (!readsCurrent(copy.readAt, (homeserver) => epochs.get(homeserver) ?? 0)) return;
       for (const homeserver of copy.deleteHomeservers ?? []) {
         const ids = await scopes.where('homeserver').equals(homeserver).primaryKeys();
         for (const id of ids) await pathsOf(id).delete();
         await scopes.bulkDelete(ids);
+        await homeserverStates.put({ homeserver, state: deletedState(await stateOfHomeserver(homeserver)) });
       }
       for (const { scope, cutoff } of copy.evictions ?? []) {
         const row = await scopeRow(scope);
@@ -193,8 +202,7 @@ export function createIdbStore<D>(databaseName: string): IdbIndexStore<D> {
       }
       await userHomeservers.bulkPut((copy.userHomeservers ?? []).map(({ user, value }) => ({ user, value })));
       for (const { homeserver, patch } of copy.homeserverStates ?? []) {
-        const current = (await homeserverStates.get(homeserver))?.state ?? EMPTY_HOMESERVER_STATE;
-        await homeserverStates.put({ homeserver, state: patchedState(current, patch) });
+        await homeserverStates.put({ homeserver, state: patchedState(await stateOfHomeserver(homeserver), patch) });
       }
       await scopeMembers.bulkPut(
         (copy.scopeMembers ?? []).map(({ seed, members }) => ({ seed, members: new Map(members) })),
@@ -222,8 +230,7 @@ export function createIdbStore<D>(databaseName: string): IdbIndexStore<D> {
     deleteHomeserver: (homeserver) => commit({ deleteHomeservers: [homeserver] }),
     readUserHomeserver: async (user) => (await userHomeservers.get(user))?.value ?? null,
     writeUserHomeserver: (user, value) => commit({ userHomeservers: [{ user, value }] }),
-    readHomeserverState: async (homeserver) =>
-      (await homeserverStates.get(homeserver))?.state ?? { ...EMPTY_HOMESERVER_STATE },
+    readHomeserverState: async (homeserver) => homeserverStateOf((await homeserverStates.get(homeserver))?.state),
     patchHomeserverState: (homeserver, patch) => commit({ homeserverStates: [{ homeserver, patch }] }),
     readScopeMembers: async (seed) => (await scopeMembers.get(seed))?.members ?? new Map<string, number>(),
     writeScopeMembers: (seed, members) => commit({ scopeMembers: [{ seed, members }] }),
