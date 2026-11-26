@@ -174,7 +174,11 @@ describe('createSocialIndexer', () => {
   });
 
   it('proves a post deleted from the tombstones of its loaded history, outside the window', async () => {
-    const { fixture, indexerOf } = socialWorld({ hops: 1, windowDays: 0.5 });
+    const { fixture, network, indexerOf } = socialWorld({ hops: 1, windowDays: 0.5 });
+    // Every write is older than the half-day window, and only a write dates the window start: alice's last one,
+    // written after the delete, puts the tombstone below the start and outside what the scope sync reads.
+    const later = at(14, () => buildPost(ALICE, { content: 'Written after the delete' }));
+    network.put(ALICE, later.path, later.body);
     const url = `/v1/post/${ALICE}/${fixture.posts.gone.id}`;
     const indexer = indexerOf();
     indexer.start(ALICE);
