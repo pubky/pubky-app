@@ -377,10 +377,8 @@ describe('createIndexerRuntime backfill', () => {
     await settle();
 
     const first = runtime.backfill('bob', ACTIVITY, 1);
-    const joined = runtime.backfill('bob', ACTIVITY, 2, { force: true });
-    const step = await first;
-    expect(step).toEqual({ tail: CURSOR_ZERO, pages: 1, events: 2 });
-    expect(await joined).toEqual(step);
+    expect(runtime.backfill('bob', ACTIVITY, 2, { force: true })).toBe(first);
+    expect(await first).toEqual({ tail: CURSOR_ZERO, pages: 1, events: 2 });
     expect(await runtime.backfill('bob', ACTIVITY, 1)).toBeNull();
 
     expect(await runtime.backfill('bob', ACTIVITY, 1, { force: true })).toEqual({

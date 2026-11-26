@@ -60,8 +60,8 @@ interface Task {
   remote: boolean;
 }
 
-interface Ensured {
-  promise: Promise<Settled>;
+interface Ensured<T> {
+  promise: Promise<T>;
   settledAt: number | null;
 }
 
@@ -131,7 +131,9 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
   const waitingFor = new Set<string>();
   /** This tab's requests sent to the crawling tab, by id. */
   const forwarded = new Map<string, Task>();
-  const ensured = new Map<string, Ensured>();
+  /** The `ensureUser` and `ensureLeaf` calls by key, and the backfills by author and group. */
+  const ensured = new Map<string, Ensured<void>>();
+  const backfills = new Map<string, Ensured<BackfillResult>>();
   const changeListeners = new Set<(change: StoreChange) => void>();
   const statusListeners = new Set<(status: RuntimeStatus) => void>();
 
@@ -557,18 +559,23 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
   }
 
   /** Shares the call with a pending one of the same key, or one finished less than `ttlMs` ago. */
-  function ensure(key: string, request: CrawlRequest, ttlMs: number): Promise<Settled> {
-    const known = ensured.get(key);
+  function ensure<T>(
+    entries: Map<string, Ensured<T>>,
+    key: string,
+    ttlMs: number,
+    start: () => Promise<T>,
+  ): Promise<T> {
+    const known = entries.get(key);
     if (known !== undefined && (known.settledAt === null || now() - known.settledAt < ttlMs)) return known.promise;
-    const promise = submit(request);
-    const entry: Ensured = { promise, settledAt: null };
-    ensured.set(key, entry);
+    const promise = start();
+    const entry: Ensured<T> = { promise, settledAt: null };
+    entries.set(key, entry);
     promise.then(
       () => {
         entry.settledAt = now();
       },
       () => {
-        if (ensured.get(key) === entry) ensured.delete(key);
+        if (entries.get(key) === entry) entries.delete(key);
       },
     );
     return promise;
@@ -626,6 +633,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     scopeDue = [];
     forwarded.clear();
     ensured.clear();
+    backfills.clear();
     cancelFlush?.();
     flushChange();
     emitStatus();
@@ -675,24 +683,23 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
       // Visitor mode has no scope to sync.
       return started && seed === null ? Promise.resolve() : done(submit({ kind: 'scope' }));
     },
-    ensureUser: (user) => done(ensure(userKey(user), { kind: 'users', users: [user] }, options.ensureTtlMs)),
+    ensureUser: (user) =>
+      ensure(ensured, userKey(user), options.ensureTtlMs, () => done(submit({ kind: 'users', users: [user] }))),
     ensureLeaf: (leaf) =>
-      done(
-        ensure(
-          leafKey(leaf.author, leaf.group),
-          { kind: 'leaf', leaf: { author: leaf.author, group: leaf.group, paths: [...leaf.paths] } },
-          options.ensureTtlMs,
-        ),
+      ensure(ensured, leafKey(leaf.author, leaf.group), options.ensureTtlMs, () =>
+        done(submit({ kind: 'leaf', leaf: { author: leaf.author, group: leaf.group, paths: [...leaf.paths] } })),
       ),
     backfill(author, group, pages, backfillOptions) {
       const key = backfillKey(author, group);
-      const known = ensured.get(key);
+      const known = backfills.get(key);
       const force = backfillOptions?.force === true;
       const recent =
         known !== undefined && known.settledAt !== null && now() - known.settledAt < options.backfillMinIntervalMs;
       if (!force && recent) return Promise.resolve(null);
       // A step still running is shared, forced or not; a finished one is never reused.
-      return ensure(key, { kind: 'backfill', author, group, pages }, 0).then((step) => step ?? NO_STEP);
+      return ensure(backfills, key, 0, () =>
+        submit({ kind: 'backfill', author, group, pages }).then((step) => step ?? NO_STEP),
+      );
     },
     forget,
     setExcluded: (users) => crawler.setExcluded(users),
