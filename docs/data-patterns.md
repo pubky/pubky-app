@@ -606,8 +606,9 @@ end, a selected pin's card; its `geo:` entry ("Default maps app") shows on Andro
   `/api/map?p=<path>` (`toPrivateMapRequest` → `toMapRouteUrl`), without credentials or a referrer, so a map is
   drawn at once, with nothing asked from another host. The route reads
   `tiles.openfreemap.org` only, and only the paths `toMapTileRequest` allows (the two styles, the planet's TileJSON
-  and vector tiles to zoom 14 of a tile set that TileJSON named in the last two days; a set newer than every one
-  seen has the TileJSON read again past the cache, at most once a minute, before it is refused, Natural Earth relief to zoom 6, the styles' Noto Sans font ranges, the sprites; any
+  in either of its copies, `planet` and `backup_planet`, which the styles switch between, and vector tiles to zoom 14
+  of a tile set a TileJSON named in the last two days; a set newer than every one seen in its copy has that copy's
+  TileJSON read again past the cache, at most once a minute per copy, before it is refused, Natural Earth relief to zoom 6, the styles' Noto Sans font ranges, the sprites; any
   other path is a 400 with nothing read), no redirect, 2 MB and 8 s per file, each served as its pattern's type
   (a PNG only when its bytes are one) with nosniff, sandbox and same-origin headers, the app naming itself
   (`PubkyApp/<version>`). Files are kept a day (a style an hour, the TileJSON ten minutes, as long as browsers

@@ -34,12 +34,27 @@ describe('GET /api/map', () => {
     expect(new Uint8Array(await response.arrayBuffer())).toEqual(new Uint8Array([1, 2, 3]));
   });
 
-  it('serves the planet’s TileJSON kept as long as the server keeps it, with no stale copy', async () => {
-    fetchFile.mockResolvedValueOnce(new TextEncoder().encode('{}'));
+  it.each(['planet', 'backup_planet'])(
+    'serves the %s TileJSON kept as long as the server keeps it, with no stale copy',
+    async (path) => {
+      fetchFile.mockResolvedValueOnce(new TextEncoder().encode('{}'));
 
-    const response = await GET(request('planet'));
+      const response = await GET(request(path));
 
-    expect(response.headers.get('cache-control')).toBe('public, max-age=600, s-maxage=600');
+      expect(response.status).toBe(200);
+      expect(response.headers.get('content-type')).toBe('application/json');
+      expect(response.headers.get('cache-control')).toBe('public, max-age=600, s-maxage=600');
+    },
+  );
+
+  it('serves a tile of the backup copy as a tile, cached for good', async () => {
+    fetchFile.mockResolvedValueOnce(new Uint8Array([1, 2, 3]));
+
+    const response = await GET(request('backup_planet/20261122_124456_pt/10/536/358.pbf'));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe('application/x-protobuf');
+    expect(response.headers.get('cache-control')).toContain('immutable');
   });
 
   it('serves a style as JSON, kept an hour', async () => {
@@ -51,7 +66,7 @@ describe('GET /api/map', () => {
     expect(response.headers.get('cache-control')).toContain('max-age=3600');
   });
 
-  it.each([null, 'styles/liberty', 'https://evil.example/x', '../etc/passwd'])(
+  it.each([null, 'styles/liberty', 'https://evil.example/x', '../etc/passwd', 'other_planet', 'backup_planet/x'])(
     'refuses %j with a 400, reading nothing',
     async (path) => {
       const response = await GET(request(path));

@@ -172,6 +172,107 @@ describe('MapTileApplication', () => {
     expect(tileJsonReads()).toBe(4);
   });
 
+  describe('the backup copy (`backup_planet`)', () => {
+    const BACKUP_SET = '20261122_124456_pt';
+    const tileJsonOf = (copy: string, set: string) =>
+      new TextEncoder().encode(
+        JSON.stringify({ tiles: [`https://tiles.openfreemap.org/${copy}/${set}/{z}/{x}/{y}.pbf`] }),
+      );
+    const tileIn = (copy: string, set: string, y = 358) => toMapTileRequest(`${copy}/${set}/10/536/${y}.pbf`)!;
+    const reads = (path: string) =>
+      vi.mocked(NextJsMapTileService.fetch).mock.calls.filter(([request]) => request.path === path).length;
+
+    it('serves each copy’s tiles once that copy’s TileJSON names them', async () => {
+      vi.mocked(NextJsMapTileService.fetch).mockImplementation(async (request) =>
+        request.path === 'planet'
+          ? tileJsonOf('planet', TILESET)
+          : request.path === 'backup_planet'
+            ? tileJsonOf('backup_planet', BACKUP_SET)
+            : BYTES,
+      );
+
+      await expect(MapTileApplication.fetchFile(tileIn('backup_planet', BACKUP_SET))).resolves.toBe(BYTES);
+      await expect(MapTileApplication.fetchFile(tileIn('planet', TILESET))).resolves.toBe(BYTES);
+      expect(reads('backup_planet')).toBe(1);
+      expect(reads('planet')).toBe(1);
+    });
+
+    it('serves no tile of a set in one copy that a TileJSON named in the other copy, even of the same date', async () => {
+      vi.mocked(NextJsMapTileService.fetch).mockImplementation(async (request) =>
+        request.path === 'planet' ? tileJsonOf('planet', BACKUP_SET) : request.path === 'backup_planet' ? null : BYTES,
+      );
+      await expect(MapTileApplication.fetchFile(tileIn('planet', BACKUP_SET))).resolves.toBe(BYTES);
+
+      await expect(MapTileApplication.fetchFile(tileIn('backup_planet', BACKUP_SET))).resolves.toBeNull();
+      expect(
+        vi
+          .mocked(NextJsMapTileService.fetch)
+          .mock.calls.filter(([request]) => request.path.startsWith('backup_planet/')),
+      ).toHaveLength(0);
+    });
+
+    it('serves a set of the backup copy that the planet’s TileJSON names, and only in that copy', async () => {
+      vi.mocked(NextJsMapTileService.fetch).mockImplementation(async (request) =>
+        request.path === 'planet'
+          ? tileJsonOf('backup_planet', BACKUP_SET)
+          : request.path === 'backup_planet'
+            ? null
+            : BYTES,
+      );
+      await expect(MapTileApplication.fetchFile(toMapTileRequest('planet')!)).resolves.not.toBeNull();
+
+      await expect(MapTileApplication.fetchFile(tileIn('backup_planet', BACKUP_SET))).resolves.toBe(BYTES);
+      await expect(MapTileApplication.fetchFile(tileIn('planet', BACKUP_SET))).resolves.toBeNull();
+    });
+
+    it('reads each copy’s TileJSON past the cache at most once a minute, the other copy’s read not counting', async () => {
+      vi.useFakeTimers();
+      let planet = TILESET;
+      let backup = '20261108_000000_pt';
+      vi.mocked(NextJsMapTileService.fetch).mockImplementation(async (request) =>
+        request.path === 'planet'
+          ? tileJsonOf('planet', planet)
+          : request.path === 'backup_planet'
+            ? tileJsonOf('backup_planet', backup)
+            : BYTES,
+      );
+      await MapTileApplication.fetchFile(tileIn('planet', planet));
+      await MapTileApplication.fetchFile(tileIn('backup_planet', backup));
+
+      // Both copies publish a new set within one minute: each copy's TileJSON is read again once.
+      planet = '20261129_080022_pt';
+      backup = BACKUP_SET;
+      await expect(MapTileApplication.fetchFile(tileIn('planet', planet))).resolves.toBe(BYTES);
+      await expect(MapTileApplication.fetchFile(tileIn('backup_planet', backup))).resolves.toBe(BYTES);
+      expect(reads('planet')).toBe(2);
+      expect(reads('backup_planet')).toBe(2);
+
+      // Within that minute a made-up newer set costs no further read in either copy.
+      await expect(MapTileApplication.fetchFile(tileIn('backup_planet', '20991231_000000_pt'))).resolves.toBeNull();
+      expect(reads('backup_planet')).toBe(2);
+    });
+
+    it('reads its TileJSON again for a set newer than every one it named, whatever the other copy named', async () => {
+      vi.useFakeTimers();
+      let backup = '20261108_000000_pt';
+      vi.mocked(NextJsMapTileService.fetch).mockImplementation(async (request) =>
+        request.path === 'planet'
+          ? tileJsonOf('planet', '20261129_080022_pt')
+          : request.path === 'backup_planet'
+            ? tileJsonOf('backup_planet', backup)
+            : BYTES,
+      );
+      await MapTileApplication.fetchFile(tileIn('planet', '20261129_080022_pt'));
+      await MapTileApplication.fetchFile(tileIn('backup_planet', backup));
+      expect(reads('backup_planet')).toBe(1);
+
+      // The backup copy moves to a set older than planet's newest: still newer than every backup set seen.
+      backup = BACKUP_SET;
+      await expect(MapTileApplication.fetchFile(tileIn('backup_planet', BACKUP_SET))).resolves.toBe(BYTES);
+      expect(reads('backup_planet')).toBe(2);
+    });
+  });
+
   it('serves no tile of a set the TileJSON does not name now, reading none', async () => {
     host(BYTES);
 

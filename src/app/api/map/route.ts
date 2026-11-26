@@ -15,7 +15,10 @@ import { HttpStatusCode } from '@/libs/http/http.types';
  */
 const IMMUTABLE_CACHE = 'public, max-age=31536000, s-maxage=31536000, immutable';
 const MUTABLE_CACHE = 'public, max-age=3600, s-maxage=3600, stale-while-revalidate=86400';
-/** The planet's TileJSON: as long as the server keeps it (`MAP_TILEJSON_TTL_MS`), no stale copy. */
+/**
+ * A copy's TileJSON (`planet`, `backup_planet`): as long as the server keeps it (`MAP_TILEJSON_TTL_MS`),
+ * no stale copy.
+ */
 const TILEJSON_CACHE = 'public, max-age=600, s-maxage=600';
 const MISS_CACHE = 'public, max-age=60, s-maxage=60';
 const REFUSED_CACHE = 'public, max-age=86400, s-maxage=86400';

@@ -1,4 +1,4 @@
-import { getTileset, type TMapTileRequest, toMapTileRequest } from '@/pipes/map-tile/map-tile';
+import { getTileJsonRequest, getTileset, type TMapTileRequest } from '@/pipes/map-tile/map-tile';
 import { MAP_TILE_FAILED, NextJsMapTileService } from '@/services/nextjs/map-tile/map-tile';
 import { BOUNDED_READ_BUSY, BoundedReadCache } from '@/utils/bounded-cache';
 import { KeyedSlots } from '@/utils/keyed-slots';
@@ -40,7 +40,7 @@ export const MAP_TILE_PAUSE_MS = 10 * 1000;
 const IMMUTABLE_TTL_MS = 24 * 60 * 60 * 1000;
 const MUTABLE_TTL_MS = 60 * 60 * 1000;
 /**
- * How long the planet's TileJSON is kept: the route tells browsers and the CDN to keep it as long
+ * How long a copy's TileJSON is kept: the route tells browsers and the CDN to keep it as long
  * (`/api/map`'s TileJSON cache), so a new tile set is seen everywhere within it.
  */
 export const MAP_TILEJSON_TTL_MS = 10 * 60 * 1000;
@@ -49,9 +49,9 @@ export const MAP_TILEJSON_TTL_MS = 10 * 60 * 1000;
  * instances may still hold the older TileJSON, and a map never asks again for a tile that failed.
  */
 export const MAP_TILESET_KEPT_MS = 2 * 24 * 60 * 60 * 1000;
-/** How often at most the TileJSON is read past the cache for a tile set newer than every one seen. */
+/** How often at most a copy's TileJSON is read past the cache for a tile set newer than every one seen. */
 export const MAP_TILEJSON_REREAD_MS = 60 * 1000;
-/** Tile sets remembered at most (OpenFreeMap publishes about one a week). */
+/** Tile sets remembered at most, both copies together (OpenFreeMap publishes about one a week). */
 const MAP_TILESETS_KEPT = 8;
 /** How long a file the host has none of is remembered. */
 const MISS_TTL_MS = 60 * 1000;
@@ -61,19 +61,17 @@ const isNotNow = (value: unknown): value is TNotNow => value === MAP_TILE_BUSY |
 type TKept = { bytes: Uint8Array; immutable: boolean; tileJson?: boolean };
 /** The one key of the host's turns. */
 const MAP_TILE_TURN_KEY = 'tiles.openfreemap.org';
-/** The planet's TileJSON: which tile set is the current one. */
-const TILEJSON = toMapTileRequest('planet')!;
 
 /**
  * Map tile application service: one OpenFreeMap file (style, TileJSON, tile, font range, sprite) for the
  * `/api/map` route, so a map is drawn with no request from the viewer's browser to the tile host. Only
  * the addresses `toMapTileRequest` allows are read (`NextJsMapTileService`, one fixed host).
  *
- * A vector tile is served only from a tile set the TileJSON named in the last two days. Files are kept a
- * day (a style an hour, the TileJSON ten minutes, a missing file a minute) in a cache bounded by
- * entries and bytes (`BoundedReadCache`); concurrent requests for one file share one read, at most
- * `MAP_TILE_MAX_IN_FLIGHT` run at once, others waiting their turn up to `MAP_TILE_WAIT_MS`, and reads come
- * from this instance's budget (`MAP_TILE_BURST`).
+ * A vector tile is served only from a tile set either copy's TileJSON (`planet`, `backup_planet`) named in
+ * the last two days. Files are kept a day (a style an hour, a TileJSON ten minutes, a missing file a
+ * minute) in a cache bounded by entries and bytes (`BoundedReadCache`); concurrent requests for one file
+ * share one read, at most `MAP_TILE_MAX_IN_FLIGHT` run at once, others waiting their turn up to
+ * `MAP_TILE_WAIT_MS`, and reads come from this instance's budget (`MAP_TILE_BURST`).
  * After the host fails, it is not asked for `MAP_TILE_PAUSE_MS`; a read not made now answers with the
  * file kept before, expired or not, else busy or unavailable, never remembered.
  */
@@ -99,22 +97,27 @@ export class MapTileApplication {
 
   /**
    * The map file `request` names (validated by `toMapTileRequest`). A vector tile is served only from a
-   * tile set the planet's TileJSON (read through the same cache) named within `MAP_TILESET_KEPT_MS`, the
+   * tile set a TileJSON (its copy's, read through the same cache) named within `MAP_TILESET_KEPT_MS`, the
    * current one or one before it that browsers or the CDN may still ask for: any other set's address is
    * `null` with no tile read, so made-up addresses cannot each cost a read.
    */
   static async fetchFile(request: TMapTileRequest): Promise<TMapTileRead> {
     if (request.tileset && !MapTileApplication.isRecentTileset(request.tileset)) {
-      // A set not named lately: the TileJSON (read through the same cache) may name it now.
-      const tileJson = await MapTileApplication.readCached(TILEJSON);
+      const tileJsonRequest = getTileJsonRequest(request.tileset);
+      if (!tileJsonRequest) return null;
+      // A set not named lately: its copy's TileJSON (read through the same cache) may name it now.
+      const tileJson = await MapTileApplication.readCached(tileJsonRequest);
       if (isNotNow(tileJson)) return tileJson;
       if (!MapTileApplication.isRecentTileset(request.tileset)) {
         // Newer than every set seen: OpenFreeMap may have published it since the TileJSON was kept (another
-        // instance, or a browser, read it first). Read the TileJSON past the cache, at most once a minute.
-        if (!MapTileApplication.isNewerTileset(request.tileset) || !MapTileApplication.mayReadTileJsonAgain()) {
+        // instance, or a browser, read it first). Read it past the cache, at most once a minute per copy.
+        if (
+          !MapTileApplication.isNewerTileset(request.tileset) ||
+          !MapTileApplication.mayReadTileJsonAgain(tileJsonRequest.path)
+        ) {
           return null;
         }
-        const fresh = await MapTileApplication.readCached(TILEJSON, { maxAgeMs: -1 });
+        const fresh = await MapTileApplication.readCached(tileJsonRequest, { maxAgeMs: -1 });
         if (isNotNow(fresh)) return fresh;
         if (!MapTileApplication.isRecentTileset(request.tileset)) return null;
       }
@@ -122,19 +125,27 @@ export class MapTileApplication {
     return MapTileApplication.readCached(request);
   }
 
-  /** When the TileJSON was last read past the cache for a newer tile set (epoch ms). */
-  private static tileJsonReadAgainAt = 0;
+  /** When each copy's TileJSON was last read past the cache for a newer tile set (epoch ms). */
+  private static readonly tileJsonReadAgainAt = new Map<string, number>();
 
-  /** Whether the TileJSON may be read past the cache now (`MAP_TILEJSON_REREAD_MS` since the last time); notes it. */
-  private static mayReadTileJsonAgain(): boolean {
-    if (Date.now() - MapTileApplication.tileJsonReadAgainAt < MAP_TILEJSON_REREAD_MS) return false;
-    MapTileApplication.tileJsonReadAgainAt = Date.now();
+  /**
+   * Whether the TileJSON of `copy` may be read past the cache now (`MAP_TILEJSON_REREAD_MS` since its last
+   * time); notes it.
+   */
+  private static mayReadTileJsonAgain(copy: string): boolean {
+    const last = MapTileApplication.tileJsonReadAgainAt.get(copy);
+    if (last !== undefined && Date.now() - last < MAP_TILEJSON_REREAD_MS) return false;
+    MapTileApplication.tileJsonReadAgainAt.set(copy, Date.now());
     return true;
   }
 
-  /** Whether `tileset` is newer than every set the TileJSON named (sets are named by their date). */
+  /**
+   * Whether `tileset` is newer than every set seen in its copy (sets are named by their date; the other
+   * copy's sets do not count).
+   */
   private static isNewerTileset(tileset: string): boolean {
-    return [...MapTileApplication.tilesets.keys()].every((known) => tileset > known);
+    const copy = `${tileset.split('/')[0]}/`;
+    return [...MapTileApplication.tilesets.keys()].every((known) => !known.startsWith(copy) || tileset > known);
   }
 
   /** One file through the cache (`maxAgeMs`: read again when kept longer than that; `-1` always). */
@@ -174,7 +185,7 @@ export class MapTileApplication {
     return bytes ? { bytes, immutable: request.immutable, tileJson: request.tileJson } : null;
   }
 
-  /** The tile sets the TileJSON named, and when it last did (epoch ms). */
+  /** The tile sets (`<copy>/<date>_pt`) the TileJSONs named, and when they last did (epoch ms). */
   private static readonly tilesets = new Map<string, number>();
 
   /** Notes the tile set a TileJSON just read names, the oldest forgotten past `MAP_TILESETS_KEPT`. */
@@ -190,7 +201,7 @@ export class MapTileApplication {
     }
   }
 
-  /** Whether the TileJSON named `tileset` within `MAP_TILESET_KEPT_MS`. */
+  /** Whether a TileJSON named `tileset` within `MAP_TILESET_KEPT_MS`. */
   private static isRecentTileset(tileset: string): boolean {
     const seen = MapTileApplication.tilesets.get(tileset);
     return seen !== undefined && Date.now() - seen <= MAP_TILESET_KEPT_MS;
@@ -201,7 +212,7 @@ export class MapTileApplication {
     MapTileApplication.files.clear();
     MapTileApplication.turns.clear();
     MapTileApplication.tilesets.clear();
-    MapTileApplication.tileJsonReadAgainAt = 0;
+    MapTileApplication.tileJsonReadAgainAt.clear();
     MapTileApplication.budget.reset();
     MapTileApplication.pausedUntil = 0;
   }
