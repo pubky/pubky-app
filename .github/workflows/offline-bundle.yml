@@ -1,0 +1,73 @@
+name: Offline bundle
+
+# The static export of the app plus its local launchers (docs/offline-bundle.md), uploaded as an
+# artifact. Built only for the branch that introduces it while the bundle is being proven out.
+on:
+  pull_request:
+    branches:
+      - '**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bundle:
+    name: Build the offline bundle
+    if: github.head_ref == 'feat/indexer'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          # Blobless partial clone without the VRT baseline PNGs, as in build.yml.
+          filter: blob:none
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /*
+            !/src/test/vrt/**/__screenshots__
+
+      - name: Install dependencies
+        uses: ./.github/actions/install-dependencies
+
+      # The export bakes this config into every page, and its build fails when a required value is
+      # missing. Staging network, the in-browser index, and no optional third-party service.
+      - name: Export
+        env:
+          NEXT_PUBLIC_STATIC_EXPORT: 'true'
+          PUBKY_RUNTIME_ENV: staging
+          PUBKY_RUNTIME_TESTNET: 'false'
+          PUBKY_RUNTIME_HOMESERVER: ufibwbmed6jeq9k4p583go95wofakh9fwpp4k734trq79pd9u1uy
+          PUBKY_RUNTIME_HOMESERVER_URL: https://homeserver.staging.pubky.app
+          PUBKY_RUNTIME_INDEXER_SOURCES: local
+          PUBKY_RUNTIME_HOMEGATE_URL: https://homegate.staging.pubky.app
+          PUBKY_RUNTIME_PKARR_RELAYS: '["https://pkarr.pubky.app","https://pkarr.pubky.org"]'
+          PUBKY_RUNTIME_DEFAULT_HTTP_RELAY: https://httprelay.staging.pubky.app/inbox
+          PUBKY_RUNTIME_MODERATION_ID: nto4u7kkagk5hfjk4wgueemzy61nssic811hid1ty9u81uatmqzy
+        run: npm run build
+
+      - name: Check the export
+        run: |
+          test -f out/index.html
+          test -f out/sw.js
+          test -f out/post/_/_.html
+          test -f out/profile/_.html
+          grep -q 'window.__PUBKY_CONFIG__=Object.freeze' out/index.html
+          if find out -name '*.map' | grep -q .; then echo 'source maps in the export'; exit 1; fi
+          if [ -d out/api ]; then echo 'route handlers in the export'; exit 1; fi
+
+      - name: Assemble the bundle
+        run: |
+          mkdir -p bundle/pubky-app-offline
+          cp -r out bundle/pubky-app-offline/app
+          cp offline-bundle/serve.py offline-bundle/serve.mjs offline-bundle/routes.json offline-bundle/README.txt \
+            bundle/pubky-app-offline/
+          du -sh bundle/pubky-app-offline bundle/pubky-app-offline/app
+
+      - name: Upload the bundle
+        uses: actions/upload-artifact@v7
+        with:
+          name: pubky-app-offline
+          path: bundle
+          retention-days: 7
