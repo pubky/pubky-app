@@ -82,7 +82,7 @@ const PERMANENT: Record<string, { patterns: readonly PatternName[]; reason: stri
 const LEGACY_RATCHET: readonly string[] = [];
 
 /**
- * No session on an event stream, anywhere, so no allow-list. In `@synonymdev/pubky` 0.16.2 and 0.17.1 a
+ * No session on an event stream, anywhere, so no allow-list. In `@synonymdev/pubky` 0.16.2 through 0.18.0 a
  * session-bound request holds the shared session Web Lock until its response headers reach the SDK, with no
  * timeout. Behind anything that buffers event streams until the body completes (the Cypress proxy does; an
  * intermediary in the wild could) the headers never arrive, so the SDK's exclusive bearer refresh after any 401

@@ -19,7 +19,7 @@ import { MutedUsers } from '@/templates/Settings/MutedUsers/MutedUsers';
 import { Notifications } from '@/templates/Settings/Notifications/Notifications';
 import { Privacy } from '@/templates/Settings/Privacy/Privacy';
 
-// Covers tabs: account, edit profile (also with the migration note), notifications, locks, privacy & safety, muted users, help.
+// Covers tabs: account, edit profile (also with the migration note and a long link label), notifications, locks, privacy & safety, muted users, help.
 const routeState = vi.hoisted(() => ({
   pathname: '/settings/account',
 }));
@@ -28,6 +28,12 @@ const routeState = vi.hoisted(() => ({
 const locksState = vi.hoisted(() => ({
   available: false,
   status: 'set-up' as LocksSettingsStatus,
+}));
+
+// #3205: a 100-character alphanumeric link label has nowhere to break.
+const longLinkState = vi.hoisted(() => ({
+  enabled: false,
+  title: 'ABCD'.repeat(25),
 }));
 
 const SETTINGS_CHROME_IMAGE_URLS = [
@@ -208,7 +214,15 @@ vi.mock('@/hooks/useCurrentUserProfile/useCurrentUserProfile', async () => {
     currentUserPubky: f.viewerPubky,
     isLoading: false,
   };
-  return { useCurrentUserProfile: () => result };
+  // Built once: useProfileForm reloads the form whenever the userDetails reference changes.
+  const withLongLink = {
+    ...result,
+    userDetails: {
+      ...result.userDetails,
+      links: [{ title: longLinkState.title, url: 'https://example.com/alice' }],
+    },
+  };
+  return { useCurrentUserProfile: () => (longLinkState.enabled ? withLongLink : result) };
 });
 
 vi.mock('@/hooks/useAvatarUrl/useAvatarUrl', () => ({
@@ -367,6 +381,24 @@ describe('Settings — edit profile — visual regression', () => {
   it('renders edit profile at mobile viewport', async () => {
     await renderEditProfile(VRT_VIEWPORT_MOBILE);
     await matchVrtFrameScreenshot('settings-edit-profile-mobile');
+  });
+
+  describe('with a 100-character link label', () => {
+    beforeEach(() => {
+      longLinkState.enabled = true;
+      return () => {
+        longLinkState.enabled = false;
+      };
+    });
+
+    it.each([
+      ['desktop', VRT_VIEWPORT_DESKTOP],
+      ['mobile', VRT_VIEWPORT_MOBILE],
+    ] as const)('wraps the label at %s', async (name, viewport) => {
+      const screen = await renderEditProfile(viewport);
+      await expect.element(screen.getByText(longLinkState.title)).toBeVisible();
+      await matchVrtFrameScreenshot(`settings-edit-profile-long-link-label-${name}`);
+    });
   });
 
   // The one-shot note (D17) this browser keeps after the social v1 update dropped profile values: the picture and

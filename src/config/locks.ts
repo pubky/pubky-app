@@ -18,3 +18,6 @@ export const LOCK_ATTACHMENT_UPLOAD_CONCURRENCY = 3;
  * session. The reads carry no deadline of their own and keep going after it; only the pill stops waiting.
  */
 export const UNLOCK_PILL_HOLD_MS = 10_000;
+
+// #3207 raises it so every browser runs the copy once more.
+export const LOCKS_READER_FILES_COPY_VERSION = 1;

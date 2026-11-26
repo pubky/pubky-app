@@ -85,8 +85,9 @@ export function isStagingHomeserverDeploy(): boolean {
 // - /pub/pubky.app/:rw         — the 0.x public tree: legacy reads, and deletes of migrated objects
 // - /pub/social/v1/:rw         — the app's public social data (`pubky-social-specs` 1.x)
 // - /priv/social/v1/:rw        — the private social tree: bookmarks, mutes, feeds
-// - /priv/app.pubky/v1/:rw     — the app's own files: settings, notification read cursor
-// - /priv/social/:rw           — where unlocked lock content is copied (reader replication)
+// - /priv/app.pubky/v1/:rw     — the app's own files: settings, notification read cursor, Locks reader files
+// - /priv/social/:rw           — the Locks reader files of builds before #3206: read until copied, deleted on
+//                                account deletion and by #3207
 // - /priv/app.locks/content/:r — read-only: a creator reads their OWN guarded original here (Ring sessions)
 // The order is the order Ring shows the scopes in; `src/config/auth.test.ts` pins the string.
 export const HOMESERVER_CAPABILITIES = [APP_CAPABILITIES, ...SOCIAL_V1_APP_CAPABILITIES, ...LOCKS_CAPABILITIES].join(

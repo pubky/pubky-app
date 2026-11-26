@@ -109,7 +109,7 @@ export const CreateProfileForm = () => {
             <Container className="gap-6">
               {state.links.map((link, index) => (
                 <Container className="gap-2" key={`${link.label}-${index}`}>
-                  <Label className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                  <Label className="text-xs font-medium tracking-wide wrap-anywhere text-muted-foreground uppercase">
                     {link.label}
                   </Label>
                   <InputField
@@ -214,7 +214,7 @@ export const CreateProfileForm = () => {
                 )}
               </Button>
               {errors.avatarError && (
-                <Typography as="small" size="sm" className="ml-1 text-red-500">
+                <Typography as="small" size="sm" className="ml-1 text-error-foreground">
                   {errors.avatarError}
                 </Typography>
               )}

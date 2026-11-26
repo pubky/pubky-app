@@ -354,6 +354,7 @@ export class LocksService {
    * Whether the Paykit Server already holds this creator, read through the app's own
    * `/api/paykit-creator` (the Paykit Server sends no CORS headers, so a browser cannot ask it).
    * Throws when the answer is unavailable; that says nothing about the creator.
+   * Same-origin credentials keep the page's HTTP auth, e.g. staging's basic auth.
    */
   static async lookupPaykitCreatorHeld({ creator }: TLookupPaykitCreatorHeldParams): Promise<boolean> {
     const operation = 'LocksService.lookupPaykitCreatorHeld';
@@ -362,7 +363,6 @@ export class LocksService {
     try {
       const response = await safeFetch(
         endpoint.href,
-        // Staging's Basic auth and the previews' IAP cookie also guard this route, and `omit` would not send them.
         { method: HttpMethod.GET, credentials: 'same-origin', cache: 'no-store' },
         ErrorService.Locks,
         operation,

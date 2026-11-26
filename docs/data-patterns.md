@@ -270,16 +270,28 @@ Article bodies (`kind: long`) embed images, videos, audio and PDFs with one mark
 ## Homeserver Trees and App Files
 
 The app reads and writes five trees of the signed-in account on its homeserver. Objects of the social data model
-(`pubky-social-specs`) are built, decoded and encoded by the package; the two files the app owns outside that model
-are plain JSON under the app's private namespace (`src/config/app-files.ts`).
+(`pubky-social-specs`) are built, decoded and encoded by the package; the files the app owns outside that model
+are plain JSON or media under the app's private namespace (`src/config/app-files.ts`).
 
-| Tree                    | Holds                                                                                  | After the migration gate                                                                         |
-| ----------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `/pub/social/v1/`       | `profile.json`, posts, follows, tags, files                                            | the public tree; `listPrefix(pubky, 'public')`                                                   |
-| `/priv/social/v1/`      | bookmarks, mutes, feeds, private post versions, the migration flag `_migrated.json`    | the private tree; `listPrefix(pubky, 'private')`                                                 |
-| `/priv/social/` (rest)  | the Locks reader directories `unlocked/` and `purchases/` (`docs/locks.md`)            | not social objects; covered by the same `/priv/social/:rw` grant                                 |
-| `/priv/app.pubky/v1/`   | `settings.json` and the notification read cursor `last_read.json` (`APP_PRIVATE_PATH`) | app-private files, read by this app only                                                         |
-| `/pub/pubky.app/` (0.x) | what a 0.x client wrote; the migrator copies the social objects, not the app files     | read only as a fallback (`listPrefix(pubky, 'legacy')`); never written; deleted with the account |
+| Tree                    | Holds                                                                               | After the migration gate                                                                         |
+| ----------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `/pub/social/v1/`       | `profile.json`, posts, follows, tags, files                                         | the public tree; `listPrefix(pubky, 'public')`                                                   |
+| `/priv/social/v1/`      | bookmarks, mutes, feeds, private post versions, the migration flag `_migrated.json` | the private tree; `listPrefix(pubky, 'private')`                                                 |
+| `/priv/social/` (rest)  | the Locks reader directories of builds before #3206, `unlocked/` and `purchases/`   | not social objects; read until copied (`docs/locks.md`), under the `/priv/social/:rw` grant      |
+| `/priv/app.pubky/v1/`   | `settings.json`, the read cursor `last_read.json`, the Locks reader files `locks/`  | app-private files, read by this app only                                                         |
+| `/pub/pubky.app/` (0.x) | what a 0.x client wrote; the migrator copies the social objects, not the app files  | read only as a fallback (`listPrefix(pubky, 'legacy')`); never written; deleted with the account |
+
+**Names.** Every name the app builds under these trees is made of unreserved characters only (`A-Za-z0-9-_.~`):
+the ids `pubky-social-specs` builds (Crockford base32 ids, z-base-32 keys, a bookmark's base64url target or `~` and
+a hash, an extension from the media type table), fixed file names, and for a lock this app publishes the Lock
+Server's id and the UUIDs of its guarded files. `@synonymdev/pubky` sends such a path as written. Since 0.18.0 it
+percent-encodes every other byte once; a session call of 0.16.2 and 0.17.1 sent some of those bytes unescaped and
+escaped the rest twice, so a file an older build wrote under such a name can be stored under its escaped name and is
+then not found at the plain one. Never put user text, a file name or a raw media type in a path segment, and treat a
+listed entry as the name itself: nothing is decoded. `spec.contract.test.ts` pins the alphabet of the built paths
+and `homeserver.storage.contract.test.ts` what the SDK sends for them. The one place an unchecked name from someone
+else is written is the reader's Locks directories, which reuse the lock id and the attachment names of the
+creator's post (`GuardedContentParser`): a lock published by another client could carry other characters there.
 
 **Profile.** `ProfileController.commitCreate` builds the profile with `UserNormalizer.to` (`buildUser`) and PUTs
 `built.body` with `putBlob`. An edit (`ProfileApplication.commitUpdate` / `commitUpdateStatus`) is a fenced
@@ -334,7 +346,7 @@ upload that fails leaves a profile naming a file that is not there yet; the avat
 
 **Account delete and export** (`ProfileApplication.commitDelete` / `downloadData`) walk all five trees:
 `listPrefix(pubky, 'legacy')`, `listPrefix(pubky, 'public')`, the whole `/priv/social/` (the v1 tree, the flag and
-the Locks reader directories) and `/priv/app.pubky/v1/`. The export names every file by its path under the account.
+the Locks reader directories of builds before #3206) and `/priv/app.pubky/v1/`. The export names every file by its path under the account.
 The deletion removes every other file first, deepest first, then the profiles in the order `deletionPaths({ kind:
 'user' })` gives: the 0.x `profile.json`, then the v1 one. `/pub/app.locks/` and `/priv/app.locks/content/` are
 Lock Server contracts under a read-only grant and are left alone.

@@ -23,9 +23,7 @@ export const HumanSelection = ({ onClick, onInviteCodeClick, onDevMode }: HumanS
           {'Prove you’re '}
           <span className="block text-brand lg:inline">{'not a robot.'}</span>
         </PageTitle>
-        <PageSubtitle className="leading-7 lg:leading-8">
-          {'Verify to get 1GB of storage, used for your posts, media, and your profile.'}
-        </PageSubtitle>
+        <PageSubtitle>{'Verify to get 1GB of storage, used for your posts, media, and your profile.'}</PageSubtitle>
       </PageHeader>
 
       <Container

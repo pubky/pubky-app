@@ -131,6 +131,18 @@ describe('EditProfileForm', () => {
     expect(screen.getByText('Avatar')).toBeInTheDocument();
   });
 
+  it('uses the field validation color for an avatar error', () => {
+    const form = profileFormReturn();
+    mockUseProfileForm.mockReturnValue({
+      ...form,
+      errors: { ...form.errors, avatarError: 'Avatar must be an image file' },
+    });
+
+    render(<EditProfileForm />);
+
+    expect(screen.getByText('Avatar must be an image file')).toHaveClass('text-error-foreground');
+  });
+
   it('delegates saving to the profile hook, which waits for authentication', () => {
     render(<EditProfileForm />);
     act(() => useAuthStore.setState({ session: null, restoreStatus: 'restoring' }));

@@ -2,7 +2,7 @@
 
 ## Behavior
 
-PubkyApp uses `@synonymdev/pubky@0.16.2` and grant authentication for Ring and Passport (Continue with Google).
+PubkyApp uses `@synonymdev/pubky` (`0.15.0` when this migration landed, `0.16.2` from #2847; `package.json` has the current pin) and grant authentication for Ring and Passport (Continue with Google).
 Encrypted-file and recovery-phrase login and browser signup used root grants until they were removed (#3142, #3147).
 Existing cookie sessions require fresh authorization.
 Valid saved grants continue to restore. The update does not change accounts, published content or the Dexie version.
@@ -177,7 +177,7 @@ transient storage failures keep the pending material for retry.
 Locks keeps its merged UI, payment behavior and independent Lock Server authentication. `@synonymdev/locks-sdk`
 uses the merged BTC/USD build (`0.1.0-rc9+git.c692fb70522c`), pinned to the public
 [artifact commit `245253a6d7c9`](https://github.com/pubky/locks/commit/245253a6d7c9559fbcbdffc33250dacf28108d69).
-Reader copies/purchases use `/priv/social/:rw`; creator originals use `/priv/app.locks/content/:r`.
+Reader copies/purchases use `/priv/social/:rw` (since #3206 `/priv/app.pubky/v1/:rw`, with the old ones read until copied); creator originals use `/priv/app.locks/content/:r`.
 
 `useAuthUrl({ type: 'upgrade' })` calls the shared `AuthController.requestCapabilities()` flow. Approval combines current,
 app and requested capabilities and validates the same account/environment/client. Resume the feature after adoption;

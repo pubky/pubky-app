@@ -544,6 +544,15 @@ describe('CreateProfileForm', () => {
     expect(avatar).toHaveAttribute('aria-label', 'Choose avatar image');
   });
 
+  it('shows the avatar validation message when an image is required', async () => {
+    const { container } = render(<CreateProfileForm />);
+    const input = container.querySelector<HTMLInputElement>('input[type="file"]')!;
+
+    fireEvent.change(input, { target: { files: [new File(['text'], 'note.txt', { type: 'text/plain' })] } });
+
+    expect(await screen.findByText('Avatar must be an image file')).toHaveClass('text-error-foreground');
+  });
+
   it('handles file selection', async () => {
     render(<CreateProfileForm />);
 

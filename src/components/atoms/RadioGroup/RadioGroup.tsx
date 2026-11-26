@@ -42,17 +42,18 @@ const RadioGroupItem = React.forwardRef<React.ComponentRef<typeof RadioGroupPrim
         aria-describedby={descriptionId}
         className={cn(
           'peer size-4 shrink-0 rounded-full',
-          'border border-input bg-glass shadow-sm',
+          'border border-input bg-button-outline shadow-sm',
           'transition-colors',
           'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none',
           'disabled:cursor-not-allowed disabled:opacity-50',
-          'data-[state=checked]:border-brand data-[state=checked]:bg-brand',
+          'data-[state=unchecked]:border-ring',
+          'data-[state=checked]:border-border light:data-[state=checked]:border-brand light:data-[state=checked]:bg-brand',
           className,
         )}
         {...props}
       >
         <RadioGroupPrimitive.Indicator className="flex items-center justify-center">
-          <span className="block size-2 rounded-full bg-brand-foreground" />
+          <span className="block size-2 rounded-full bg-brand light:bg-brand-foreground" />
         </RadioGroupPrimitive.Indicator>
       </RadioGroupPrimitive.Item>
     );
