@@ -542,7 +542,8 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
   }
 
   async function syncScope(seed: string, signal?: AbortSignal): Promise<SyncResult> {
-    const ctx = contextOf(signal);
+    // Nobody waits for it: the requests of an operation someone waits for go first at each homeserver.
+    const ctx = contextOf(signal, 'background');
     Object.assign(counters, { usersPerHop: [], lookups: 0, streamRequests: 0, bodyRequests: 0, events: 0 });
     seedReach = undefined;
     seen.clear();
@@ -699,7 +700,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     limit = Infinity,
     signal?: AbortSignal,
   ): Promise<HydrateResult> {
-    const ctx = contextOf(signal, 'background');
+    const ctx = contextOf(signal, 'idle');
     for (const scope of scopes) unfilled.set(scopeId(scope), scopeOf(scope));
     const missing: Array<{ scope: ScopeKey; record: RecordEntry<D>; key: string }> = [];
     const scanned = [...unfilled];

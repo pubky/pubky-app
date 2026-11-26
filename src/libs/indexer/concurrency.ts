@@ -126,8 +126,13 @@ export async function mapLimit<T, R>(items: readonly T[], limit: number, fn: (it
   return results;
 }
 
-/** Foreground calls answer what someone waits for; background calls only fill in what is shown already. */
-export type Priority = 'foreground' | 'background';
+/**
+ * Foreground calls answer what someone waits for, background calls keep what is shown current, and idle calls only
+ * fill in what is shown already.
+ */
+export type Priority = 'foreground' | 'background' | 'idle';
+
+const PRIORITIES: readonly Priority[] = ['foreground', 'background', 'idle'];
 
 export interface RequestGate {
   /**
@@ -138,22 +143,21 @@ export interface RequestGate {
 }
 
 /**
- * Admits at most `limit` calls per key at once, in arrival order within a priority and foreground first. A
- * background call starts only while no foreground call waits, and leaves one slot free when there are two or more,
- * so a foreground call arriving while background ones run starts at once.
+ * Admits at most `limit` calls per key at once, in arrival order within a priority and higher priorities first. A
+ * call other than a foreground one starts only while no call of a higher priority waits, and leaves one slot free
+ * when there are two or more, so a foreground call arriving while the others run starts at once.
  */
 export function createRequestGate(limit: number): RequestGate {
   interface Lane {
     active: number;
-    foreground: Array<() => void>;
-    background: Array<() => void>;
+    waiting: Record<Priority, Array<() => void>>;
   }
   const backgroundLimit = Math.max(1, limit - 1);
   const lanes = new Map<string, Lane>();
   const laneOf = (key: string): Lane => {
     const known = lanes.get(key);
     if (known !== undefined) return known;
-    const lane: Lane = { active: 0, foreground: [], background: [] };
+    const lane: Lane = { active: 0, waiting: { foreground: [], background: [], idle: [] } };
     lanes.set(key, lane);
     return lane;
   };
@@ -165,11 +169,13 @@ export function createRequestGate(limit: number): RequestGate {
           return;
         }
         const lane = laneOf(key);
-        const waiting = priority === 'foreground' ? lane.foreground : lane.background;
+        const waiting = lane.waiting[priority];
         const drain = () => {
-          while (lane.foreground.length > 0 && lane.active < limit) lane.foreground.shift()?.();
-          while (lane.foreground.length === 0 && lane.background.length > 0 && lane.active < backgroundLimit) {
-            lane.background.shift()?.();
+          for (const rank of PRIORITIES) {
+            const queue = lane.waiting[rank];
+            const cap = rank === 'foreground' ? limit : backgroundLimit;
+            while (queue.length > 0 && lane.active < cap) queue.shift()?.();
+            if (queue.length > 0) return;
           }
         };
         const onAbort = () => {

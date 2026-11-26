@@ -139,11 +139,15 @@ export interface BackfillResult {
 }
 
 /**
- * Crawls scopes into the store. Run one operation at a time, except `hydrate`, which may run beside one: its requests
- * go after theirs, and it only sets the data of records still stored. An aborted operation rejects with
- * `IndexerAbortedError`, and everything it committed before stays valid.
+ * Crawls scopes into the store. Operations may run together, even over the same scopes: each one commits whole runs,
+ * which merge in any order to the same result, and `hydrate` only sets the data of records still stored. An aborted
+ * operation rejects with `IndexerAbortedError`, and everything it committed before stays valid.
  */
 export interface Crawler {
+  /**
+   * Syncs the seed's whole scope. Its requests are background ones: at each homeserver they wait while a request of
+   * another operation, other than `hydrate`, does, and never take its last free slot.
+   */
   syncScope(seed: string, signal?: AbortSignal): Promise<SyncResult>;
   /**
    * Extends the author's top contiguous coverage of the group backwards by up to `pages` pages of `backfillPageLimit`
@@ -162,9 +166,9 @@ export interface Crawler {
   syncLeaves(leaves: readonly LeafRequest[], signal?: AbortSignal): Promise<LeavesOutcome>;
   /**
    * Fetches the files of served records that need one and have no data, newest cursor first, at most `limit`, and
-   * commits each as it arrives, on the record if it is still stored. Its requests are background ones: at each
-   * homeserver they wait while a request of another operation does, and never take its last free slot. It looks in `scopes`, such as every stored scope after a start or the scopes of a
-   * saved index, and in the scopes left unfilled: those a crawl committed with `later` records, and those a call
+   * commits each as it arrives, on the record if it is still stored. Its requests are idle ones: at each homeserver
+   * they wait while a request of any other operation does, and never take its last free slot. It looks in `scopes`,
+   * such as every stored scope after a start or the scopes of a saved index, and in the scopes left unfilled: those a crawl committed with `later` records, and those a call
    * could not finish, on a failing homeserver or past the limit. A record is tried once per crawler: one whose file
    * stays gone or invalid is not fetched again until a later event replaces it.
    */

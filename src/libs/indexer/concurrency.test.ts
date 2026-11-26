@@ -62,6 +62,21 @@ describe('createRequestGate', () => {
     expect(started).toEqual(['bg1', 'bg2', 'fg1', 'fg2', 'bg3']);
   });
 
+  it('starts idle calls only while no background call waits', async () => {
+    const { ask, started, finish } = gated(3);
+    void ask('a', 'background', 'bg1');
+    void ask('a', 'background', 'bg2');
+    void ask('a', 'idle', 'idle1');
+    void ask('a', 'background', 'bg3');
+    await settle();
+    expect(started).toEqual(['bg1', 'bg2']);
+
+    await finish('bg1');
+    expect(started).toEqual(['bg1', 'bg2', 'bg3']);
+    await finish('bg2');
+    expect(started).toEqual(['bg1', 'bg2', 'bg3', 'idle1']);
+  });
+
   it('runs one background call at a time with a limit of one', async () => {
     const { ask, started, finish } = gated(1);
     void ask('a', 'background', 'bg1');
