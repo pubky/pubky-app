@@ -184,6 +184,8 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     unfilledMark += 1;
     unfilled.set(scopeId(scope), { scope: scopeOf(scope), mark: unfilledMark });
   };
+  /** Per homeserver, the epoch and time of the last restore check a `backfill` made, which the next steps share. */
+  const backfillChecks = new Map<string, { epoch: number; at: number }>();
   const listeners = new Set<(stats: CrawlerStats) => void>();
   const commitListeners = new Set<(change: StoreChange) => void>();
 
@@ -989,9 +991,20 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     const homeserver = (await store.readUserHomeserver(author))?.homeserver ?? null;
     if (homeserver === null) return { tail: null, pages: 0, events: 0 };
     const scope = { author, homeserver, group: group.id };
-    // Like every read, under the epoch the restore check confirms, so a page read before a restore is never kept.
+    // Like every read, under the epoch the restore check confirms, so a page read before a restore is never kept. A
+    // step right after another shares its check: a restore found meanwhile moved the epoch, refusing what it read.
+    const state = await store.readHomeserverState(homeserver);
+    const shared = backfillChecks.get(homeserver);
+    const fresh = shared !== undefined && shared.epoch === state.epoch && now() - shared.at < options.backfillCheckMs;
+    if (fresh) {
+      ctx.epochs.set(homeserver, state.epoch);
+      ctx.clocks.set(homeserver, state.clock);
+      ctx.checked.set(homeserver, Promise.resolve(true));
+    }
     if (!(await ready(ctx, homeserver)))
       return { tail: topTailOf(await store.readCoverage(scope)), pages: 0, events: 0 };
+    const epoch = ctx.epochs.get(homeserver);
+    if (!fresh && epoch !== undefined) backfillChecks.set(homeserver, { epoch, at: now() });
     let events = 0;
     let done = 0;
     for (; done < pages; done += 1) {

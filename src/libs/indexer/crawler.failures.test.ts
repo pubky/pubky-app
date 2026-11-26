@@ -328,6 +328,34 @@ describe('backfill', () => {
     expect(await store.readCoverage(scope)).toEqual([{ tail: CURSOR_ZERO, head: network.headOf('hs1') }]);
   });
 
+  it('shares one restore check between steps that follow each other under its epoch', async () => {
+    const { network, store, crawler, clock } = harness({ backfillPageLimit: 2 });
+    network.addHomeserver('hs1').addUser('alice', 'hs1');
+    for (let i = 0; i < 12; i += 1) network.putJson('alice', postPath((60 - i) * DAY_MS), { i });
+    network.putJson('alice', postPath(2 * DAY_MS), { text: 'recent' });
+    await crawler.syncScope('alice');
+    const requestsOf = async (step: () => Promise<unknown>) => {
+      const before = crawler.stats().streamRequests;
+      await step();
+      return crawler.stats().streamRequests - before;
+    };
+    const stepBack = () => crawler.backfill('alice', ACTIVITY, 1);
+
+    // The first step checks and reads a page, the next one only reads.
+    expect(await requestsOf(stepBack)).toBe(2);
+    expect(await requestsOf(stepBack)).toBe(1);
+    clock.now += 30 * 1000;
+    expect(await requestsOf(stepBack)).toBe(2);
+    // A restore another operation found moves the epoch, and the next step checks again.
+    expect(await requestsOf(stepBack)).toBe(1);
+    network.del('alice', postPath(2 * DAY_MS));
+    await crawler.syncScope('alice');
+    network.restore('hs1');
+    await crawler.syncScope('alice');
+    expect((await store.readHomeserverState('hs1')).epoch).toBe(1);
+    expect(await requestsOf(stepBack)).toBe(2);
+  });
+
   it('starts at the newest event of an author whose window held none of theirs', async () => {
     const { network, store, crawler } = harness({ backfillPageLimit: 5 });
     network.addHomeserver('hs1').addUser('alice', 'hs1');

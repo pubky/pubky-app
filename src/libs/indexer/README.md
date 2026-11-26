@@ -103,7 +103,9 @@ that need their file get it fetched and reduced; a file that is gone or fails it
 homeserver whose request keeps failing is skipped for the rest of the sync with exponential backoff, and one whose
 log went backwards (a restore) loses everything stored for it and is synced again. Every operation, `backfill` and
 `hydrate` included, reads a homeserver under the epoch it found, so a restore one operation finds also voids what
-the others read before it. The check reads the newest event of the high-water mark's author, which a homeserver never
+the others read before it. The steps of one scroll share a check: a `backfill` within `backfillCheckMs` (30 s) of one
+that checked the homeserver reads under that check's epoch, as any operation reads under its own check for as long as
+it runs, and a restore found meanwhile moved the epoch, so what it read is refused. The check reads the newest event of the high-water mark's author, which a homeserver never
 drops: it deletes no event, and a disabled user's events still stream.
 
 Requests to a homeserver queue in the crawler, at most `homeserverConcurrency` (6) in flight at once across every

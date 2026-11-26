@@ -46,6 +46,11 @@ export interface CrawlerOptions {
   requestTimeoutMs: number;
   /** Deadline of one homeserver lookup; past it the lookup fails like any other. */
   lookupTimeoutMs: number;
+  /**
+   * How long a restore check a `backfill` made serves the steps after it under the same epoch: the steps of one scroll
+   * come seconds apart, and any operation reads under its own check for as long as it runs.
+   */
+  backfillCheckMs: number;
 }
 
 export const DEFAULT_CRAWLER_OPTIONS: Readonly<CrawlerOptions> = Object.freeze({
@@ -62,6 +67,7 @@ export const DEFAULT_CRAWLER_OPTIONS: Readonly<CrawlerOptions> = Object.freeze({
   excluded: new Set<string>(),
   requestTimeoutMs: 30 * 1000,
   lookupTimeoutMs: 10 * 1000,
+  backfillCheckMs: 30 * 1000,
 });
 
 export interface CrawlerParams<D> {
