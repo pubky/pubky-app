@@ -163,5 +163,17 @@ describe('SocialMigrationApplication', () => {
 
       expect(run).toHaveBeenCalledExactlyOnceWith({ session, signal, onProgress, onLockWait });
     });
+
+    it('forwards onLegacyDataFound when given', async () => {
+      const run = vi.spyOn(HomeserverService, 'migrateToSocialV1').mockResolvedValue(asOpaque({ status: 'done' }));
+      const { signal } = new AbortController();
+      const onProgress = vi.fn();
+      const onLockWait = vi.fn();
+      const onLegacyDataFound = vi.fn();
+
+      await SocialMigrationApplication.run({ session, signal, onProgress, onLockWait, onLegacyDataFound });
+
+      expect(run).toHaveBeenCalledExactlyOnceWith({ session, signal, onProgress, onLockWait, onLegacyDataFound });
+    });
   });
 });

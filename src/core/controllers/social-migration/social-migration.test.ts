@@ -10,6 +10,7 @@ import { AuthErrorCode, NetworkErrorCode, ServerErrorCode, TimeoutErrorCode } fr
 import { Err } from '@/libs/error/error.factories';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import {
+  markSocialMigrated,
   readSocialMigrationRecord,
   socialMigrationRecordKey,
   writeSocialMigrationRecord,
@@ -541,6 +542,76 @@ describe('SocialMigrationController', () => {
       expect(readSocialMigrationRecord(owner)?.migratedRev).toBe(SOCIAL_MIGRATION_TRANSFORM_REV);
     });
 
+    it('asks before copying when a legacy profile is written after the empty-tree check', async () => {
+      autoContinue = false;
+      homeserver.spies.list.mockImplementationOnce(async () => {
+        // The pre-check observes an empty tree; a legacy client writes a profile right after.
+        await homeserver.session.storage.putJson('/pub/pubky.app/profile.json', { name: 'Alice', bio: 'hi' });
+        return [];
+      });
+      const migrating = ensure('signin');
+
+      await vi.waitFor(() => expect(stage().stage).toBe('confirm'));
+      expect(status()).toBe('social-migration');
+      expect(await homeserver.session.storage.exists('/pub/social/v1/profile.json')).toBe(false);
+      expect(await homeserver.session.storage.exists(SOCIAL_MIGRATION_FLAG_PATH)).toBe(false);
+
+      SocialMigrationController.confirm();
+
+      expect(await migrating).toBe('passed');
+      expect(await homeserver.session.storage.exists('/pub/social/v1/profile.json')).toBe(true);
+      expect(await homeserver.session.storage.exists(SOCIAL_MIGRATION_FLAG_PATH)).toBe(true);
+      expect(readSocialMigrationRecord(owner)?.migratedRev).toBe(SOCIAL_MIGRATION_TRANSFORM_REV);
+    });
+
+    it.each(['restore', 'signin'] as const)(
+      'still asks on %s after an interrupted empty-account attempt when a legacy profile appears later',
+      async (entry) => {
+        autoContinue = false;
+        // Hold the engine's flag probe so the tab closes after the first `probe` event is saved, before the flag lands
+        let releaseProbe!: () => void;
+        const heldProbe = new Promise<void>((resolve) => {
+          releaseProbe = resolve;
+        });
+        const { storage } = homeserver.session;
+        const probeHeldSession = asOpaque<Session>({
+          ...homeserver.session,
+          info: { ...homeserver.session.info, capabilities: ['/:rw'] },
+          storage: {
+            ...storage,
+            exists: async (path: string) => {
+              await heldProbe;
+              return storage.exists(path);
+            },
+          },
+        });
+
+        const first = ensure('signin', probeHeldSession);
+        await vi.waitFor(() => expect(readSocialMigrationRecord(owner)?.lastRun?.phase).toBe('probe'));
+        SocialMigrationController.cancel();
+        releaseProbe();
+        expect(await first).toBe('canceled');
+        expect(readSocialMigrationRecord(owner)?.migratedRev).toBeUndefined();
+        expect(readSocialMigrationRecord(owner)?.lastRun?.confirmed).toBe(false);
+
+        // A legacy client writes the account's first profile before the next visit
+        await homeserver.session.storage.putJson('/pub/pubky.app/profile.json', { name: 'Alice', bio: 'hi' });
+
+        const next = ensure(entry);
+        await vi.waitFor(() => expect(stage().stage).toBe('confirm'));
+        expect(status()).toBe('social-migration');
+        expect(stage().resumedFrom).toBeUndefined();
+        expect(await homeserver.session.storage.exists('/pub/social/v1/profile.json')).toBe(false);
+        expect(await homeserver.session.storage.exists(SOCIAL_MIGRATION_FLAG_PATH)).toBe(false);
+
+        SocialMigrationController.confirm();
+
+        expect(await next).toBe('passed');
+        expect(await homeserver.session.storage.exists('/pub/social/v1/profile.json')).toBe(true);
+        expect(readSocialMigrationRecord(owner)?.migratedRev).toBe(SOCIAL_MIGRATION_TRANSFORM_REV);
+      },
+    );
+
     it('cancels a sign-in whose auth generation changed during the legacy-data check, without asking or loading the engine', async () => {
       autoContinue = false;
       let answer!: (value: string[]) => void;
@@ -724,7 +795,7 @@ describe('SocialMigrationController', () => {
     );
 
     it.each(['signin', 'restore'] as const)(
-      'resumes a %s whose record has a last run without the screen',
+      'resumes a %s whose record has a last run without the screen or an extra legacy LIST',
       async (entry) => {
         await seedLegacyTree();
         writeSocialMigrationRecord(owner, { v: 1, admittedGrantIds: [GRANT], lastRun });
@@ -734,9 +805,74 @@ describe('SocialMigrationController', () => {
         unsubscribe();
 
         expect(continues).toBe(0);
+        expect(homeserver.spies.list).not.toHaveBeenCalled();
         expect(seen).not.toContain('confirm');
         expect(seen).toContain('running');
         expect(readSocialMigrationRecord(owner)?.migratedRev).toBe(SOCIAL_MIGRATION_TRANSFORM_REV);
+      },
+    );
+
+    it.each(['signin', 'restore'] as const)(
+      'passes %s without showing Continue when another tab finishes during the legacy-data check',
+      async (entry) => {
+        autoContinue = false;
+        await seedLegacyTree();
+        writeSocialMigrationRecord(owner, { v: 1, admittedGrantIds: [GRANT] });
+        let answer!: (value: string[]) => void;
+        homeserver.spies.list.mockReturnValueOnce(
+          new Promise((resolve) => {
+            answer = resolve;
+          }),
+        );
+        const run = vi.spyOn(HomeserverService, 'migrateToSocialV1');
+        const { seen, unsubscribe } = stages();
+
+        const migrating = ensure(entry);
+        await vi.waitFor(() => expect(homeserver.spies.list).toHaveBeenCalledOnce());
+
+        // Another tab finishes the migration during the LIST wait, recording the current revision and clearing lastRun
+        markSocialMigrated(owner, SOCIAL_MIGRATION_TRANSFORM_REV);
+        answer([`${listPrefix(owner, 'legacy')}profile.json`]);
+
+        expect(await migrating).toBe('passed');
+        unsubscribe();
+
+        expect(continues).toBe(0);
+        expect(seen).not.toContain('confirm');
+        expect(run).not.toHaveBeenCalled();
+        expect(status()).toBe('restoring');
+      },
+    );
+
+    it.each(['signin', 'restore'] as const)(
+      'passes %s without listing or asking when another tab finishes during the flag read',
+      async (entry) => {
+        autoContinue = false;
+        await seedLegacyTree();
+        writeSocialMigrationRecord(owner, { v: 1, admittedGrantIds: [GRANT] });
+        let answer!: (value: null) => void;
+        homeserver.spies.getBytesIfExists.mockReturnValueOnce(
+          new Promise((resolve) => {
+            answer = resolve;
+          }),
+        );
+        const run = vi.spyOn(HomeserverService, 'migrateToSocialV1');
+        const { seen, unsubscribe } = stages();
+
+        const migrating = ensure(entry);
+        await vi.waitFor(() => expect(homeserver.spies.getBytesIfExists).toHaveBeenCalledOnce());
+
+        markSocialMigrated(owner, SOCIAL_MIGRATION_TRANSFORM_REV);
+        answer(null);
+
+        expect(await migrating).toBe('passed');
+        unsubscribe();
+
+        expect(continues).toBe(0);
+        expect(seen).not.toContain('confirm');
+        expect(homeserver.spies.list).not.toHaveBeenCalled();
+        expect(run).not.toHaveBeenCalled();
+        expect(status()).toBe('restoring');
       },
     );
 

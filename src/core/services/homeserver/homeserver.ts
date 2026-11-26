@@ -1,5 +1,6 @@
 import { Address, Client, Pubky, PublicKey, resolvePubky, Session } from '@synonymdev/pubky';
-import type { MigrationLock, MigrationReport, ProgressEvent } from 'pubky-social-migrator';
+import type { MigrationLock, MigrationPort, MigrationReport, ProgressEvent } from 'pubky-social-migrator';
+import { listPrefix } from 'pubky-social-specs';
 import { getAuthClientId } from '@/config/auth';
 import {
   getHomeserver,
@@ -829,11 +830,14 @@ export class HomeserverService {
     signal,
     onProgress,
     onLockWait,
+    onLegacyDataFound,
   }: {
     session: Session;
     signal?: AbortSignal;
     onProgress?: (event: ProgressEvent) => void;
     onLockWait?: () => void;
+    /** When given, aborts the run before copying if the engine's own listing finds any 0.x file. */
+    onLegacyDataFound?: () => void;
   }): Promise<MigrationReport> {
     const engine = await Promise.all([
       import('pubky-social-migrator'),
@@ -852,6 +856,41 @@ export class HomeserverService {
       });
     });
     const [{ runMigration }, { sdkPort }] = engine;
+    const owner = session.info.publicKey.z32();
+    const basePort = sdkPort(session);
+    let runSignal = signal;
+    let runAbort: AbortController | undefined;
+    let forwardAbort: (() => void) | undefined;
+    let port: MigrationPort = basePort;
+    if (onLegacyDataFound) {
+      runAbort = new AbortController();
+      runSignal = runAbort.signal;
+      if (signal?.aborted) {
+        runAbort.abort();
+      } else if (signal) {
+        forwardAbort = () => runAbort?.abort();
+        signal.addEventListener('abort', forwardAbort, { once: true });
+      }
+      const legacyPrefix = listPrefix(owner, 'legacy');
+      const abortOnLegacy = runAbort;
+      port = {
+        list: async (prefix, cursor) => {
+          const page = await basePort.list(prefix, cursor);
+          if (prefix === legacyPrefix && page.urls.length > 0) {
+            if (!signal?.aborted) onLegacyDataFound();
+            abortOnLegacy.abort();
+            // Guarantee the engine loops to its abort check before walking or writing the flag
+            return { urls: page.urls, next: page.next ?? page.urls.at(-1) };
+          }
+          return page;
+        },
+        get: (url, options) => basePort.get(url, options),
+        head: (url) => basePort.head(url),
+        putJson: (url, object, options) => basePort.putJson(url, object, options),
+        putBytes: (url, bytes, options) => basePort.putBytes(url, bytes, options),
+        delete: (url) => basePort.delete(url),
+      };
+    }
     const locks = globalThis.navigator?.locks;
     const lock: MigrationLock | undefined = locks
       ? async (name, fn) => {
@@ -860,23 +899,27 @@ export class HomeserverService {
             if (held.some((entry) => entry.name === name)) onLockWait();
           }
           try {
-            return await locks.request(name, { signal }, fn);
+            return await locks.request(name, { signal: runSignal }, fn);
           } catch (error) {
             // The wait itself was aborted: run unlocked (`null` would mean "another tab holds
             // it"), the engine stops at once with `ABORTED` and nothing is written.
-            if (signal?.aborted) return await fn({});
+            if (runSignal?.aborted) return await fn({});
             throw error;
           }
         }
       : undefined;
-    return await runMigration({
-      owner: session.info.publicKey.z32(),
-      port: sdkPort(session),
-      caps: session.info.capabilities,
-      lock,
-      signal,
-      onProgress,
-    });
+    try {
+      return await runMigration({
+        owner,
+        port,
+        caps: session.info.capabilities,
+        lock,
+        signal: runSignal,
+        onProgress,
+      });
+    } finally {
+      if (signal && forwardAbort) signal.removeEventListener('abort', forwardAbort);
+    }
   }
 
   /**

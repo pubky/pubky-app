@@ -125,6 +125,29 @@ describe('HomeserverService.migrateToSocialV1', () => {
     expect(report.error?.code).toBe('ABORTED');
   });
 
+  it('aborts before copying when onLegacyDataFound is set and the 0.x tree is non-empty', async () => {
+    const onLegacyDataFound = vi.fn();
+
+    const report = await HomeserverService.migrateToSocialV1({ session, onLegacyDataFound });
+
+    expect(onLegacyDataFound).toHaveBeenCalledTimes(1);
+    expect(report.status).toBe('aborted');
+    expect(report.error?.code).toBe('ABORTED');
+    expect(await homeserver.session.storage.exists(V1_PROFILE)).toBe(false);
+    expect(await homeserver.session.storage.exists(SOCIAL_MIGRATION_FLAG_PATH)).toBe(false);
+  });
+
+  it('writes the flag without calling onLegacyDataFound when the 0.x tree is empty', async () => {
+    await homeserver.session.storage.delete(LEGACY_PROFILE);
+    const onLegacyDataFound = vi.fn();
+
+    const report = await HomeserverService.migrateToSocialV1({ session, onLegacyDataFound });
+
+    expect(onLegacyDataFound).not.toHaveBeenCalled();
+    expect(report.status).toBe('done');
+    expect(await homeserver.session.storage.exists(SOCIAL_MIGRATION_FLAG_PATH)).toBe(true);
+  });
+
   it('runs unlocked without Web Locks', async () => {
     Object.defineProperty(navigator, 'locks', { configurable: true, value: undefined });
 

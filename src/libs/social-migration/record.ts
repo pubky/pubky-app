@@ -32,6 +32,7 @@ const socialMigrationRecordSchema = z.object({
       total: z.number().int().nonnegative(),
       counts: countsSchema,
       dropped: z.number().int().nonnegative(),
+      confirmed: z.boolean().optional(),
       error: z.object({ code: z.string(), needBytes: z.number().nonnegative().optional() }).optional(),
     })
     .optional(),
@@ -93,6 +94,14 @@ export function updateSocialMigrationRecord(
 /** A restore trusts the record only when it saw the flag at this build's revision or a later one. */
 export function isSocialMigrationRecordTrusted(record: SocialMigrationRecord | null): boolean {
   return record?.migratedRev !== undefined && record.migratedRev >= SOCIAL_MIGRATION_TRANSFORM_REV;
+}
+
+/**
+ * Whether this browser holds an interrupted run the user confirmed (an earlier build's `lastRun`
+ * omitted `confirmed` and was always confirmed; an automatic empty-tree attempt records `false`).
+ */
+export function isSocialMigrationLastRunConfirmed(record: SocialMigrationRecord | null): boolean {
+  return record?.lastRun !== undefined && record.lastRun.confirmed !== false;
 }
 
 export function admitSocialMigrationGrant(pubky: string, grantId: string): void {

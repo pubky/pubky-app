@@ -58,12 +58,20 @@ export class SocialMigrationApplication {
     signal,
     onProgress,
     onLockWait,
+    onLegacyDataFound,
   }: {
     session: Session;
     signal: AbortSignal;
     onProgress: (event: ProgressEvent) => void;
     onLockWait: () => void;
+    onLegacyDataFound?: () => void;
   }): Promise<MigrationReport> {
-    return HomeserverService.migrateToSocialV1({ session, signal, onProgress, onLockWait });
+    return HomeserverService.migrateToSocialV1({
+      session,
+      signal,
+      onProgress,
+      onLockWait,
+      ...(onLegacyDataFound ? { onLegacyDataFound } : {}),
+    });
   }
 }

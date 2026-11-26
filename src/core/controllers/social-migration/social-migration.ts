@@ -13,6 +13,7 @@ import {
   acknowledgeSocialMigrationProfileNotice,
   admitSocialMigrationGrant,
   isSocialMigrationGrantAdmitted,
+  isSocialMigrationLastRunConfirmed,
   isSocialMigrationRecordTrusted,
   markSocialMigrated,
   mergeSocialMigrationDroppedProfile,
@@ -91,14 +92,17 @@ export class SocialMigrationController {
   private static gate: Gate | null = null;
 
   /**
-   * Restore: scopes, then the local record (no network), then the flag, then resume when this
-   * browser's record saw the flag at an earlier revision or admitted the grant, and sign out
-   * otherwise (D2). Fresh sign-in: admit the grant, pass on a trusted record or a current flag,
-   * run inline when the 0.x tree is confirmed empty (such as a new Pubky Passport account), and
-   * otherwise ask (`confirm`) before the engine runs; a failed flag read or legacy-data check
-   * asks too, and the engine's own check then settles it. Upgrade: the local record; without one,
-   * like a sign-in. A run that has not started in this browser (no `lastRun`) waits for Continue
-   * unless it is inline; a signup and an empty-tree run never wait. Never hand-writes the flag.
+   * Restore: scopes, then the local record (no network), then the flag (errors propagate so
+   * `AuthController` enters `temporary-error`), then resume when this browser's record saw the
+   * flag at an earlier revision or admitted the grant, and sign out otherwise (D2). Fresh
+   * sign-in: admit the grant, pass on a trusted record or a current flag, run inline when no
+   * confirmed run is pending and the 0.x tree is confirmed empty (such as a new Pubky Passport
+   * account, still asking before the first copy if the engine's own listing finds files), and
+   * otherwise resume a confirmed `lastRun` or ask (`confirm`) before the engine runs; a failed
+   * flag read on sign-in skips the listing and resumes a confirmed run or asks, and the engine's
+   * own check settles it. Upgrade: the local record; without one, like a sign-in. A run that has
+   * not been confirmed in this browser waits for Continue unless it is inline; a signup and an
+   * empty-tree run never wait unless the engine finds legacy files. Never hand-writes the flag.
    */
   static async ensureMigrated({
     session,
@@ -125,15 +129,17 @@ export class SocialMigrationController {
         markSocialMigrated(pubky, rev);
         return 'passed';
       }
+      const afterFlag = readSocialMigrationRecord(pubky);
+      if (isSocialMigrationRecordTrusted(afterFlag)) return 'passed';
       // A record that saw the flag means this browser saw the account pass; an outdated flag is then a revision bump
-      if (record?.migratedRev === undefined && !isSocialMigrationGrantAdmitted(record, this.activeGrantId()))
+      if (afterFlag?.migratedRev === undefined && !isSocialMigrationGrantAdmitted(afterFlag, this.activeGrantId()))
         return this.requireReauth({ generation, isCurrent }, 'pre-migration-grant');
       checkLegacy = true;
     } else {
       const grantId = this.activeGrantId();
       if (grantId) admitSocialMigrationGrant(pubky, grantId);
       if (entry !== 'signup') {
-        // An account already updated is not asked. A failed read asks: the run that follows finds the flag itself.
+        // An account already updated is not asked. A failed read resumes a confirmed run or asks: the engine settles it.
         if (isSocialMigrationRecordTrusted(record)) return 'passed';
         const flag = await SocialMigrationApplication.readFlag({ session, pubky }).then(
           (rev) => ({ ok: true as const, rev }),
@@ -147,21 +153,25 @@ export class SocialMigrationController {
         checkLegacy = flag.ok;
       }
     }
-    if (checkLegacy) {
+    // Read again after the flag read: another tab may have finished or started a confirmed run meanwhile
+    let latest = readSocialMigrationRecord(pubky);
+    if (entry !== 'signup' && isSocialMigrationRecordTrusted(latest)) return 'passed';
+    if (checkLegacy && !isSocialMigrationLastRunConfirmed(latest)) {
       // An account with nothing under the 0.x tree (such as a new Pubky Passport account) is marked inline like a
       // signup. A failed check falls back to the screen so an account with real data never skips it.
       const hasLegacy = await SocialMigrationApplication.hasLegacyData({ session, pubky }).catch(() => true);
       if (!isCurrent()) return 'canceled';
-      inline = !hasLegacy;
+      latest = readSocialMigrationRecord(pubky);
+      if (isSocialMigrationRecordTrusted(latest)) return 'passed';
+      inline = !hasLegacy && !isSocialMigrationLastRunConfirmed(latest);
     }
-    // Read again after the homeserver reads: a run another tab of this browser started meanwhile has started here too
     return this.migrate({
       session,
       pubky,
       generation,
       isCurrent,
       inline,
-      record: readSocialMigrationRecord(pubky),
+      record: latest,
     });
   }
 
@@ -270,17 +280,19 @@ export class SocialMigrationController {
     const { signal } = gate.abort;
     const store = useSocialMigrationStore.getState();
     store.reset();
-    const lastRun = record?.lastRun;
-    store.setResumedFrom(lastRun ? { done: lastRun.done, total: lastRun.total } : undefined);
+    let confirmed = isSocialMigrationLastRunConfirmed(record);
+    const resumedLastRun = confirmed ? record?.lastRun : undefined;
+    store.setResumedFrom(resumedLastRun ? { done: resumedLastRun.done, total: resumedLastRun.total } : undefined);
     const show = () => {
       if (!signal.aborted) this.showGate(generation);
     };
     if (!inline) show();
     try {
-      // A run this browser has not started yet waits for Continue; an interrupted one resumes at once
-      if (!inline && !lastRun) {
+      // A run this browser has not confirmed yet waits for Continue; a confirmed interrupted one resumes at once
+      if (!inline && !confirmed) {
         store.setStage('confirm');
         if ((await this.wait(gate)) !== 'continue') return 'canceled';
+        confirmed = true;
       }
       let attempt = 0;
       let autoRetries = 0;
@@ -290,16 +302,24 @@ export class SocialMigrationController {
         store.setAttempt(attempt);
         store.setStage('running');
         let report: MigrationReport;
+        let legacyDataFound = false;
         try {
           report = await SocialMigrationApplication.run({
             session,
             signal,
-            onProgress: this.progressWriter(gate),
+            onProgress: this.progressWriter(gate, confirmed),
             onLockWait: () => {
               if (signal.aborted) return;
               store.setStage('waiting-for-tab');
               show();
             },
+            ...(inline && !confirmed
+              ? {
+                  onLegacyDataFound: () => {
+                    legacyDataFound = true;
+                  },
+                }
+              : {}),
           });
         } catch (error) {
           if (signal.aborted || !isCurrent()) return 'canceled';
@@ -316,7 +336,19 @@ export class SocialMigrationController {
           continue;
         }
         if (signal.aborted || !isCurrent()) return 'canceled';
-        this.saveLastRun(pubky, report);
+        if (legacyDataFound) {
+          // A legacy client wrote files after the empty-tree check; ask before copying anything.
+          inline = false;
+          store.reset();
+          store.setStage('confirm');
+          show();
+          if ((await this.wait(gate)) !== 'continue') return 'canceled';
+          confirmed = true;
+          attempt = 0;
+          autoRetries = 0;
+          continue;
+        }
+        this.saveLastRun(pubky, report, confirmed);
         // Every report: a later run of this gate finds the 1.x profile present and does not report its drops again
         rememberSocialMigrationDroppedProfile(pubky, summarizeSocialMigrationReport(report).dropped);
         const code = report.error?.code;
@@ -399,7 +431,7 @@ export class SocialMigrationController {
   }
 
   /** Store writes coalesced to phase changes plus one per throttle window; the record follows the same cadence. */
-  private static progressWriter(gate: Gate): (event: ProgressEvent) => void {
+  private static progressWriter(gate: Gate, confirmed: boolean): (event: ProgressEvent) => void {
     let lastWrite = 0;
     let lastPhase: ProgressEvent['phase'] | undefined;
     let lastPass: ProgressEvent['pass'];
@@ -424,7 +456,7 @@ export class SocialMigrationController {
       if (changed && event.phase === 'migrating') store.setResumedFrom(undefined);
       // The first event of a run that waited for another tab's lock ends the waiting stage
       if (changed) store.setStage('running');
-      this.saveLastRun(gate.pubky, { status: 'running', ...event });
+      this.saveLastRun(gate.pubky, { status: 'running', ...event }, confirmed);
     };
   }
 
@@ -434,6 +466,7 @@ export class SocialMigrationController {
       status: string;
       phase?: ProgressEvent['phase'];
     },
+    confirmed: boolean,
   ): void {
     updateSocialMigrationRecord(pubky, (record) => ({
       ...record,
@@ -446,6 +479,7 @@ export class SocialMigrationController {
         total: run.total,
         counts: run.counts,
         dropped: run.dropped,
+        confirmed: confirmed || isSocialMigrationLastRunConfirmed(record),
         error: run.error && { code: run.error.code, needBytes: run.error.needBytes },
       },
     }));
