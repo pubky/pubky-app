@@ -8,6 +8,7 @@ import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
 import { Heading } from '@/atoms/Heading/Heading';
 import { Typography } from '@/atoms/Typography/Typography';
+import { HAS_APP_SERVER } from '@/libs/static-export/appServer';
 import { DialogFeedback } from '@/organisms/DialogFeedback/DialogFeedback';
 import { FAQAccordion } from '../../FAQAccordion/FAQAccordion';
 import type { FAQAccordionItem } from '../../FAQAccordion/FAQAccordion.types';
@@ -153,26 +154,31 @@ export function HelpContent() {
 
       <SettingsDivider />
 
-      {/* Feedback Section - Mobile only (hidden on lg screens where sidebar is visible) */}
-      <Container overrideDefaults className="flex w-full flex-col items-start gap-6 lg:hidden">
-        <Container overrideDefaults className="inline-flex items-center gap-3">
-          <MessageSquare size={24} />
-          <Heading level={2} size="lg" className="leading-8">
-            {'Feedback'}
-          </Heading>
-        </Container>
-        <Typography as="p" overrideDefaults className="text-base leading-6 font-medium text-secondary-foreground">
-          {"We'd love to hear your thoughts on Pubky. Share your feedback with us!"}
-        </Typography>
-        <Button id="feedback-btn" variant="secondary" size="default" onClick={handleFeedbackClick}>
-          <Send size={16} />
-          {'Send feedback'}
-        </Button>
-      </Container>
+      {/* Feedback is sent through the app server, which the static export does not have. */}
+      {HAS_APP_SERVER && (
+        <>
+          {/* Feedback Section - Mobile only (hidden on lg screens where sidebar is visible) */}
+          <Container overrideDefaults className="flex w-full flex-col items-start gap-6 lg:hidden">
+            <Container overrideDefaults className="inline-flex items-center gap-3">
+              <MessageSquare size={24} />
+              <Heading level={2} size="lg" className="leading-8">
+                {'Feedback'}
+              </Heading>
+            </Container>
+            <Typography as="p" overrideDefaults className="text-base leading-6 font-medium text-secondary-foreground">
+              {"We'd love to hear your thoughts on Pubky. Share your feedback with us!"}
+            </Typography>
+            <Button id="feedback-btn" variant="secondary" size="default" onClick={handleFeedbackClick}>
+              <Send size={16} />
+              {'Send feedback'}
+            </Button>
+          </Container>
 
-      <Container overrideDefaults className="w-full lg:hidden">
-        <SettingsDivider />
-      </Container>
+          <Container overrideDefaults className="w-full lg:hidden">
+            <SettingsDivider />
+          </Container>
+        </>
+      )}
 
       {/* User Guide Section */}
       <Container overrideDefaults className="flex w-full flex-col items-start gap-6">
