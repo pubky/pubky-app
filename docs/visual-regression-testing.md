@@ -236,6 +236,13 @@ click-outside would collapse QuickReply, and a focused composer would lose
 moves the cursor by clicking, use `matchVrtFrameScreenshot()` (or call the helper
 again) before the final screenshot.
 
+To capture a `:hover` state, pass the target to the capture instead of hovering
+first: `matchVrtElementScreenshot(crop, name, { hover: target })`. The capture
+scale moves the iframe, so a pointer placed before it no longer sits over the
+target and the next hit test drops `:hover` (Chromium always, WebKit sometimes).
+The helper hovers inside the scaled frame and waits for the target to match
+`:hover` before the screenshot.
+
 Expanded QuickReply tests click the textarea again after the expand motion so
 the field stays focused. Product CSS then hides the prompt
 (`focus-within:[&_textarea::placeholder]:opacity-0`); VRT already sets

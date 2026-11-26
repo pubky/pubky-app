@@ -89,9 +89,36 @@ export async function matchVrtFrameScreenshot(name: string, options?: Screenshot
   await withCaptureScale(() => expect(page.elementLocator(document.documentElement)).toMatchScreenshot(name, options));
 }
 
+export interface VrtElementCaptureOptions extends ScreenshotMatcherOptions {
+  /**
+   * Element to hold in `:hover` for the capture. The capture scale moves the
+   * iframe out from under a pointer placed before it, so the hover is applied
+   * inside the scaled frame and confirmed before the screenshot.
+   */
+  hover?: Locator;
+}
+
+const HOVER_READY_TIMEOUT_MS = 5_000;
+
 /** Element-level counterpart of `matchVrtFrameScreenshot` (e.g. RepostHeader crops), at the same capture scale. */
-export async function matchVrtElementScreenshot(locator: Locator, name: string, options?: ScreenshotMatcherOptions) {
-  await withCaptureScale(() => expect(locator).toMatchScreenshot(name, options));
+export async function matchVrtElementScreenshot(
+  locator: Locator,
+  name: string,
+  { hover, ...options }: VrtElementCaptureOptions = {},
+) {
+  await withCaptureScale(async () => {
+    if (hover) {
+      await hover.hover();
+      const target = hover.element();
+      await vi.waitFor(
+        () => {
+          if (!target.matches(':hover')) throw new Error(`VRT hover target lost :hover before capture (${name})`);
+        },
+        { timeout: HOVER_READY_TIMEOUT_MS },
+      );
+    }
+    await expect(locator).toMatchScreenshot(name, options);
+  });
 }
 
 /**
