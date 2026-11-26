@@ -23,6 +23,7 @@ import {
 } from './crawler.types';
 import { CURSOR_ZERO } from './cursor';
 import type { PathGroup } from './domain.types';
+import { createHeap, type Heap } from './heap';
 import {
   HomeserverUnreachableError,
   IndexerAbortedError,
@@ -31,7 +32,7 @@ import {
   RateLimitedError,
   RequestTimeoutError,
 } from './indexer.errors';
-import type { Coverage, Cursor, RecordEntry, Run } from './indexer.types';
+import type { Coverage, Cursor, Entry, RecordEntry, Run } from './indexer.types';
 import { readForward, type ReadPage } from './paging';
 import { foldEvents } from './run';
 import { scopeId, scopeOf } from './store.helpers';
@@ -83,6 +84,13 @@ interface WindowBound {
 interface Below {
   ranges: ReadonlyMap<string, { top: Cursor; tail: Cursor }>;
   events: readonly AuthoredStreamEvent[];
+}
+
+/** A record stored without the file it needs, with the epoch of the read that stored it. */
+interface Unfilled<D> {
+  scope: ScopeKey;
+  record: RecordEntry<D>;
+  epoch: number;
 }
 
 const contextOf = (signal?: AbortSignal, priority: Priority = 'foreground'): OperationContext => ({
@@ -172,17 +180,47 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
   const lookups = new Map<string, Promise<string | null>>();
   /** Consecutive failed requests per homeserver, 429s included, across operations, until one to it succeeds. */
   const failing = new Map<string, number>();
-  /** Records `hydrate` fetched once, by scope, path and cursor. */
-  const hydrated = new Set<string>();
   /**
-   * Scopes that may hold records without the file they need, by scope id, for `hydrate`, each with the mark it got
-   * when it was last added: a fill that read a scope at an older mark reads it again.
+   * Records stored without the file they need, by scope id then path, each with the epoch of the read that stored it.
+   * One lives from the commit that stored it until a fill tries it, a later event of its path replaces it, or its
+   * homeserver or scope is dropped.
    */
-  const unfilled = new Map<string, { scope: ScopeKey; mark: number }>();
-  let unfilledMark = 0;
-  const markUnfilled = (scope: ScopeKey) => {
-    unfilledMark += 1;
-    unfilled.set(scopeId(scope), { scope: scopeOf(scope), mark: unfilledMark });
+  const unfilled = new Map<string, Map<string, Unfilled<D>>>();
+  let unfilledCount = 0;
+  /** The fills running, each told of every record a commit leaves without its file. */
+  const fills = new Set<(item: Unfilled<D>) => void>();
+  /** Keeps the newest event of each path: a record without data to fetch, or nothing once data or a delete won. */
+  const noteEntry = (scope: ScopeKey, entry: Entry<D>, epoch: number, fetch: boolean) => {
+    const id = scopeId(scope);
+    const paths = unfilled.get(id) ?? new Map<string, Unfilled<D>>();
+    const known = paths.get(entry.path);
+    if (known !== undefined && known.record.cursor >= entry.cursor) return;
+    if (known !== undefined) unfilledCount -= 1;
+    paths.delete(entry.path);
+    if (fetch && entry.kind === 'record' && entry.data === undefined) {
+      const item = { scope: scopeOf(scope), record: entry, epoch };
+      paths.set(entry.path, item);
+      unfilledCount += 1;
+      for (const fill of fills) fill(item);
+    }
+    if (paths.size === 0) unfilled.delete(id);
+    else unfilled.set(id, paths);
+  };
+  const isUnfilled = (item: Unfilled<D>) => unfilled.get(scopeId(item.scope))?.get(item.record.path) === item;
+  const settleUnfilled = (item: Unfilled<D>) => {
+    if (!isUnfilled(item)) return;
+    const id = scopeId(item.scope);
+    unfilled.get(id)?.delete(item.record.path);
+    unfilledCount -= 1;
+    if (unfilled.get(id)?.size === 0) unfilled.delete(id);
+  };
+  const dropUnfilled = (keep: (scope: ScopeKey) => boolean) => {
+    for (const [id, paths] of unfilled) {
+      const first = paths.values().next().value;
+      if (first === undefined || keep(first.scope)) continue;
+      unfilledCount -= paths.size;
+      unfilled.delete(id);
+    }
   };
   /** Per homeserver, the epoch and time of the last restore check a `backfill` made, which the next steps share. */
   const backfillChecks = new Map<string, { epoch: number; at: number }>();
@@ -327,6 +365,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     if (newest.length > 0 && newest[0].cursor >= highWater.cursor) return;
     const scopes = (await store.listScopes()).filter((scope) => scope.homeserver === homeserver);
     await commit({ ...readAtOf(ctx, homeserver), deleteHomeservers: [homeserver] }, { scopes, seeds: [] });
+    dropUnfilled((scope) => scope.homeserver !== homeserver);
     // Read again: the deletion that started it may be another operation's, which found the restore first.
     ctx.epochs.set(homeserver, (await store.readHomeserverState(homeserver)).epoch);
     // The clock went with the log: the times of the old cursors say nothing about the new ones.
@@ -394,12 +433,14 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     });
   }
 
-  /** Commits fresh runs and leaves the files of their `later` records to the next `hydrate`. */
+  /** Commits fresh runs and leaves the files of their `later` records to the fill. */
   async function commitRuns(batch: StoreBatch<D>, change: StoreChange): Promise<void> {
     await commit(batch, change);
     for (const run of batch.applyRuns ?? []) {
-      if (run.entries.some((entry) => entry.kind === 'record' && domain.needsBody(entry.path) === 'later')) {
-        markUnfilled(run);
+      const epoch = batch.readAt?.find(({ homeserver }) => homeserver === run.homeserver)?.epoch ?? 0;
+      for (const entry of run.entries) {
+        const needs = domain.needsBody(entry.path);
+        if (needs !== null) noteEntry(run, entry, epoch, needs === 'later');
       }
     }
   }
@@ -1019,75 +1060,48 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     return { tail: topTailOf(await store.readCoverage(scope)), pages: done, events };
   }
 
-  async function hydrate(
-    scopes: Iterable<ScopeKey> = [],
-    limit = Infinity,
-    signal?: AbortSignal,
-  ): Promise<HydrateResult> {
+  async function hydrate(scopes: Iterable<ScopeKey> = [], signal?: AbortSignal): Promise<HydrateResult> {
     // It keeps what is shown complete, as a scope sync keeps it current: both queue in the same place.
     const ctx = contextOf(signal, 'background');
-    for (const scope of scopes) markUnfilled(scope);
-    interface Item {
-      scope: ScopeKey;
-      record: RecordEntry<D>;
-      key: string;
-    }
-    const items = new Map<string, Item>();
-    /** Per homeserver, the records still to fetch, newest first. */
-    const queues = new Map<string, Item[]>();
-    /** The mark each scope was read at. */
-    const scanned = new Map<string, number>();
-    let seenMark = -1;
-    let scanning: Promise<void> | null = null;
-    const drains = new Map<string, Promise<void>>();
-    const errors: unknown[] = [];
-    let picked = 0;
-    let fetched = 0;
-
-    /** Reads the scopes marked since the last read, so records a crawl commits meanwhile join in cursor order. */
-    async function scan(): Promise<void> {
-      while (seenMark !== unfilledMark) {
-        seenMark = unfilledMark;
-        const grown = new Set<string>();
-        for (const [id, { scope, mark }] of [...unfilled]) {
-          if (scanned.get(id) === mark) continue;
-          throwIfAborted(signal);
-          scanned.set(id, mark);
-          // Taken before the records are, so a fill of a record read before a restore commits nothing.
-          if (!ctx.epochs.has(scope.homeserver)) {
-            ctx.epochs.set(scope.homeserver, (await store.readHomeserverState(scope.homeserver)).epoch);
-          }
-          const { live } = await store.readScope(scope);
-          for (const record of live.values()) {
-            const key = `${id}\u0000${record.path}\u0000${record.cursor}`;
-            if (record.data !== undefined || domain.needsBody(record.path) === null) continue;
-            if (hydrated.has(key) || items.has(key)) continue;
-            const item = { scope, record, key };
-            items.set(key, item);
-            queues.set(scope.homeserver, [...(queues.get(scope.homeserver) ?? []), item]);
-            grown.add(scope.homeserver);
-          }
-        }
-        for (const homeserver of grown) {
-          queues.get(homeserver)?.sort((a, b) => (a.record.cursor > b.record.cursor ? -1 : 1));
-          if (drains.has(homeserver)) continue;
-          drains.set(
-            homeserver,
-            drain(homeserver)
-              .catch((error: unknown) => {
-                errors.push(error);
-              })
-              .finally(() => drains.delete(homeserver)),
-          );
-        }
+    // Stored records of these scopes may lack their files, as after a session that closed before its fill.
+    for (const scope of scopes) {
+      throwIfAborted(signal);
+      // Taken before the records are, so a fill of a record read before a restore commits nothing.
+      const { epoch } = await store.readHomeserverState(scope.homeserver);
+      const { live } = await store.readScope(scope);
+      for (const record of live.values()) {
+        if (record.data === undefined && domain.needsBody(record.path) !== null) noteEntry(scope, record, epoch, true);
       }
     }
-    const absorb = (): Promise<void> => {
-      if (seenMark === unfilledMark) return scanning ?? Promise.resolve();
-      scanning ??= scan().finally(() => {
-        scanning = null;
-      });
-      return scanning;
+    /** Per homeserver, the records to fetch, newest first: a tag names its post only in its file. */
+    const queues = new Map<string, Heap<Unfilled<D>>>();
+    const drains = new Map<string, Promise<void>>();
+    const errors: unknown[] = [];
+    let fetched = 0;
+
+    const enqueue = (item: Unfilled<D>) => {
+      const { homeserver } = item.scope;
+      let queue = queues.get(homeserver);
+      if (queue === undefined) {
+        queue = createHeap((a, b) => a.record.cursor > b.record.cursor);
+        queues.set(homeserver, queue);
+      }
+      queue.push(item);
+      if (drains.has(homeserver)) return;
+      drains.set(
+        homeserver,
+        drain(homeserver)
+          .catch((error: unknown) => {
+            errors.push(error);
+          })
+          .finally(() => drains.delete(homeserver)),
+      );
+    };
+    /** The homeserver's newest record still to fetch; one replaced or dropped since it was queued is skipped. */
+    const next = (homeserver: string): Unfilled<D> | undefined => {
+      const queue = queues.get(homeserver);
+      for (let item = queue?.pop(); item !== undefined; item = queue?.pop()) if (isUnfilled(item)) return item;
+      return undefined;
     };
 
     /** Fetches the homeserver's queue; a failing homeserver leaves the rest untried, for a later call. */
@@ -1101,10 +1115,8 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
       let stopped = false;
       const worker = async () => {
         for (;;) {
-          await absorb();
-          const item = stopped || picked >= limit ? undefined : queues.get(homeserver)?.shift();
+          const item = stopped ? undefined : next(homeserver);
           if (item === undefined) return;
-          picked += 1;
           try {
             await fill(item);
           } catch (error) {
@@ -1118,30 +1130,43 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
       });
     }
 
-    async function fill({ scope, record, key }: Item): Promise<void> {
+    async function fill(item: Unfilled<D>): Promise<void> {
+      const { scope, record, epoch } = item;
       const data = await bodyOf(ctx, scope.homeserver, scope.author, record);
-      hydrated.add(key);
-      if (data === null) return;
-      // Committed at once, so a stopped call keeps every file it got. Crawls run beside it: one that replaced,
-      // forgot or dropped the record meanwhile wins, and the data is set on nothing.
-      await commit(
-        {
-          ...readAtOf(ctx, scope.homeserver),
-          recordData: [{ scope: scopeOf(scope), path: record.path, cursor: record.cursor, data }],
-        },
-        { scopes: [scopeOf(scope)], seeds: [] },
-      );
-      fetched += 1;
+      if (data !== null) {
+        // Committed at once, so a stopped call keeps every file it got. Crawls run beside it: one that replaced,
+        // forgot or dropped the record meanwhile wins, and the data is set on nothing.
+        await commit(
+          {
+            readAt: [{ homeserver: scope.homeserver, epoch }],
+            recordData: [{ scope: scopeOf(scope), path: record.path, cursor: record.cursor, data }],
+          },
+          { scopes: [scopeOf(scope)], seeds: [] },
+        );
+        fetched += 1;
+      }
+      // A file that is gone or fails its hash waits for a later event of its path.
+      settleUnfilled(item);
     }
 
-    await absorb();
-    while (drains.size > 0) await Promise.all([...drains.values()]);
+    fills.add(enqueue);
+    try {
+      for (const paths of unfilled.values()) for (const item of paths.values()) enqueue(item);
+      while (drains.size > 0) await Promise.all([...drains.values()]);
+    } finally {
+      fills.delete(enqueue);
+    }
     if (errors.length > 0) throw errors[0];
-    const untried = [...items.values()].filter(({ key }) => !hydrated.has(key));
-    const left = new Set(untried.map(({ scope }) => scopeId(scope)));
-    // A scope a crawl committed `later` records to again since it was read stays for the next call.
-    for (const [id, mark] of scanned) if (!left.has(id) && unfilled.get(id)?.mark === mark) unfilled.delete(id);
-    return { fetched, remaining: untried.length };
+    const waiting = new Set(
+      [...unfilled.values()].flatMap((paths) => [...paths.values()].map(({ scope }) => scope.homeserver)),
+    );
+    return { fetched, remaining: unfilledCount, failedHomeservers: [...ctx.failed].filter((hs) => waiting.has(hs)) };
+  }
+
+  /** Forgets the records of these scopes still to fill, which a `forget` deletes. */
+  function forgetUnfilled(scopes: readonly ScopeKey[]): void {
+    const ids = new Set(scopes.map(scopeId));
+    dropUnfilled((scope) => !ids.has(scopeId(scope)));
   }
 
   return {
@@ -1151,7 +1176,8 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     syncLeaf,
     syncLeaves,
     hydrate,
-    unfilled: () => unfilled.size,
+    unfilled: () => unfilledCount,
+    forgetUnfilled,
     setExcluded(users) {
       excluded = new Set(users);
     },

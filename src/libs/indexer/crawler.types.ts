@@ -140,8 +140,10 @@ export interface StoreChange {
 export interface HydrateResult {
   /** Records that got their data. */
   fetched: number;
-  /** Records still missing their data and not tried yet: beyond the limit or on a failing homeserver. */
+  /** Records still missing their data and not tried yet, as on a failing homeserver. */
   remaining: number;
+  /** The homeservers that failed or were backing off with records of theirs still to fill. */
+  failedHomeservers: string[];
 }
 
 export interface BackfillResult {
@@ -181,16 +183,18 @@ export interface Crawler {
    */
   syncLeaves(leaves: readonly LeafRequest[], signal?: AbortSignal): Promise<LeavesOutcome>;
   /**
-   * Fetches the files of served records that need one and have no data, newest cursor first at each homeserver, at
-   * most `limit`, and commits each as it arrives, on the record if it is still stored. Its requests are background
-   * ones, queued with a scope sync's. It looks in `scopes`, such as every stored scope after a start or the scopes of a
-   * saved index, and in the scopes left unfilled: those a crawl committed with `later` records, also while the call
-   * runs, and those a call could not finish, on a failing homeserver or past the limit. A record is tried once per
-   * crawler: one whose file stays gone or invalid is not fetched again until a later event replaces it.
+   * Fetches the files of stored records that need one and have no data, newest cursor first at each homeserver, and
+   * commits each as it arrives, on the record if it is still stored. Its requests are background ones, queued with a
+   * scope sync's. It fetches the records crawls committed without their `later` files, also while the call runs, and
+   * those a call could not finish, on a failing homeserver; `scopes`, such as every stored scope after a start or the
+   * scopes of a saved index, are read once for records without data. A record is tried once each time a commit or a
+   * read of its scope brings it: one whose file stays gone or invalid waits for a later event of its path.
    */
-  hydrate(scopes?: Iterable<ScopeKey>, limit?: number, signal?: AbortSignal): Promise<HydrateResult>;
-  /** How many scopes the next `hydrate` looks in without being given any. */
+  hydrate(scopes?: Iterable<ScopeKey>, signal?: AbortSignal): Promise<HydrateResult>;
+  /** How many stored records lack a file the next `hydrate` fetches. */
   unfilled(): number;
+  /** Drops the records of these scopes from those to fill, as when `forget` deletes the scopes. */
+  forgetUnfilled(scopes: readonly ScopeKey[]): void;
   /** Replaces the `excluded` option from the next `syncScope` on. */
   setExcluded(users: Iterable<string>): void;
   stats(): CrawlerStats;

@@ -153,7 +153,7 @@ describe('crawler requests per homeserver', () => {
     }
     // The tag already waiting for a slot goes first; the new one before every older tag not taken yet.
     expect(gets.started).toEqual([tags[3], tags[2], tags[1], fresh, tags[0]].map((tag) => `bob:${tag}`));
-    expect(await filling).toEqual({ fetched: 5, remaining: 0 });
+    expect(await filling).toEqual({ fetched: 5, remaining: 0, failedHomeservers: [] });
     await crawling;
     const bob = await servedData(store, 'bob', 'hs1', ACTIVITY);
     for (const tag of [...tags, fresh]) expect(bob.get(tag)).toEqual({ text: tag });

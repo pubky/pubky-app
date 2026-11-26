@@ -83,7 +83,7 @@ describe('crawler files fetched after the commit', () => {
     const coverage = await store.readCoverage(BOB);
     const mark = commits.length;
 
-    expect(await crawler.hydrate()).toEqual({ fetched: 1, remaining: 0 });
+    expect(await crawler.hydrate()).toEqual({ fetched: 1, remaining: 0, failedHomeservers: [] });
 
     expect((await servedData(store, 'bob', 'hs1', ACTIVITY)).get(paths.tag2)).toEqual({ text: 't2' });
     expect(await store.readCoverage(BOB)).toEqual(coverage);
@@ -91,7 +91,7 @@ describe('crawler files fetched after the commit', () => {
     expect(crawler.unfilled()).toBe(0);
     const gets = state.gets.length;
     await crawler.syncScope('alice');
-    expect(await crawler.hydrate()).toEqual({ fetched: 0, remaining: 0 });
+    expect(await crawler.hydrate()).toEqual({ fetched: 0, remaining: 0, failedHomeservers: [] });
     expect(state.gets).toHaveLength(gets);
   });
 
@@ -100,7 +100,7 @@ describe('crawler files fetched after the commit', () => {
     state.failTags = true;
     await crawler.syncScope('alice');
 
-    expect(await crawler.hydrate()).toEqual({ fetched: 0, remaining: 1 });
+    expect(await crawler.hydrate()).toEqual({ fetched: 0, remaining: 1, failedHomeservers: ['hs1'] });
 
     expect(await servedData(store, 'bob', 'hs1', ACTIVITY)).toEqual(
       new Map([
@@ -116,7 +116,7 @@ describe('crawler files fetched after the commit', () => {
     state.failTags = false;
     clock.now += MINUTE_MS;
     await crawler.syncScope('alice');
-    expect(await crawler.hydrate()).toEqual({ fetched: 1, remaining: 0 });
+    expect(await crawler.hydrate()).toEqual({ fetched: 1, remaining: 0, failedHomeservers: [] });
     expect((await servedData(store, 'bob', 'hs1', ACTIVITY)).get(paths.tag2)).toEqual({ text: 't2' });
   });
 
@@ -135,7 +135,7 @@ describe('crawler files fetched after the commit', () => {
     expect(served.get(paths.tag1)).toBeUndefined();
     expect(crawler.unfilled()).toBe(1);
 
-    expect(await crawler.hydrate()).toEqual({ fetched: 1, remaining: 0 });
+    expect(await crawler.hydrate()).toEqual({ fetched: 1, remaining: 0, failedHomeservers: [] });
     expect((await servedData(store, 'bob', 'hs1', ACTIVITY)).get(paths.tag1)).toEqual({ text: 't1' });
   });
 
@@ -170,7 +170,11 @@ describe('crawler files fetched after the commit', () => {
     const loader = crawlerOf(other);
     expect(loader.unfilled()).toBe(0);
     const gets = state.gets.length;
-    expect(await loader.hydrate(await other.listScopes())).toEqual({ fetched: 1, remaining: 0 });
+    expect(await loader.hydrate(await other.listScopes())).toEqual({
+      fetched: 1,
+      remaining: 0,
+      failedHomeservers: [],
+    });
     expect(state.gets.slice(gets).map(({ path }) => path)).toEqual([paths.tag2]);
     await crawler.hydrate();
     expect(await other.exportRuns(BOB)).toEqual(await store.exportRuns(BOB));

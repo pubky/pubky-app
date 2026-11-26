@@ -406,7 +406,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     /** Whether it committed a file. */
     const run = async (): Promise<boolean> => {
       try {
-        const { fetched } = await crawler.hydrate(scan ? await store.listScopes() : [], undefined, stopper.signal);
+        const { fetched } = await crawler.hydrate(scan ? await store.listScopes() : [], stopper.signal);
         return fetched > 0;
       } catch (error) {
         if (!stopper.signal.aborted) {
@@ -695,6 +695,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     if (scopes.length === 0) return;
     // Every cursor is at or below the largest one, so the eviction drops each scope whole.
     await store.commit({ evictions: scopes.map((scope) => ({ scope, cutoff: MAX_CURSOR })) });
+    crawler.forgetUnfilled(scopes);
     announce({ scopes, seeds: [], forgotten: scopes });
   }
 

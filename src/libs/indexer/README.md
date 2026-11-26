@@ -143,8 +143,10 @@ whichever hop wrote them: a tag names its post only in its file, so the newest i
 same state a saved index loads, and the view skips it: a post shows before the tags on it, which join it and its
 counts a moment later. Only `render` records back an answer the index calls exact, a post, a profile or a proof that
 one is absent; tags and counts are always answered for the scope, so a pending tag is never claimed as known. The
-crawler keeps the scopes it committed `later` records to, and those a `hydrate` could not finish, for the next
-`hydrate`.
+crawler keeps each record it committed without its `later` file, the newest event of its path, from that commit until
+a `hydrate` tries it, a later event of the path replaces it, or its homeserver is dropped or its scope forgotten, so
+a fill reads no scope again for what a commit left, and queues them per homeserver in a heap by cursor. A file that is
+gone or fails its hash is tried once each time a commit or a read of its scope brings its record.
 
 Each crawl step is one `commit` that applies the runs of the users that moved. A scope's coverage stays
 one range over normal syncs; a gap, such as a newest page loaded on demand above older history, keeps two.
