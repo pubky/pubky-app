@@ -94,3 +94,25 @@ jobs:
           done
 
           echo "Production server is ready."
+
+          # Hard loads of every route shape, dynamic ones included: client navigation never asks the
+          # server for these, so a page that fails only on a direct request shows up here.
+          KEY="oj5irox6fpf3qgjau8wkwx8irpyyapoy75dmd14obb7z8pmnxd9y"
+          FAILED=0
+          for ROUTE in / /home /hot /search?q=pubky /settings/account /collections \
+            "/profile/${KEY}" "/profile/${KEY}/followers" "/post/${KEY}/003625JK4263R" \
+            "/collections/${KEY}/003625JK4263R" /feed/feed-abc123 /invite/abcd-efgh-ijkl; do
+            BODY="$(mktemp)"
+            STATUS="$(curl -sS -o "$BODY" -w '%{http_code}' "http://localhost:${PORT}${ROUTE}")"
+            if [ "$STATUS" != "200" ] || grep -q 'Internal Server Error\|Application error' "$BODY"; then
+              echo "FAIL ${ROUTE}: HTTP ${STATUS}"
+              FAILED=1
+            else
+              echo "ok   ${ROUTE}"
+            fi
+          done
+          if [ "$FAILED" = "1" ]; then
+            echo "--- server log ---"
+            cat "$SERVER_LOG"
+            exit 1
+          fi
