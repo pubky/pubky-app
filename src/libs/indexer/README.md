@@ -63,6 +63,13 @@ reduced; a file that is gone or fails its hash leaves the record without data un
 failing homeserver is skipped for the rest of the sync with exponential backoff, and one whose log went
 backwards (a restore) loses everything stored for it and is synced again.
 
+Every transport call runs under a deadline of the library's own, timed by the injected `schedule`, so a transport
+whose request never settles cannot stall a crawl: a stream read or file fetch past `requestTimeoutMs` (30 s) has
+its signal aborted and fails its homeserver like any unreachable one, a lookup past `lookupTimeoutMs` (10 s) fails
+like any failed lookup, and an index file call past `indexFileTimeoutMs` (2 min) fails the load or save. An abort,
+such as a pre-emption or `stop`, settles the operation at once, even while a call hangs. A call that settles after
+its deadline or abort is ignored.
+
 Each crawl step is one `commit` that applies the runs of the users that moved. A scope's coverage stays
 one range over normal syncs; a gap, such as stored history older than the window start, keeps two.
 

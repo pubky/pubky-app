@@ -1,3 +1,4 @@
+import type { Schedule } from './concurrency';
 import type { CrawlerOptions, CrawlerStats, LeafRequest, StoreChange } from './crawler.types';
 import type { Domain } from './domain.types';
 import type { IndexStore } from './store.types';
@@ -12,8 +13,7 @@ export interface IndexSealer {
   open(bytes: Uint8Array, name: string): Promise<Uint8Array>;
 }
 
-/** Runs `callback` after `ms` and returns the function that cancels it. */
-export type Schedule = (callback: () => void, ms: number) => () => void;
+export type { Schedule } from './concurrency';
 
 export interface RuntimeOptions {
   /** Pause between the end of a scope sync and the next one. */
@@ -37,6 +37,8 @@ export interface RuntimeOptions {
   sealer?: IndexSealer;
   /** Least time between two backfills of one author's group, unless forced. */
   backfillMinIntervalMs: number;
+  /** Deadline of one index file call: a file may be as large as `fileBudgetBytes`, so it gets longer than a read. */
+  indexFileTimeoutMs: number;
   crawler: Partial<CrawlerOptions>;
 }
 
@@ -49,6 +51,7 @@ export const DEFAULT_RUNTIME_OPTIONS: Readonly<RuntimeOptions> = Object.freeze({
   writerExpiryMs: 30 * 24 * 60 * 60 * 1000,
   fileBudgetBytes: 200 * 1024 * 1024,
   backfillMinIntervalMs: 30 * 1000,
+  indexFileTimeoutMs: 2 * 60 * 1000,
   crawler: {},
 });
 
@@ -122,7 +125,7 @@ export interface RuntimeParams<D> {
   domain: Domain<D>;
   /** Wall clock in ms. */
   now: () => number;
-  /** Timers; `setTimeout` by default. */
+  /** Timers, request deadlines included; `setTimeout` by default. */
   schedule?: Schedule;
   /** Without it the runtime crawls as if it were the only tab. Its owner closes it: the runtime never does. */
   coordination?: Coordination | null;

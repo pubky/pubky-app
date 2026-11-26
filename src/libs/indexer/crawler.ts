@@ -1,4 +1,4 @@
-import { chunks, mapLimit, sleep, throwIfAborted } from './concurrency';
+import { chunks, mapLimit, sleep, throwIfAborted, timerSchedule, untilAborted, withDeadline } from './concurrency';
 import {
   type Crawler,
   type CrawlerParams,
@@ -19,6 +19,7 @@ import {
   IndexerError,
   InvalidIndexInputError,
   RateLimitedError,
+  RequestTimeoutError,
 } from './indexer.errors';
 import type { Coverage, Cursor, RecordEntry, Run } from './indexer.types';
 import { readBackward, readForward, type ReadPage } from './paging';
@@ -75,6 +76,7 @@ const newestOf = (current: HighWater | null, event: AuthoredStreamEvent | null):
 export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
   const { transport, store, domain, now } = params;
   const wait = params.sleep ?? sleep;
+  const schedule = params.schedule ?? timerSchedule;
   const options = { ...DEFAULT_CRAWLER_OPTIONS, ...params.options };
   const scopeGroup = domain.groups.find((group) => group.id === domain.scopeGroup);
   if (scopeGroup === undefined || scopeGroup.history !== 'full') {
@@ -142,11 +144,23 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     }
   }
 
+  /** One call to the homeserver under the request deadline; past it the homeserver counts as unreachable. */
+  async function call<T>(ctx: OperationContext, homeserver: string, request: (signal: AbortSignal) => Promise<T>) {
+    try {
+      return await withDeadline(request, options.requestTimeoutMs, schedule, ctx.signal);
+    } catch (error) {
+      if (error instanceof RequestTimeoutError) throw new HomeserverUnreachableError(homeserver, { cause: error });
+      throw error;
+    }
+  }
+
   function reader(ctx: OperationContext, homeserver: string, paths: string[], limit: number): ReadPage {
     return async (users, reverse) => {
       const events = await attempt(ctx, () => {
         count('streamRequests');
-        return transport.readEvents({ homeserver, users, paths, limit, reverse, signal: ctx.signal });
+        return call(ctx, homeserver, (signal) =>
+          transport.readEvents({ homeserver, users, paths, limit, reverse, signal }),
+        );
       });
       count('events', events.length);
       return events;
@@ -217,10 +231,15 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     return heads;
   }
 
-  async function bodyOf(ctx: OperationContext, author: string, record: RecordEntry<D>): Promise<D | null> {
+  async function bodyOf(
+    ctx: OperationContext,
+    homeserver: string,
+    author: string,
+    record: RecordEntry<D>,
+  ): Promise<D | null> {
     const bytes = await attempt(ctx, () => {
       count('bodyRequests');
-      return transport.getPublic({ author, path: record.path, signal: ctx.signal });
+      return call(ctx, homeserver, (signal) => transport.getPublic({ author, path: record.path, signal }));
     });
     // A 404 or other bytes mean a later event replaced this one, and that event brings the data.
     if (bytes === null) return null;
@@ -234,11 +253,13 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
   async function attachBodies(ctx: OperationContext, runs: readonly Run<D>[]): Promise<void> {
     const records = runs.flatMap((run) =>
       run.entries.flatMap((entry) =>
-        entry.kind === 'record' && domain.needsBody(entry.path) ? [{ author: run.author, record: entry }] : [],
+        entry.kind === 'record' && domain.needsBody(entry.path)
+          ? [{ homeserver: run.homeserver, author: run.author, record: entry }]
+          : [],
       ),
     );
-    await mapLimit(records, options.bodyConcurrency, async ({ author, record }) => {
-      const data = await bodyOf(ctx, author, record);
+    await mapLimit(records, options.bodyConcurrency, async ({ homeserver, author, record }) => {
+      const data = await bodyOf(ctx, homeserver, author, record);
       if (data !== null) record.data = data;
     });
   }
@@ -369,9 +390,8 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
       pending = lookUp(user).finally(() => lookups.delete(user));
       lookups.set(user, pending);
     }
-    const homeserver = await pending;
-    throwIfAborted(ctx.signal);
-    return homeserver;
+    // A shared lookup outlives this operation, so an abort leaves it running for the others.
+    return untilAborted(pending, ctx.signal);
   }
 
   async function lookUp(user: string): Promise<string | null> {
@@ -380,7 +400,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     count('lookups');
     let homeserver: string | null;
     try {
-      homeserver = await transport.resolveHomeserver(user);
+      homeserver = await withDeadline(() => transport.resolveHomeserver(user), options.lookupTimeoutMs, schedule);
     } catch (error) {
       if (!(error instanceof IndexerError)) throw error;
       return cached?.homeserver ?? null;
@@ -590,7 +610,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
       await guard(ctx, homeserver, async () => {
         const runs: Run<D>[] = [];
         await mapLimit(items, options.bodyConcurrency, async ({ scope, record }) => {
-          const data = await bodyOf(ctx, scope.author, record);
+          const data = await bodyOf(ctx, scope.homeserver, scope.author, record);
           if (data === null) return;
           // The one event at this cursor: a run of it alone lies inside the stored coverage and changes no range.
           runs.push({

@@ -4,12 +4,13 @@ import { ACTIVITY, DAY_MS, FOLLOWS, GRAPH, NOW, type Post, postPath, POSTS, test
 import type { StoreChange } from './crawler.types';
 import { FakeNetwork } from './fakeNetwork';
 import { createIndexerRuntime } from './indexer';
+import { RequestTimeoutError } from './indexer.errors';
 import { createMemoryStore } from './memoryStore';
 import { createTabs, fakeTime, settle, tracked, type TrackedRead } from './runtime.fixtures';
 import type { Coordination } from './runtime.types';
 import { scopeId } from './store.helpers';
 import type { ScopeKey } from './store.types';
-import type { ReadEventsRequest } from './transport.types';
+import type { IndexerTransport, ReadEventsRequest } from './transport.types';
 
 const INTERVAL = 60 * 1000;
 const DEBOUNCE = 250;
@@ -266,6 +267,93 @@ describe('createIndexerRuntime queue', () => {
     runtime.stop();
 
     await expect(queued).rejects.toThrow('aborted');
+  });
+});
+
+describe('createIndexerRuntime requests that never settle', () => {
+  /** The world's network, with every stream read naming `user` never settling and deaf to its signal. */
+  function deafTo(w: World, user: string) {
+    const hung = { reads: 0 };
+    const transport: IndexerTransport = {
+      resolveHomeserver: (name) => w.network.resolveHomeserver(name),
+      readEvents: (request) => {
+        if (!request.users.some((entry) => entry.user === user)) return w.network.readEvents(request);
+        hung.reads += 1;
+        return new Promise(() => undefined);
+      },
+      getPublic: (request) => w.network.getPublic(request),
+      listIndexFiles: () => new Promise(() => undefined),
+      readIndexFile: (name) => w.network.readIndexFile(name),
+      writeIndexFile: (name, bytes) => w.network.writeIndexFile(name, bytes),
+      deleteIndexFile: (name) => w.network.deleteIndexFile(name),
+    };
+    return { transport, hung };
+  }
+
+  const runtimeWith = (w: World, transport: IndexerTransport, savedIndex = false) =>
+    createIndexerRuntime({
+      transport,
+      store: w.store,
+      domain: testDomain,
+      now: () => w.time.clock.now,
+      schedule: w.time.schedule,
+      options: { savedIndex },
+    });
+
+  it('pre-empts a scope sync stuck in a read, then stops and starts again, waiting for no deadline', async () => {
+    const w = world();
+    const { transport, hung } = deafTo(w, 'alice');
+    const runtime = runtimeWith(w, transport);
+
+    runtime.start('alice');
+    await settle();
+    expect(hung.reads).toBe(1);
+
+    await runtime.ensureUser('carol');
+    expect((await w.store.listScopes()).some((scope) => scope.author === 'carol')).toBe(true);
+    await settle();
+    expect(hung.reads).toBe(2);
+
+    runtime.stop();
+    runtime.start('alice');
+    await settle();
+    expect(hung.reads).toBe(3);
+    expect(w.time.clock.now).toBe(NOW);
+    runtime.stop();
+  });
+
+  it('fails the stuck homeserver at the deadline and syncs again at the next interval', async () => {
+    const w = world();
+    const { transport, hung } = deafTo(w, 'alice');
+    const runtime = runtimeWith(w, transport);
+
+    runtime.start('alice');
+    await w.time.advance(30 * 1000);
+
+    expect(hung.reads).toBe(1);
+    expect(runtime.status()).toMatchObject({ state: 'idle', firstSyncPending: false });
+    expect(runtime.status().stats.homeserversFailed).toBe(1);
+    expect((await w.store.readHomeserverState('hs1')).failure?.failures).toBe(1);
+    runtime.stop();
+  });
+
+  it('gives up on an index file call at its deadline and crawls anyway', async () => {
+    const w = world();
+    const { transport } = deafTo(w, 'nobody');
+    const runtime = runtimeWith(w, transport, true);
+    const errors: unknown[] = [];
+    runtime.onStatus((status) => {
+      if (status.savedIndex?.error) errors.push(status.savedIndex.error);
+    });
+
+    runtime.start('alice');
+    await settle();
+    expect(runtime.status().lastSyncAt).toBeNull();
+    await w.time.advance(2 * 60 * 1000);
+
+    expect(errors[0]).toBeInstanceOf(RequestTimeoutError);
+    expect(runtime.status().lastSyncAt).not.toBeNull();
+    runtime.stop();
   });
 });
 

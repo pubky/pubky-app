@@ -38,6 +38,17 @@ export class RateLimitedError extends IndexerError {
   }
 }
 
+/** A transport call did not settle within its deadline; its signal was aborted. */
+export class RequestTimeoutError extends IndexerError {
+  readonly timeoutMs: number;
+
+  constructor(timeoutMs: number, options?: ErrorOptions) {
+    super(`request did not settle within ${timeoutMs} ms`, options);
+    this.name = 'RequestTimeoutError';
+    this.timeoutMs = timeoutMs;
+  }
+}
+
 /** The caller's `AbortSignal` fired. Everything committed before it stays valid. */
 export class IndexerAbortedError extends IndexerError {
   constructor(options?: ErrorOptions) {

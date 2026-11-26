@@ -1,3 +1,4 @@
+import type { Schedule } from './concurrency';
 import type { Domain } from './domain.types';
 import type { Cursor } from './indexer.types';
 import type { IndexStore, ScopeKey } from './store.types';
@@ -20,6 +21,13 @@ export interface CrawlerOptions {
   maxUsers: number;
   /** Users left out of every scope, and with them whoever is reached only through them. */
   excluded: ReadonlySet<string>;
+  /**
+   * Deadline of one stream read or file fetch. Past it the call's signal aborts and the homeserver counts as
+   * unreachable, so a transport whose request never settles cannot stall a crawl.
+   */
+  requestTimeoutMs: number;
+  /** Deadline of one homeserver lookup; past it the lookup fails like any other. */
+  lookupTimeoutMs: number;
 }
 
 export const DEFAULT_CRAWLER_OPTIONS: Readonly<CrawlerOptions> = Object.freeze({
@@ -32,6 +40,8 @@ export const DEFAULT_CRAWLER_OPTIONS: Readonly<CrawlerOptions> = Object.freeze({
   homeserverTtlMs: 6 * 60 * 60 * 1000,
   maxUsers: 2000,
   excluded: new Set<string>(),
+  requestTimeoutMs: 30 * 1000,
+  lookupTimeoutMs: 10 * 1000,
 });
 
 export interface CrawlerParams<D> {
@@ -42,6 +52,8 @@ export interface CrawlerParams<D> {
   now: () => number;
   /** Waits before retrying a rate-limited request; a timer by default. Rejects with `IndexerAbortedError` on abort. */
   sleep?: (ms: number, signal?: AbortSignal) => Promise<void>;
+  /** Timers for request deadlines; `setTimeout` by default. */
+  schedule?: Schedule;
   options?: Partial<CrawlerOptions>;
 }
 

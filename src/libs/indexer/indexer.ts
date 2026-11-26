@@ -1,3 +1,4 @@
+import { timerSchedule, withDeadline } from './concurrency';
 import { createCrawler } from './crawler';
 import { DEFAULT_CRAWLER_OPTIONS, type LeafRequest, type StoreChange } from './crawler.types';
 import { MAX_CURSOR } from './cursor';
@@ -11,11 +12,11 @@ import {
   type RuntimeParams,
   type RuntimeStatus,
   type SavedIndexStatus,
-  type Schedule,
 } from './runtime.types';
 import { fitToBudget, indexFileName, loadSavedIndex, snapshotIndex, writerIdOf } from './savedIndex';
 import { scopeId } from './store.helpers';
 import type { ScopeKey } from './store.types';
+import type { IndexerTransport } from './transport.types';
 
 const LOCK_PREFIX = 'pubky-indexer:';
 /**
@@ -23,11 +24,6 @@ const LOCK_PREFIX = 'pubky-indexer:';
  * pre-empted the last time still go first; later ones wait for the pass.
  */
 const MAX_PREEMPTIONS = 3;
-
-const defaultSchedule: Schedule = (callback, ms) => {
-  const timer = setTimeout(callback, ms);
-  return () => clearTimeout(timer);
-};
 
 const asError = (error: unknown): Error => (error instanceof Error ? error : new Error(String(error)));
 
@@ -61,11 +57,23 @@ interface Ensured {
 }
 
 export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntime {
-  const { transport, store, domain, now } = params;
-  const schedule = params.schedule ?? defaultSchedule;
+  const { store, domain, now } = params;
+  const schedule = params.schedule ?? timerSchedule;
   const coordination = params.coordination ?? null;
   const options = { ...DEFAULT_RUNTIME_OPTIONS, ...params.options };
-  const crawler = createCrawler({ transport, store, domain, now, options: options.crawler });
+  const inner = params.transport;
+  const crawler = createCrawler({ transport: inner, store, domain, now, schedule, options: options.crawler });
+  const timed = <T>(call: () => Promise<T>) => withDeadline(call, options.indexFileTimeoutMs, schedule);
+  /** The transport the saved index uses, each index file call under its deadline. */
+  const transport: IndexerTransport = {
+    resolveHomeserver: (user) => inner.resolveHomeserver(user),
+    readEvents: (request) => inner.readEvents(request),
+    getPublic: (request) => inner.getPublic(request),
+    listIndexFiles: () => timed(() => inner.listIndexFiles()),
+    readIndexFile: (name) => timed(() => inner.readIndexFile(name)),
+    writeIndexFile: (name, bytes) => timed(() => inner.writeIndexFile(name, bytes)),
+    deleteIndexFile: (name) => timed(() => inner.deleteIndexFile(name)),
+  };
   const crawlerOptions = { ...DEFAULT_CRAWLER_OPTIONS, ...options.crawler };
   const windowGroups = new Set(domain.groups.filter(({ history }) => history === 'window').map(({ id }) => id));
   const tab = Math.random().toString(36).slice(2);

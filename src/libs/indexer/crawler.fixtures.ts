@@ -1,3 +1,4 @@
+import type { Schedule } from './concurrency';
 import { createCrawler } from './crawler';
 import type { CrawlerOptions } from './crawler.types';
 import type { Domain } from './domain.types';
@@ -51,7 +52,8 @@ export const testDomain: Domain<Post> = {
 /** The path of a post created `ageMs` before `NOW`, its id being the creation time in microseconds. */
 export const postPath = (ageMs: number) => `${POSTS}${BigInt(NOW - ageMs) * BigInt(1000)}`;
 
-export function harness(options: Partial<CrawlerOptions> = {}) {
+/** `schedule` runs the request deadlines, real timers when absent. */
+export function harness(options: Partial<CrawlerOptions> = {}, schedule?: Schedule) {
   const network = new FakeNetwork();
   const store = createMemoryStore<Post>();
   const clock = { now: NOW };
@@ -66,6 +68,7 @@ export function harness(options: Partial<CrawlerOptions> = {}) {
         waits.push(ms);
         clock.now += ms;
       },
+      schedule,
       options,
     });
   return { network, store, clock, waits, crawler: crawlerOf(network), crawlerOf };
