@@ -85,6 +85,10 @@ export function runsOfScope<D>(scope: ScopeKey, { entries, coverage }: MergedRun
   }));
 }
 
+/** A window end an eviction at `cutoff` keeps: one above it. */
+export const keptEnd = (end: Cursor | undefined, cutoff: Cursor): Cursor | undefined =>
+  end !== undefined && end > cutoff ? end : undefined;
+
 /** `coverage` without anything at or below `cutoff`, as the pure `evictBelow` trims runs. */
 export function evictCoverage(coverage: readonly Range[], cutoff: Cursor): Coverage {
   return coverage
@@ -97,7 +101,6 @@ export function homeserverStateOf(stored: Partial<HomeserverState> | undefined):
   return {
     highWater: stored?.highWater ?? null,
     epoch: stored?.epoch ?? EMPTY_HOMESERVER_STATE.epoch,
-    windowStart: stored?.windowStart ?? null,
     failure: stored?.failure ?? null,
   };
 }
@@ -109,16 +112,14 @@ export function patchedState(current: Readonly<HomeserverState>, patch: Homeserv
   return {
     highWater: rises ? highWater : current.highWater,
     epoch: current.epoch,
-    windowStart: patch.windowStart !== undefined ? patch.windowStart : current.windowStart,
     failure: patch.failure !== undefined ? patch.failure : current.failure,
   };
 }
 
-/** The state a deletion leaves: the next epoch, no mark, no window start. */
+/** The state a deletion leaves: the next epoch, no mark. */
 export const deletedState = (current: Readonly<HomeserverState>): HomeserverState => ({
   highWater: null,
   epoch: current.epoch + 1,
-  windowStart: null,
   failure: current.failure,
 });
 

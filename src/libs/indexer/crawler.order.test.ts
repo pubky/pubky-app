@@ -28,17 +28,18 @@ const MINUTE_MS = 60 * 1000;
 /**
  * alice follows the hop 1 users and u0 follows the hop 2 users, all on hs1. Each user wrote a post older than the
  * window, hop 1 last, then one a day for 20 days, the users' posts interleaved and the newest last. `after` writes
- * more once a day's posts are in.
+ * more once a day's posts are in. Each user's window ends at their old post: nothing of theirs is older.
  */
 function world(after: (day: number, network: FakeNetwork) => void = () => undefined) {
   const network = new FakeNetwork().addHomeserver('hs1');
   for (const user of ['alice', ...HOP1, ...HOP2]) network.addUser(user, 'hs1');
   for (const user of HOP1) network.put('alice', `${FOLLOWS}${user}`);
   for (const user of HOP2) network.put('u0', `${FOLLOWS}${user}`);
-  let windowStart: Cursor = BigInt(0);
+  const ends = new Map<string, Cursor>();
   [...HOP2, ...HOP1].forEach((user, i) => {
-    windowStart = network.putJson(user, postPath(31 * DAY_MS + i * MINUTE_MS), { text: `old ${user}` });
+    ends.set(user, network.putJson(user, postPath(31 * DAY_MS + i * MINUTE_MS), { text: `old ${user}` }));
   });
+  const endOf = (user: string) => ends.get(user) ?? BigInt(0);
   let top: Cursor = BigInt(0);
   for (let day = 20; day >= 1; day -= 1) {
     [...HOP1, ...HOP2].forEach((user, i) => {
@@ -47,7 +48,7 @@ function world(after: (day: number, network: FakeNetwork) => void = () => undefi
     });
     after(day, network);
   }
-  return { network, windowStart, top };
+  return { network, endOf, top };
 }
 
 type Step = { kind: 'read'; users: string[] } | { kind: 'get'; author: string; path: string } | { kind: 'commit' };
@@ -98,7 +99,7 @@ const activityOf = (runs: ReadonlyArray<{ step: number; run: Run<Post> }>, users
 
 describe('syncScope newest first', () => {
   it("commits a first sync's window a slice at a time, newest first, each once its posts are in", async () => {
-    const { network, windowStart } = world();
+    const { network, endOf } = world();
     const { crawler, store, steps, runs } = recorded(network, { hops: 1 });
 
     await crawler.syncScope('alice');
@@ -110,7 +111,7 @@ describe('syncScope newest first', () => {
     for (const user of HOP1) {
       const own = hop1.filter(({ run }) => run.author === user).map(({ run }) => run);
       for (let i = 1; i < own.length; i += 1) expect(own[i].head).toBe(own[i - 1].tail);
-      expect(own[own.length - 1].tail).toBe(windowStart);
+      expect(own[own.length - 1].tail).toBe(endOf(user));
     }
     // No record commits before its file is in.
     for (const { run } of hop1) {
@@ -123,10 +124,11 @@ describe('syncScope newest first', () => {
     const lastGet = steps.findLastIndex((step) => step.kind === 'get' && HOP1.includes(step.author));
     expect(commits[0]).toBeLessThan(lastGet);
     for (const user of HOP1) {
-      expect(await served(store, user, 'hs1', ACTIVITY)).toEqual(network.liveOf(user, [POSTS], windowStart));
-      expect((await store.readCoverage({ author: user, homeserver: 'hs1', group: ACTIVITY })).length).toBe(1);
+      const scope = { author: user, homeserver: 'hs1', group: ACTIVITY };
+      expect(await served(store, user, 'hs1', ACTIVITY)).toEqual(network.liveOf(user, [POSTS], endOf(user)));
+      expect((await store.readCoverage(scope)).length).toBe(1);
+      expect(await store.readWindowEnd(scope)).toBe(endOf(user));
     }
-    expect((await store.readHomeserverState('hs1')).windowStart?.cursor).toBe(windowStart);
   });
 
   it("reads hop 1's activity beside its graph, and starts hop 2 once hop 1's graph is in", async () => {
@@ -150,7 +152,7 @@ describe('syncScope newest first', () => {
   });
 
   it("commits a homeserver's batches as one stream, newest first, reading the next page while a page's posts come", async () => {
-    const { network, windowStart } = world();
+    const { network, endOf } = world();
     const { crawler, store, steps, runs } = recorded(network, { hops: 1, batchSize: 2, pageLimit: 10 });
 
     await crawler.syncScope('alice');
@@ -161,12 +163,12 @@ describe('syncScope newest first', () => {
     const first = hop1.filter(({ step }) => step === commits[0]).flatMap(({ run }) => run.entries);
     const newest = HOP1.map((user, i) => postPath(DAY_MS + i * MINUTE_MS));
     expect(first.map(({ path }) => path)).toEqual(expect.arrayContaining(newest));
-    // Each commit sits right below the one before it, for every user, down to their batch's newest older write.
+    // Each commit sits right below the one before it, for every user, down to where their own window ends.
     for (const user of HOP1) {
       const own = hop1.filter(({ run }) => run.author === user).map(({ run }) => run);
       for (let i = 1; i < own.length; i += 1) expect(own[i].head).toBe(own[i - 1].tail);
-      expect(own[own.length - 1].tail).toBeLessThanOrEqual(windowStart);
-      expect(await served(store, user, 'hs1', ACTIVITY)).toEqual(network.liveOf(user, [POSTS], windowStart));
+      expect(own[own.length - 1].tail).toBe(endOf(user));
+      expect(await served(store, user, 'hs1', ACTIVITY)).toEqual(network.liveOf(user, [POSTS], endOf(user)));
     }
     // A window read goes out before the posts of the page read before it are all in.
     const reads = steps.flatMap((step, index) =>
@@ -179,13 +181,13 @@ describe('syncScope newest first', () => {
   });
 
   it('reads the window once, with no search for its start, and fetches each post in it once', async () => {
-    const { network, windowStart } = world();
+    const { network, endOf } = world();
     const inWindow = ['alice', ...HOP1, ...HOP2].flatMap((user) =>
-      [...network.liveOf(user, [POSTS], windowStart).keys()].map((path) => `${user}${path}`),
+      [...network.liveOf(user, [POSTS], endOf(user)).keys()].map((path) => `${user}${path}`),
     );
     const whole = recorded(network, { hops: 2 });
     await whole.crawler.syncScope('alice');
-    // Per hop one graph read and one window read: the window start is found by the window read itself.
+    // Per hop one graph read and one window read: each window end is found by the window read itself.
     expect(whole.crawler.stats().streamRequests).toBe(6);
 
     // Batches merged into one stream read no event twice.
@@ -206,7 +208,7 @@ describe('syncScope newest first', () => {
 
   it('keeps the tombstones of every slice and the slices above a fetch that keeps failing, then completes', async () => {
     const deleted = postPath(15 * DAY_MS);
-    const { network, windowStart, top } = world((day, net) => {
+    const { network, endOf, top } = world((day, net) => {
       if (day === 15) net.del('u0', deleted);
     });
     const failing = postPath(10 * DAY_MS + MINUTE_MS);
@@ -219,7 +221,7 @@ describe('syncScope newest first', () => {
     // Everything above the post whose file never came is in, with its data; nothing at or below it is claimed.
     for (const user of HOP1) {
       const [range] = await store.readCoverage(scope(user));
-      expect(range.tail).toBeGreaterThan(windowStart);
+      expect(range.tail).toBeGreaterThan(endOf(user));
       expect(network.liveOf(user, [POSTS], range.tail)).toEqual(await served(store, user, 'hs1', ACTIVITY));
       for (const record of (await store.readScope(scope(user))).live.values()) expect(record.data).toBeDefined();
     }
@@ -230,8 +232,8 @@ describe('syncScope newest first', () => {
     expect((await crawler.syncScope('alice')).failedHomeservers).toEqual([]);
 
     for (const user of HOP1) {
-      expect(await served(store, user, 'hs1', ACTIVITY)).toEqual(network.liveOf(user, [POSTS], windowStart));
-      expect(await store.readCoverage(scope(user))).toEqual([{ tail: windowStart, head: top }]);
+      expect(await served(store, user, 'hs1', ACTIVITY)).toEqual(network.liveOf(user, [POSTS], endOf(user)));
+      expect(await store.readCoverage(scope(user))).toEqual([{ tail: endOf(user), head: top }]);
     }
     expect((await store.readScope(scope('u0'))).entries.get(deleted)?.kind).toBe('tombstone');
   });

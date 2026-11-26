@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import { MAX_CURSOR } from './cursor';
 import { InvalidIndexInputError } from './indexer.errors';
 import type { Cursor, Entry, Run, RunMeta } from './indexer.types';
 import { compactRuns, evictBelow, mergeRuns } from './merge';
@@ -417,6 +418,7 @@ export function describeIndexStoreContract<S extends IndexStore<Payload>>(
         deleteHomeservers: ['hs2'],
         applyRuns: [runOf(2, 4), runOf(2, 4, hs2)],
         recordData: [{ scope: hs2, path: 'a', cursor: c(2), data: { n: 7 } }],
+        windowEnds: [{ scope: hs2, cursor: c(1) }],
         userHomeservers: [{ user: 'alice', value: { homeserver: 'hs1', resolvedAt: 5 } }],
         homeserverStates: [{ homeserver: 'hs1', patch: { highWater: { cursor: c(4), author: 'alice' } } }],
         scopeMembers: [{ seed: 'alice', members: new Map([['alice', 0]]) }],
@@ -426,6 +428,7 @@ export function describeIndexStoreContract<S extends IndexStore<Payload>>(
 
       await expectScopeOf(store, META, []);
       await expectScopeOf(store, hs2, [runOf(0, 2, hs2)]);
+      expect(await store.readWindowEnd(hs2)).toBeNull();
       expect(await store.readUserHomeserver('alice')).toBeNull();
       expect(await store.readHomeserverState('hs1')).toEqual({ ...EMPTY_HOMESERVER_STATE, epoch: 1 });
       expect(await store.readHomeserverState('hs2')).toEqual(EMPTY_HOMESERVER_STATE);
@@ -434,6 +437,38 @@ export function describeIndexStoreContract<S extends IndexStore<Payload>>(
       await store.commit({ ...stale, readAt: [{ homeserver: 'hs1', epoch: 1 }], deleteHomeservers: [] });
       await expectScopeOf(store, META, [runOf(2, 4)]);
       expect((await store.readHomeserverState('hs1')).highWater).toEqual({ cursor: c(4), author: 'alice' });
+    });
+
+    it('keeps a window end on a scope with coverage until the scope goes or an eviction reaches it', async () => {
+      const store = fresh();
+      const bob: RunMeta = { ...META, author: 'bob' };
+      const carol: RunMeta = { ...META, author: 'carol', homeserver: 'hs2' };
+      await store.applyRuns([runOf(4, 9), runOf(4, 9, bob), runOf(4, 9, carol)]);
+
+      await store.commit({
+        windowEnds: [
+          { scope: META, cursor: c(4) },
+          { scope: bob, cursor: c(6) },
+          { scope: carol, cursor: c(4) },
+          { scope: { ...META, group: 'graph' }, cursor: c(1) },
+        ],
+      });
+      await store.applyRuns([runOf(9, 12), runOf(9, 12, bob)]);
+      await store.commit({ evictions: [{ scope: META, cutoff: c(3) }] });
+      await store.evictBelow(bob, c(6));
+      await store.deleteHomeserver('hs2');
+      await store.applyRuns([runOf(0, 2, carol)]);
+
+      expect(await store.readWindowEnd(META)).toBe(c(4));
+      expect(await store.readWindowEnd(bob)).toBeNull();
+      expect(await store.readWindowEnd(carol)).toBeNull();
+      expect(await store.readWindowEnd({ ...META, group: 'graph' })).toBeNull();
+      await store.commit({ windowEnds: [{ scope: META, cursor: c(2) }] });
+      expect(await store.readWindowEnd(META)).toBe(c(2));
+      await store.evictBelow(META, MAX_CURSOR);
+      expect(await store.readWindowEnd(META)).toBeNull();
+      await store.applyRuns([runOf(0, 2)]);
+      expect(await store.readWindowEnd(META)).toBeNull();
     });
 
     it('stores user homeservers and scope members per key, the last write winning', async () => {

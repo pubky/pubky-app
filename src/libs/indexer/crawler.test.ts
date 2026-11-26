@@ -18,7 +18,7 @@ import {
 import { CURSOR_ZERO } from './cursor';
 import type { Domain } from './domain.types';
 import type { FakeNetwork } from './fakeNetwork';
-import { InvalidIndexInputError } from './indexer.errors';
+import { HomeserverUnreachableError, InvalidIndexInputError } from './indexer.errors';
 import { createMemoryStore } from './memoryStore';
 import { settle } from './runtime.fixtures';
 import type { IndexerTransport } from './transport.types';
@@ -156,12 +156,12 @@ describe('syncScope scope', () => {
     const { network, store, crawlerOf } = harness();
     network.addHomeserver('hs1');
     chain(network, ['alice', 'bob', 'carol']);
-    const membersAtBob: Array<Map<string, number>> = [];
+    const membersAtBob: Array<Promise<Map<string, number>>> = [];
     const transport: IndexerTransport = {
       resolveHomeserver: (user) => network.resolveHomeserver(user),
       readEvents: async (request) => {
         if (membersAtBob.length === 0 && request.users.some(({ user }) => user === 'bob')) {
-          membersAtBob.push(await store.readScopeMembers('alice'));
+          membersAtBob.push(store.readScopeMembers('alice'));
         }
         return network.readEvents(request);
       },
@@ -175,7 +175,7 @@ describe('syncScope scope', () => {
 
     await crawler.syncScope('alice');
 
-    expect(membersAtBob).toEqual([
+    expect(await Promise.all(membersAtBob)).toEqual([
       new Map([
         ['alice', 0],
         ['bob', 1],
@@ -326,13 +326,13 @@ describe('syncScope paging', () => {
 });
 
 describe('syncScope window', () => {
-  it('indexes the windowed group from the window start and the graph in full', async () => {
+  it("indexes the windowed group down to where each author's window ends and the graph in full", async () => {
     const { network, store, crawler } = harness();
     network.addHomeserver('hs1').addHomeserver('hs2');
     network.addUser('alice', 'hs1').addUser('bob', 'hs2');
     network.put('alice', `${FOLLOWS}bob`);
     network.putJson('alice', postPath(40 * DAY_MS), { text: 'old' });
-    const windowStart = network.putJson('alice', postPath(32 * DAY_MS), { text: 'old too' });
+    const end = network.putJson('alice', postPath(32 * DAY_MS), { text: 'old too' });
     network.putJson('alice', postPath(2 * DAY_MS), { text: 'recent' });
     network.putJson('alice', postPath(DAY_MS), { text: 'newest' });
     network.putJson('bob', postPath(3 * DAY_MS), { text: 'young homeserver' });
@@ -344,20 +344,20 @@ describe('syncScope window', () => {
       { text: 'recent' },
       { text: 'newest' },
     ]);
-    expect(await served(store, 'alice', 'hs1', ACTIVITY)).toEqual(network.liveOf('alice', [POSTS], windowStart));
-    expect((await store.readHomeserverState('hs1')).windowStart).toEqual({ cursor: windowStart, foundAt: NOW });
-    // Bob's history alone proves nothing about the homeserver's: the next sync looks again.
-    expect((await store.readHomeserverState('hs2')).windowStart).toBeNull();
+    expect(await served(store, 'alice', 'hs1', ACTIVITY)).toEqual(network.liveOf('alice', [POSTS], end));
+    // Older writes alone, then the stream start: the window ends at the first of them.
+    expect(await store.readWindowEnd({ author: 'alice', homeserver: 'hs1', group: ACTIVITY })).toBe(end);
     expect(await served(store, 'bob', 'hs2', ACTIVITY)).toEqual(network.liveOf('bob', [POSTS]));
+    expect(await store.readWindowEnd({ author: 'bob', homeserver: 'hs2', group: ACTIVITY })).toBe(CURSOR_ZERO);
   });
 
-  it("keeps a seed's long quiet spell out of the window its followees are read from", async () => {
+  it("ends each user's window at their own writes, whatever another user's quiet spell", async () => {
     const { network, store, crawler } = harness();
     network.addHomeserver('hs1').addUser('alice', 'hs1').addUser('bob', 'hs1');
     network.put('alice', `${FOLLOWS}bob`);
     network.putJson('alice', postPath(200 * DAY_MS), { text: 'long ago' });
     network.putJson('bob', postPath(100 * DAY_MS), { text: 'outside the window' });
-    const windowStart = network.putJson('bob', postPath(31 * DAY_MS), { text: 'just before the window' });
+    const bobEnd = network.putJson('bob', postPath(31 * DAY_MS), { text: 'just before the window' });
     network.putJson('bob', postPath(10 * DAY_MS), { text: 'inside' });
     network.putJson('alice', postPath(DAY_MS), { text: 'back' });
 
@@ -365,22 +365,99 @@ describe('syncScope window', () => {
 
     expect([...(await servedData(store, 'alice', 'hs1', ACTIVITY)).values()]).toEqual([{ text: 'back' }]);
     expect([...(await servedData(store, 'bob', 'hs1', ACTIVITY)).values()]).toEqual([{ text: 'inside' }]);
-    expect((await store.readHomeserverState('hs1')).windowStart).toEqual({ cursor: windowStart, foundAt: NOW });
+    expect(await store.readWindowEnd({ author: 'bob', homeserver: 'hs1', group: ACTIVITY })).toBe(bobEnd);
   });
 
-  it('dates the window start by writes only, never by a later delete of an old post', async () => {
+  it('ends a window at writes only, never at a later delete of an old post', async () => {
     const { network, store, crawler } = harness();
     network.addHomeserver('hs1').addUser('alice', 'hs1');
     const old = postPath(31 * DAY_MS);
-    const windowStart = network.putJson('alice', old, { text: 'old' });
+    const end = network.putJson('alice', old, { text: 'old' });
     const recent = postPath(2 * DAY_MS);
     network.putJson('alice', recent, { text: 'recent' });
     network.del('alice', old);
 
     await crawler.syncScope('alice');
 
-    expect((await store.readHomeserverState('hs1')).windowStart?.cursor).toBe(windowStart);
+    expect(await store.readWindowEnd({ author: 'alice', homeserver: 'hs1', group: ACTIVITY })).toBe(end);
     expect(await servedData(store, 'alice', 'hs1', ACTIVITY)).toEqual(new Map([[recent, { text: 'recent' }]]));
+  });
+
+  it("reads every post of a user's window however old the paths another user writes above it", async () => {
+    const { network, store, crawler } = harness();
+    network.addHomeserver('hs1');
+    for (const user of ['alice', 'u1', 'u2']) network.addUser(user, 'hs1');
+    network.put('alice', `${FOLLOWS}u1`);
+    network.put('alice', `${FOLLOWS}u2`);
+    for (let day = 20; day >= 2; day -= 1) network.putJson('u1', postPath(day * DAY_MS), { text: `u1 ${day}` });
+    // u2 moves today: copies of posts first written long ago land at the newest cursors, oldest first, the copies of
+    // the posts still inside the window last.
+    for (let day = 90; day >= 25; day -= 1) network.putJson('u2', postPath(day * DAY_MS), { text: `u2 ${day}` });
+
+    await crawler.syncScope('alice');
+    await crawler.syncScope('alice');
+
+    expect(await served(store, 'u1', 'hs1', ACTIVITY)).toEqual(network.liveOf('u1', [POSTS]));
+    const u2 = [...(await servedData(store, 'u2', 'hs1', ACTIVITY)).values()].map((post) => post?.text);
+    expect(u2.sort()).toEqual(['u2 25', 'u2 26', 'u2 27', 'u2 28', 'u2 29', 'u2 30']);
+  });
+
+  it("reads past a user's own old-dated writes until enough of them come in a row", async () => {
+    const { network, store, crawler } = harness();
+    network.addHomeserver('hs1').addUser('alice', 'hs1');
+    for (const age of [60, 59, 58]) network.putJson('alice', postPath(age * DAY_MS), { text: `old ${age}` });
+    for (let day = 20; day >= 3; day -= 1) network.putJson('alice', postPath(day * DAY_MS), { text: `${day}` });
+    // An edit of an old post that dates by the post, then another one: two in a row end nothing.
+    network.putJson('alice', postPath(45 * DAY_MS), { text: 'edited' });
+    network.putJson('alice', postPath(2 * DAY_MS), { text: '2' });
+    network.putJson('alice', postPath(50 * DAY_MS), { text: 'edited' });
+    network.putJson('alice', postPath(51 * DAY_MS), { text: 'edited' });
+
+    await crawler.syncScope('alice');
+
+    const texts = [...(await servedData(store, 'alice', 'hs1', ACTIVITY)).values()].map((post) => post?.text);
+    expect(texts.filter((text) => text !== 'edited')).toHaveLength(19);
+    expect(texts.filter((text) => text?.startsWith('old'))).toEqual([]);
+  });
+
+  it('continues a window a sync left halfway, and reads a finished one no further', async () => {
+    const { network, store, crawlerOf } = harness({ pageLimit: 4, backfillPageLimit: 4 });
+    network.addHomeserver('hs1').addUser('alice', 'hs1');
+    const olds = [40, 39, 38].map((age) => network.putJson('alice', postPath(age * DAY_MS), { text: 'old' }));
+    let top = CURSOR_ZERO;
+    for (let day = 12; day >= 1; day -= 1) top = network.putJson('alice', postPath(day * DAY_MS), { text: `${day}` });
+    let reads = 0;
+    const failing: IndexerTransport = {
+      resolveHomeserver: (user) => network.resolveHomeserver(user),
+      readEvents: async (request) => {
+        reads += 1;
+        if (request.reverse && reads > 3) throw new HomeserverUnreachableError('hs1');
+        return network.readEvents(request);
+      },
+      getPublic: (request) => network.getPublic(request),
+      listIndexFiles: () => network.listIndexFiles(),
+      readIndexFile: (name) => network.readIndexFile(name),
+      writeIndexFile: (name, bytes) => network.writeIndexFile(name, bytes),
+      deleteIndexFile: (name) => network.deleteIndexFile(name),
+    };
+    const scope = { author: 'alice', homeserver: 'hs1', group: ACTIVITY };
+
+    expect((await crawlerOf(failing).syncScope('alice')).failedHomeservers).toEqual(['hs1']);
+    expect(await store.readWindowEnd(scope)).toBeNull();
+    expect((await served(store, 'alice', 'hs1', ACTIVITY)).size).toBeLessThan(12);
+
+    const crawler = crawlerOf(network);
+    await store.patchHomeserverState('hs1', { failure: null });
+    await crawler.syncScope('alice');
+    expect((await served(store, 'alice', 'hs1', ACTIVITY)).size).toBe(12);
+    expect(await store.readWindowEnd(scope)).toBe(olds[2]);
+    expect(await store.readCoverage(scope)).toEqual([{ tail: olds[2], head: top }]);
+
+    const mark = network.reads.length;
+    await crawler.syncScope('alice');
+    // Only the restore check reads backwards, one event.
+    const backwards = network.reads.slice(mark).filter(({ reverse }) => reverse);
+    expect(backwards.map(({ events }) => events.length)).toEqual([1]);
   });
 });
 
@@ -416,12 +493,12 @@ describe('syncScope coverage', () => {
     expect(await served(store, 'bob', 'hs1', ACTIVITY)).toEqual(network.liveOf('bob', [POSTS]));
   });
 
-  it('keeps a stored range below the window start apart, behind the gap', async () => {
+  it('catches up forward from a stored head, however old, in one range', async () => {
     const { network, store, crawler } = harness();
     network.addHomeserver('hs1').addUser('alice', 'hs1');
     const ancient = postPath(40 * DAY_MS);
     const ancientCursor = network.putJson('alice', ancient, { text: 'ancient' });
-    const windowStart = network.putJson('alice', postPath(35 * DAY_MS), { text: 'old' });
+    network.putJson('alice', postPath(35 * DAY_MS), { text: 'old' });
     const recent = network.putJson('alice', postPath(DAY_MS), { text: 'recent' });
     const scope = { author: 'alice', homeserver: 'hs1', group: ACTIVITY };
     await store.applyRuns([
@@ -436,11 +513,8 @@ describe('syncScope coverage', () => {
     await crawler.syncScope('alice');
     await crawler.syncScope('alice');
 
-    // A delete inside (ancientCursor, windowStart] would be missed, so the two ranges must not join.
-    expect(await store.readCoverage(scope)).toEqual([
-      { tail: CURSOR_ZERO, head: ancientCursor },
-      { tail: windowStart, head: recent },
-    ]);
-    expect(await served(store, 'alice', 'hs1', ACTIVITY)).toEqual(network.liveOf('alice', [POSTS], windowStart));
+    // The range reaches the stream start, so it is complete without a window end, and the forward read joins it.
+    expect(await store.readCoverage(scope)).toEqual([{ tail: CURSOR_ZERO, head: recent }]);
+    expect(await served(store, 'alice', 'hs1', ACTIVITY)).toEqual(network.liveOf('alice', [POSTS]));
   });
 });

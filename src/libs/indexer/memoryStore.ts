@@ -1,10 +1,11 @@
-import type { Coverage, Entry } from './indexer.types';
+import type { Coverage, Cursor, Entry } from './indexer.types';
 import {
   applyRun,
   assertValidBatch,
   deletedState,
   evictCoverage,
   homeserverStateOf,
+  keptEnd,
   patchedState,
   readsCurrent,
   runsOfScope,
@@ -24,6 +25,7 @@ import {
 interface CoverageRow {
   scope: ScopeKey;
   coverage: Coverage;
+  end?: Cursor;
 }
 
 /** Map writes that can be undone, newest first, so a commit that throws halfway leaves nothing behind. */
@@ -82,7 +84,12 @@ export function createMemoryStore<D>(): IndexStore<D> {
         for (const [path, entry] of paths) if (entry.cursor <= cutoff) writes.set(paths, path, undefined);
         if (paths.size === 0) writes.set(entries, id, undefined);
         const kept = evictCoverage(row.coverage, cutoff);
-        writes.set(coverage, id, kept.length === 0 ? undefined : { scope: row.scope, coverage: kept });
+        const end = keptEnd(row.end, cutoff);
+        writes.set(
+          coverage,
+          id,
+          kept.length === 0 ? undefined : { scope: row.scope, coverage: kept, ...(end === undefined ? {} : { end }) },
+        );
       }
       for (const run of copy.applyRuns ?? []) {
         const id = scopeId(run);
@@ -93,12 +100,22 @@ export function createMemoryStore<D>(): IndexStore<D> {
           if (paths === undefined) writes.set(entries, id, target);
           for (const entry of applied.changed) writes.set(target, entry.path, entry);
         }
-        writes.set(coverage, id, { scope: scopeOf(run), coverage: applied.coverage });
+        const end = coverage.get(id)?.end;
+        writes.set(coverage, id, {
+          scope: scopeOf(run),
+          coverage: applied.coverage,
+          ...(end === undefined ? {} : { end }),
+        });
       }
       for (const { scope, path, cursor, data } of copy.recordData ?? []) {
         const paths = entries.get(scopeId(scope));
         const filled = withData(paths?.get(path), cursor, data);
         if (paths !== undefined && filled !== null) writes.set(paths, path, filled);
+      }
+      for (const { scope, cursor } of copy.windowEnds ?? []) {
+        const id = scopeId(scope);
+        const row = coverage.get(id);
+        if (row !== undefined) writes.set(coverage, id, { ...row, end: cursor });
       }
     } catch (error) {
       writes.rollback();
@@ -125,6 +142,7 @@ export function createMemoryStore<D>(): IndexStore<D> {
     applyRuns: (runs) => commit({ applyRuns: runs }),
     readScope: async (scope) => structuredClone(stateOf(scope)),
     readCoverage: async (scope) => structuredClone(coverage.get(scopeId(scope))?.coverage ?? []),
+    readWindowEnd: async (scope) => coverage.get(scopeId(scope))?.end ?? null,
     exportRuns: async (scope) => structuredClone(runsOfScope(scope, stateOf(scope))),
     evictBelow: (scope, cutoff) => commit({ evictions: [{ scope, cutoff }] }),
     listScopes: async () => [...coverage.values()].map(({ scope }) => scopeOf(scope)),

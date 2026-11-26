@@ -80,7 +80,7 @@ describe('syncUsers', () => {
 
     await crawler.syncUsers(['carol']);
 
-    // One page of four events, read backwards from the newest: no window start searched, no range read twice.
+    // One page of four events, read backwards from the newest: no window end looked for, no range read twice.
     const carolReads = network.reads.filter((read) => read.users.includes('carol'));
     expect(carolReads.filter((read) => read.reverse).map((read) => read.events.length)).toEqual([4]);
     expect(await store.readCoverage(scope)).toEqual([{ tail: oldCursor - BigInt(1), head }]);
@@ -97,7 +97,7 @@ describe('syncUsers', () => {
     const mark = network.reads.length;
     await crawler.syncUsers(['carol']);
     expect(await store.readCoverage(scope)).toEqual([{ tail: oldCursor - BigInt(1), head: fresh }]);
-    // Only the restore check reads backwards, one event: no window start search.
+    // Only the restore check reads backwards, one event: no window end looked for.
     expect(network.reads.slice(mark).filter((read) => read.reverse && read.events.length > 1)).toEqual([]);
 
     // More than a page behind: the newest page, above a gap that backfill closes, after which one range holds all.
@@ -126,6 +126,9 @@ describe('syncLeaf', () => {
   it('loads a post older than the window into its own scope, then only its delta', async () => {
     const { network, store, crawler } = twoCircles();
     const old = postPath(40 * DAY_MS);
+    // Three old posts in a row end alice's window: one alone could be a copy of an old post.
+    network.putJson('alice', postPath(42 * DAY_MS), { text: 'older' });
+    network.putJson('alice', postPath(41 * DAY_MS), { text: 'older' });
     network.putJson('alice', old, { text: 'old' });
     network.putJson('alice', postPath(DAY_MS / 2), { text: 'recent' });
     await crawler.syncScope('alice');
@@ -251,7 +254,7 @@ describe('onCommit', () => {
 
   it('reports every scope of a restored homeserver and a backfilled scope', async () => {
     const { network, store, crawler } = twoCircles();
-    network.putJson('alice', postPath(40 * DAY_MS), { text: 'old' });
+    for (const age of [42, 41, 40]) network.putJson('alice', postPath(age * DAY_MS), { text: 'old' });
     network.putJson('alice', postPath(DAY_MS / 2), { text: 'recent' });
     await crawler.syncScope('alice');
     const before = idsOf(await store.listScopes());

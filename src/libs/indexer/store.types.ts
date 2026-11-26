@@ -18,12 +18,6 @@ export interface HighWater {
   author: string;
 }
 
-/** The first cursor of the windowed history, found at `foundAt` (ms). */
-export interface WindowStart {
-  cursor: Cursor;
-  foundAt: number;
-}
-
 /** Consecutive failures and when the homeserver may be tried again (ms). */
 export interface FailureState {
   failures: number;
@@ -35,21 +29,18 @@ export interface HomeserverState {
   highWater: HighWater | null;
   /** Counts the homeserver's deletions: what was read before one is not read under the epoch after it. */
   epoch: number;
-  windowStart: WindowStart | null;
   failure: FailureState | null;
 }
 
 export const EMPTY_HOMESERVER_STATE: Readonly<HomeserverState> = Object.freeze({
   highWater: null,
   epoch: 0,
-  windowStart: null,
   failure: null,
 });
 
 /** A high-water mark older than the stored one keeps the stored. Fields left out keep their stored value. */
 export interface HomeserverPatch {
   highWater?: HighWater;
-  windowStart?: WindowStart | null;
   failure?: FailureState | null;
 }
 
@@ -57,6 +48,12 @@ export interface HomeserverPatch {
 export interface ReadAt {
   homeserver: string;
   epoch: number;
+}
+
+/** Where a scope's windowed history ends: the scope holds everything above `cursor` of its window. */
+export interface WindowEnd {
+  scope: ScopeKey;
+  cursor: Cursor;
 }
 
 /** The data of the record a scope stores for `path` at `cursor`. */
@@ -68,8 +65,8 @@ export interface RecordData<D> {
 }
 
 /**
- * Changes applied together by `commit`, in this order: homeserver deletions, evictions, runs, record data, then user
- * homeservers, homeserver state patches and scope members.
+ * Changes applied together by `commit`, in this order: homeserver deletions, evictions, runs, record data, window
+ * ends, then user homeservers, homeserver state patches and scope members.
  */
 export interface StoreBatch<D> {
   /**
@@ -77,12 +74,9 @@ export interface StoreBatch<D> {
    * nothing: what it read may predate a deletion.
    */
   readAt?: ReadAt[];
-  /**
-   * Drops every scope stored under these homeservers and starts a new epoch for each, without a high-water mark or a
-   * window start.
-   */
+  /** Drops every scope stored under these homeservers and starts a new epoch for each, without a high-water mark. */
   deleteHomeservers?: string[];
-  /** Forgets each scope's entries and coverage at or below the cutoff. */
+  /** Forgets each scope's entries and coverage at or below the cutoff, and its window end there. */
   evictions?: Array<{ scope: ScopeKey; cutoff: Cursor }>;
   /** Merged into their scopes, in order. */
   applyRuns?: Run<D>[];
@@ -91,6 +85,8 @@ export interface StoreBatch<D> {
    * applying the run of that one event with its data. Once the entry is replaced, evicted or deleted, it sets nothing.
    */
   recordData?: RecordData<D>[];
+  /** Each set on its scope while the scope has coverage, replacing the stored one. */
+  windowEnds?: WindowEnd[];
   userHomeservers?: Array<{ user: string; value: UserHomeserver }>;
   homeserverStates?: Array<{ homeserver: string; patch: HomeserverPatch }>;
   /** Replaces the users in scope of a seed, each with its hop distance. */
@@ -111,6 +107,8 @@ export interface IndexStore<D> {
   readScope(scope: ScopeKey): Promise<MergedRuns<D>>;
   /** The scope's coverage alone, without loading its entries. */
   readCoverage(scope: ScopeKey): Promise<Coverage>;
+  /** The scope's window end, `null` when none is stored. */
+  readWindowEnd(scope: ScopeKey): Promise<Cursor | null>;
   /** The scope as one run per contiguous range of its coverage. */
   exportRuns(scope: ScopeKey): Promise<Run<D>[]>;
   /** What the pure `evictBelow` makes of the scope's exported runs. */

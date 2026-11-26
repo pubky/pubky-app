@@ -45,11 +45,12 @@ of the scope. For any runs applied in any order, `readScope` equals `mergeRuns` 
 equals their `compactRuns`, the form a run takes when it leaves the device. `readCoverage` reads the
 heads and tails alone. `store.contract.ts` checks this equivalence after every step of random histories.
 
-The store also keeps each user's resolved homeserver, per-homeserver crawl state and the members of
-each scope. `commit` applies a whole batch atomically, and values are copied in and out, so callers
-never share objects with the store. A homeserver's high-water mark only rises, and deleting a homeserver
-starts a new epoch for it: a batch names the epochs it read under, and changes nothing once one of them
-is over, so what an operation read before another one dropped the homeserver never comes back. `createMemoryStore` keeps it in memory, for tests and short-lived
+The store also keeps each user's resolved homeserver, per-homeserver crawl state, the members of each
+scope and where each windowed scope's window ends. `commit` applies a whole batch atomically, and values
+are copied in and out, so callers never share objects with the store. A homeserver's high-water mark only
+rises, and deleting a homeserver starts a new epoch for it: a batch names the epochs it read under, and
+changes nothing once one of them is over, so what an operation read before another one dropped the
+homeserver never comes back. `createMemoryStore` keeps it in memory, for tests and short-lived
 use. `createIdbStore` keeps it in IndexedDB through Dexie, each `commit` in one read-write transaction.
 Entries are keyed by scope then path, so a scope is one range of the primary key, and a run reads and
 writes only the rows of its own paths. Payloads and cursors are stored by structured clone, so `D` must
@@ -61,25 +62,31 @@ be structured-cloneable; cursors stay `bigint` and are never part of a key.
 full-history groups in batches from each user's stored head, and follows the links in the scope group to
 the next hop. A hop's windowed groups are read beside its full-history ones, since that read needs no link, and the
 next hop starts as soon as this hop's scope group is in, while its activity is still read; each homeserver is checked
-for a restore once, before any of those reads. Windowed groups reach back to the homeserver's window start, the newest write older than
-`windowDays`, and grow older only through `backfill`, which reads pages of `backfillPageLimit` events (100) and
-fetches and commits each page before reading the next, so older history shows up a screen at a time. A user in scope
-with history from the window start on catches up forward from its head. Any other, such as everyone in a first sync,
-is read newest first from their newest event down to the window start, or without one known down to their batch's
-newest write older than the window, which may settle it for the homeserver: no search for the start runs before the
-read. The batches of a homeserver commit as one stream in cursor order: each reads its first page, then a round
+for a restore once, before any of those reads. Windowed groups reach back to where each user's window ends, and grow
+older only through `backfill`, which reads pages of `backfillPageLimit` events (100) and fetches and commits each page
+before reading the next, so older history shows up a screen at a time. A user's window ends at their newest write
+dated older than `windowDays` that their next two writes below it confirm, none of the three dated inside the window,
+or at their stream start. Only a user's own writes end their window. A cursor says when something was written, a
+path's time only when its writer says it is from: a copy of an old post written today, as a move to social v1 writes
+hundreds of, an edit that dates by its post, or a skewed clock, says nothing about where anyone else's window starts.
+So the rule holds for a moved account, whose copies come oldest first and leave the window's newest on top, for an
+edit of an old post or two, for a quiet homeserver and for users with no dated record at all, who are read to their
+stream start. It does not reach a post of a user's window below three of their own old-dated writes in a row, nor an
+undated record, such as a tag, older than where their window ends. Each scope stores that cursor, so a later sync
+knows without reading whether its top range is complete: a user whose top range reaches it, or the stream start,
+catches up forward from its head; any other, such as everyone in a first sync, is read newest first from their newest
+event, or from below their top range, down to it. The batches of a homeserver commit as one stream in cursor order: each reads its first page, then a round
 commits everything above the highest point a batch still reading has reached, while that batch reads its next page.
 A round commits the way `backfill` does, in slices of `backfillPageLimit` events, newest first, each once its files to
 render are in, the files of a round fetched together. So a feed's newest page is in after its own files, not after the
-window's, whichever batch its authors fell in, and the top range only grows downwards. A user whose top range still starts
-above the window start, as after a sync that failed halfway, is read the same way below it at the next sync. A user loaded on
+window's, whichever batch its authors fell in, and the top range only grows downwards. A user whose top range does not
+reach where their window ends, as after a sync that failed halfway, is read the same way below it at the next sync. A user loaded on
 demand (`syncUsers`) with no history of a windowed group starts with one such page from their newest event instead: a
-profile shows the newest posts first, so it needs neither the window start, a search over up to 1000 events, nor a
-forward read of the range that search already went through. The page's run is `(tail, newest]`, a full page's tail
+profile shows the newest posts first, so it needs no window end. The page's run is `(tail, newest]`, a full page's tail
 just below its lowest cursor, a short one's at the stream start; it holds the page's tombstones like any run, and is
 the scope's only range, so it is trusted. A later on-demand sync catches up with one forward page from the head while
 the user wrote less than a page since, keeping one range; past that it reads the newest page again, above a gap that
-`backfill` closes, and until then only the range above the gap is served. Neither searches for the window start. Records
+`backfill` closes, and until then only the range above the gap is served. Records
 that need their file get it fetched and reduced; a file that is gone or fails its hash leaves the record without data until a later event. A
 homeserver whose request keeps failing is skipped for the rest of the sync with exponential backoff, and one whose
 log went backwards (a restore) loses everything stored for it and is synced again. Every operation, `backfill` and
@@ -125,7 +132,7 @@ crawler keeps the scopes it committed `later` records to, and those a `hydrate` 
 `hydrate`.
 
 Each crawl step is one `commit` that applies the runs of the users that moved. A scope's coverage stays
-one range over normal syncs; a gap, such as stored history older than the window start, keeps two.
+one range over normal syncs; a gap, such as a newest page loaded on demand above older history, keeps two.
 
 ## Using it
 
