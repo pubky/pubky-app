@@ -154,7 +154,9 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
       label: 'Report post',
       icon: Flag,
       // Reports go through the app server; without one they go to the support address by email.
-      onClick: HAS_APP_SERVER ? () => requireAuth(onReportClick) : () => window.open(getReportMailto(postUrl)),
+      onClick: HAS_APP_SERVER
+        ? () => requireAuth(onReportClick)
+        : () => window.location.assign(getReportMailto(postUrl)),
       variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
     });
   }
