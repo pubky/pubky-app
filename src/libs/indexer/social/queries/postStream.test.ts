@@ -16,6 +16,7 @@ import {
 import { buildSocialView } from '../social.view';
 import { postStreamKeys, type PostStreamParams } from './postStream';
 import { InvalidQueryError, NotFoundQueryError, UnavailableQueryError } from './queries.errors';
+import { isoOf } from './queries.types';
 
 const network = socialNetwork();
 const { a1, b1, repost, quote, article, image, collection } = network.posts;
@@ -242,6 +243,22 @@ describe('postStreamKeys over a partly loaded history', () => {
     const firstPage = postStreamKeys(partial, { source: 'author', author_id: ALICE, limit: 1 });
     expect(firstPage.coverage.kind).toBe('scope');
     expect(firstPage.more).toBeUndefined();
+  });
+
+  it('serves a thread over the scope uncut, saying where its time order is complete', () => {
+    const partial = buildSocialView(withPartialActivity(recordsOf(network), CLEO, BigInt(14)));
+    const answer = postStreamKeys(partial, { source: 'post_replies', author_id: ALICE, post_id: a1.id });
+
+    // Any member may reply: a cut at the latest start would follow the busiest one, so the note says it instead.
+    expect(answer.data.post_keys).toEqual([key(BRAN, b1)]);
+    expect(answer.coverage).toEqual({
+      kind: 'scope',
+      note: `activity of the scope loaded only partly, the latest start ${isoOf(partial.historyOf(CLEO).sinceMs)}, estimated: an older item may still join between those served`,
+    });
+    expect(answer.more).toBeUndefined();
+    expect(postStreamKeys(view, { source: 'post_replies', author_id: ALICE, post_id: a1.id }).coverage).toEqual({
+      kind: 'scope',
+    });
   });
 
   it('hints at a followee’s backfill only once the page reaches past their loaded window', () => {

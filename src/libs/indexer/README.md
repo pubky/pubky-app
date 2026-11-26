@@ -214,7 +214,10 @@ deletes its scopes, an eviction at the largest cursor, which every tab hears. A 
 most once per `backfillMinIntervalMs` unless forced. Like the `ensure` calls it resolves once the view holds what it
 loaded, so a request asked right after it sees the older posts, and it says what it did: `status` (`ran`, or
 `skipped` by the rate limit), `complete` once the author's history reaches the start of their stream, the stream
-`events` and new `posts` it added, and `sinceMs`, the estimated start of what is loaded. A post stream of authors sorted by time stops above the latest start of their loaded histories, so a page never skips over posts of an author that are not loaded yet: it comes back short. A post stream page asks for
+`events` and new `posts` it added, and `sinceMs`, the estimated start of what is loaded. A post stream of authors sorted by time stops above the latest start of their loaded histories, so a page never skips over posts of an author that are not loaded yet: it comes back short. A time-sorted answer merged over every member, such as a thread's replies, the
+sources over the whole scope or the notifications, is served uncut instead: its latest start follows the scope's
+busiest member, a member capped by the window can start days ago, and only loading every member's history could lower
+it, so the coverage note names that start. A post stream page asks for
 an author's backfill in `more` only when an older post of theirs could join it: the page is short, or it would
 continue past what is loaded for them. A full newest-first page that ends inside every author's loaded history, and
 a page bounded from below (`end`, a head poll) by a score inside it, ask for none. `setExcluded(users)`, for muted users, drops them and whoever is

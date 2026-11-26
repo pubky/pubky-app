@@ -13,10 +13,12 @@ import {
   type SocialFile,
   socialNetwork,
   T0,
+  withPartialActivity,
 } from '../social.fixtures';
 import { buildSocialView } from '../social.view';
 import { notifications } from './notifications';
 import { InvalidQueryError, UnavailableQueryError } from './queries.errors';
+import { isoOf } from './queries.types';
 
 const network = socialNetwork();
 const { a1, b1, repost, quote } = network.posts;
@@ -143,5 +145,18 @@ describe('notifications', () => {
   it('serves only the seed and rejects a bad page', () => {
     expect(() => notifications(view, context, { user_id: BRAN })).toThrow(UnavailableQueryError);
     expect(() => notifications(view, context, { user_id: ALICE, limit: 101 })).toThrow(InvalidQueryError);
+  });
+
+  it('says where its time order is complete while a member is loaded only partly', () => {
+    const partial = buildSocialView(withPartialActivity(recordsOf(network), CLEO, BigInt(14)));
+    const since = isoOf(partial.historyOf(CLEO).sinceMs);
+
+    expect(notifications(partial, context, { user_id: ALICE }).coverage).toEqual({
+      kind: 'scope',
+      note: `events by authors in the scope; follow and tag times estimated from homeserver event order; activity of the scope loaded only partly, the latest start ${since}, estimated: an older item may still join between those served`,
+    });
+    expect(notifications(view, context, { user_id: ALICE }).coverage.note).toBe(
+      'events by authors in the scope; follow and tag times estimated from homeserver event order',
+    );
   });
 });

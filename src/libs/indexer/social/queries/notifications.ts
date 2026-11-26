@@ -1,7 +1,8 @@
 import type { SocialView } from '../social.view';
+import { scopeMergeNote } from './loaded';
 import { compareText, limitOf, page, skipOf } from './params';
 import { UnavailableQueryError } from './queries.errors';
-import { type Answer, type NotificationJson, type QueryContext, scoped } from './queries.types';
+import { type Answer, noteOf, type NotificationJson, type QueryContext, scoped } from './queries.types';
 import { postUri } from './wire';
 
 export interface NotificationsParams {
@@ -125,6 +126,9 @@ export function notifications(
   );
   return scoped(
     page(listed, skip, limit),
-    'events by authors in the scope; follow and tag times estimated from homeserver event order',
+    noteOf(
+      'events by authors in the scope; follow and tag times estimated from homeserver event order',
+      scopeMergeNote(view),
+    ),
   );
 }

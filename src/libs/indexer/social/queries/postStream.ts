@@ -1,6 +1,7 @@
 import { postKinds } from 'pubky-social-specs';
 import type { SocialPost, SocialView } from '../social.view';
 import { isCrawled, webOfTrust } from './graph';
+import { latestStart, partlyLoaded, scopeMergeNote } from './loaded';
 import { compareText, labelsOf, limitOf, oneOf, page, skipOf } from './params';
 import { postOrNotFound } from './presence';
 import { InvalidQueryError, UnavailableQueryError } from './queries.errors';
@@ -234,18 +235,10 @@ export function postStreamKeys(view: SocialView, params: PostStreamParams): Answ
     return counts.tags + counts.replies + counts.reposts;
   };
   const sign = order === 'descending' ? -1 : 1;
-  const partial = candidates.streamed
-    .map((author) => ({ author, ...view.historyOf(author) }))
-    .filter(({ complete }) => !complete);
+  const partial = partlyLoaded(view, candidates.streamed);
   // A post older than where an author's loaded history starts may sit between older posts of theirs not loaded yet,
   // so a time-sorted page stops above the latest such start: it comes back short, asking for those authors' history.
-  const boundMs =
-    sorting !== 'timeline'
-      ? null
-      : partial.reduce<number | null>(
-          (latest, { sinceMs }) => (sinceMs !== null && (latest === null || sinceMs > latest) ? sinceMs : latest),
-          null,
-        );
+  const boundMs = sorting !== 'timeline' ? null : latestStart(partial);
   // Oldest first, a page starts at its lowest score: only one starting above the bound skips nothing.
   const above = (score: number) =>
     boundMs === null || (order === 'descending' ? score > boundMs : (params.end ?? Number.NEGATIVE_INFINITY) > boundMs);
@@ -267,7 +260,10 @@ export function postStreamKeys(view: SocialView, params: PostStreamParams): Answ
   };
 
   if (partial.length === 0) {
-    return candidates.exact && sorting === 'timeline' && tags === null ? exact(data) : scoped(data);
+    if (candidates.exact && sorting === 'timeline' && tags === null) return exact(data);
+    // A source over the scope's authors, rather than named ones, says how far its time order is complete.
+    const merged = sorting === 'timeline' && candidates.streamed.length === 0 ? scopeMergeNote(view) : null;
+    return scoped(data, merged ?? undefined);
   }
   // The oldest creation time a post may have and still land in this page: a full newest-first page ends at its last
   // post, which lies above every loaded start, any other page at `end`. Engagement scores say nothing of age, so any
