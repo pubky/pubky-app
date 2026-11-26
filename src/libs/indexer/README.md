@@ -125,7 +125,10 @@ none starts while its limit is reached.
 `ensureProfile` loads a profile alone, for avatars. What a tab loads on demand is capped (`maxVisitedUsers`,
 `maxLoosePosts`, `maxProfiles`): past a cap the least recently ensured item leaves the view and the runtime's `forget`
 deletes its scopes, an eviction at the largest cursor, which every tab hears. A `backfill` of one author's group runs at
-most once per `backfillMinIntervalMs` unless forced. `setExcluded(users)`, for muted users, drops them and whoever is
+most once per `backfillMinIntervalMs` unless forced. A post stream page asks for an author's backfill in `more` only
+when an older post of theirs could join it: the page is short, or it would continue past what is loaded for them. A
+full newest-first page that ends inside every author's loaded history, and a page bounded from below (`end`, a head
+poll) by a score inside it, ask for none. `setExcluded(users)`, for muted users, drops them and whoever is
 reached only through them from the view's members at once, and from the scope at the next sync. Answers carry `asOf`,
 the newest sync time known: this run's, the previous session's kept in the store, or a loaded file's. `onChange` gives
 `{ authors, membersChanged, kinds }`. The owner of a `createBrowserCoordination` closes it; the runtime never does.

@@ -188,8 +188,9 @@ function collectionKeys(
  * The page of post keys a source streams. Scores are a post's creation time in milliseconds for `timeline`, its
  * replies, reposts and tags summed for `total_engagement`. `start` and `end` bound the score inclusively, `start`
  * from above and `end` from below whatever the order; equal scores order by key, as one sorted set does.
- * A stream of authors is exact only over their whole histories; when a page reaches past an author's loaded
- * window, `more` asks for that author's backfill, and for an author whose own records are not loaded, for the user.
+ * A stream of authors is exact only over their whole histories. `more` asks for an author's backfill when an older
+ * post of theirs could join the page: the page is short, or it would continue past what is loaded for them. For an
+ * author whose own records are not loaded it asks for the user.
  */
 export function postStreamKeys(view: SocialView, params: PostStreamParams): Answer<PostKeyStreamJson> {
   const source = oneOf(QUERY, 'source', POST_STREAM_SOURCES, params.source, 'all');
@@ -252,13 +253,16 @@ export function postStreamKeys(view: SocialView, params: PostStreamParams): Answ
   if (partial.length === 0) {
     return candidates.exact && sorting === 'timeline' && tags === null ? exact(data) : scoped(data);
   }
-  // Older posts can only land past a full newest-first page when they are older than its last one.
-  const pageEndMs =
-    sorting === 'timeline' && order === 'descending' && selected.length === limit && last !== undefined
-      ? last.score
-      : null;
+  // The oldest creation time a post may have and still land in this page: a full newest-first page ends at its last
+  // post, any other page at `end`. Engagement scores say nothing of age, so any older post may land there.
+  const floorMs =
+    sorting !== 'timeline'
+      ? null
+      : order === 'descending' && selected.length === limit && last !== undefined
+        ? last.score
+        : (params.end ?? Number.NEGATIVE_INFINITY);
   const reached = ({ sinceMs }: { sinceMs: number | null }) =>
-    pageEndMs === null || sinceMs === null || pageEndMs < sinceMs;
+    floorMs === null || sinceMs === null || floorMs < sinceMs;
   const more = partial.filter(reached).map(({ author }): MoreHint => ({ kind: 'backfill', author }));
   const loaded = partial.map(({ author, sinceMs }) => `${author} since ${isoOf(sinceMs)}`).join(', ');
   return withMore(scoped(data, `activity loaded only partly, estimated: ${loaded}`), more);

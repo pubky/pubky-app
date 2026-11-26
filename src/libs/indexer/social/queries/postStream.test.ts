@@ -255,6 +255,29 @@ describe('postStreamKeys over a partly loaded history', () => {
     expect(following(10).more).toEqual([{ kind: 'backfill', author: CLEO }]);
   });
 
+  it('hints at a backfill for a page bounded from below only when older posts could still reach that bound', () => {
+    const partial = buildSocialView(withPartialActivity(recordsOf(network), ALICE, BigInt(11)));
+    const above = (end: number) => postStreamKeys(partial, { source: 'author', author_id: ALICE, end });
+
+    // A head poll asks for what is newer than the newest post shown, which no older post can join.
+    expect(above(minute(8)).data.post_keys).toEqual([key(ALICE, article)]);
+    expect(above(minute(8)).more).toBeUndefined();
+    expect(above(minute(4)).more).toBeUndefined();
+    expect(above(minute(2)).more).toEqual([{ kind: 'backfill', author: ALICE }]);
+  });
+
+  it('hints at a backfill for a full page that is not newest first, where an older post can land anywhere', () => {
+    const partial = buildSocialView(withPartialActivity(recordsOf(network), ALICE, BigInt(11)));
+    const hint = [{ kind: 'backfill', author: ALICE }];
+
+    expect(postStreamKeys(partial, { source: 'author', author_id: ALICE, limit: 1, order: 'ascending' }).more).toEqual(
+      hint,
+    );
+    expect(
+      postStreamKeys(partial, { source: 'author', author_id: ALICE, limit: 1, sorting: 'total_engagement' }).more,
+    ).toEqual(hint);
+  });
+
   it('stays exact and hint-free over whole histories', () => {
     expect(postStreamKeys(view, { source: 'author', author_id: ALICE }).more).toBeUndefined();
     expect(postStreamKeys(view, { source: 'following', observer_id: ALICE }).more).toBeUndefined();
