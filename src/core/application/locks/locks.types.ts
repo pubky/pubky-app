@@ -100,6 +100,9 @@ export type TFetchOwnContentParams = {
  */
 export type TViewerScope = { isCurrent?: () => boolean };
 
+/** From this browser's record, not the homeserver. */
+export type TSocialCopyScope = { socialFilesCopied?: boolean };
+
 /** The creator's price, in the selected denomination's smallest unit. */
 export type TLockConfig = TLockPrice;
 

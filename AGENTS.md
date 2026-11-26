@@ -29,7 +29,9 @@ Services → Pipes (pure transforms; the Nexus services apply the `*.fromNexus` 
 
 Hard constraints (review-enforced, not compiler-enforced; `docs/architecture.md`):
 
-- Controllers NEVER call Services directly and never do IO; they go through Application.
+- Controllers NEVER call Services directly and never do IO; they go through Application. One exception: a per-browser
+  localStorage record that must survive logout, through a never-throwing `src/libs/<domain>/` helper (#3140, #3206;
+  `docs/architecture.md`).
 - Coordinators NEVER call Application; they go through Controllers.
 - Application NEVER accesses Stores and never calls Controllers; only Controllers manage stores.
 - Services NEVER access Stores, except session reads in `HomeserverService` / `LocksService` via `getState()`

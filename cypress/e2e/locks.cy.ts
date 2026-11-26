@@ -173,7 +173,7 @@ type TUnlock = { creator: SeededUser; reader: SeededUser; lockServer: TLockServe
  * be for this lock (the creator's `lock.json`), delivered to this reader, at the lock's price.
  */
 const payToUnlock = (unlock: TUnlock) => {
-  cy.intercept('PUT', '**/priv/social/unlocked/**/post.json').as('replicaMarker');
+  cy.intercept('PUT', '**/priv/app.pubky/v1/locks/unlocked/**/post.json').as('replicaMarker');
   singlePostCard().find('[data-cy="locked-post-price"]').should('have.text', CARD_PRICE_LABEL);
   singlePostCard().find('[data-cy="locked-post-unlock-btn"]').should('not.be.disabled');
   // A reader the app has signed out gets the sign-in dialog instead of Pay to Unlock.

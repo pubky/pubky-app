@@ -366,8 +366,9 @@ export class ProfileApplication {
   /**
    * Every file of the account, for deletion and export: the 0.x tree a migrated account still
    * holds, the v1 public tree, the whole private social root (the v1 private tree, the
-   * migration flag, and the Locks reader directories `unlocked/` and `purchases/`, which the
-   * `/priv/social/:rw` grant covers) and the app's own private namespace. `/pub/app.locks/`
+   * migration flag, and the Locks reader directories of builds before #3206, which the
+   * `/priv/social/:rw` grant covers) and the app's own private namespace (with the Locks reader
+   * files since #3206). `/pub/app.locks/`
    * and `/priv/app.locks/content/` are Lock Server contracts under a read-only grant and are
    * left alone (`docs/locks.md`). A tree the account never wrote lists as empty.
    */
