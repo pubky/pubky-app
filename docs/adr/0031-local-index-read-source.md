@@ -98,6 +98,18 @@ limit`) and has no way to say short but not ended, so a page cut short by time w
   page asks for next is already on its way. Starting an account's index deletes the visitor's. With `local` as the only source a
   visitor's Home, Hot and Search show a join prompt instead of a feed nothing can answer; sidebar rankings and
   suggestions answer empty.
+- **Accounts not migrated yet.** Almost every production account still has its data only in the 0.x tree, until
+  its owner opens a v1 app. `PUBKY_RUNTIME_INDEXER_LEGACY_TREE` (off by default) makes the index read that tree too,
+  so a deploy without Nexus shows the real network. The index takes the reader as an optional tree beside v1
+  (`src/libs/indexer/social/legacy/`, which nothing else in the library imports), reduced to the same records, and
+  reads each author through one tree as Nexus does: v1 once any v1 profile event of theirs is stored, since the
+  migrator copies the 0.x records and writes the profile last, the 0.x tree otherwise. A moved author's 0.x copies
+  never show twice and leave the view on the next sync. A reference in either spelling resolves to the same post, as
+  the migration keeps post ids. A 0.x attachment or avatar is served through its File record, which states the type,
+  from the owner's blob. Its groups take ids of their own, so turning the setting on or off reads the scope again
+  from the start rather than trusting history read without it. The app writes v1 only. The compliance gate exempts
+  that one folder (`PERMANENT_DIRECTORIES`). A 0.x attachment still renders only with its file details, which come
+  from Nexus (`files/by_ids`): without Nexus the media path answers, but the card has no row to show it from.
 - **Mutes.** The account's muted users go to `setExcluded` from a Dexie live query on the local muted stream, where a
   mute, its rollback and the homeserver poll all land.
 - **Saved index.** On for accounts: the index keeps a file per device under `/priv/app.pubky/v1/index/`, inside

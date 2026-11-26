@@ -2,6 +2,7 @@ import { buildUri } from 'pubky-social-specs';
 import { LOCAL_MEDIA_CACHE } from '@/config/pwa';
 import { isAppError } from '@/libs/error/error';
 import { ClientErrorCode } from '@/libs/error/error.codes';
+import { type LegacyFile, legacyFileUri } from '@/libs/indexer/social/legacy/legacyMedia';
 import type { UserData } from '@/libs/indexer/social/social.types';
 import { Logger } from '@/libs/logger/logger';
 import { isLocalMediaMessage, type LocalMediaAnswer, type LocalMediaRequest } from '@/libs/pwa/localMedia';
@@ -18,6 +19,11 @@ export interface LocalMediaSources {
    * over `LOCAL_MEDIA_MAX_BYTES`, without reading it whole.
    */
   readFile(uri: string): Promise<Uint8Array | null>;
+  /**
+   * The bytes of a file of the tree accounts wrote before social v1, with the type its record states, `null` when the
+   * URI names none. Only while the index reads that tree.
+   */
+  readLegacyFile?(uri: string): Promise<LegacyFile | null>;
 }
 
 async function avatarUri(user: string, sources: LocalMediaSources): Promise<string | null> {
@@ -38,21 +44,34 @@ function fileUri(owner: string, name: string): string | null {
   }
 }
 
+const found = (bytes: Uint8Array, contentType: string): LocalMediaAnswer => ({
+  status: 'found',
+  bytes: bytes.slice().buffer,
+  contentType,
+});
+
 /**
- * The bytes of the media a worker request names. Only v1 public media is served, so a 0.x file or an avatar that
- * points anywhere else answers `none`; the type comes from the file extension.
+ * The bytes of the media a worker request names. v1 public media is served typed by its file extension, and a 0.x
+ * file through its record when the index reads that tree; anything else answers `none`.
  */
 export async function answerLocalMedia(
   media: LocalMediaRequest,
   sources: LocalMediaSources,
 ): Promise<LocalMediaAnswer> {
   try {
-    const uri = media.kind === 'avatar' ? await avatarUri(media.user, sources) : fileUri(media.owner, media.name);
+    const uri =
+      media.kind === 'avatar'
+        ? await avatarUri(media.user, sources)
+        : (fileUri(media.owner, media.name) ?? legacyFileUri(media.owner, media.name));
     const details = uri === null ? null : FileNormalizer.toV1FileDetails(uri);
-    if (uri === null || details === null) return { status: 'none' };
+    if (uri === null) return { status: 'none' };
+    if (details === null) {
+      const file = (await sources.readLegacyFile?.(uri)) ?? null;
+      return file === null ? { status: 'none' } : found(file.bytes, file.contentType);
+    }
     const bytes = await sources.readFile(uri);
     if (bytes === null) return { status: 'none' };
-    return { status: 'found', bytes: bytes.slice().buffer, contentType: details.content_type };
+    return found(bytes, details.content_type);
   } catch (error) {
     if (isAppError(error) && error.code === ClientErrorCode.PAYLOAD_TOO_LARGE) return { status: 'tooLarge' };
     // Unreachable homeservers are routine; the read's own operation keeps them out of Sentry.

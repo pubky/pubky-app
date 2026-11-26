@@ -221,6 +221,9 @@ export const getIndexerSources = (): readonly IndexerSource[] => getRuntimeConfi
 export const getIndexerWindowMs = (): number | undefined => getRuntimeConfig().indexerWindowMs;
 /** Whether a post's first link may render as a third-party embed or link preview (`PUBKY_RUNTIME_THIRD_PARTY_EMBEDS`). */
 export const getThirdPartyEmbeds = (): boolean => getRuntimeConfig().thirdPartyEmbeds;
+
+/** Whether the local index also reads the tree accounts wrote before social v1; off unless set. */
+export const getIndexerLegacyTree = (): boolean => getRuntimeConfig().indexerLegacyTree === true;
 export const getModerationId = (): string | undefined => getRuntimeConfig().moderationId;
 export const getModeratedTags = (): string[] => getRuntimeConfig().moderatedTags;
 export const getExchangeRateApi = (): string => getRuntimeConfig().exchangeRateApi;

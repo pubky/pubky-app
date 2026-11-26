@@ -4,10 +4,12 @@ import { LOCAL_MEDIA_MAX_BYTES, LOCAL_MEDIA_READ_TIMEOUT_MS } from '@/config/pwa
 import { browserApis, type BrowserCoordination, createBrowserCoordination } from '@/libs/indexer/browserCoordination';
 import { createIdbStore, type IdbIndexStore } from '@/libs/indexer/idbStore';
 import type { RuntimeStatus } from '@/libs/indexer/runtime.types';
+import { readLegacyFile } from '@/libs/indexer/social/legacy/legacyMedia';
+import { legacySocialTree } from '@/libs/indexer/social/legacy/legacyTree';
 import type { SocialData } from '@/libs/indexer/social/social.types';
 import { createSocialIndexer, type SocialChange, type SocialIndexer } from '@/libs/indexer/social/socialIndexer';
 import { Logger } from '@/libs/logger/logger';
-import { getIndexerWindowMs } from '@/libs/runtime-config/runtime-config';
+import { getIndexerLegacyTree, getIndexerWindowMs } from '@/libs/runtime-config/runtime-config';
 import { markPhase } from '@/libs/timing/timing';
 import type { Pubky } from '@/models/models.types';
 import { UserStreamTypes } from '@/models/stream/user/userStream.types';
@@ -103,6 +105,8 @@ export class IndexerService {
     // Scoped by the database: tabs of two accounts in one browser must not hear each other. A visitor's tabs each load
     // on their own.
     const coordination = owner === null ? null : createBrowserCoordination(browserApis(), databaseName(owner));
+    // Authors who have not moved to social v1 yet are read from their older tree too; the app still writes v1 only.
+    const legacy = getIndexerLegacyTree();
     const indexer = createSocialIndexer({
       transport: createIndexerTransport(owner),
       store,
@@ -110,6 +114,7 @@ export class IndexerService {
       coordination,
       // The account's other devices start warm from the file this one saves under its private tree; a visitor has none.
       options: { savedIndex: owner !== null, ...crawlerWindow() },
+      ...(legacy ? { legacyTree: legacySocialTree } : {}),
     });
     // Every app write lands through HomeserverService; a refresh of the account makes it part of the answers.
     const stopRefreshing =
@@ -124,15 +129,17 @@ export class IndexerService {
     const stopInvalidating = indexer.onChange(invalidatePostStreams);
     const stopExcluding = owner === null ? () => {} : excludeMutedUsers(indexer);
     // Without Nexus, avatars and attachments are same-origin paths the service worker asks this page to fill.
+    const readFile = (uri: string) =>
+      HomeserverService.getPublicFileBytes({
+        url: uri,
+        maxBytes: LOCAL_MEDIA_MAX_BYTES,
+        timeoutMs: LOCAL_MEDIA_READ_TIMEOUT_MS,
+      });
     const stopServingMedia = serveLocalMedia({
       profile: (user) => indexer.view().profile(user),
       ensureProfile: (user) => indexer.ensureProfile(user),
-      readFile: (uri) =>
-        HomeserverService.getPublicFileBytes({
-          url: uri,
-          maxBytes: LOCAL_MEDIA_MAX_BYTES,
-          timeoutMs: LOCAL_MEDIA_READ_TIMEOUT_MS,
-        }),
+      readFile,
+      ...(legacy ? { readLegacyFile: (uri: string) => readLegacyFile(uri, readFile) } : {}),
     });
     const stopReporting = indexer.onStatus((status) => this.publishStatus(status));
     const startedAt = Date.now();

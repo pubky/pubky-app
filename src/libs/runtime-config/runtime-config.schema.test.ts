@@ -133,6 +133,18 @@ describe('runtimeEnvInputSchema', () => {
     expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, indexerWindowMs: value })).toThrow();
   });
 
+  it('keeps the older social tree out of the local index unless set', () => {
+    expect(runtimeEnvInputSchema.parse(VALID_ENV_INPUT).indexerLegacyTree).toBeUndefined();
+    expect(runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, indexerLegacyTree: 'true' }).indexerLegacyTree).toBe(true);
+    expect(runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, indexerLegacyTree: 'false' }).indexerLegacyTree).toBe(
+      false,
+    );
+  });
+
+  it.each(['yes', '1', 'on'])('rejects the older social tree setting %j', (value) => {
+    expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, indexerLegacyTree: value })).toThrow();
+  });
+
   it('requires the Nexus URL only while nexus is an indexer source', () => {
     const { nexusUrl: _nexusUrl, ...withoutNexus } = VALID_ENV_INPUT;
 

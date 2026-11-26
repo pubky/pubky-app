@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { ClientErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { legacyFileUri } from '@/libs/indexer/social/legacy/legacyMedia';
 import type { LocalMediaAnswer } from '@/libs/pwa/localMedia';
 import { answerLocalMedia, type LocalMediaSources } from './indexer.media';
 
@@ -117,5 +118,59 @@ describe('answerLocalMedia', () => {
 
     expect(answer.status).toBe('found');
     expect(answer.status === 'found' ? answer.bytes : null).not.toBe(BYTES.buffer);
+  });
+
+  describe('with the older social tree', () => {
+    const fileId = '0034A0X7NJ52C';
+    const oldFile = legacyFileUri(BOB, fileId) ?? '';
+    const withLegacy = (files: Record<string, { bytes: Uint8Array; contentType: string }>) => {
+      const sources = fakeSources({});
+      const readLegacyFile = vi.fn(async (uri: string) => files[uri] ?? null);
+      return { ...sources, readLegacyFile } satisfies LocalMediaSources;
+    };
+
+    it('reads an attachment by its file id, typed by its record', async () => {
+      const sources = withLegacy({ [oldFile]: { bytes: BYTES, contentType: 'image/png' } });
+
+      const answer = await answerLocalMedia({ kind: 'file', owner: BOB, name: fileId }, sources);
+
+      expect(oldFile).not.toBe('');
+      expect(answer).toMatchObject({ status: 'found', contentType: 'image/png' });
+      expect(bytesOf(answer)).toEqual([...BYTES]);
+      expect(sources.readLegacyFile).toHaveBeenCalledExactlyOnceWith(oldFile);
+      expect(sources.readFile).not.toHaveBeenCalled();
+    });
+
+    it('reads an avatar the profile names by its older file', async () => {
+      const sources = withLegacy({ [oldFile]: { bytes: BYTES, contentType: 'image/jpeg' } });
+      sources.profile.mockReturnValue({ image: oldFile });
+
+      const answer = await answerLocalMedia({ kind: 'avatar', user: BOB }, sources);
+
+      expect(answer).toMatchObject({ status: 'found', contentType: 'image/jpeg' });
+    });
+
+    it('still reads v1 media by path, and answers none for an older file it cannot read', async () => {
+      const name = ATTACHMENT.url.slice(ATTACHMENT.url.lastIndexOf('/') + 1);
+      const sources = { ...withLegacy({}), readFile: vi.fn(async () => BYTES) };
+
+      expect(await answerLocalMedia({ kind: 'file', owner: BOB, name }, sources)).toMatchObject({ status: 'found' });
+      expect(await answerLocalMedia({ kind: 'file', owner: BOB, name: fileId }, sources)).toEqual({ status: 'none' });
+      expect(sources.readLegacyFile).toHaveBeenCalledExactlyOnceWith(oldFile);
+    });
+
+    it('answers tooLarge when the older file is over the size the worker serves', async () => {
+      const sources = withLegacy({});
+      sources.readLegacyFile.mockRejectedValueOnce(
+        Err.client(ClientErrorCode.PAYLOAD_TOO_LARGE, 'too large', {
+          service: ErrorService.Homeserver,
+          operation: 'test',
+        }),
+      );
+
+      expect(await answerLocalMedia({ kind: 'file', owner: BOB, name: fileId }, sources)).toEqual({
+        status: 'tooLarge',
+      });
+    });
   });
 });

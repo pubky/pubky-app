@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { db } from '@/database/franky/franky';
 import { type BrowserCoordination, createBrowserCoordination } from '@/libs/indexer/browserCoordination';
 import { createIdbStore } from '@/libs/indexer/idbStore';
+import { legacySocialTree } from '@/libs/indexer/social/legacy/legacyTree';
 import { createSocialIndexer, type SocialChange } from '@/libs/indexer/social/socialIndexer';
 import { resetRuntimeConfigForTests } from '@/libs/runtime-config/runtime-config';
 import type { Pubky } from '@/models/models.types';
@@ -11,6 +12,7 @@ import { postStreamDirtyRegistry } from '@/services/local/stream/posts/postStrea
 import { LocalStreamUsersService } from '@/services/local/stream/users/users';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { IndexerService } from './indexer';
+import { serveLocalMedia } from './indexer.media';
 
 const fakes = vi.hoisted(() => ({
   indexers: [] as Array<{
@@ -70,6 +72,10 @@ vi.mock('@/libs/indexer/browserCoordination', () => ({
   createBrowserCoordination: vi.fn(() => null),
 }));
 vi.mock('./indexer.transport', () => ({ createIndexerTransport: vi.fn(() => ({})) }));
+vi.mock('./indexer.media', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./indexer.media')>()),
+  serveLocalMedia: vi.fn(() => () => {}),
+}));
 vi.mock('@/services/homeserver/homeserver', () => ({
   HomeserverService: {
     subscribeOwnedWrites: vi.fn((listener: (path: string) => void) => {
@@ -84,6 +90,22 @@ const write = (path: string) => {
 };
 
 const WINDOW_ENV = 'PUBKY_RUNTIME_INDEXER_WINDOW_MS';
+const LEGACY_TREE_ENV = 'PUBKY_RUNTIME_INDEXER_LEGACY_TREE';
+
+/** Starts `owner`'s index with the older social tree setting given. */
+function startWithLegacyTree(owner: Pubky | null, value: string) {
+  process.env[LEGACY_TREE_ENV] = value;
+  resetRuntimeConfigForTests();
+  try {
+    IndexerService.start(owner);
+  } finally {
+    delete process.env[LEGACY_TREE_ENV];
+    resetRuntimeConfigForTests();
+  }
+}
+
+/** The media sources the last start handed the service worker bridge. */
+const mediaSources = () => vi.mocked(serveLocalMedia).mock.calls.at(-1)?.[0];
 
 const ALICE = 'alice-pubky' as Pubky;
 const BOB = 'bob-pubky' as Pubky;
@@ -149,6 +171,26 @@ describe('IndexerService', () => {
     expect(createSocialIndexer).toHaveBeenCalledWith(
       expect.objectContaining({ options: { savedIndex: true, crawler: { windowDays: 0.25 } } }),
     );
+  });
+
+  it('reads neither the older social tree nor its media unless set', () => {
+    IndexerService.start(ALICE);
+
+    expect(vi.mocked(createSocialIndexer).mock.calls[0][0]).not.toHaveProperty('legacyTree');
+    expect(mediaSources()).not.toHaveProperty('readLegacyFile');
+  });
+
+  it.each([ALICE, null])('hands the index the older social tree and its media when set, for %s', (owner) => {
+    startWithLegacyTree(owner, 'true');
+
+    expect(createSocialIndexer).toHaveBeenCalledWith(expect.objectContaining({ legacyTree: legacySocialTree }));
+    expect(mediaSources()?.readLegacyFile).toBeTypeOf('function');
+  });
+
+  it('keeps the older social tree out when set to false', () => {
+    startWithLegacyTree(ALICE, 'false');
+
+    expect(vi.mocked(createSocialIndexer).mock.calls[0][0]).not.toHaveProperty('legacyTree');
   });
 
   it('stops the visitor’s index and deletes its database when an account starts', () => {
