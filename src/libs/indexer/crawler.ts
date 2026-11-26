@@ -54,8 +54,8 @@ interface OperationContext {
   signal?: AbortSignal;
   /** Where its requests queue at each homeserver. */
   priority: Priority;
-  /** Homeservers already checked for a restore. */
-  checked: Set<string>;
+  /** Each homeserver's restore check, shared by the reads of the operation that run together. */
+  checked: Map<string, Promise<boolean>>;
   highWater: Map<string, HighWater | null>;
   windowStart: Map<string, Cursor>;
   /** Homeservers failed or backing off, skipped for the rest of the operation. */
@@ -68,10 +68,17 @@ interface OldWrite {
   time: bigint;
 }
 
+/** Users' events in `(tail, top]` to commit newest first, read by one request. */
+interface Below {
+  tops: ReadonlyMap<string, Cursor>;
+  tail: Cursor;
+  events: readonly AuthoredStreamEvent[];
+}
+
 const contextOf = (signal?: AbortSignal, priority: Priority = 'foreground'): OperationContext => ({
   signal,
   priority,
-  checked: new Set(),
+  checked: new Map(),
   highWater: new Map(),
   windowStart: new Map(),
   failed: new Set(),
@@ -132,8 +139,16 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
   const failing = new Map<string, number>();
   /** Records `hydrate` fetched once, by scope, path and cursor. */
   const hydrated = new Set<string>();
-  /** Scopes that may hold records without the file they need, by scope id, for the next `hydrate`. */
-  const unfilled = new Map<string, ScopeKey>();
+  /**
+   * Scopes that may hold records without the file they need, by scope id, for `hydrate`, each with the mark it got
+   * when it was last added: a fill that read a scope at an older mark reads it again.
+   */
+  const unfilled = new Map<string, { scope: ScopeKey; mark: number }>();
+  let unfilledMark = 0;
+  const markUnfilled = (scope: ScopeKey) => {
+    unfilledMark += 1;
+    unfilled.set(scopeId(scope), { scope: scopeOf(scope), mark: unfilledMark });
+  };
   const listeners = new Set<(stats: CrawlerStats) => void>();
   const commitListeners = new Set<(change: StoreChange) => void>();
 
@@ -232,15 +247,17 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     } catch (error) {
       throwIfAborted(ctx.signal);
       if (error instanceof IndexerAbortedError) throw error;
-      if (error instanceof HomeserverUnreachableError || error instanceof InvalidIndexInputError) {
+      const unreachable = error instanceof HomeserverUnreachableError || error instanceof InvalidIndexInputError;
+      if (!unreachable && !(error instanceof RateLimitedError)) throw error;
+      // Reads of one operation that run together fail a homeserver once: one failure, one step of backoff.
+      if (ctx.failed.has(homeserver)) return false;
+      markFailed(ctx, homeserver);
+      if (unreachable) {
         const { failure } = await store.readHomeserverState(homeserver);
         const failures = (failure?.failures ?? 0) + 1;
         const delay = Math.min(BACKOFF_BASE_MS * 2 ** (failures - 1), BACKOFF_MAX_MS);
         await store.patchHomeserverState(homeserver, { failure: { failures, retryAt: now() + delay } });
-      } else if (!(error instanceof RateLimitedError)) {
-        throw error;
       }
-      markFailed(ctx, homeserver);
       return false;
     }
   }
@@ -274,9 +291,12 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
       markFailed(ctx, homeserver);
       return false;
     }
-    if (ctx.checked.has(homeserver)) return true;
-    ctx.checked.add(homeserver);
-    return guard(ctx, homeserver, () => detectRestore(ctx, homeserver, state.highWater));
+    let check = ctx.checked.get(homeserver);
+    if (check === undefined) {
+      check = guard(ctx, homeserver, () => detectRestore(ctx, homeserver, state.highWater));
+      ctx.checked.set(homeserver, check);
+    }
+    return check;
   }
 
   /** The stored head of each user in the group, in batch order, `null` for a user with nothing stored. */
@@ -326,7 +346,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     await commit(batch, change);
     for (const run of batch.applyRuns ?? []) {
       if (run.entries.some((entry) => entry.kind === 'record' && domain.needsBody(entry.path) === 'later')) {
-        unfilled.set(scopeId(run), scopeOf(run));
+        markUnfilled(run);
       }
     }
   }
@@ -470,17 +490,17 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
           if (!current(user)) below.set(user, null);
           else if (start !== null && tail !== null && tail > start) below.set(user, tail);
         }
-        for (const batch of chunks([...below], options.batchSize)) {
-          await readWindowBelow(ctx, homeserver, group, new Map(batch), start);
-        }
+        await readWindowBelow(ctx, homeserver, group, below, start);
       }
     });
   }
 
   /**
-   * Reads a batch's windowed group backwards from each user's bound, their newest event for `null`, down to `floor`,
-   * or without one down to the newest write older than the window, which may settle the homeserver's window start.
-   * Every page is committed as it is read, newest events first.
+   * Reads the users' windowed group backwards from each one's bound, their newest event for `null`, down to `floor`,
+   * or without one down to their batch's newest write older than the window, which may settle the homeserver's window
+   * start. The batches of the homeserver commit as one stream, newest events first: a round commits what every batch
+   * has read, everything above the highest point a batch still reading has reached, while that batch reads its next
+   * page.
    */
   async function readWindowBelow(
     ctx: OperationContext,
@@ -491,24 +511,18 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
   ) {
     const limit = options.pageLimit;
     const read = reader(ctx, homeserver, group.paths, limit);
-    /** Per user, the head of the range still to commit. */
-    const tops = new Map<string, Cursor>();
-    let page = await read(
-      [...bounds].map(([user, bound]) => ({ user, cursor: bound === null ? null : bound + ONE })),
-      true,
-    );
-    const newest = page.length === 0 ? null : highestOf(page);
-    for (const [user, bound] of bounds) {
-      // A user read from the newest event with none in the page has no event in the group at all.
-      const top = bound ?? newest;
-      if (top !== null && (floor === null || top > floor)) tops.set(user, top);
+    interface Batch {
+      /** Per user, the head of the range still to commit. */
+      tops: Map<string, Cursor>;
+      /** Read and not committed yet. */
+      events: AuthoredStreamEvent[];
+      /** Every event of the batch above it is read. */
+      low: Cursor;
+      /** The read reached its end, `low` being every user's tail. */
+      reached: boolean;
     }
-    const newestEvent = page.find((event) => event.cursor === newest) ?? null;
-    // Taken and set with no await between, so batches read together never write an older mark over a newer one.
-    const highWater = newestOf(ctx.highWater.get(homeserver) ?? null, newestEvent);
-    ctx.highWater.set(homeserver, highWater);
-    let state: StoreBatch<D>['homeserverStates'] = [{ homeserver, patch: { highWater, failure: null } }];
-    while (tops.size > 0) {
+    /** Where a page leaves its batch. A full page holds every event of the batch down to its lowest cursor. */
+    const ending = async (page: readonly AuthoredStreamEvent[]) => {
       let stop = floor;
       const old = stop === null ? olderThanWindow(page) : null;
       if (old !== null) {
@@ -516,55 +530,93 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
         await settleWindowStart(ctx, homeserver, old);
       }
       const lowest = lowestOf(page);
-      // A full page holds every event of every user down to its lowest cursor; a shorter one reached the stream start.
       const reached = page.length < limit || lowest === null || (stop !== null && lowest <= stop);
-      const tail = reached ? (stop ?? CURSOR_ZERO) : lowest - ONE;
-      await commitBelow(
-        ctx,
-        homeserver,
-        group,
-        tops,
-        tail,
-        page.filter((event) => event.cursor > tail),
-        state,
-      );
-      state = undefined;
-      if (reached) return;
-      for (const [user, top] of tops) if (top > tail) tops.set(user, tail);
-      page = await read(
-        [...tops].map(([user, top]) => ({ user, cursor: top + ONE })),
+      const low = reached ? (stop ?? CURSOR_ZERO) : lowest - ONE;
+      return { low, reached, events: page.filter((event) => event.cursor > low) };
+    };
+    const readFirst = async (users: Array<[string, Cursor | null]>): Promise<Batch> => {
+      const page = await read(
+        users.map(([user, bound]) => ({ user, cursor: bound === null ? null : bound + ONE })),
         true,
       );
+      const newest = page.length === 0 ? null : highestOf(page);
+      // Taken and set with no await between, so reads together never keep an older mark over a newer one.
+      const newestEvent = page.find((event) => event.cursor === newest) ?? null;
+      ctx.highWater.set(homeserver, newestOf(ctx.highWater.get(homeserver) ?? null, newestEvent));
+      const tops = new Map<string, Cursor>();
+      for (const [user, bound] of users) {
+        // A user read from the newest event with none in the page has no event in the group at all.
+        const top = bound ?? newest;
+        if (top !== null && (floor === null || top > floor)) tops.set(user, top);
+      }
+      return { tops, ...(await ending(page)) };
+    };
+    const readMore = async (batch: Batch) => {
+      const page = await read(
+        [...batch.tops].map(([user, top]) => ({ user, cursor: (top < batch.low ? top : batch.low) + ONE })),
+        true,
+      );
+      const next = await ending(page);
+      batch.events.push(...next.events);
+      batch.low = next.low;
+      batch.reached = next.reached;
+    };
+    if (bounds.size === 0) return;
+    const batches = await Promise.all(chunks([...bounds], options.batchSize).map(readFirst));
+    for (let round = 0; ; round += 1) {
+      const reading = batches.filter((batch) => !batch.reached && batch.tops.size > 0);
+      const cut = reading.reduce<Cursor | null>((high, { low }) => (high === null || low > high ? low : high), null);
+      const parts: Below[] = [];
+      for (const batch of batches) {
+        const tail = cut === null || (batch.reached && batch.low > cut) ? batch.low : cut;
+        parts.push({
+          tops: new Map([...batch.tops].filter(([, top]) => top > tail)),
+          tail,
+          events: batch.events.filter((event) => event.cursor > tail),
+        });
+        batch.events = batch.events.filter((event) => event.cursor <= tail);
+        for (const [user, top] of batch.tops) if (top > tail) batch.tops.set(user, tail);
+        if (batch.reached && tail === batch.low) batch.tops.clear();
+      }
+      const next = reading.find(({ low }) => low === cut);
+      const settled = await Promise.allSettled([
+        commitBelow(ctx, homeserver, group, parts, round === 0),
+        next === undefined ? Promise.resolve() : readMore(next),
+      ]);
+      for (const outcome of settled) if (outcome.status === 'rejected') throw outcome.reason;
+      if (next === undefined) return;
     }
   }
 
   /**
-   * Commits a backwards read: per user its events in `(tail, top]`, in slices of `backfillPageLimit` events, newest
+   * Commits backwards reads of one homeserver as one stream: their events in slices of `backfillPageLimit`, newest
    * first. A slice commits once its files to render and every newer slice are in, so the top range only grows
-   * downwards and a failure keeps every slice above it; the files of all slices are fetched together.
+   * downwards and a failure keeps every slice above it; the files of all slices are fetched together. With
+   * `highWater` the first slice also stores the homeserver's high-water mark.
    */
   async function commitBelow(
     ctx: OperationContext,
     homeserver: string,
     group: PathGroup,
-    tops: ReadonlyMap<string, Cursor>,
-    tail: Cursor,
-    events: readonly AuthoredStreamEvent[],
-    state?: StoreBatch<D>['homeserverStates'],
+    parts: readonly Below[],
+    highWater: boolean,
   ) {
-    const newestFirst = [...events].sort((a, b) => (a.cursor > b.cursor ? -1 : 1));
+    const newestFirst = parts.flatMap(({ events }) => events).sort((a, b) => (a.cursor > b.cursor ? -1 : 1));
     const slices: Run<D>[][] = [];
     let high: Cursor | null = null;
     for (let i = 0; i === 0 || i < newestFirst.length; i += options.backfillPageLimit) {
       const slice = newestFirst.slice(i, i + options.backfillPageLimit);
       const last = i + options.backfillPageLimit >= newestFirst.length;
-      const low = last ? tail : slice[slice.length - 1].cursor - ONE;
+      const low = last ? null : slice[slice.length - 1].cursor - ONE;
       const runs: Run<D>[] = [];
-      for (const [author, top] of tops) {
-        const head = high === null || top < high ? top : high;
-        if (head <= low) continue;
-        const own = slice.filter((event) => event.author === author);
-        runs.push(foldEvents<D>({ author, homeserver, group: group.id }, low, head, own));
+      for (const part of parts) {
+        const tail = low === null || part.tail > low ? part.tail : low;
+        for (const [author, top] of part.tops) {
+          const head = high === null || top < high ? top : high;
+          if (head <= tail) continue;
+          const own = slice.filter((event) => event.author === author);
+          runs.push(foldEvents<D>({ author, homeserver, group: group.id }, tail, head, own));
+        }
       }
       slices.push(runs);
       high = low;
@@ -585,11 +637,20 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
       // Once a fetch failed, a fetch still in flight that ends later commits nothing after this call is over.
       while (!stopped && next < slices.length && pending[next] === 0) {
         const runs = slices[next];
-        const batch: StoreBatch<D> = { applyRuns: runs, ...(next === 0 && state ? { homeserverStates: state } : {}) };
+        const first = next === 0;
         next += 1;
         // A slice whose newer one failed is not committed: it would sit below a gap.
         committing = committing
-          .then(() => (errors.length === 0 ? commitRuns(batch, { scopes: runs.map(scopeOf), seeds: [] }) : undefined))
+          .then(() => {
+            if (errors.length > 0) return undefined;
+            // Read when it commits, so a mark another read stored meanwhile is never set back.
+            const mark = ctx.highWater.get(homeserver) ?? null;
+            const state =
+              highWater && first
+                ? { homeserverStates: [{ homeserver, patch: { highWater: mark, failure: null } }] }
+                : {};
+            return commitRuns({ applyRuns: runs, ...state }, { scopes: runs.map(scopeOf), seeds: [] });
+          })
           .catch((error: unknown) => {
             errors.push(error);
           });
@@ -749,30 +810,44 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     const members = new Map([[seed, 0]]);
     let frontier = [seed];
     let resolving = resolveAll(ctx, frontier);
-    for (let hop = 0; frontier.length > 0; hop += 1) {
-      counters.usersPerHop.push(frontier.length);
-      changed();
-      const { homeserverOf, byHomeserver } = await resolving;
-      await eachHomeserver(byHomeserver, (homeserver, users) => syncFull(ctx, homeserver, users));
-      // The seed's profile and follows are enough for a first answer: it is a member before its activity is read.
-      if (hop === 0) await publish(new Map([...before, ...members]), false);
-      const next = hop < options.hops ? await nextHop(frontier, homeserverOf, members, hop + 1, skipped) : [];
-      // Lookups go to the resolvers, not the homeservers: the next hop's run while this hop's activity is read.
-      resolving = resolveAll(ctx, next);
-      // Awaited at the next hop; when this one throws first, its rejection is dropped here.
-      resolving.catch(() => undefined);
-      await eachHomeserver(byHomeserver, (homeserver, users) => syncWindow(ctx, homeserver, users));
-      if (hop === 0) {
-        const homeserver = homeserverOf.get(seed) ?? null;
-        seedReach = { homeserver, failed: homeserver !== null && ctx.failed.has(homeserver) };
+    /** Each hop's activity, read beside its graph and the hops after it; failures wait for the end. */
+    const windows: Promise<void>[] = [];
+    const errors: unknown[] = [];
+    try {
+      for (let hop = 0; frontier.length > 0; hop += 1) {
+        counters.usersPerHop.push(frontier.length);
         changed();
+        const { homeserverOf, byHomeserver } = await resolving;
+        // The window read needs no link, so a feed's newest posts do not wait for the hop's whole graph.
+        const window = eachHomeserver(byHomeserver, (homeserver, users) => syncWindow(ctx, homeserver, users));
+        windows.push(
+          window
+            .then(() => {
+              if (hop > 0) return;
+              const homeserver = homeserverOf.get(seed) ?? null;
+              seedReach = { homeserver, failed: homeserver !== null && ctx.failed.has(homeserver) };
+              changed();
+            })
+            .catch((error: unknown) => {
+              errors.push(error);
+            }),
+        );
+        await eachHomeserver(byHomeserver, (homeserver, users) => syncFull(ctx, homeserver, users));
+        const next = hop < options.hops ? await nextHop(frontier, homeserverOf, members, hop + 1, skipped) : [];
+        // Lookups go to the resolvers, not the homeservers: the next hop's run while this hop's activity is read.
+        resolving = resolveAll(ctx, next);
+        // Awaited at the next hop; when this one throws first, its rejection is dropped here.
+        resolving.catch(() => undefined);
+        throwIfAborted(signal);
+        // The hop's graph names the next one: they join the stored members at once, so answers grow during a first
+        // sync, the seed's as soon as its profile and follows are in. None leaves before the sync ends.
+        await publish(new Map([...before, ...members]), false);
+        frontier = next;
       }
-      throwIfAborted(signal);
-      // Each hop's members join the stored ones at once, so answers grow during a first sync; none leaves before
-      // the sync ends.
-      await publish(new Map([...before, ...members]), false);
-      frontier = next;
+    } finally {
+      await Promise.all(windows);
     }
+    if (errors.length > 0) throw errors[0];
     throwIfAborted(signal);
     await publish(members, true);
     return { members, failedHomeservers: [...ctx.failed] };
@@ -849,7 +924,8 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     // A full page holds every event down to its lowest cursor; a shorter one reached the stream start. The newest
     // page ends at the newest event read: nothing above it exists yet.
     const tail = page.length >= limit && lowest !== null ? lowest - ONE : CURSOR_ZERO;
-    await commitBelow(ctx, scope.homeserver, group, new Map([[scope.author, below ?? highestOf(page)]]), tail, page);
+    const tops = new Map([[scope.author, below ?? highestOf(page)]]);
+    await commitBelow(ctx, scope.homeserver, group, [{ tops, tail, events: page }], false);
     return page.length;
   }
 
@@ -879,55 +955,117 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     limit = Infinity,
     signal?: AbortSignal,
   ): Promise<HydrateResult> {
-    const ctx = contextOf(signal, 'idle');
-    for (const scope of scopes) unfilled.set(scopeId(scope), scopeOf(scope));
-    const missing: Array<{ scope: ScopeKey; record: RecordEntry<D>; key: string }> = [];
-    const scanned = [...unfilled];
-    for (const [, scope] of scanned) {
-      throwIfAborted(signal);
-      const { live } = await store.readScope(scope);
-      for (const record of live.values()) {
-        const key = `${scopeId(scope)}\u0000${record.path}\u0000${record.cursor}`;
-        if (record.data !== undefined || domain.needsBody(record.path) === null || hydrated.has(key)) continue;
-        missing.push({ scope, record, key });
+    // It keeps what is shown complete, as a scope sync keeps it current: both queue in the same place.
+    const ctx = contextOf(signal, 'background');
+    for (const scope of scopes) markUnfilled(scope);
+    interface Item {
+      scope: ScopeKey;
+      record: RecordEntry<D>;
+      key: string;
+    }
+    const items = new Map<string, Item>();
+    /** Per homeserver, the records still to fetch, newest first. */
+    const queues = new Map<string, Item[]>();
+    /** The mark each scope was read at. */
+    const scanned = new Map<string, number>();
+    let seenMark = -1;
+    let scanning: Promise<void> | null = null;
+    const drains = new Map<string, Promise<void>>();
+    const errors: unknown[] = [];
+    let picked = 0;
+    let fetched = 0;
+
+    /** Reads the scopes marked since the last read, so records a crawl commits meanwhile join in cursor order. */
+    async function scan(): Promise<void> {
+      while (seenMark !== unfilledMark) {
+        seenMark = unfilledMark;
+        const grown = new Set<string>();
+        for (const [id, { scope, mark }] of [...unfilled]) {
+          if (scanned.get(id) === mark) continue;
+          throwIfAborted(signal);
+          scanned.set(id, mark);
+          const { live } = await store.readScope(scope);
+          for (const record of live.values()) {
+            const key = `${id}\u0000${record.path}\u0000${record.cursor}`;
+            if (record.data !== undefined || domain.needsBody(record.path) === null) continue;
+            if (hydrated.has(key) || items.has(key)) continue;
+            const item = { scope, record, key };
+            items.set(key, item);
+            queues.set(scope.homeserver, [...(queues.get(scope.homeserver) ?? []), item]);
+            grown.add(scope.homeserver);
+          }
+        }
+        for (const homeserver of grown) {
+          queues.get(homeserver)?.sort((a, b) => (a.record.cursor > b.record.cursor ? -1 : 1));
+          if (drains.has(homeserver)) continue;
+          drains.set(
+            homeserver,
+            drain(homeserver)
+              .catch((error: unknown) => {
+                errors.push(error);
+              })
+              .finally(() => drains.delete(homeserver)),
+          );
+        }
       }
     }
-    missing.sort((a, b) => (a.record.cursor > b.record.cursor ? -1 : a.record.cursor < b.record.cursor ? 1 : 0));
-    const chosen = missing.slice(0, limit);
-    const byHomeserver = new Map<string, typeof chosen>();
-    for (const item of chosen) {
-      byHomeserver.set(item.scope.homeserver, [...(byHomeserver.get(item.scope.homeserver) ?? []), item]);
-    }
-    let fetched = 0;
-    let tried = 0;
-    await eachHomeserver(byHomeserver, async (homeserver, items) => {
+    const absorb = (): Promise<void> => {
+      if (seenMark === unfilledMark) return scanning ?? Promise.resolve();
+      scanning ??= scan().finally(() => {
+        scanning = null;
+      });
+      return scanning;
+    };
+
+    /** Fetches the homeserver's queue; a failing homeserver leaves the rest untried, for a later call. */
+    async function drain(homeserver: string): Promise<void> {
       if (ctx.failed.has(homeserver)) return;
       const { failure } = await store.readHomeserverState(homeserver);
       if (failure !== null && failure.retryAt > now()) {
         markFailed(ctx, homeserver);
         return;
       }
-      // A failing homeserver leaves its records untried, for a later call.
+      let stopped = false;
+      const worker = async () => {
+        for (;;) {
+          await absorb();
+          const item = stopped || picked >= limit ? undefined : queues.get(homeserver)?.shift();
+          if (item === undefined) return;
+          picked += 1;
+          try {
+            await fill(item);
+          } catch (error) {
+            stopped = true;
+            throw error;
+          }
+        }
+      };
       await guard(ctx, homeserver, async () => {
-        await mapLimit(items, options.homeserverConcurrency, async ({ scope, record, key }) => {
-          const data = await bodyOf(ctx, scope.homeserver, scope.author, record);
-          hydrated.add(key);
-          tried += 1;
-          if (data === null) return;
-          // Committed at once, so a stopped call keeps every file it got. Crawls run beside it: one that replaced,
-          // forgot or dropped the record meanwhile wins, and the data is set on nothing.
-          await commit(
-            { recordData: [{ scope: scopeOf(scope), path: record.path, cursor: record.cursor, data }] },
-            { scopes: [scopeOf(scope)], seeds: [] },
-          );
-          fetched += 1;
-        });
+        await Promise.all(Array.from({ length: options.homeserverConcurrency }, worker));
       });
-    });
-    const untried = new Set(missing.filter(({ key }) => !hydrated.has(key)).map(({ scope }) => scopeId(scope)));
-    // A scope a crawl committed `later` records to again since the scan stays for the next call.
-    for (const [id, scope] of scanned) if (!untried.has(id) && unfilled.get(id) === scope) unfilled.delete(id);
-    return { fetched, remaining: missing.length - tried };
+    }
+
+    async function fill({ scope, record, key }: Item): Promise<void> {
+      const data = await bodyOf(ctx, scope.homeserver, scope.author, record);
+      hydrated.add(key);
+      if (data === null) return;
+      // Committed at once, so a stopped call keeps every file it got. Crawls run beside it: one that replaced,
+      // forgot or dropped the record meanwhile wins, and the data is set on nothing.
+      await commit(
+        { recordData: [{ scope: scopeOf(scope), path: record.path, cursor: record.cursor, data }] },
+        { scopes: [scopeOf(scope)], seeds: [] },
+      );
+      fetched += 1;
+    }
+
+    await absorb();
+    while (drains.size > 0) await Promise.all([...drains.values()]);
+    if (errors.length > 0) throw errors[0];
+    const untried = [...items.values()].filter(({ key }) => !hydrated.has(key));
+    const left = new Set(untried.map(({ scope }) => scopeId(scope)));
+    // A scope a crawl committed `later` records to again since it was read stays for the next call.
+    for (const [id, mark] of scanned) if (!left.has(id) && unfilled.get(id)?.mark === mark) unfilled.delete(id);
+    return { fetched, remaining: untried.length };
   }
 
   return {

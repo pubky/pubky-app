@@ -699,14 +699,10 @@ describe('createSocialIndexer', () => {
     first.stop();
 
     // Nothing from a homeserver ever answers.
-    const asked = { bodies: 0 };
     const offline: IndexerTransport = {
       resolveHomeserver: () => new Promise<string | null>(() => undefined),
       readEvents: () => new Promise(() => undefined),
-      getPublic: () => {
-        asked.bodies += 1;
-        return new Promise(() => undefined);
-      },
+      getPublic: () => new Promise(() => undefined),
       listIndexFiles: () => network.listIndexFiles(),
       readIndexFile: (fileName) => network.readIndexFile(fileName),
       writeIndexFile: (fileName, bytes) => network.writeIndexFile(fileName, bytes),
@@ -728,7 +724,6 @@ describe('createSocialIndexer', () => {
     expect(feed).toMatchObject({ syncing: true, asOf: file.writtenAt });
     expect(feed.json).toMatchObject({ post_keys: [key(BRAN, image), key(CLEO, quote), key(BRAN, repost)] });
     expect(posts.json).toMatchObject([{ details: { id: image.id, author: BRAN } }]);
-    expect(asked.bodies).toBe(0);
     second.stop();
   });
 });

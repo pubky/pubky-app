@@ -289,4 +289,49 @@ describe('createIndexerRuntime fill', () => {
     await settle();
     expect((await bob()).get(`${TAGS}t2`)).toEqual({ text: 't2' });
   });
+
+  it('fetches the files a scope sync leaves while the sync still runs', async () => {
+    const network = new FakeNetwork().addHomeserver('hs1');
+    for (const user of ['alice', 'bob', 'carol']) network.addUser(user, 'hs1');
+    network.put('alice', `${FOLLOWS}bob`);
+    network.put('bob', `${FOLLOWS}carol`);
+    network.putJson('bob', postPath(DAY_MS), { text: 'bob' });
+    network.putJson('bob', `${TAGS}t1`, { text: 't1' });
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    // Hop 2 never answers until released, so the sync runs on.
+    const transport: IndexerTransport = {
+      resolveHomeserver: (user) => network.resolveHomeserver(user),
+      readEvents: async (request) => {
+        if (request.users.some(({ user }) => user === 'carol')) await held;
+        return network.readEvents(request);
+      },
+      getPublic: (request) => network.getPublic(request),
+      listIndexFiles: () => network.listIndexFiles(),
+      readIndexFile: (name) => network.readIndexFile(name),
+      writeIndexFile: (name, bytes) => network.writeIndexFile(name, bytes),
+      deleteIndexFile: (name) => network.deleteIndexFile(name),
+    };
+    const store = createMemoryStore<Post>();
+    const time = fakeTime(NOW);
+    const runtime = createIndexerRuntime({
+      transport,
+      store,
+      domain: taggedDomain,
+      now: () => time.clock.now,
+      schedule: time.schedule,
+    });
+
+    runtime.start('alice');
+    await settle();
+
+    expect(runtime.status()).toMatchObject({ state: 'syncing', firstSyncPending: true });
+    expect((await servedData(store, 'bob', 'hs1', ACTIVITY)).get(`${TAGS}t1`)).toEqual({ text: 't1' });
+    release();
+    await settle();
+    expect(runtime.status()).toMatchObject({ state: 'idle', firstSyncPending: false, bodiesPending: false });
+    runtime.stop();
+  });
 });

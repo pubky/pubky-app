@@ -210,6 +210,11 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
   crawler.onCommit((change) => {
     dirty = true;
     announce(change);
+    // A crawl left files to fetch: the fill starts now, beside it, rather than when it ends.
+    if (filling === null && crawler.unfilled() > 0) {
+      fillDue = true;
+      if (canCrawl() && startFill()) emitStatus();
+    }
   });
 
   /** Never rejects: a failure goes to the status. */
@@ -385,10 +390,10 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
   }
 
   /**
-   * Starts fetching the files that crawls left to fetch, and with a scan due those any stored record lacks, once no
-   * crawl runs and the saved index is read. The fill then runs beside the crawls that follow: at each homeserver their
-   * requests go before its own, and it commits each file as it arrives, so it never aborts a request or holds up a
-   * crawl, and only a stop or a step down aborts it. Whether it started.
+   * Starts fetching the files that crawls left to fetch, and with a scan due those any stored record lacks, once the
+   * saved index is read: as soon as a crawl commits a record whose file comes later, beside that crawl and the ones
+   * that follow. Its requests queue with a scope sync's, behind a request someone waits for, and it commits each file
+   * as it arrives, so it never aborts a request, and only a stop or a step down aborts it. Whether it started.
    */
   function startFill(): boolean {
     if (filling !== null || loading || loadDue || !(scanDue || fillDue)) return false;
@@ -416,6 +421,8 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     filling = run().then((committed) => {
       filling = null;
       stopFill = null;
+      // Files a crawl left while the fill ended are fetched next; a fill that brought none waits for a crawl instead.
+      if (committed && crawler.unfilled() > 0) fillDue = true;
       // A view rebuilt on the status that says the fill ended then holds every file it brought.
       if (committed) flushNow();
       pump();
@@ -479,7 +486,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
         afterCrawl();
       });
     }
-    if (running === null && scoping === null && startFill()) began = true;
+    if (startFill()) began = true;
     if (began) emitStatus();
   }
 

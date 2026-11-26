@@ -20,6 +20,7 @@ import type { Domain } from './domain.types';
 import type { FakeNetwork } from './fakeNetwork';
 import { InvalidIndexInputError } from './indexer.errors';
 import { createMemoryStore } from './memoryStore';
+import { settle } from './runtime.fixtures';
 import type { IndexerTransport } from './transport.types';
 
 const MINUTE_MS = 60 * 1000;
@@ -183,18 +184,20 @@ describe('syncScope scope', () => {
     expect(crawler.stats().seed).toEqual({ homeserver: 'hs1', failed: false });
   });
 
-  it('makes the seed a member once its graph is in, before its activity is read', async () => {
+  it('reads the activity of the seed beside its graph, and makes it and its follows members once the graph is in', async () => {
     const { network, store, crawlerOf } = harness();
     network.addHomeserver('hs1');
     chain(network, ['alice', 'bob']);
-    const membersAtActivity: Array<Map<string, number>> = [];
+    network.putJson('alice', postPath(DAY_MS), { text: 'alice' });
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
     const transport: IndexerTransport = {
       resolveHomeserver: (user) => network.resolveHomeserver(user),
       readEvents: async (request) => {
         const ofAlice = request.users.some(({ user }) => user === 'alice');
-        if (membersAtActivity.length === 0 && ofAlice && request.paths.includes(POSTS)) {
-          membersAtActivity.push(await store.readScopeMembers('alice'));
-        }
+        if (ofAlice && request.paths.includes(POSTS)) await held;
         return network.readEvents(request);
       },
       getPublic: (request) => network.getPublic(request),
@@ -204,9 +207,24 @@ describe('syncScope scope', () => {
       deleteIndexFile: (name) => network.deleteIndexFile(name),
     };
 
-    await crawlerOf(transport).syncScope('alice');
+    const sync = crawlerOf(transport).syncScope('alice');
+    for (let turn = 0; turn < 50 && (await store.readScopeMembers('alice')).size === 0; turn += 1) await settle();
 
-    expect(membersAtActivity).toEqual([new Map([['alice', 0]])]);
+    // alice's activity read is still held: her graph alone made the members.
+    expect(await store.readScopeMembers('alice')).toEqual(
+      new Map([
+        ['alice', 0],
+        ['bob', 1],
+      ]),
+    );
+    expect(await store.readCoverage({ author: 'alice', homeserver: 'hs1', group: ACTIVITY })).toEqual([]);
+    // The next hop starts once the graph is in, without waiting for her activity.
+    const readsBob = () => network.reads.some((read) => read.users.includes('bob'));
+    for (let turn = 0; turn < 50 && !readsBob(); turn += 1) await settle();
+    expect(readsBob()).toBe(true);
+    release();
+    await sync;
+    expect(await served(store, 'alice', 'hs1', ACTIVITY)).toEqual(network.liveOf('alice', [POSTS]));
   });
 
   it('says when the seed did not resolve or its homeserver failed', async () => {

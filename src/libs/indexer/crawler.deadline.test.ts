@@ -11,6 +11,8 @@ const LOOKUP_MS = 10 * 1000;
 const STEP_MS = 1000;
 /** A request and its three retries. */
 const TRIES = 4;
+/** A first sync reads a user's graph and activity at once. */
+const READS = 2;
 
 type FakeTime = ReturnType<typeof fakeTime>;
 
@@ -83,7 +85,7 @@ describe('request deadlines', () => {
     expect(result.failedHomeservers).toEqual(['hs2']);
     expect(w.time.clock.now - NOW).toBeGreaterThanOrEqual(TRIES * REQUEST_MS);
     expect(w.time.clock.now - NOW).toBeLessThan(TRIES * REQUEST_MS + 2 * STEP_MS);
-    expect(net.signals.length).toBe(TRIES);
+    expect(net.signals.length).toBe(READS * TRIES);
     expect(net.signals.every((signal) => signal.aborted)).toBe(true);
     expect((await w.store.readHomeserverState('hs2')).failure?.failures).toBe(1);
     expect(await served(w.store, 'carol', 'hs3', ACTIVITY)).toEqual(w.network.liveOf('carol', [POSTS]));
@@ -167,13 +169,13 @@ describe('request deadlines', () => {
     const controller = new AbortController();
 
     const sync = w.crawlerOf(net.transport).syncScope('alice', controller.signal);
-    for (let turn = 0; turn < 50 && net.hung() === 0; turn += 1) await settle();
-    expect(net.hung()).toBe(1);
+    for (let turn = 0; turn < 50 && net.hung() < READS; turn += 1) await settle();
+    expect(net.hung()).toBe(READS);
     controller.abort();
 
     await expect(sync).rejects.toBeInstanceOf(IndexerAbortedError);
     expect(w.time.clock.now).toBe(NOW);
-    expect(net.signals[0].aborted).toBe(true);
+    expect(net.signals.every((signal) => signal.aborted)).toBe(true);
     expect(w.time.pending()).toBe(0);
   });
 });

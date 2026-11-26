@@ -1,7 +1,18 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 import { createCrawler } from './crawler';
-import { ACTIVITY, DAY_MS, FOLLOWS, NOW, type Post, postPath, POSTS, served, testDomain } from './crawler.fixtures';
+import {
+  ACTIVITY,
+  DAY_MS,
+  FOLLOWS,
+  GRAPH,
+  NOW,
+  type Post,
+  postPath,
+  POSTS,
+  served,
+  testDomain,
+} from './crawler.fixtures';
 import type { CrawlerOptions } from './crawler.types';
 import { FakeNetwork } from './fakeNetwork';
 import { HomeserverUnreachableError } from './indexer.errors';
@@ -118,34 +129,79 @@ describe('syncScope newest first', () => {
     expect((await store.readHomeserverState('hs1')).windowStart?.cursor).toBe(windowStart);
   });
 
-  it("commits hop 1's newest posts before any request for hop 2", async () => {
+  it("reads hop 1's activity beside its graph, and starts hop 2 once hop 1's graph is in", async () => {
     const { network } = world();
     const { crawler, steps, runs } = recorded(network, { hops: 2 });
 
     await crawler.syncScope('alice');
 
-    const firstHop1 = Math.min(...activityOf(runs, HOP1).map(({ step }) => step));
-    const firstHop2 = steps.findIndex(
-      (step) =>
-        (step.kind === 'read' && step.users.some((user) => HOP2.includes(user))) ||
-        (step.kind === 'get' && HOP2.includes(step.author)),
+    const isRead = (step: Step, users: readonly string[]) =>
+      step.kind === 'read' && step.users.some((user) => users.includes(user));
+    const hop1Reads = steps.flatMap((step, index) => (isRead(step, HOP1) ? [index] : []));
+    const hop1Graph = Math.min(
+      ...runs.filter(({ run }) => run.group === GRAPH && HOP1.includes(run.author)).map(({ step }) => step),
     );
-    expect(firstHop2).toBeGreaterThan(firstHop1);
+    // Both of hop 1's reads go out before its graph commits, and hop 2 waits for that commit alone.
+    expect(hop1Reads.slice(0, 2).every((index) => index < hop1Graph)).toBe(true);
+    const firstHop2 = steps.findIndex(
+      (step) => isRead(step, HOP2) || (step.kind === 'get' && HOP2.includes(step.author)),
+    );
+    expect(firstHop2).toBeGreaterThan(hop1Graph);
+  });
+
+  it("commits a homeserver's batches as one stream, newest first, reading the next page while a page's posts come", async () => {
+    const { network, windowStart } = world();
+    const { crawler, store, steps, runs } = recorded(network, { hops: 1, batchSize: 2, pageLimit: 10 });
+
+    await crawler.syncScope('alice');
+
+    const hop1 = activityOf(runs, HOP1);
+    const commits = [...new Set(hop1.map(({ step }) => step))];
+    // The first commit holds the newest post of every user, whichever batch read it.
+    const first = hop1.filter(({ step }) => step === commits[0]).flatMap(({ run }) => run.entries);
+    const newest = HOP1.map((user, i) => postPath(DAY_MS + i * MINUTE_MS));
+    expect(first.map(({ path }) => path)).toEqual(expect.arrayContaining(newest));
+    // Each commit sits right below the one before it, for every user, down to their batch's newest older write.
+    for (const user of HOP1) {
+      const own = hop1.filter(({ run }) => run.author === user).map(({ run }) => run);
+      for (let i = 1; i < own.length; i += 1) expect(own[i].head).toBe(own[i - 1].tail);
+      expect(own[own.length - 1].tail).toBeLessThanOrEqual(windowStart);
+      expect(await served(store, user, 'hs1', ACTIVITY)).toEqual(network.liveOf(user, [POSTS], windowStart));
+    }
+    // A window read goes out before the posts of the page read before it are all in.
+    const reads = steps.flatMap((step, index) =>
+      step.kind === 'read' && step.users.some((user) => HOP1.includes(user)) ? [index] : [],
+    );
+    const gets = steps.flatMap((step, index) => (step.kind === 'get' && HOP1.includes(step.author) ? [index] : []));
+    expect(reads.some((read, i) => i > 0 && gets.some((get) => get < read) && gets.some((get) => get > read))).toBe(
+      true,
+    );
   });
 
   it('reads the window once, with no search for its start, and fetches each post in it once', async () => {
     const { network, windowStart } = world();
-    const { crawler, steps } = recorded(network, { hops: 2 });
-
-    await crawler.syncScope('alice');
-
-    // Per hop one graph read and one window read: the window start is found by the window read itself.
-    expect(crawler.stats().streamRequests).toBe(6);
-    const gets = steps.flatMap((step) => (step.kind === 'get' ? [`${step.author}${step.path}`] : []));
     const inWindow = ['alice', ...HOP1, ...HOP2].flatMap((user) =>
       [...network.liveOf(user, [POSTS], windowStart).keys()].map((path) => `${user}${path}`),
     );
-    expect(gets.sort()).toEqual(inWindow.sort());
+    const whole = recorded(network, { hops: 2 });
+    await whole.crawler.syncScope('alice');
+    // Per hop one graph read and one window read: the window start is found by the window read itself.
+    expect(whole.crawler.stats().streamRequests).toBe(6);
+
+    // Batches merged into one stream read no event twice.
+    const mark = network.reads.length;
+    const paged = recorded(network, { hops: 2, batchSize: 2, pageLimit: 10 });
+    await paged.crawler.syncScope('alice');
+    const read = network.reads
+      .slice(mark)
+      .filter(({ reverse }) => reverse)
+      .flatMap(({ events }) => events.map(({ author, cursor }) => `${author}:${cursor}`));
+    expect(new Set(read).size).toBe(read.length);
+
+    for (const { steps } of [whole, paged]) {
+      const gets = steps.flatMap((step) => (step.kind === 'get' ? [`${step.author}${step.path}`] : []));
+      expect(gets.sort()).toEqual([...inWindow].sort());
+    }
   });
 
   it('keeps the tombstones of every slice and the slices above a fetch that keeps failing, then completes', async () => {
@@ -182,7 +238,7 @@ describe('syncScope newest first', () => {
 
   it('commits runs that give the same store applied in any order', async () => {
     const { network } = world();
-    const { crawler, store, runs } = recorded(network, { hops: 2 });
+    const { crawler, store, runs } = recorded(network, { hops: 2, batchSize: 2, pageLimit: 10 });
 
     await crawler.syncScope('alice');
 

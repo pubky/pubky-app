@@ -126,13 +126,10 @@ export async function mapLimit<T, R>(items: readonly T[], limit: number, fn: (it
   return results;
 }
 
-/**
- * Foreground calls answer what someone waits for, background calls keep what is shown current, and idle calls only
- * fill in what is shown already.
- */
-export type Priority = 'foreground' | 'background' | 'idle';
+/** Foreground calls answer what someone waits for; background calls keep what is shown current and complete. */
+export type Priority = 'foreground' | 'background';
 
-const PRIORITIES: readonly Priority[] = ['foreground', 'background', 'idle'];
+const PRIORITIES: readonly Priority[] = ['foreground', 'background'];
 
 export interface RequestGate {
   /**
@@ -143,9 +140,9 @@ export interface RequestGate {
 }
 
 /**
- * Admits at most `limit` calls per key at once, in arrival order within a priority and higher priorities first. A
- * call other than a foreground one starts only while no call of a higher priority waits, and leaves one slot free
- * when there are two or more, so a foreground call arriving while the others run starts at once.
+ * Admits at most `limit` calls per key at once, in arrival order within a priority and foreground first. A
+ * background call starts only while no foreground call waits, and leaves one slot free when there are two or more, so
+ * a foreground call arriving while the others run starts at once.
  */
 export function createRequestGate(limit: number): RequestGate {
   interface Lane {
@@ -157,7 +154,7 @@ export function createRequestGate(limit: number): RequestGate {
   const laneOf = (key: string): Lane => {
     const known = lanes.get(key);
     if (known !== undefined) return known;
-    const lane: Lane = { active: 0, waiting: { foreground: [], background: [], idle: [] } };
+    const lane: Lane = { active: 0, waiting: { foreground: [], background: [] } };
     lanes.set(key, lane);
     return lane;
   };

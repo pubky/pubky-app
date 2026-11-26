@@ -207,8 +207,8 @@ describe('onCommit', () => {
         { ...bob, group: ACTIVITY },
       ]),
     );
-    // Two member sets in turn, each a change of what is stored: the seed alone once its graph is in, then with bob.
-    expect(changes.flatMap((change) => change.seeds)).toEqual(['alice', 'alice']);
+    // One member set, once the seed's graph is in: the seed with bob, whom it names.
+    expect(changes.flatMap((change) => change.seeds)).toEqual(['alice']);
 
     changes.length = 0;
     await crawler.syncScope('alice');
@@ -238,8 +238,8 @@ describe('onCommit', () => {
 
     await crawler.syncScope('alice');
 
-    // The seed alone, then with bob (hop 1), then with carol (hop 2); the end of the sync stores nothing new.
-    expect(changes.filter((change) => change.seeds.length > 0)).toHaveLength(3);
+    // The seed with bob once its graph is in, then with carol once bob's is; the end of the sync stores nothing new.
+    expect(changes.filter((change) => change.seeds.length > 0)).toHaveLength(2);
     expect(await store.readScopeMembers('alice')).toEqual(
       new Map([
         ['alice', 0],

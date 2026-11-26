@@ -57,15 +57,19 @@ be structured-cloneable; cursors stay `bigint` and are never part of a key.
 
 `createCrawler` walks a scope hop by hop from the seed: it resolves each user's homeserver, syncs the
 full-history groups in batches from each user's stored head, and follows the links in the scope group to
-the next hop. Windowed groups reach back to the homeserver's window start, the newest write older than
+the next hop. A hop's windowed groups are read beside its full-history ones, since that read needs no link, and the
+next hop starts as soon as this hop's scope group is in, while its activity is still read; each homeserver is checked
+for a restore once, before any of those reads. Windowed groups reach back to the homeserver's window start, the newest write older than
 `windowDays`, and grow older only through `backfill`, which reads pages of `backfillPageLimit` events (100) and
 fetches and commits each page before reading the next, so older history shows up a screen at a time. A user in scope
 with history from the window start on catches up forward from its head. Any other, such as everyone in a first sync,
-is read newest first, a batch at a time, from their newest event down to the window start, or without one known down
-to the batch's newest write older than the window, which may settle it for the homeserver: no search for the start
-runs before the read. That read commits the way `backfill` does, in slices of `backfillPageLimit` events, newest first,
-each once its files to render are in, the files of a whole read fetched together. So a feed's newest page is in after
-its own files, not after the window's, and the top range only grows downwards. A user whose top range still starts
+is read newest first from their newest event down to the window start, or without one known down to their batch's
+newest write older than the window, which may settle it for the homeserver: no search for the start runs before the
+read. The batches of a homeserver commit as one stream in cursor order: each reads its first page, then a round
+commits everything above the highest point a batch still reading has reached, while that batch reads its next page.
+A round commits the way `backfill` does, in slices of `backfillPageLimit` events, newest first, each once its files to
+render are in, the files of a round fetched together. So a feed's newest page is in after its own files, not after the
+window's, whichever batch its authors fell in, and the top range only grows downwards. A user whose top range still starts
 above the window start, as after a sync that failed halfway, is read the same way below it at the next sync. A user loaded on
 demand (`syncUsers`) with no history of a windowed group starts with one such page from their newest event instead: a
 profile shows the newest posts first, so it needs neither the window start, a search over up to 1000 events, nor a
@@ -80,9 +84,9 @@ log went backwards (a restore) loses everything stored for it and is synced agai
 
 Requests to a homeserver queue in the crawler, at most `homeserverConcurrency` (6) in flight at once across every
 operation, so the order is the crawler's and not the browser's: a browser runs 6 connections per host over HTTP/1.1
-and queues the rest where nothing can reorder them. Three priorities share the queue: foreground for what someone
-waits for, background for a scope sync, idle for `hydrate`. A request starts only while none of a higher priority
-waits, and a background or idle one leaves one slot free, so a foreground request arriving beside them starts at once.
+and queues the rest where nothing can reorder them. Two priorities share the queue: foreground for what someone
+waits for, background for a scope sync and `hydrate`. A background request starts only while no foreground one
+waits, and leaves one slot free, so a foreground request arriving beside them starts at once.
 A request that started always runs to its end: on HTTP/1.1 an aborted request costs its connection. Operations may run
 together, even over the same scopes: each commits whole runs, which merge in any order.
 
@@ -96,8 +100,9 @@ its deadline or abort is ignored.
 A request answered 429, or failed or past its deadline, is retried up to three times, after the wait a 429 named
 or, since the SDK passes none on, after 1 s doubling per consecutive failure of that homeserver up to 8 s, reset by
 its next success. So one slow or failed request on a healthy homeserver costs a retry, never the homeserver. Only a
-request that fails all four times fails it, and then no other request of the operation retries against it, so a
-dead homeserver costs at most four requests per request in flight to it, not one per record. Retries never change what a
+request that fails all four times fails it, once for the operation however many of its reads failed together, and then
+no other request of the operation retries against it, so a dead homeserver costs at most four requests per request in
+flight to it, not one per record. Retries never change what a
 failure leaves behind: a batch, or a slice of a newest-first read, commits only once the files it needs to render are
 fetched, so a failed one commits nothing, its users keep their stored coverage, the slices above it included, and a
 later sync reads them again from there. A `later` file that
@@ -106,7 +111,9 @@ keeps failing fails its homeserver the same way and leaves its record without da
 The domain says when a record's file is fetched (`needsBody`). A `render` record, such as a post or a profile, gets
 its file before its run commits, since what it belongs to cannot be shown without it. A `later` one, such as a tag,
 only adds to what is shown already, so its run commits without it and `hydrate` fetches it afterwards, committing
-each file as a run of its one event, inside the stored coverage. In between the record is stored without data, the
+each file as a run of its one event, inside the stored coverage. A `hydrate` takes in the records crawls commit while
+it runs, and at each homeserver fetches the newest first, so the tags of a feed's first page come before older ones
+whichever hop wrote them: a tag names its post only in its file, so the newest is the nearest guess. In between the record is stored without data, the
 same state a saved index loads, and the view skips it: a post shows before the tags on it, which join it and its
 counts a moment later. Only `render` records back an answer the index calls exact, a post, a profile or a proof that
 one is absent; tags and counts are always answered for the scope, so a pending tag is never claimed as known. The
@@ -143,9 +150,10 @@ referenced author is known only through posts loaded alone (`ensurePost`), which
 profile; their stream answers empty with a `more` hint to load the user. A post whose every version, or a profile
 whose file, has a tombstone inside a trusted range is a definite not-found, whatever the window.
 
-A scope sync commits each hop's members as it reaches them, and the seed as a member as soon as its graph (profile and
-follows) is in, before its activity is read. So `ready()` resolves as soon as the view holds the seed's own scopes:
-from the store, a loaded file, or the first sync's seed graph, the seed's posts following within the sync and their tags after it; a seed that does not resolve or whose
+A scope sync commits each hop's members as it reaches them, the seed and the users it follows as soon as the seed's
+graph (profile and follows) is in, while its activity is read. So `ready()` resolves as soon as the view holds the seed's own scopes:
+from the store, a loaded file, or the first sync's seed graph, the seed's posts following within the sync and their tags
+beside it; a seed that does not resolve or whose
 homeserver fails resolves it too, `status().stats.seed` saying which. `status().firstSyncPending` turns false when the
 first scope sync settles: every post, profile and follow of the scope is in. Answers still say `syncing: true`, and
 the bootstrap `indexed: false`, while files a tag or a count depends on are known to be missing, `status().bodiesPending`:
@@ -185,9 +193,10 @@ Leaf requests run together: the ones waiting, or asked in the same turn, make on
 each author once and checks each homeserver once. A lookup already in flight for a user is shared by every operation
 that needs it. A tab that steps down lets its crawls end before it hands the lock on; `stop` aborts them.
 
-The files crawls leave for later are fetched by a fill (`hydrate`) that starts once no crawl runs and then runs beside
-the crawls that follow, its requests behind theirs at every homeserver, so it never aborts a request: a crawl's
-request takes a free slot or the next one a fill request frees. It commits each file as it arrives,
+The files crawls leave for later are fetched by a fill (`hydrate`) that starts as soon as a crawl commits a record whose
+file comes later, and runs beside that crawl and the ones that follow. Its requests queue with a scope sync's and
+behind a request someone waits for, so it never aborts a request: a request takes a free slot or the next one a fill
+request frees. A fill that brought files is followed by another while crawls left more. It commits each file as it arrives,
 setting the data only on a record still stored at that cursor, so a crawl that replaced the record, a restore that
 dropped its homeserver or a `forget` meanwhile wins. Only a stop or a step down aborts it. A fill that could not finish,
 on a failing homeserver, waits for the next crawl instead of looping. The first fill after a start, and the first after

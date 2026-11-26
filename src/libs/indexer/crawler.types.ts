@@ -145,8 +145,9 @@ export interface BackfillResult {
  */
 export interface Crawler {
   /**
-   * Syncs the seed's whole scope. Its requests are background ones: at each homeserver they wait while a request of
-   * another operation, other than `hydrate`, does, and never take its last free slot.
+   * Syncs the seed's whole scope, hop by hop, each hop's activity read beside its graph and the next hop started once
+   * the graph is in. Its requests are background ones, as `hydrate`'s: at each homeserver they wait while a
+   * foreground request does, and never take its last free slot.
    */
   syncScope(seed: string, signal?: AbortSignal): Promise<SyncResult>;
   /**
@@ -165,12 +166,12 @@ export interface Crawler {
    */
   syncLeaves(leaves: readonly LeafRequest[], signal?: AbortSignal): Promise<LeavesOutcome>;
   /**
-   * Fetches the files of served records that need one and have no data, newest cursor first, at most `limit`, and
-   * commits each as it arrives, on the record if it is still stored. Its requests are idle ones: at each homeserver
-   * they wait while a request of any other operation does, and never take its last free slot. It looks in `scopes`,
-   * such as every stored scope after a start or the scopes of a saved index, and in the scopes left unfilled: those a crawl committed with `later` records, and those a call
-   * could not finish, on a failing homeserver or past the limit. A record is tried once per crawler: one whose file
-   * stays gone or invalid is not fetched again until a later event replaces it.
+   * Fetches the files of served records that need one and have no data, newest cursor first at each homeserver, at
+   * most `limit`, and commits each as it arrives, on the record if it is still stored. Its requests are background
+   * ones, queued with a scope sync's. It looks in `scopes`, such as every stored scope after a start or the scopes of a
+   * saved index, and in the scopes left unfilled: those a crawl committed with `later` records, also while the call
+   * runs, and those a call could not finish, on a failing homeserver or past the limit. A record is tried once per
+   * crawler: one whose file stays gone or invalid is not fetched again until a later event replaces it.
    */
   hydrate(scopes?: Iterable<ScopeKey>, limit?: number, signal?: AbortSignal): Promise<HydrateResult>;
   /** How many scopes the next `hydrate` looks in without being given any. */

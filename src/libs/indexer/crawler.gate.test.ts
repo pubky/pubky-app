@@ -107,7 +107,7 @@ describe('crawler requests per homeserver', () => {
     for (const post of posts) expect(carol.get(post)).toEqual({ text: post });
   });
 
-  it('lets the fill finish a fetch whose record a crawl replaced meanwhile, setting nothing on the newer one', async () => {
+  it('lets the fill finish a fetch whose record a crawl replaced meanwhile, then fetches the newer one', async () => {
     const { network, tags, gets, releaseOldest, store, crawler } = world();
     await crawler.syncUsers(['bob']);
     gets.hold = true;
@@ -124,15 +124,38 @@ describe('crawler requests per homeserver', () => {
     }
     await filling;
 
+    // The old file set nothing on the edit; the edit, committed while the fill ran, joined it with its own file.
     const scope = { author: 'bob', homeserver: 'hs1', group: ACTIVITY };
     const newest = (await store.readScope(scope)).live.get(tags[3]);
     expect(newest?.cursor).toBe(edited);
-    expect(newest?.data).toBeUndefined();
+    expect(newest?.data).toEqual({ text: 'edited' });
     expect((await servedData(store, 'bob', 'hs1', ACTIVITY)).get(tags[2])).toEqual({ text: tags[2] });
+    expect(gets.started.filter((get) => get === `bob:${tags[3]}`)).toHaveLength(2);
     expect(gets.aborted).toBe(0);
+  });
 
-    gets.hold = false;
-    await crawler.hydrate();
-    expect((await servedData(store, 'bob', 'hs1', ACTIVITY)).get(tags[3])).toEqual({ text: 'edited' });
+  it('takes in the files a crawl leaves while it runs, newest first, ahead of older ones still queued', async () => {
+    const { network, tags, gets, releaseOldest, store, crawler } = world();
+    await crawler.syncUsers(['bob']);
+    gets.started = [];
+    gets.hold = true;
+    const filling = crawler.hydrate();
+    await settle();
+    expect(gets.started).toEqual([`bob:${tags[3]}`, `bob:${tags[2]}`]);
+
+    const fresh = `${TAGS}t5`;
+    network.putJson('bob', fresh, { text: fresh });
+    const crawling = crawler.syncUsers(['bob']);
+    await settle();
+    for (let turn = 0; turn < 20 && gets.held.length > 0; turn += 1) {
+      releaseOldest();
+      await settle();
+    }
+    // The tag already waiting for a slot goes first; the new one before every older tag not taken yet.
+    expect(gets.started).toEqual([tags[3], tags[2], tags[1], fresh, tags[0]].map((tag) => `bob:${tag}`));
+    expect(await filling).toEqual({ fetched: 5, remaining: 0 });
+    await crawling;
+    const bob = await servedData(store, 'bob', 'hs1', ACTIVITY);
+    for (const tag of [...tags, fresh]) expect(bob.get(tag)).toEqual({ text: tag });
   });
 });

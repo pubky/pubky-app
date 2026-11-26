@@ -313,17 +313,18 @@ describe('createIndexerRuntime requests that never settle', () => {
 
     runtime.start('alice');
     await settle();
-    expect(hung.reads).toBe(1);
+    // The seed's graph and activity, read at once.
+    expect(hung.reads).toBe(2);
 
     await runtime.ensureUser('carol');
     expect((await w.store.listScopes()).some((scope) => scope.author === 'carol')).toBe(true);
     await settle();
-    expect(hung.reads).toBe(1);
+    expect(hung.reads).toBe(2);
 
     runtime.stop();
     runtime.start('alice');
     await settle();
-    expect(hung.reads).toBe(2);
+    expect(hung.reads).toBe(4);
     expect(w.time.clock.now).toBe(NOW);
     runtime.stop();
   });
@@ -334,10 +335,11 @@ describe('createIndexerRuntime requests that never settle', () => {
     const runtime = runtimeWith(w, transport);
 
     runtime.start('alice');
-    // The read and its three retries, each at its deadline, with the waits of 1, 2 and 4 s between them.
-    await w.time.advance(4 * 30 * 1000 + 7 * 1000);
+    // The graph and activity reads and their three retries each, at their deadlines, the waits between them growing
+    // with the homeserver's failures: 1, 4 and 8 s for one, 2, 8 and 8 s for the other.
+    await w.time.advance(4 * 30 * 1000 + 18 * 1000);
 
-    expect(hung.reads).toBe(4);
+    expect(hung.reads).toBe(8);
     expect(runtime.status()).toMatchObject({ state: 'idle', firstSyncPending: false });
     expect(runtime.status().stats.homeserversFailed).toBe(1);
     expect((await w.store.readHomeserverState('hs1')).failure?.failures).toBe(1);

@@ -126,11 +126,11 @@ describe('saved index', () => {
     b.runtime.start('alice');
     await until(() => b.counts.reads.length > 0, 'the first stream read');
 
-    // Loaded before any stream answered: the follows, and the posts as pointers without data.
+    // Loaded before any stream answered: the follows, and the posts as pointers, whose files the fill fetches beside
+    // the sync.
     expect(await served(b.store, 'alice', 'hs1', GRAPH)).toEqual(await served(a.store, 'alice', 'hs1', GRAPH));
     const pointers = await b.store.readScope({ author: 'carol', homeserver: 'hs1', group: ACTIVITY });
     expect([...pointers.live.keys()]).toEqual([...(await served(a.store, 'carol', 'hs1', ACTIVITY)).keys()]);
-    expect([...pointers.live.values()].every((record) => record.data === undefined)).toBe(true);
     expect(await b.store.readScopeMembers('alice')).toEqual(await a.store.readScopeMembers('alice'));
 
     b.gate.open();
