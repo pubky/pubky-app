@@ -46,9 +46,9 @@ interface ResourcePlayerFrameProps {
    */
   holdsVideo?: boolean;
   /**
-   * An embed shown up front (a card without Also on, `GenericResourcePreview`), not opened by Play:
-   * no status line, since nothing was asked to start; loaded once near the screen, like a post's
-   * video embed.
+   * A frame loaded but not started (a post, map or document frame, a preview's player, a player let
+   * go by other media): no status line, since nothing was asked to start; loaded once near the
+   * screen, like a post's video embed.
    */
   quiet?: boolean;
 }

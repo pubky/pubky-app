@@ -30,12 +30,12 @@ interface NativeEmbedLinkCardProps {
 }
 
 /**
- * A platform's link (a YouTube or Vimeo video, an X post) that has no Pinakes card, with platform embeds
- * up front off: the link's own preview as a finished card from the app's origin (`ResourceLinkCard`:
- * its title and site, under them a YouTube video's thumbnail from the image route, else the page's own
- * preview image), with Play on <site> (Show on <site> for a post) in its header. The press loads the
- * platform's embed inside the card, in the image's place, a video started by that press; the same pill
- * closes it, back to the card. Nothing is asked from the platform before the press.
+ * A platform's link (a YouTube or Vimeo video, an X post) that has no Pinakes card: the link's own
+ * preview as a finished card from the app's origin (`ResourceLinkCard`: its title and site, under
+ * them a YouTube video's thumbnail from the image route, else the page's own preview image), with
+ * Play on <site> (Show on <site> for a post) in its header. The press loads the platform's embed
+ * inside the card, in the image's place, a video started by that press; the same pill closes it,
+ * back to the card. Nothing is asked from the platform before the press.
  */
 export function NativeEmbedLinkCard({ link, kind, renderEmbed, actions, open, onOpen }: NativeEmbedLinkCardProps) {
   const [ownOpen, setIsOpen] = useState(false);

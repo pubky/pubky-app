@@ -90,14 +90,6 @@ describe('GenericPreview, a link that is an image file', () => {
     expect(pinakes.calls.every(([uri]) => uri === null)).toBe(true);
     expect(screen.getByTestId('resource-link-card')).toBeInTheDocument();
   });
-
-  it('loads the file from its host as before, with platform embeds up front on', () => {
-    useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: true } });
-    render(<GenericPreview url={FILE} />);
-
-    expect(screen.getByAltText('Image preview')).toHaveAttribute('src', FILE);
-    expect(pinakes.calls).toHaveLength(0);
-  });
 });
 
 describe('GenericPreview, a link that is a video or audio file', () => {
@@ -136,13 +128,4 @@ describe('GenericPreview, a link that is a video or audio file', () => {
       expect(screen.getByRole('button', { name: `Play ${name} on cdn.example.com` })).toBeInTheDocument();
     },
   );
-
-  it('shows the player right away, not started, with platform embeds up front on', () => {
-    useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: true } });
-    media('video', 'https://cdn.example.com/clip.mp4');
-    const { container } = render(<GenericPreview url="https://cdn.example.com/clip.mp4" />);
-
-    expect(container.querySelector('video')).toHaveProperty('autoplay', false);
-    expect(screen.queryByRole('button', { name: /^Play / })).not.toBeInTheDocument();
-  });
 });

@@ -28,8 +28,8 @@ export interface ResourcePostPressProps {
 
 /**
  * A post whose card has no post text (`getResourcePost` is `null`: Pinakes could not read it, its name is
- * the link's shape alone, or the site refused the read) but whose own link has a post frame, with platform
- * embeds up front off: in the card, under its text, the place where the site's post will show, drawn with
+ * the link's shape alone, or the site refused the read) but whose own link has a post frame: in the
+ * card, under its text, the place where the site's post will show, drawn with
  * the parts of a service's drawn player (`ResourcePlayerFacade`'s button, row, mark and Play glyph):
  * "Show post", the site's mark and the glyph, one button. It is its own slim component rather than the
  * facade itself: the facade draws a whole player (a 420 px box, its title again), where inside a card

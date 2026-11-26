@@ -33,15 +33,15 @@ export interface ResourcePlayerFacadeProps {
 }
 
 /**
- * A service's player as the app draws it before the viewer's press, with platform embeds up front off
- * (`useCardPlayer`'s `embed`): in the player's place, in the player's box (`ResourcePlayerFrame`: a
- * video's 16:9 at most 80% of the screen tall, an audio player's own height, scaled with it where the
- * service lays out at a minimum width, `useFitScale`), from the card's data only, its image the card's
- * own (`useCardImage`, on the app's image route). Nothing loads from the service. A video shows its still
- * with the title and the service's mark over it; audio its cover, title, the card's summary line
- * (artist, length, album) and the service's mark. The whole drawing is one button ("Play <title> on
- * <service>"; a preview "Show the <service> player"): a press, Enter or Space loads the real player in
- * its place, started where the service allows.
+ * A service's player as the app draws it before the viewer's press (`useCardPlayer`'s `embed`): in
+ * the player's place, in the player's box (`ResourcePlayerFrame`: a video's 16:9 at most 80% of the
+ * screen tall, an audio player's own height, scaled with it where the service lays out at a minimum
+ * width, `useFitScale`), from the card's data only, its image the card's own (`useCardImage`, on
+ * the app's image route). Nothing loads from the service. A video shows its still with the title
+ * and the service's mark over it; audio its cover, title, the card's summary line (artist, length,
+ * album) and the service's mark. The whole drawing is one button ("Play <title> on <service>"; a
+ * preview "Show the <service> player"): a press, Enter or Space loads the real player in its place,
+ * started where the service allows.
  */
 export function ResourcePlayerFacade({ card, target, title, preview = false, onPlay }: ResourcePlayerFacadeProps) {
   const boxRef = useRef<HTMLDivElement>(null);

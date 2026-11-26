@@ -23,7 +23,6 @@ import {
 import { ResourceLinkCard } from '@/molecules/ResourceCard/ResourceLinkCard';
 import { PlayOnPill } from '@/molecules/ResourcePlayer/ResourcePlayerControls';
 import { PinakesStatus } from '@/services/pinakes/pinakes.types';
-import { useSettingsStore } from '@/stores/settings/settings.store';
 import { GenericPreviewSkeleton } from './GenericPreview.skeleton';
 import { useSlowRead } from './useSlowRead';
 
@@ -87,23 +86,15 @@ export function GenericPreview({ url }: GenericPreviewProps) {
 }
 
 /**
- * A link straight to an image file. With platform embeds up front on, the image from its host, as ever.
- * Off, nothing is asked from its host: Pinakes is asked to read the link once it is on screen
- * (`usePinakesCard`'s `resolveOnView`), which makes an image's card whose image is the file, and the
- * image shows from the app's image route as any card's (`?uri=<link>&src=<image>`), asked once more after
- * a failed answer. With no card (Pinakes unset or not reading it), or an image the route cannot serve,
- * the link shows as a finished card (`ResourceLinkCard`: the file's name and site), never as bare text.
+ * A link straight to an image file, with nothing asked from its host: Pinakes is asked to read the
+ * link once it is on screen (`usePinakesCard`'s `resolveOnView`), which makes an image's card whose
+ * image is the file, and the image shows from the app's image route as any card's
+ * (`?uri=<link>&src=<image>`), asked once more after a failed answer. With no card (Pinakes unset
+ * or not reading it), or an image the route cannot serve, the link shows as a finished card
+ * (`ResourceLinkCard`: the file's name and site), never as bare text.
  */
 function ImageFilePreview({ url }: { url: string }) {
-  const embedsUpFront = useSettingsStore((state) => state.media.embedsUpFront);
   const { ref, isVisible } = useViewportObserver({ rootMargin: '0px' });
-  if (embedsUpFront) {
-    return (
-      <Link overrideDefaults href={url}>
-        <Image src={url} alt="Image preview" className="w-full rounded-md object-contain" />
-      </Link>
-    );
-  }
   return (
     <Container overrideDefaults ref={ref} className="min-w-0" data-testid="image-file">
       <ImageFileCard url={url} isOnScreen={isVisible} />
@@ -145,23 +136,21 @@ function getFileName(url: string): string {
 }
 
 /**
- * A video or audio file the link is: the player right away with platform embeds up front on. Else the
- * link as a finished card from the app's origin (`ResourceLinkCard`: the file's kind, site and name) with
- * Play in its header; nothing is asked from the file's site until that press, which loads the player
- * inside the card, started by it. The same pill closes it, back to the card.
+ * A video or audio file the link is: the link as a finished card from the app's origin
+ * (`ResourceLinkCard`: the file's kind, site and name) with Play in its header; nothing is asked
+ * from the file's site until that press, which loads the player inside the card, started by it. The
+ * same pill closes it, back to the card.
  */
 function MediaPreview({ url, type }: { url: string; type: 'video' | 'audio' }) {
-  const embedsUpFront = useSettingsStore((state) => state.media.embedsUpFront);
   const [isOpen, setIsOpen] = useState(false);
   const site = getLinkHost(url) ?? url;
   const name = getFileName(url);
   const player =
     type === 'video' ? (
-      <Video src={url} autoPlay={!embedsUpFront} className="w-full cursor-auto object-contain" />
+      <Video src={url} autoPlay className="w-full cursor-auto object-contain" />
     ) : (
-      <Audio src={url} autoPlay={!embedsUpFront} className="cursor-auto" />
+      <Audio src={url} autoPlay className="cursor-auto" />
     );
-  if (embedsUpFront) return player;
   return (
     <Container overrideDefaults className="min-w-0" data-testid="media-preview" data-type={type}>
       <ResourceLinkCard

@@ -116,11 +116,6 @@ export class SettingsController {
     await this.commitUpdate();
   }
 
-  static async setEmbedsUpFront(embedsUpFront: boolean): Promise<void> {
-    useSettingsStore.getState().setEmbedsUpFront(embedsUpFront);
-    await this.commitUpdate();
-  }
-
   static async setLanguages(languages: string[]): Promise<void> {
     useSettingsStore.getState().setLanguages(languages);
     await this.commitUpdate();

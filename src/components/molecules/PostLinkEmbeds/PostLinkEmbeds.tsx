@@ -46,11 +46,11 @@ import type { EmbedData, EmbedProvider, EmbedResourceKind } from './Providers/Pr
  * as that resource too (`NativeEmbedResource`), also in the composer and in a quoted post (only
  * another Pubky post is suppressed there). Without Pinakes, the plain embed. A YouTube or Vimeo link
  * whose player the viewer removed from Players shows as any link does (the resource card, or the
- * link's own preview). With platform embeds up front off (the default), a platform embed that is not
- * shown as a resource (a link only in the text, or no Pinakes) shows the link's Pinakes card when
- * there is one (Pinakes asked to read the link once it is near the screen), a video's player drawn by
- * the app in its place until a press, else the link's own preview as a card with the platform's Play
- * inside it (`EmbedOnPress`).
+ * link's own preview). A platform embed that is not shown as a resource (a link only in the text, or no
+ * Pinakes) shows the link's Pinakes card when there is one (Pinakes asked to read the link once it is
+ * near the screen), a video's player drawn by the app in its place until a press, else the link's own
+ * preview as a card with the platform's Play inside it (`EmbedOnPress`). Nothing loads from the
+ * platform before the viewer's press.
  */
 export const PostLinkEmbeds = ({ content = '', url, isComposing = false }: PostLinkEmbedsProps) => {
   const isNested = useIsNestedPostPreview();
@@ -81,7 +81,7 @@ export const PostLinkEmbeds = ({ content = '', url, isComposing = false }: PostL
           kind={resourceKind}
           isComposing={isComposing}
         />
-      ) : provider.resourceKind && !media.embedsUpFront ? (
+      ) : provider.resourceKind ? (
         <EmbedOnPress
           key={url || getFirstLinkUrl(content)}
           link={url || getFirstLinkUrl(content) || ''}
@@ -135,17 +135,17 @@ interface EmbedOnPressProps {
 }
 
 /**
- * A platform's embed (an X post, a YouTube or Vimeo video) that is not shown as a resource, with
- * platform embeds up front off. Once the box first comes near the screen (at once in the composer),
- * the link's Pinakes card is read (re-read while on screen); a link Pinakes does not know is sent to
- * be read once (`resolveOnView`; the composer's own `resolve` there), the card's skeleton holding the
- * place for at most `PINAKES_SLOW_READ_MS`. With a card (`EmbedOnPressCard`): the card as a post's
- * embed shows it, with no footer of its own (the link is the post's text, not its resource): a video's
- * player drawn by the app until a press loads it in place, or the post's embed loading inside the card on
- * a press. Without one (Pinakes unset, no card, a
- * failed or slow read): the link's own preview as a card (`NativeEmbedLinkCard`), the platform's
- * embed loading inside it on its Play. An X post the card cannot tell (none, or no text) is read by the
- * app's own server (`useXPostCard`) and shows as a post. Nothing loads from the platform before the press.
+ * A platform's embed (an X post, a YouTube or Vimeo video) that is not shown as a resource. Once
+ * the box first comes near the screen (at once in the composer), the link's Pinakes card is read
+ * (re-read while on screen); a link Pinakes does not know is sent to be read once (`resolveOnView`;
+ * the composer's own `resolve` there), the card's skeleton holding the place for at most
+ * `PINAKES_SLOW_READ_MS`. With a card (`EmbedOnPressCard`): the card as a post's embed shows it,
+ * with no footer of its own (the link is the post's text, not its resource): a video's player drawn
+ * by the app until a press loads it in place, or the post's embed loading inside the card on a
+ * press. Without one (Pinakes unset, no card, a failed or slow read): the link's own preview as a
+ * card (`NativeEmbedLinkCard`), the platform's embed loading inside it on its Play. An X post the
+ * card cannot tell (none, or no text) is read by the app's own server (`useXPostCard`) and shows as
+ * a post. Nothing loads from the platform before the press.
  */
 function EmbedOnPress(props: EmbedOnPressProps) {
   // The default margin: the box counts as near 200px before it scrolls in.

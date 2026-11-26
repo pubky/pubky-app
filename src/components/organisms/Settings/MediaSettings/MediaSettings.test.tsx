@@ -4,7 +4,6 @@ import { defaultMediaPreferences, type MediaPreferences } from '@/stores/setting
 import { MediaSettings } from './MediaSettings';
 
 const mockSetPlayers = vi.fn();
-const mockSetEmbedsUpFront = vi.fn();
 const mockSetLanguages = vi.fn();
 const mockUseSettingsStore = vi.fn();
 
@@ -15,7 +14,6 @@ vi.mock('@/stores/settings/settings.store', () => ({
 vi.mock('@/hooks/useSettingsActions/useSettingsActions', () => ({
   useSettingsActions: () => ({
     setPlayers: mockSetPlayers,
-    setEmbedsUpFront: mockSetEmbedsUpFront,
     setLanguages: mockSetLanguages,
   }),
 }));
@@ -114,28 +112,11 @@ describe('MediaSettings', () => {
     expect(mockSetPlayers).not.toHaveBeenCalled();
   });
 
-  it('shows platform embeds up front off once turned off', () => {
-    setMedia({ embedsUpFront: false });
+  it('has no switch for platform embeds: every embed shows its view until a press, for everyone', () => {
     render(<MediaSettings />);
 
-    expect(screen.getByRole('switch', { name: 'Show platform embeds up front' })).not.toBeChecked();
-    expect(screen.getByText(/^When off, links show their card/)).toBeInTheDocument();
-  });
-
-  it('shows platform embeds up front off by default, and turns them on', () => {
-    render(<MediaSettings />);
-    expect(screen.getByRole('switch', { name: 'Show platform embeds up front' })).not.toBeChecked();
-    fireEvent.click(screen.getByRole('switch', { name: 'Show platform embeds up front' }));
-
-    expect(mockSetEmbedsUpFront).toHaveBeenCalledWith(true);
-  });
-
-  it('turns platform embeds up front off again', () => {
-    setMedia({ embedsUpFront: true });
-    render(<MediaSettings />);
-    expect(screen.getByRole('switch', { name: 'Show platform embeds up front' })).toBeChecked();
-    fireEvent.click(screen.getByRole('switch', { name: 'Show platform embeds up front' }));
-
-    expect(mockSetEmbedsUpFront).toHaveBeenCalledWith(false);
+    expect(screen.queryByRole('switch')).not.toBeInTheDocument();
+    expect(screen.queryByText(/platform embeds/i)).not.toBeInTheDocument();
+    expect(screen.getByText('Players')).toBeInTheDocument();
   });
 });

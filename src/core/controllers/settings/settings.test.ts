@@ -40,7 +40,6 @@ const mockStoreActions = {
   setHideSearch: vi.fn(),
   setNeverShowPosts: vi.fn(),
   setPlayers: vi.fn(),
-  setEmbedsUpFront: vi.fn(),
   setLanguages: vi.fn(),
   addMutedUser: vi.fn(),
   removeMutedUser: vi.fn(),
@@ -189,15 +188,6 @@ describe('SettingsController', () => {
       await SettingsController.setPlayers(['tidal'], ['youtube'], 'music');
 
       expect(mockStoreActions.setPlayers).toHaveBeenCalledWith(['tidal'], ['youtube'], 'music');
-      expect(commitUpdateSpy).toHaveBeenCalledWith(mockSettingsState, TEST_PUBKY);
-    });
-  });
-
-  describe('setEmbedsUpFront', () => {
-    it('should update zustand store and sync to homeserver', async () => {
-      await SettingsController.setEmbedsUpFront(false);
-
-      expect(mockStoreActions.setEmbedsUpFront).toHaveBeenCalledWith(false);
       expect(commitUpdateSpy).toHaveBeenCalledWith(mockSettingsState, TEST_PUBKY);
     });
   });

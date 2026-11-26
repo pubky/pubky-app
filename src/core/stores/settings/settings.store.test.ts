@@ -190,15 +190,13 @@ describe('SettingsStore', () => {
       const store = useSettingsStore.getState();
 
       store.setPlayers(['tidal', 'spotify'], ['youtube']);
-      store.setEmbedsUpFront(false);
       expect(useSettingsStore.getState().media).toEqual({
         playerOrder: ['tidal', 'spotify'],
         hiddenPlayers: ['youtube'],
-        embedsUpFront: false,
       });
 
       store.setPlayers([], []);
-      expect(useSettingsStore.getState().media).toEqual({ playerOrder: [], hiddenPlayers: [], embedsUpFront: false });
+      expect(useSettingsStore.getState().media).toEqual({ playerOrder: [], hiddenPlayers: [] });
       expect(useSettingsStore.getState().privacy).toEqual(defaultPrivacyPreferences); // Unchanged
     });
 
@@ -232,7 +230,6 @@ describe('SettingsStore', () => {
       expect(useSettingsStore.getState().media).toEqual({
         playerOrder: ['tidal'],
         hiddenPlayers: ['vimeo'],
-        embedsUpFront: false,
       });
     });
 
@@ -244,7 +241,6 @@ describe('SettingsStore', () => {
       expect(useSettingsStore.getState().media).toEqual({
         playerOrder: ['tidal'],
         hiddenPlayers: [],
-        embedsUpFront: false,
         languages: ['de', 'fr'],
       });
 
@@ -269,7 +265,6 @@ describe('SettingsStore', () => {
       expect(useSettingsStore.getState().media).toEqual({
         playerOrder: ['tidal'],
         hiddenPlayers: ['youtube'],
-        embedsUpFront: false,
         players: { podcasts: { order: ['spotify', 'card'], hidden: [] }, video: { order: [], hidden: ['vimeo'] } },
       });
     });
@@ -284,10 +279,17 @@ describe('SettingsStore', () => {
     });
 
     it('should keep the players of a store persisted with them', async () => {
-      const media = { playerOrder: ['deezer', 'youtube'], hiddenPlayers: ['vimeo'], embedsUpFront: true };
+      const media = { playerOrder: ['deezer', 'youtube'], hiddenPlayers: ['vimeo'] };
       await rehydrateFrom({ media });
 
       expect(useSettingsStore.getState().media).toEqual(media);
+    });
+
+    it('should drop platform embeds up front from a store an earlier version persisted with it on', async () => {
+      await rehydrateFrom({ media: { playerOrder: ['deezer'], hiddenPlayers: [], embedsUpFront: true } });
+
+      expect(useSettingsStore.getState().media).toEqual({ playerOrder: ['deezer'], hiddenPlayers: [] });
+      expect(useSettingsStore.getState().media).not.toHaveProperty('embedsUpFront');
     });
 
     it('should update privacy preferences independently', () => {

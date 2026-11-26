@@ -27,8 +27,8 @@ export interface TXPostCard {
  *
  * @param card - Pinakes' card as shown (`getNativeEmbedCard`), or `null`
  * @param link - The link as written
- * @param enabled - Platform embeds up front off, and the link's card read answered (a resolve of the
- *   link may still be running: the post shows without waiting for it)
+ * @param enabled - The link's card read answered (a resolve of the link may still be running: the
+ *   post shows without waiting for it)
  */
 export function useXPostCard(card: TPinakesResourceDetail | null, link: string, enabled: boolean): TXPostCard {
   const id = getXPostId(link) ?? getXPostId(card?.uri);

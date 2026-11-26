@@ -107,8 +107,8 @@ const DETAIL_ICON_SIZE = 14;
  * click on the card outside its controls (`ResourceCardFrame`); a tap on the image opens it in the
  * post's lightbox. The header's source is the one link out (none on a `missing` card). A player or
  * embed in the body (`isBodyReplaced`) is its own set of controls, as the episode's audio is, and
- * takes the image's place too. An embed loaded inside the card (`player`: an X post's, platform embeds
- * up front off) sits under the text instead of a video's image under it, and the card stays. The `large`
+ * takes the image's place too. An embed loaded inside the card (`player`: an X post's, after its press)
+ * sits under the text instead of a video's image under it, and the card stays. The `large`
  * card heads the resource page, lists every fact under "Details" (not while an X post's embed is its body,
  * `isBodyReplaced`), with one plain line in place of a refused read's `blocked` fact (`getBlockedNote`),
  * and is no click-through.

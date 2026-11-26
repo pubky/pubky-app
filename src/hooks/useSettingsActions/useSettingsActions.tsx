@@ -68,8 +68,6 @@ export function useSettingsActions(): UseSettingsActionsResult {
   const setPlayers = (playerOrder: string[], hiddenPlayers: string[], category?: string) =>
     run(() => SettingsController.setPlayers(playerOrder, hiddenPlayers, category));
 
-  const setEmbedsUpFront = (embedsUpFront: boolean) => run(() => SettingsController.setEmbedsUpFront(embedsUpFront));
-
   const setLanguages = (languages: string[]) => run(() => SettingsController.setLanguages(languages));
 
   return {
@@ -83,7 +81,6 @@ export function useSettingsActions(): UseSettingsActionsResult {
     setHideSearch,
     setNeverShowPosts,
     setPlayers,
-    setEmbedsUpFront,
     setLanguages,
     error,
   };

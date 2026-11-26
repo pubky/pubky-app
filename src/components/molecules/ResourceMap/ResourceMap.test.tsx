@@ -19,7 +19,6 @@ const mocks = vi.hoisted(() => {
     isVisible: false,
     /** What the map asked the viewport observer for. */
     observed: undefined as { rootMargin?: string } | undefined,
-    embedsUpFront: true,
     isLight: false,
     /** Every map made, in order. */
     maps: [] as FakeMap[],
@@ -109,10 +108,6 @@ vi.mock('@/hooks/useViewportObserver/useViewportObserver', () => ({
 vi.mock('@/hooks/useThemePreference/useThemePreference', () => ({
   useThemePreference: () => ({ isLightApplied: mocks.state.isLight }),
 }));
-vi.mock('@/stores/settings/settings.store', () => ({
-  useSettingsStore: (select: (state: { media: { embedsUpFront: boolean } }) => unknown) =>
-    select({ media: { embedsUpFront: mocks.state.embedsUpFront } }),
-}));
 
 const CAFE = { id: 'cafe', point: { lat: 47.3708689, lon: 8.5418241 }, label: 'Conditorei schober' };
 
@@ -128,7 +123,6 @@ const madeMap = async () => {
 describe('ResourceMap', () => {
   beforeEach(() => {
     mocks.state.isVisible = false;
-    mocks.state.embedsUpFront = true;
     mocks.state.isLight = false;
     mocks.state.maps.length = 0;
     mocks.state.constructorError = null;
@@ -570,9 +564,8 @@ describe('ResourceMap', () => {
   });
 
   describe('consent', () => {
-    it('draws the map at once with platform embeds up front off: no Show map, every request to the app', async () => {
+    it('draws the map at once: no Show map, every request to the app', async () => {
       mocks.state.isVisible = true;
-      mocks.state.embedsUpFront = false;
       renderMap();
 
       const map = await madeMap();

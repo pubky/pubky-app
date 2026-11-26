@@ -13,14 +13,19 @@ import { expectNoThirdPartyLoads } from '@/test-utils/third-party';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { useCardPlayer } from './useCardPlayer';
 
-// These cases are for platform embeds up front (Settings, Links & Media) turned on; the default
-// is off (`defaultMediaPreferences`): the same view, the player drawn by the app until a press.
-const upFrontMedia = { ...defaultMediaPreferences, embedsUpFront: true };
-beforeEach(() => useSettingsStore.setState({ media: upFrontMedia }));
+beforeEach(() => useSettingsStore.setState({ media: defaultMediaPreferences }));
 
-/** Every image or frame address on the page is the app's own (its `/api/favicon` icons): nothing from a service. */
-/** The player's drawing with platform embeds up front off: what it plays, on which service. */
+/** The player's drawing: what it plays, on which service. */
 const playOn = (service: string, title = musicFixture.name!) => `Play ${title} on ${service}`;
+/**
+ * The viewer's press on the player the app draws in `scope` (else the page), when one is drawn: that
+ * service's player loads in its place, started. The loaded frame (or the app's audio player) in `scope`.
+ */
+const load = (scope: HTMLElement = document.body, testId = 'resource-player-frame') => {
+  const facade = within(scope).queryAllByTestId('player-facade')[0];
+  if (facade) fireEvent.click(facade);
+  return within(scope).getByTestId(testId);
+};
 
 // A generic link (an artist's MusicBrainz page) Pinakes knows on a service with a player (Spotify,
 // the song's link): its card first, the services in its switch.
@@ -57,7 +62,7 @@ const rowsOf = (menu: HTMLElement) =>
     .getAllByTestId('play-on-row')
     .map((row) => row.textContent);
 
-/** Picks a service in the switch of the card in `testId`: with platform embeds up front off, that loads it. */
+/** Picks a service in the switch of the card in `testId`: the pick is the press, so that loads it. */
 const pickIn = (testId: string, row = 0) => {
   fireEvent.pointerDown(within(screen.getByTestId(testId)).getByRole('button', { name: /choose another service$/ }), {
     button: 0,
@@ -105,7 +110,7 @@ describe('useCardPlayer, a generic link', () => {
       ],
     };
     const setPlayers = (playerOrder: string[], hiddenPlayers: string[] = []) =>
-      useSettingsStore.setState({ media: { ...upFrontMedia, playerOrder, hiddenPlayers } });
+      useSettingsStore.setState({ media: { ...defaultMediaPreferences, playerOrder, hiddenPlayers } });
 
     afterEach(() => setPlayers([]));
 
@@ -139,11 +144,7 @@ describe('useCardPlayer, a generic link', () => {
     });
   });
 
-  it('loads nothing with platform embeds up front off: its card, its one service in the switch, loaded at once when picked', () => {
-    useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
-    onTestFinished(() => {
-      useSettingsStore.setState({ media: upFrontMedia });
-    });
+  it('loads nothing: its card, its one service in the switch, loaded at once when picked', () => {
     render(<Card card={ARTIST} testId="artist" />);
 
     expect(screen.getByTestId('artist')).toHaveAttribute('data-card', 'true');
@@ -182,18 +183,16 @@ describe('useCardPlayer, links Pinakes matched by metadata (kind maybe)', () => 
   // A song on Spotify (its own link), exactly on TIDAL, and maybe on Deezer (by artist, title and length).
   const SONG: TPinakesResourceDetail = { ...musicFixture, also_on: [DEEZER_MAYBE, TIDAL_EXACT] };
   const DEEZER_WIDGET = 'https://widget.deezer.com/widget/dark/track/67238735';
-  const setPlayers = (playerOrder: string[]) => useSettingsStore.setState({ media: { ...upFrontMedia, playerOrder } });
+  const setPlayers = (playerOrder: string[]) =>
+    useSettingsStore.setState({ media: { ...defaultMediaPreferences, playerOrder } });
 
   afterEach(() => setPlayers([]));
 
-  it('shows an exact link’s player up front, never a match, even one the viewer ranks first', () => {
+  it('plays an exact link’s player first, never a match, even one the viewer ranks first', () => {
     setPlayers(['deezer', 'tidal', 'spotify']);
     render(<Card card={SONG} testId="song" />);
 
-    expect(screen.getByTestId('resource-player-frame')).toHaveAttribute(
-      'src',
-      'https://embed.tidal.com/tracks/490851477?hideOverlays=true',
-    );
+    expect(load()).toHaveAttribute('src', 'https://embed.tidal.com/tracks/490851477?hideOverlays=true');
     expect(screen.getByTestId('player-switch').textContent).toBe('TIDAL');
     expect(rowsOf(openSwitchOf('song'))).toEqual(['TIDAL', 'Spotify', 'Deezer']);
   });
@@ -267,10 +266,7 @@ describe('useCardPlayer, links Pinakes matched by metadata (kind maybe)', () => 
   it('marks nothing on a card with exact links only, in Pinakes’ order as before', () => {
     render(<Card card={{ ...SONG, also_on: [TIDAL_EXACT, { ...DEEZER_MAYBE, kind: undefined }] }} testId="song" />);
 
-    expect(screen.getByTestId('resource-player-frame')).toHaveAttribute(
-      'src',
-      'https://open.spotify.com/embed/track/1YQWosTIljIvxAgHWTp7KP',
-    );
+    expect(load()).toHaveAttribute('src', 'https://open.spotify.com/embed/track/1YQWosTIljIvxAgHWTp7KP');
     const menu = openSwitchOf('song');
     expect(rowsOf(menu)).toEqual(['Spotify', 'TIDAL', 'Deezer']);
     for (const row of within(menu).getAllByTestId('play-on-row')) {
@@ -281,9 +277,9 @@ describe('useCardPlayer, links Pinakes matched by metadata (kind maybe)', () => 
 });
 
 /**
- * A song shared as its link on a service with a player shows that player up front (`embed`):
- * the chosen service's own embed, paused, with a switch to Card and the card's other services; no
- * Play on.
+ * A song shared as its link on a service with a player shows that player (`embed`): drawn by the
+ * app until the viewer's press loads the chosen service's own embed, with a switch to Card and the
+ * card's other services; no Play on.
  */
 describe('useCardPlayer, a song', () => {
   const SPOTIFY = musicFixture.uri;
@@ -309,7 +305,7 @@ describe('useCardPlayer, a song', () => {
   }
 
   const setMedia = (media: Partial<typeof defaultMediaPreferences>) =>
-    useSettingsStore.setState({ media: { ...upFrontMedia, ...media } });
+    useSettingsStore.setState({ media: { ...defaultMediaPreferences, ...media } });
 
   function Song({
     card,
@@ -333,7 +329,10 @@ describe('useCardPlayer, a song', () => {
     );
   }
 
-  const frameOf = (testId = 'song') => within(screen.getByTestId(testId)).getByTestId('resource-player-frame');
+  /** The card's loaded player: the viewer's press on its drawing loads it when it is not loaded yet. */
+  const frameOf = (testId = 'song') => load(screen.getByTestId(testId));
+  /** The drawing of the card's player before any press: its name says what it plays, on which service. */
+  const drawnIn = (testId = 'song') => within(screen.getByTestId(testId)).getByTestId('player-facade');
   // A press inside a player's frame: the pointer is over it, then the frame takes the focus.
   const engage = (frame: HTMLElement) =>
     act(() => {
@@ -360,9 +359,11 @@ describe('useCardPlayer, a song', () => {
     setMedia({});
   });
 
-  it('shows the shared link’s player up front, paused, instead of the card’s text and without Play on', () => {
+  it('draws the shared link’s player instead of the card’s text, without Play on, and loads it on a press', () => {
     render(<Song card={SONG} />);
 
+    expect(drawnIn()).toHaveAccessibleName(playOn('Spotify'));
+    expect(document.querySelector('iframe')).toBeNull();
     expect(frameOf()).toHaveAttribute('src', 'https://open.spotify.com/embed/track/1YQWosTIljIvxAgHWTp7KP');
     expect(screen.queryByText(musicFixture.name!)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^Play on/ })).not.toBeInTheDocument();
@@ -373,41 +374,23 @@ describe('useCardPlayer, a song', () => {
     setMedia({ playerOrder: ['tidal', 'spotify'] });
     render(<Song card={SONG} />);
 
-    expect(frameOf()).toHaveAttribute('src', 'https://embed.tidal.com/tracks/490851477?hideOverlays=true');
+    expect(drawnIn()).toHaveAccessibleName(playOn('TIDAL'));
   });
 
   it('picks the shared link’s service when the song is on no service in the viewer’s order', () => {
     setMedia({ playerOrder: ['deezer'] });
     render(<Song card={SONG} href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" />);
 
-    expect(frameOf()).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1&rel=0');
+    expect(drawnIn()).toHaveAccessibleName(playOn('YouTube'));
   });
 
   it('falls back to the card’s canonical link when the shared link has no player', () => {
     render(<Song card={SONG} href="https://example.com/share/1" />);
 
-    expect(frameOf()).toHaveAttribute('src', 'https://open.spotify.com/embed/track/1YQWosTIljIvxAgHWTp7KP');
+    expect(drawnIn()).toHaveAccessibleName(playOn('Spotify'));
   });
 
-  it('never tells the up-front player to start: no autoplay parameter, no start message', () => {
-    render(<Song card={SONG} />);
-    const frame = frameOf() as HTMLIFrameElement;
-    const post = vi.spyOn(frame.contentWindow!, 'postMessage');
-
-    fireEvent.load(frame);
-    window.dispatchEvent(
-      new MessageEvent('message', {
-        origin: 'https://open.spotify.com',
-        source: frame.contentWindow,
-        data: { type: 'ready' },
-      }),
-    );
-
-    expect(frame.getAttribute('src')).not.toMatch(/auto_?play/);
-    expect(post).not.toHaveBeenCalled();
-  });
-
-  it('switches in place from its menu: the old player goes, the new one stays paused, the default is kept', () => {
+  it('switches in place from its menu: the old player goes, the picked one loads, the default is kept', () => {
     render(<Song card={SONG} />);
     const old = frameOf();
 
@@ -421,7 +404,6 @@ describe('useCardPlayer, a song', () => {
     expect(old).not.toBeInTheDocument();
     expect(frameOf()).toHaveAttribute('src', 'https://embed.tidal.com/tracks/490851477?hideOverlays=true');
     expect(screen.getAllByTestId('resource-player-frame')).toHaveLength(1);
-    expect(document.querySelector('[data-keep-playing]')).toBeNull();
     expect(useSettingsStore.getState().media.playerOrder).toEqual([]);
   });
 
@@ -442,7 +424,7 @@ describe('useCardPlayer, a song', () => {
     setMedia({ playerOrder: ['youtube', 'tidal', 'spotify'], hiddenPlayers: ['tidal'] });
     render(<Song card={SONG} />);
 
-    expect(frameOf()).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1&rel=0');
+    expect(drawnIn()).toHaveAccessibleName(playOn('YouTube'));
     const rows = within(openSwitch()).getAllByTestId('play-on-row');
     expect(rows.map((row) => row.textContent)).toEqual(['YouTube', 'Spotify']);
   });
@@ -459,7 +441,7 @@ describe('useCardPlayer, a song', () => {
   it('has no switch for a song on one service: nothing to choose', () => {
     render(<Song card={SONG_ALONE} />);
 
-    expect(frameOf()).toBeInTheDocument();
+    expect(drawnIn()).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /choose another service$/ })).not.toBeInTheDocument();
   });
 
@@ -614,8 +596,8 @@ describe('useCardPlayer, a song', () => {
         expect(screen.queryByRole('button', { name: /choose another service$/ })).not.toBeInTheDocument();
       });
 
-      it('loads the services’ icons only from the app with platform embeds up front off', () => {
-        setMedia({ playerOrder: ['card'], embedsUpFront: false });
+      it('loads the services’ icons only from the app', () => {
+        setMedia({ playerOrder: ['card'] });
         render(<Song card={SONG} />);
 
         expect(document.querySelector('iframe')).toBeNull();
@@ -670,7 +652,7 @@ describe('useCardPlayer, a song', () => {
     expect(frameOf()).toBe(frame);
   });
 
-  it('does not dock up-front players when they scroll away, only one the viewer pressed in', () => {
+  it('docks no drawn player when it scrolls away, only one the viewer loaded', () => {
     vi.useFakeTimers();
     render(<Song card={SONG} />);
     report(false);
@@ -696,34 +678,13 @@ describe('useCardPlayer, a song', () => {
     expect(first.closest('[data-keep-playing]')).not.toBeNull();
 
     engage(frameOf('second'));
+    // The first is let go: its drawing is back.
     expect(first).not.toBeInTheDocument();
-    expect(frameOf('first').closest('[data-keep-playing]')).toBeNull();
+    expect(drawnIn('first')).toHaveAccessibleName(playOn('Spotify'));
     expect(frameOf('second').closest('[data-keep-playing]')).not.toBeNull();
   });
 
-  it('takes the focus tabbed into another player’s frame for no press: the playing one keeps the page', () => {
-    vi.useFakeTimers();
-    render(
-      <>
-        <Song card={SONG} testId="first" />
-        <Song card={SONG_ALONE} testId="second" />
-      </>,
-    );
-    const first = frameOf('first');
-    engage(first);
-    fireEvent.mouseOver(document.body);
-
-    const second = frameOf('second');
-    act(() => {
-      second.focus();
-      vi.advanceTimersByTime(1);
-    });
-    expect(frameOf('first')).toBe(first);
-    expect(first.closest('[data-keep-playing]')).not.toBeNull();
-    expect(second.closest('[data-keep-playing]')).toBeNull();
-  });
-
-  it('closes from the dock to a paused player in the card, which does not open again by itself', () => {
+  it('closes from the dock to its drawing in the card, which does not open again by itself', () => {
     vi.useFakeTimers();
     render(<Song card={SONG} />);
     const frame = frameOf();
@@ -739,7 +700,8 @@ describe('useCardPlayer, a song', () => {
     });
     report(false);
     expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
-    expect(frameOf().closest('[data-keep-playing]')).toBeNull();
+    expect(drawnIn()).toBeInTheDocument();
+    expect(document.querySelector('iframe')).toBeNull();
   });
 
   describe('with the default settings (a new viewer, nothing saved)', () => {
@@ -874,9 +836,7 @@ describe('useCardPlayer, a song', () => {
     });
   });
 
-  describe('with platform embeds up front off', () => {
-    beforeEach(() => setMedia({ embedsUpFront: false }));
-
+  describe('nothing third-party before a press', () => {
     it('draws the player until it is pressed, and the service icons only from the app', () => {
       render(<Song card={SONG} />);
 
@@ -925,7 +885,7 @@ describe('useCardPlayer, a song', () => {
     expect(composer).not.toBeInTheDocument();
   });
 
-  it('makes an up-front audio file the page’s player once it plays, and pauses it for another', () => {
+  it('makes an audio file loaded by its press the page’s player, and pauses it for another', () => {
     vi.useFakeTimers();
     const pause = vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => undefined);
     render(
@@ -938,16 +898,16 @@ describe('useCardPlayer, a song', () => {
         <Song card={SONG_ALONE} testId="spotify" />
       </>,
     );
-    const audio = within(screen.getByTestId('file')).getByTestId('resource-player-audio');
+    const audio = load(screen.getByTestId('file'), 'resource-player-audio');
     Object.defineProperty(audio, 'paused', { configurable: true, value: false });
     fireEvent.play(audio);
     expect(audio.closest('[data-keep-playing]')).not.toBeNull();
 
     engage(frameOf('spotify'));
-    // Paused where it is, not loaded anew.
+    // Paused, then let go: its drawing is back.
     expect(pause.mock.contexts).toEqual([audio]);
-    expect(audio).toBeInTheDocument();
-    expect(audio.closest('[data-keep-playing]')).toBeNull();
+    expect(audio).not.toBeInTheDocument();
+    expect(drawnIn('file')).toBeInTheDocument();
   });
 
   /** One media plays on the page: its own word, where it gives one, says it started. */
@@ -1007,7 +967,8 @@ describe('useCardPlayer, a song', () => {
       render(
         <>
           <Song card={DEEZER_SONG} href={DEEZER_SONG.uri} testId="deezer" />
-          <Song card={TOOT} testId="toot" />
+          {/* A post the card cannot tell (no text): its frame shown by the press in the card. */}
+          <Song card={{ ...TOOT, name: null, description: null }} testId="toot" />
         </>,
       );
       const deezer = frameOf('deezer');
@@ -1015,7 +976,8 @@ describe('useCardPlayer, a song', () => {
       const playing = deezer.closest('[data-keep-playing]');
       expect(playing).not.toBeNull();
 
-      const toot = frameOf('toot');
+      fireEvent.click(within(screen.getByTestId('toot')).getByTestId('post-press'));
+      const toot = within(screen.getByTestId('toot')).getByTestId('resource-player-frame');
       expect(toot).toHaveAttribute('src', TOOT.embed?.src);
       engage(toot);
       expect(frameOf('deezer')).toBe(deezer);
@@ -1026,7 +988,6 @@ describe('useCardPlayer, a song', () => {
 
     it('stops what plays when the video in a post’s frame is pressed, and loads that frame anew when other media starts', () => {
       vi.useFakeTimers();
-      setMedia({ embedsUpFront: false });
       const VIDEO_TOOT = {
         ...TOOT,
         stream: { url: 'https://files.mastodon.social/a.mp4', type: 'video/mp4', preview: false },
@@ -1058,7 +1019,6 @@ describe('useCardPlayer, a song', () => {
     });
 
     it('keeps what plays when a post’s frame is shown by its press: a frame shown stops nothing', () => {
-      setMedia({ embedsUpFront: false });
       render(
         <>
           <Song card={DEEZER_SONG} href={DEEZER_SONG.uri} testId="deezer" />
@@ -1077,7 +1037,7 @@ describe('useCardPlayer, a song', () => {
       expect(Array.from(docked())).toEqual([playing]);
     });
 
-    it('asks a YouTube player to say when it plays, and makes it the page’s player only once it does', () => {
+    it('asks a YouTube player to say when it plays; loaded by the press, it is the page’s player at once', () => {
       vi.useFakeTimers();
       render(<Page />);
       const youtube = frameOf('youtube') as HTMLIFrameElement;
@@ -1085,9 +1045,7 @@ describe('useCardPlayer, a song', () => {
 
       fireEvent.load(youtube);
       expect(post).toHaveBeenCalledWith(JSON.stringify({ event: 'listening', id: 1, channel: 'widget' }), YOUTUBE);
-      // A press is no start: the player says when it plays.
-      engage(youtube);
-      expect(docked()).toHaveLength(0);
+      expect(docked()).toHaveLength(1);
 
       youtubeSays(youtube, 1);
       expect(docked()).toHaveLength(1);
@@ -1104,18 +1062,17 @@ describe('useCardPlayer, a song', () => {
 
       const deezer = frameOf('deezer');
       engage(deezer);
-      // YouTube is paused in place (its frame stays); the Deezer player is the page's now.
+      // YouTube is paused, then let go (its drawing back); the Deezer player is the page's now.
       expect(post).toHaveBeenCalledWith(JSON.stringify({ event: 'command', func: 'pauseVideo', args: '' }), YOUTUBE);
-      expect(frameOf('youtube')).toBe(youtube);
+      expect(youtube).not.toBeInTheDocument();
+      expect(drawnIn('youtube')).toBeInTheDocument();
       expect(Array.from(docked())).toEqual([deezer.closest('[data-keep-playing]')]);
 
-      // YouTube starting again stops Deezer, which cannot be paused: loaded anew, paused.
-      youtubeSays(youtube, 2);
-      youtubeSays(youtube, 1);
+      // YouTube pressed again stops Deezer, which cannot be paused: its drawing back too.
+      const again = frameOf('youtube');
       expect(deezer).not.toBeInTheDocument();
-      expect(Array.from(docked())).toEqual([youtube.closest('[data-keep-playing]')]);
-      report(false);
-      expect(screen.getAllByRole('complementary')).toHaveLength(1);
+      expect(drawnIn('deezer')).toBeInTheDocument();
+      expect(Array.from(docked())).toEqual([again.closest('[data-keep-playing]')]);
     });
 
     it('leaves a player the viewer paused in its card out of the dock, until it plays again', () => {
@@ -1163,16 +1120,26 @@ describe('useCardPlayer, a song', () => {
 
     it('ignores a player’s word from another origin or another window', () => {
       vi.useFakeTimers();
-      render(<Page />);
+      render(
+        <>
+          <Song card={DEEZER_SONG} href={DEEZER_SONG.uri} testId="deezer" />
+          <Song card={YOUTUBE_SONG} href={YOUTUBE_SONG.uri} testId="youtube" preview />
+        </>,
+      );
+      const deezer = frameOf('deezer') as HTMLIFrameElement;
+      const playing = deezer.closest('[data-keep-playing]');
+      // A preview's player loads paused, the page's player playing on.
       const youtube = frameOf('youtube');
+      expect(Array.from(docked())).toEqual([playing]);
 
       youtubeSays(youtube, 1, 'https://evil.example');
       youtubeSays(youtube, 1, YOUTUBE, window);
-      youtubeSays(youtube, 1, YOUTUBE, (frameOf('deezer') as HTMLIFrameElement).contentWindow);
-      expect(docked()).toHaveLength(0);
+      youtubeSays(youtube, 1, YOUTUBE, deezer.contentWindow);
+      expect(frameOf('deezer')).toBe(deezer);
+      expect(Array.from(docked())).toEqual([playing]);
     });
 
-    it('closes from the dock to a paused player in place', () => {
+    it('closes from the dock to its drawing in place', () => {
       vi.useFakeTimers();
       render(<Page />);
       const youtube = frameOf('youtube') as HTMLIFrameElement;
@@ -1182,7 +1149,8 @@ describe('useCardPlayer, a song', () => {
 
       fireEvent.click(screen.getByRole('button', { name: 'Close the YouTube player' }));
       expect(post).toHaveBeenCalledWith(JSON.stringify({ event: 'command', func: 'pauseVideo', args: '' }), YOUTUBE);
-      expect(frameOf('youtube')).toBe(youtube);
+      expect(youtube).not.toBeInTheDocument();
+      expect(drawnIn('youtube')).toBeInTheDocument();
       expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
     });
 
@@ -1208,29 +1176,6 @@ describe('useCardPlayer, a song', () => {
       expect(second.closest('[data-keep-playing]')).not.toBeNull();
     });
 
-    it('takes no word from a player still playing, nor from a paused video being sought, for a start', () => {
-      vi.useFakeTimers();
-      render(<Page />);
-      const youtube = frameOf('youtube');
-      youtubeSays(youtube, 1);
-      const deezer = frameOf('deezer');
-      engage(deezer);
-      const dockedDeezer = deezer.closest('[data-keep-playing]');
-
-      // Still playing as it is told to pause, then paused and sought: Deezer keeps the page.
-      youtubeSays(youtube, 1);
-      youtubeSays(youtube, 3);
-      youtubeSays(youtube, 2);
-      youtubeSays(youtube, 3);
-      expect(frameOf('deezer')).toBe(deezer);
-      expect(Array.from(docked())).toEqual([dockedDeezer]);
-
-      // Played again by the viewer: it takes the page.
-      youtubeSays(youtube, 1);
-      expect(deezer).not.toBeInTheDocument();
-      expect(Array.from(docked())).toEqual([youtube.closest('[data-keep-playing]')]);
-    });
-
     it('stops the other players for a preview’s player, which never docks', () => {
       vi.useFakeTimers();
       render(
@@ -1251,21 +1196,8 @@ describe('useCardPlayer, a song', () => {
     });
   });
 
-  it('lets go of the page’s player when platform embeds are turned off while it plays', () => {
-    vi.useFakeTimers();
-    render(<Song card={SONG} />);
-    engage(frameOf());
-    expect(document.querySelector('[data-keep-playing]')).not.toBeNull();
-
-    act(() => setMedia({ embedsUpFront: false }));
-    expect(document.querySelector('iframe')).toBeNull();
-    act(() => setMedia({ embedsUpFront: true }));
-    expect(frameOf().closest('[data-keep-playing]')).toBeNull();
-  });
-
   it('offers the service’s page when a player opened by Play on has not loaded after a while', () => {
     vi.useFakeTimers();
-    setMedia({ embedsUpFront: false });
     render(<Song card={SONG} />);
     fireEvent.click(screen.getByRole('button', { name: playOn('Spotify') }));
 
@@ -1274,11 +1206,12 @@ describe('useCardPlayer, a song', () => {
     expect(screen.getByRole('link', { name: /Open in Spotify/ })).toHaveAttribute('href', SPOTIFY);
   });
 
-  it('does not start a plain audio file up front', () => {
+  it('starts a plain audio file on the press, not before', () => {
     render(<Song card={{ ...SONG_ALONE, uri: 'https://example.com/song.mp3' }} href="https://example.com/song.mp3" />);
 
-    const audio = screen.getByTestId('resource-player-audio') as HTMLAudioElement;
-    expect(audio.autoplay).toBe(false);
+    expect(screen.queryByTestId('resource-player-audio')).not.toBeInTheDocument();
+    const audio = load(document.body, 'resource-player-audio') as HTMLAudioElement;
+    expect(audio.autoplay).toBe(true);
   });
 
   it('shows an artist’s generic link as its card, a song that is not ok as its player, one gone upstream as its card', () => {
@@ -1288,7 +1221,7 @@ describe('useCardPlayer, a song', () => {
     unmount();
 
     const { unmount: unmountUnreachable } = render(<Song card={{ ...SONG, status: 'unreachable' }} />);
-    expect(frameOf()).toHaveAttribute('src', 'https://open.spotify.com/embed/track/1YQWosTIljIvxAgHWTp7KP');
+    expect(drawnIn()).toHaveAccessibleName(playOn('Spotify'));
     unmountUnreachable();
 
     // Gone upstream: its own link offers no player, so the card shows, its Also on in the switch.
@@ -1333,7 +1266,7 @@ describe('useCardPlayer, a song', () => {
     };
     render(<Song card={youtube} href={youtube.uri} />);
 
-    expect(frameOf()).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/5NV6Rdv1a3I?enablejsapi=1&rel=0');
+    expect(drawnIn()).toHaveAccessibleName(playOn('YouTube'));
     expect(screen.queryByRole('button', { name: /^Play on/ })).not.toBeInTheDocument();
     const rows = within(openSwitch()).getAllByTestId('play-on-row');
     expect(rows.map((row) => row.textContent)).toEqual(['YouTube', 'Spotify', 'Deezer', 'TIDAL', 'Apple Music']);
@@ -1410,7 +1343,6 @@ describe('useCardPlayer, a song', () => {
     });
 
     it('neither plays nor shows a player because Play on was pressed for the first one', () => {
-      setMedia({ embedsUpFront: false });
       const { rerender } = render(<Song card={SONG} />);
       fireEvent.click(screen.getByRole('button', { name: playOn('Spotify') }));
       expect(frameOf()).toBeInTheDocument();
@@ -1423,7 +1355,7 @@ describe('useCardPlayer, a song', () => {
 });
 
 /**
- * Every link that plays shows its player up front, as a song does: a video, an album, an episode,
+ * Every link that plays shows its player, as a song does: a video, an album, an episode,
  * any link on a service with a player; the switch only when there is more than one service.
  */
 describe('useCardPlayer, anything that plays', () => {
@@ -1446,21 +1378,21 @@ describe('useCardPlayer, anything that plays', () => {
       .map((row) => row.textContent);
   };
 
-  afterEach(() => useSettingsStore.setState({ media: upFrontMedia }));
+  afterEach(() => useSettingsStore.setState({ media: defaultMediaPreferences }));
 
-  it('shows an ordinary video Pinakes knows nowhere else as its player, paused, with no switch and no Play on', () => {
+  it('draws an ordinary video Pinakes knows nowhere else as its player, with no switch and no Play on', () => {
     render(<Item card={{ ...videoFixture, also_on: [] }} />);
 
-    expect(frame()).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1&rel=0');
-    expect(screen.queryByText(videoFixture.name!)).not.toBeInTheDocument();
+    expect(screen.getByTestId('player-facade')).toHaveAccessibleName(playOn('YouTube', videoFixture.name!));
+    expect(document.querySelector('iframe')).toBeNull();
     expect(screen.queryByRole('button', { name: /choose another service$/ })).not.toBeInTheDocument();
     noPlayOn();
   });
 
-  it('shows a video with Also on as its player too, its other services in the switch', () => {
+  it('draws a video with Also on as its player too, its other services in the switch', () => {
     render(<Item card={videoFixture} />);
 
-    expect(frame()).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1&rel=0');
+    expect(screen.getByTestId('player-facade')).toHaveAccessibleName(playOn('YouTube', videoFixture.name!));
     noPlayOn();
     expect(switchRows()).toEqual(['YouTube', 'TIDAL', 'Apple Music', 'Deezer', 'Spotify']);
   });
@@ -1491,6 +1423,8 @@ describe('useCardPlayer, anything that plays', () => {
     };
     render(<Item card={artist} />);
 
+    expect(screen.getByTestId('player-facade')).toHaveAccessibleName(playOn('Spotify', artist.name!));
+    fireEvent.click(screen.getByTestId('player-facade'));
     expect(frame()).toHaveAttribute('src', 'https://open.spotify.com/embed/artist/4tZwfgrHOc3mvqYlEYSvVi');
     expect(switchRows()).toEqual(['Spotify', 'Deezer']);
     noPlayOn();
@@ -1517,7 +1451,7 @@ describe('useCardPlayer, anything that plays', () => {
     noPlayOn();
   });
 
-  it('shows a SoundCloud track as its player, with no switch', () => {
+  it('draws a SoundCloud track’s player, with no switch, and starts it on the press', () => {
     const track: TPinakesResourceDetail = {
       ...musicFixture,
       uri: 'https://soundcloud.com/forss/flickermood',
@@ -1528,13 +1462,14 @@ describe('useCardPlayer, anything that plays', () => {
     };
     render(<Item card={track} />);
 
+    expect(document.querySelector('iframe')).toBeNull();
+    fireEvent.click(screen.getByTestId('player-facade'));
     expect(frame().getAttribute('src')).toMatch(/^https:\/\/w\.soundcloud\.com\/player\/\?url=/);
-    expect(frame().getAttribute('src')).not.toMatch(/auto_play/);
+    expect(frame().getAttribute('src')).toMatch(/auto_play=true/);
     expect(screen.queryByRole('button', { name: /choose another service$/ })).not.toBeInTheDocument();
   });
 
-  it('loads nothing up front with platform embeds up front off: a stand-in with Play on', () => {
-    useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
+  it('loads nothing before a press: a stand-in with Play on', () => {
     render(<Item card={videoFixture} />);
 
     expect(document.querySelector('iframe')).toBeNull();
@@ -1542,8 +1477,7 @@ describe('useCardPlayer, anything that plays', () => {
     expect(screen.getByRole('button', { name: playOn('YouTube', videoFixture.name!) })).toBeInTheDocument();
   });
 
-  it('loads the player in the drawing’s place on a press with platform embeds up front off, started, with no Close pill', () => {
-    useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
+  it('loads the player in the drawing’s place on a press, started, with no Close pill', () => {
     render(<Item card={videoFixture} />);
 
     fireEvent.click(screen.getByRole('button', { name: playOn('YouTube', videoFixture.name!) }));
@@ -1555,6 +1489,7 @@ describe('useCardPlayer, anything that plays', () => {
 
   it('puts the switch apart from the player, for the header of the frame it is shown in', () => {
     render(<Item card={videoFixture} />);
+    fireEvent.click(screen.getByTestId('player-facade'));
 
     expect(within(screen.getByTestId('item-header')).getByTestId('player-switch')).toHaveTextContent('YouTube');
     expect(within(screen.getByTestId('embed-player')).queryByTestId('player-switch')).not.toBeInTheDocument();
@@ -1571,7 +1506,7 @@ describe('useCardPlayer, a podcast that plays in its card', () => {
   }));
   const SHOW: TPinakesResourceDetail = { ...podcastFixture, episodes };
   const setMedia = (media: Partial<typeof defaultMediaPreferences>) =>
-    useSettingsStore.setState({ media: { ...upFrontMedia, ...media } });
+    useSettingsStore.setState({ media: { ...defaultMediaPreferences, ...media } });
 
   afterEach(() => setMedia({}));
 
@@ -1607,17 +1542,14 @@ describe('useCardPlayer, a podcast that plays in its card', () => {
     const { unmount } = render(<Card card={SHOW} testId="show" />);
 
     expect(screen.getByTestId('show')).toHaveAttribute('data-card', 'false');
-    expect(screen.getByTestId('resource-player-frame')).toHaveAttribute(
-      'src',
-      expect.stringContaining('embed.podcasts.apple.com'),
-    );
+    expect(load()).toHaveAttribute('src', expect.stringContaining('embed.podcasts.apple.com'));
     unmount();
 
     // Ranked below Spotify: Spotify's embed.
     setMedia({ players: { podcasts: { order: ['spotify', 'card', 'apple-podcasts'], hidden: [] } } });
     render(<Card card={SHOW} testId="ranked" />);
     expect(screen.getByTestId('ranked')).toHaveAttribute('data-card', 'false');
-    expect(screen.getByTestId('resource-player-frame')).toHaveAttribute(
+    expect(load(screen.getByTestId('ranked'))).toHaveAttribute(
       'src',
       expect.stringContaining('open.spotify.com/embed/show/'),
     );
@@ -1627,10 +1559,7 @@ describe('useCardPlayer, a podcast that plays in its card', () => {
     render(<Card card={podcastFixture} testId="show" />);
 
     expect(screen.getByTestId('show')).toHaveAttribute('data-card', 'false');
-    expect(screen.getByTestId('resource-player-frame')).toHaveAttribute(
-      'src',
-      expect.stringContaining('embed.podcasts.apple.com'),
-    );
+    expect(load()).toHaveAttribute('src', expect.stringContaining('embed.podcasts.apple.com'));
   });
 
   it('follows Podcasts’ players, not the ones music or video set', () => {
@@ -1739,28 +1668,7 @@ describe('useCardPlayer, a frame Pinakes names (`embed`)', () => {
     },
   };
 
-  it('shows a rich frame up front like any embed, while a place keeps its card first', () => {
-    render(
-      <>
-        <Card card={SLIDES} testId="slides" />
-        <Card card={PLACE} testId="place" />
-      </>,
-    );
-
-    expect(screen.getByTestId('slides')).toHaveAttribute('data-card', 'false');
-    expect(screen.getByTestId('resource-player-frame')).toHaveAttribute('src', SLIDES.embed?.src);
-    expect(screen.getByRole('region', { name: /^Speaker Deck embed:/ })).toBeInTheDocument();
-    expect(within(screen.getByTestId('slides')).queryByTestId('player-switch')).not.toBeInTheDocument();
-    expect(screen.getByTestId('place')).toHaveAttribute('data-card', 'true');
-    expect(within(screen.getByTestId('place')).queryByTestId('resource-player-frame')).not.toBeInTheDocument();
-    expect(within(screen.getByTestId('place-header')).getByTestId('player-switch')).toHaveTextContent('Card');
-  });
-
   it('offers no map service’s frame for a place whose card draws its own map, and keeps it where none is drawn', () => {
-    useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
-    onTestFinished(() => {
-      useSettingsStore.setState({ media: upFrontMedia });
-    });
     const MAPPED = { ...PLACE, point: { lat: 46.0, lon: 8.95 } };
     render(
       <>
@@ -1782,17 +1690,7 @@ describe('useCardPlayer, a frame Pinakes names (`embed`)', () => {
     expect(document.querySelector('iframe')).toBeNull();
   });
 
-  it('keeps the map service in the switch of a place that draws its map, with platform embeds up front on', () => {
-    render(<Card card={{ ...PLACE, point: { lat: 46.0, lon: 8.95 } }} testId="mapped" />);
-
-    expect(within(screen.getByTestId('mapped-header')).getByTestId('player-switch')).toHaveTextContent('Card');
-  });
-
-  it('keeps a rich link’s card with platform embeds up front off: its frame in the switch, shown when picked', () => {
-    useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
-    onTestFinished(() => {
-      useSettingsStore.setState({ media: upFrontMedia });
-    });
+  it('keeps a rich link’s card first: its frame in the switch, shown when picked', () => {
     render(
       <>
         <Card card={SLIDES} testId="slides" />
@@ -1848,7 +1746,8 @@ describe('useCardPlayer, a frame Pinakes names (`embed`)', () => {
     const resize = () => act(() => resizes.forEach((report) => report()));
     const { rerender } = render(<Feed hidden={false} />);
 
-    // Off screen but laid out: it stays.
+    // Its frame picked in the switch; off screen but laid out: it stays.
+    pickIn('slides');
     resize();
     expect(screen.getByTestId('resource-player-frame')).toHaveAttribute('src', SLIDES.embed?.src);
 
@@ -1863,14 +1762,6 @@ describe('useCardPlayer, a frame Pinakes names (`embed`)', () => {
     expect(document.querySelectorAll('iframe')).toHaveLength(1);
   });
 
-  it('shows a post’s own frame up front, its only source: no switch, no Card', () => {
-    render(<Card card={POST} testId="post" />);
-
-    expect(screen.getByTestId('resource-player-frame')).toHaveAttribute('src', POST.embed?.src);
-    expect(screen.getByRole('region', { name: /^mastodon\.social embed:/ })).toBeInTheDocument();
-    expect(screen.queryByTestId('player-switch')).not.toBeInTheDocument();
-  });
-
   it('shows a place’s card first and its map in the switch, at the map’s shape', () => {
     render(<Card card={PLACE} testId="place" />);
 
@@ -1883,11 +1774,7 @@ describe('useCardPlayer, a frame Pinakes names (`embed`)', () => {
     expect(screen.getByRole('region', { name: /^OpenStreetMap embed:/ })).toHaveStyle({ aspectRatio: '1.7778' });
   });
 
-  it('offers no frame for a post its card tells, with platform embeds up front off: the card shows it', () => {
-    useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
-    onTestFinished(() => {
-      useSettingsStore.setState({ media: upFrontMedia });
-    });
+  it('offers no frame for a post its card tells: the card shows it', () => {
     render(<Card card={POST} testId="post" />);
 
     // Nothing to play or show: no switch, no Show on in the header.
@@ -1897,10 +1784,6 @@ describe('useCardPlayer, a frame Pinakes names (`embed`)', () => {
   });
 
   it('sees a post’s video in the link preview image it is given (an X video still), as its surfaces do', () => {
-    useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
-    onTestFinished(() => {
-      useSettingsStore.setState({ media: upFrontMedia });
-    });
     function PostWithPreview() {
       const { switcher, embed } = useCardPlayer({ ...POST, image: null }, POST.uri, undefined, {
         previewImage: 'https://pbs.twimg.com/ext_tw_video_thumb/1/pu/img/still.jpg',
@@ -1919,11 +1802,7 @@ describe('useCardPlayer, a frame Pinakes names (`embed`)', () => {
     expect(screen.getByTestId('resource-player-frame')).toHaveAttribute('src', POST.embed?.src);
   });
 
-  it('offers a post whose frame carries a video in the switch, with platform embeds up front off, loaded when picked', () => {
-    useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
-    onTestFinished(() => {
-      useSettingsStore.setState({ media: upFrontMedia });
-    });
+  it('offers a post whose frame carries a video in the switch, loaded when picked', () => {
     render(
       <Card
         card={{ ...POST, stream: { url: 'https://media.example/a.mp4', type: 'video/mp4', preview: false } }}
@@ -1938,10 +1817,6 @@ describe('useCardPlayer, a frame Pinakes names (`embed`)', () => {
   });
 
   it('offers only the other services in the switch beside a post’s press, never the post’s own frame', () => {
-    useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
-    onTestFinished(() => {
-      useSettingsStore.setState({ media: upFrontMedia });
-    });
     const spotify = { id: 's', uri: 'https://open.spotify.com/track/69kOkLUCkxIZYexIgSG8rq', site: 'Spotify' };
     render(<Card card={{ ...POST, name: null, description: null, also_on: [spotify] }} testId="post" />);
 
@@ -1960,11 +1835,7 @@ describe('useCardPlayer, a frame Pinakes names (`embed`)', () => {
     expect(document.querySelector('iframe')).toBeNull();
   });
 
-  it('loads no frame with platform embeds up front off for a post its card cannot tell, until the press in its card', () => {
-    useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
-    onTestFinished(() => {
-      useSettingsStore.setState({ media: upFrontMedia });
-    });
+  it('loads no frame for a post its card cannot tell, until the press in its card', () => {
     render(<Card card={{ ...POST, name: null, description: null }} testId="post" />);
 
     expect(document.querySelector('iframe')).toBeNull();

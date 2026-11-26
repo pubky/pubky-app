@@ -25,7 +25,7 @@ import type { PlayerTarget } from './resourcePlayer.utils';
 
 interface ProviderMenuProps {
   targets: PlayerTarget[];
-  /** The service shown now (playing, or a song's player up front), or `null`. */
+  /** The service shown now (playing, or a song's player shown), or `null`. */
   current: PlayerTarget | null;
   onSelect: (target: PlayerTarget) => void;
   trigger: ReactNode;
@@ -119,9 +119,8 @@ function ProviderMenu({ targets, current, onSelect, trigger, icons = true, label
 /**
  * A card's embed/card switch, in the header of its frame or card (`useCardPlayer`'s `switcher`): the
  * shown service's favicon, name and a chevron, in the action row's pill style, opening Card and,
- * below a separator, the services to show instead (`ProviderMenu`). Up front a pick only switches
- * the player shown, paused; with platform embeds up front off it is the viewer's press: the picked
- * service's player loads and starts (`useCardPlayer`). While the card shows (`current` is `null`), the
+ * below a separator, the services to show instead (`ProviderMenu`). A pick is the viewer's press: the
+ * picked service's player loads and starts (`useCardPlayer`). While the card shows (`current` is `null`), the
  * switch reads Card; a service whose link is a match by metadata shows no label here either, its note in
  * the hover text and name. On a phone it shows the favicon (or the card's link icon) and the chevron
  * only; the name stays in its accessible name.
@@ -241,7 +240,7 @@ export function PlayOnPillPlaceholder({ uri, surface }: { uri: string; surface?:
 /**
  * A player that is not loaded yet, as one row: the action row's Play button (`label` its name and
  * tooltip) beside the title and a line under it. Without `onPlay` (its player open under it) only
- * the title and line. `useCardPlayer`'s stand-in with platform embeds up front off, a show's episode
+ * the title and line. `useCardPlayer`'s stand-in before a press, a show's episode
  * (`ResourceAudioPlayer`). With `href` (an episode's own page) the title is a link that covers the
  * row: a press anywhere but Play opens it, in a new tab with `linkTarget` (where links may not
  * navigate). `image` adds a cover after the title (`ResourceAudioArt`) and `titleLines` lets the
@@ -355,7 +354,7 @@ export interface PagePlayer {
  * dock (CSS only, the frame is never moved, so it keeps playing) with Close and a way back; back in
  * view it returns to the card. The dock sits above the phone's bottom bar and left of the new-post
  * button, so it never covers either (`DOCK_CLASS`). Audio uses the service's compact height; video
- * keeps its ratio at the dock's width. A player nobody started (a player shown up front, `dockable` off)
+ * keeps its ratio at the dock's width. A player nobody started (a player shown paused, `dockable` off)
  * stays in its card, and a post pauses it off screen like any embed. Here (no player host: tests, a
  * tree outside the app) a paused player is not `dockable`, so one paused in this dock goes back to
  * its card; the host keeps one paused in the dock there.

@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { useOgMetadata } from '@/hooks/useOgMetadata/useOgMetadata';
 import { usePinakesGroup } from '@/hooks/usePinakesGroup/usePinakesGroup';
@@ -22,10 +22,7 @@ import { defaultMediaPreferences } from '@/stores/settings/settings.types';
 import { expectNoThirdPartyLoads } from '@/test-utils/third-party';
 import { ResourceDetails } from './ResourceDetails';
 
-// These cases are for platform embeds up front (Settings, Links & Media) turned on; the default
-// is off (`defaultMediaPreferences`): a card, nothing loaded from the platform before Play.
-const upFrontMedia = { ...defaultMediaPreferences, embedsUpFront: true };
-beforeEach(() => useSettingsStore.setState({ media: upFrontMedia }));
+beforeEach(() => useSettingsStore.setState({ media: defaultMediaPreferences }));
 
 const mocks = vi.hoisted(() => ({
   configured: true,
@@ -529,15 +526,13 @@ describe('ResourceDetails', () => {
       expect(within(card).getByTestId('resource-actions')).toBeInTheDocument();
     });
 
-    it('shows a video as its player in place of its image and text, its other services in the switch in the header', () => {
+    it('draws a video’s player in place of its image and text, its other services in the switch in the header', () => {
       read = settled(ORDINARY_VIDEO);
       renderDetails(VIDEO.uri);
 
       const card = screen.getByTestId('resource-card');
-      expect(within(card).getByTestId('resource-player-frame')).toHaveAttribute(
-        'src',
-        'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1&rel=0',
-      );
+      expect(within(card).getByTestId('player-facade')).toHaveAccessibleName(`Play ${VIDEO.name} on YouTube`);
+      expect(document.querySelector('iframe')).toBeNull();
       expect(within(card).queryByTestId('resource-card-title')).not.toBeInTheDocument();
       expect(within(card).queryByRole('button', { name: /^Play on/ })).not.toBeInTheDocument();
       expect(within(card).getByRole('heading', { level: 2, name: VIDEO.name! })).toHaveClass('sr-only');
@@ -547,10 +542,7 @@ describe('ResourceDetails', () => {
     });
 
     it('shows a song as its card, with the switch in its header, with Card (no player) first in Players', () => {
-      useSettingsStore.setState({ media: { ...upFrontMedia, playerOrder: ['card'] } });
-      onTestFinished(() => {
-        useSettingsStore.setState({ media: upFrontMedia });
-      });
+      useSettingsStore.setState({ media: { ...defaultMediaPreferences, playerOrder: ['card'] } });
       read = settled(mbRecordingEnrichedFixture);
       renderDetails(mbRecordingEnrichedFixture.uri);
 
@@ -602,11 +594,7 @@ describe('ResourceDetails', () => {
         expect(within(card).getAllByTestId('resource-card-episode-audio')).toHaveLength(2);
       });
 
-      it('loads a service picked in the switch at once with platform embeds up front off, Card brings them back', () => {
-        useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
-        onTestFinished(() => {
-          useSettingsStore.setState({ media: upFrontMedia });
-        });
+      it('loads a service picked in the switch at once, Card brings them back', () => {
         read = settled({ ...podcastFixture, episodes });
         renderDetails(podcastFixture.uri);
 
@@ -633,17 +621,14 @@ describe('ResourceDetails', () => {
       read = settled(mbRecordingEnrichedFixture);
       renderDetails('https://tidal.com/track/534050211');
 
+      fireEvent.click(screen.getByRole('button', { name: `Play ${mbRecordingEnrichedFixture.name} on TIDAL` }));
       expect(screen.getByTestId('resource-player-frame')).toHaveAttribute(
         'src',
-        'https://embed.tidal.com/tracks/534050211?hideOverlays=true',
+        expect.stringContaining('https://embed.tidal.com/tracks/534050211?hideOverlays=true'),
       );
     });
 
-    it('draws the page’s player in the large card’s body, loading nothing, and loads it there on a press, with embeds up front off', () => {
-      useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
-      onTestFinished(() => {
-        useSettingsStore.setState({ media: upFrontMedia });
-      });
+    it('draws the page’s player in the large card’s body, loading nothing, and loads it there on a press', () => {
       read = settled(mbRecordingEnrichedFixture);
       renderDetails('https://tidal.com/track/534050211');
 
@@ -769,24 +754,7 @@ describe('ResourceDetails', () => {
   describe('an X post', () => {
     beforeEach(() => mockGroup.mockReturnValue(settled(null)));
 
-    it('shows X’s embed as the card’s body when Pinakes knows it nowhere else, without the card’s own text or details', () => {
-      read = settled(X_POST);
-      renderDetails(X_URL);
-
-      expect(within(screen.getByTestId('native-embed-body')).getByTestId('twitter-tweet')).toBeInTheDocument();
-      expect(screen.queryByTestId('resource-card-title')).toBeNull();
-      expect(screen.queryByTestId('resource-card-description')).toBeNull();
-      expect(screen.queryByTestId('resource-facts')).toBeNull();
-      // The header, the footer and the page's headings stay.
-      expect(screen.getByTestId('resource-card')).toHaveAttribute('data-size', 'large');
-      expect(screen.getByTestId('resource-card-source').textContent).toBe('x.com');
-      expect(screen.getByTestId('resource-card-source')).toHaveAccessibleName('Open in x.com');
-      expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(X_POST.name!);
-      expect(screen.getByTestId('resource-actions')).toBeInTheDocument();
-      expect(screen.queryByTestId('show-embed')).toBeNull();
-    });
-
-    describe('read by the app’s server, with platform embeds up front off', () => {
+    describe('read by the app’s server', () => {
       const SERVER_POST = {
         id: '1234567890',
         text: 'Read by the app',
@@ -799,9 +767,6 @@ describe('ResourceDetails', () => {
         video: null as string | null,
         videoAspect: null,
       };
-      beforeEach(() => {
-        useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } });
-      });
 
       it('holds the skeleton for a card without its text while the post is read, then shows the post', () => {
         read = settled({ ...X_POST, name: null, description: null, status: 'pending' });
@@ -850,21 +815,7 @@ describe('ResourceDetails', () => {
       });
     });
 
-    it('shows X’s embed when Pinakes knows it on other services too, its only source: no switch, no Show on', () => {
-      read = settled(X_POST_WITH_ALSO_ON);
-      renderDetails(X_URL);
-
-      expect(within(screen.getByTestId('native-embed-body')).getByTestId('twitter-tweet')).toBeInTheDocument();
-      expect(screen.queryByTestId('resource-card-title')).toBeNull();
-      expect(screen.queryByTestId('show-embed')).toBeNull();
-      expect(screen.queryByTestId('player-switch')).toBeNull();
-    });
-
-    it('shows an X post from its card’s data at once to a viewer who turned platform embeds up front off, never X’s embed', () => {
-      useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
-      onTestFinished(() => {
-        useSettingsStore.setState({ media: upFrontMedia });
-      });
+    it('shows an X post from its card’s data at once, never X’s embed', () => {
       read = settled(X_POST_WITH_ALSO_ON);
       renderDetails(X_URL);
 
@@ -881,11 +832,7 @@ describe('ResourceDetails', () => {
       expectNoThirdPartyLoads();
     });
 
-    it('shows our card with Play on <site> for a video post, with platform embeds up front off, X’s embed only from there', () => {
-      useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
-      onTestFinished(() => {
-        useSettingsStore.setState({ media: upFrontMedia });
-      });
+    it('shows our card with Play on <site> for a video post, X’s embed only from there', () => {
       read = settled(xVideoPost(X_POST_WITH_ALSO_ON));
       renderDetails(X_URL);
 
@@ -911,38 +858,18 @@ describe('ResourceDetails', () => {
       expect(screen.queryByTestId('twitter-tweet')).toBeNull();
     });
 
-    it('shows our card with Show on 𝕏 to a viewer who turned platform embeds up front off', () => {
-      useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
-      try {
-        read = settled(xVideoPost(X_POST));
-        renderDetails(X_URL);
-
-        expect(screen.getByTestId('resource-card-title')).toHaveTextContent(X_POST.name!);
-        expect(screen.getByTestId('resource-facts')).toBeInTheDocument();
-        expect(screen.queryByTestId('twitter-tweet')).toBeNull();
-        fireEvent.click(within(screen.getByTestId('resource-actions')).getByTestId('show-embed'));
-        expect(within(screen.getByTestId('native-embed-body')).getByTestId('twitter-tweet')).toBeInTheDocument();
-      } finally {
-        act(() => useSettingsStore.setState({ media: upFrontMedia }));
-      }
-    });
-
-    it('shows our card, without Show on, when X cannot show the post', () => {
-      tweet.state = { data: null, error: new Error('gone'), isLoading: false };
-      read = settled(X_POST);
+    it('shows our card with Show on 𝕏', () => {
+      read = settled(xVideoPost(X_POST));
       renderDetails(X_URL);
 
       expect(screen.getByTestId('resource-card-title')).toHaveTextContent(X_POST.name!);
       expect(screen.getByTestId('resource-facts')).toBeInTheDocument();
-      expect(screen.queryByTestId('native-embed-body')).toBeNull();
-      expect(screen.queryByTestId('show-embed')).toBeNull();
+      expect(screen.queryByTestId('twitter-tweet')).toBeNull();
+      fireEvent.click(within(screen.getByTestId('resource-actions')).getByTestId('show-embed'));
+      expect(within(screen.getByTestId('native-embed-body')).getByTestId('twitter-tweet')).toBeInTheDocument();
     });
 
-    it('waits for Show on before loading X’s embed for a card Pinakes is still reading, by default', () => {
-      useSettingsStore.setState({ media: defaultMediaPreferences });
-      onTestFinished(() => {
-        useSettingsStore.setState({ media: upFrontMedia });
-      });
+    it('waits for Show on before loading X’s embed for a card Pinakes is still reading', () => {
       read = settled({ ...X_POST, status: 'pending', name: null, description: null });
       renderDetails(X_URL);
 
@@ -952,55 +879,39 @@ describe('ResourceDetails', () => {
       expect(within(screen.getByTestId('native-embed-body')).getByTestId('twitter-tweet')).toBeInTheDocument();
     });
 
-    it('shows X’s embed up front for a card Pinakes is still reading, as in a post', () => {
-      read = settled({ ...X_POST, status: 'pending', name: null, description: null });
-      renderDetails(X_URL);
-
-      expect(within(screen.getByTestId('native-embed-body')).getByTestId('twitter-tweet')).toBeInTheDocument();
-      expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(X_URL);
-    });
-
-    it('goes back to our card, without Show on, when X cannot show the post it was asked to', () => {
-      useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
-      onTestFinished(() => {
-        useSettingsStore.setState({ media: upFrontMedia });
-      });
+    it('goes back to our card, without Show on, when X cannot show the post it was asked to, its other services in the switch', () => {
       tweet.state = { data: null, error: new Error('gone'), isLoading: false };
-      read = settled(xVideoPost(X_POST_WITH_ALSO_ON));
+      read = settled(
+        xVideoPost({
+          ...X_POST,
+          also_on: [{ id: 'yt', uri: 'https://www.youtube.com/watch?v=Om61naQC8is', site: 'YouTube' }],
+        }),
+      );
       renderDetails(X_URL);
 
       fireEvent.click(screen.getByTestId('show-embed'));
       expect(screen.getByTestId('resource-card-title')).toHaveTextContent(X_POST.name!);
       expect(screen.queryByTestId('native-embed-body')).toBeNull();
       expect(screen.queryByTestId('show-embed')).toBeNull();
-    });
-
-    it('gives a card the player of its other services back once X cannot show the post', () => {
-      tweet.state = { data: null, error: new Error('gone'), isLoading: false };
-      read = settled({
-        ...X_POST,
-        also_on: [{ id: 'yt', uri: 'https://www.youtube.com/watch?v=Om61naQC8is', site: 'YouTube' }],
-      });
-      renderDetails(X_URL);
-
-      // Our card, its other service in the switch (Card first), never Play on or Show on.
-      expect(screen.getByTestId('resource-card-title')).toHaveTextContent(X_POST.name!);
-      expect(screen.queryByTestId('show-embed')).toBeNull();
+      // The card's player takes over: its other service in the switch (Card first), loaded when picked.
       expect(screen.queryByRole('button', { name: /^Play on/ })).toBeNull();
       fireEvent.pointerDown(screen.getByRole('button', { name: 'Card: choose another service' }), {
         button: 0,
         ctrlKey: false,
       });
       fireEvent.click(screen.getByRole('menuitem', { name: 'YouTube' }));
-      expect(screen.getByTestId('resource-player')).toBeInTheDocument();
+      expect(screen.getByTestId('resource-player-frame')).toHaveAttribute(
+        'src',
+        expect.stringContaining('https://www.youtube-nocookie.com/embed/'),
+      );
       expect(screen.queryByTestId('native-embed-body')).toBeNull();
     });
 
-    it('shows a video as its player, with no X embed and no switch for a video on one service', () => {
+    it('draws a video’s player, with no X embed and no switch for a video on one service', () => {
       read = settled({ ...VIDEO, also_on: [] });
       renderDetails(VIDEO.uri);
 
-      expect(screen.getByTestId('resource-player-frame')).toBeInTheDocument();
+      expect(screen.getByTestId('player-facade')).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /choose another service$/ })).toBeNull();
       expect(screen.queryByTestId('native-embed-body')).toBeNull();
       expect(screen.queryByTestId('show-embed')).toBeNull();
@@ -1392,10 +1303,6 @@ describe('ResourceDetails', () => {
     };
     beforeEach(() => {
       mockGroup.mockReturnValue(settled(null));
-      useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: false } });
-      onTestFinished(() => {
-        useSettingsStore.setState({ media: upFrontMedia });
-      });
     });
 
     it('heads the page with the card, its plain Details line and the press inside it; nothing loaded before it', () => {

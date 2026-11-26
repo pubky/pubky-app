@@ -303,7 +303,7 @@ describe('ResourcePlayerFrame', () => {
     expect(screen.getByRole('link', { name: 'Open in Spotify' })).toHaveAttribute('href', SPOTIFY.link);
   });
 
-  it('stops an embed shown up front once pressed, when other media starts: loaded anew, paused', () => {
+  it('stops a quiet embed once pressed, when other media starts: loaded anew, paused', () => {
     vi.useFakeTimers();
     const ALBUM = getPlayerTarget('https://www.deezer.com/album/302127')!;
     render(
@@ -384,7 +384,7 @@ describe('ResourcePlayerFrame', () => {
     expect(after === shown).toBe(!starts);
   });
 
-  it('loads anew an embed shown up front that said it plays, when other media starts', () => {
+  it('loads anew a quiet embed that said it plays, when other media starts', () => {
     render(
       <>
         <ResourcePlayerFrame target={SPOTIFY} title="Get Lucky" load="ready" onLoaded={() => {}} quiet />
@@ -398,7 +398,7 @@ describe('ResourcePlayerFrame', () => {
     expect(screen.getByLabelText('Spotify player: Get Lucky', { selector: 'iframe' })).not.toBe(song);
   });
 
-  it('shows no status line and loads lazily when quiet (an embed shown up front)', () => {
+  it('shows no status line and loads lazily when quiet (a frame loaded but not started)', () => {
     render(<ResourcePlayerFrame target={MIXCLOUD} title="Party time" load="ready" onLoaded={() => {}} quiet />);
 
     expect(screen.getByTestId('resource-player-status')).toHaveClass('hidden');

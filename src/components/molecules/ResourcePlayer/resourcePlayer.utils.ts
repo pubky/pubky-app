@@ -931,9 +931,10 @@ function getOwnTarget(card: TOwnLinks, href?: string | null): PlayerTarget | nul
 }
 
 /**
- * A player shown up front, not after a press on Play: the same player without what starts it on
- * load (its autoplay parameter and start message), so it plays only when pressed inside. A plain
- * audio file keeps the app's audio player, which then does not start on its own (`autoplay: false`).
+ * A player shown but not started by the viewer's press (a preview's, a post, map or document frame,
+ * one let go by other media): the same player without what starts it on load (its autoplay
+ * parameter and start message), so it plays only when pressed inside. A plain audio file keeps the
+ * app's audio player, which then does not start on its own (`autoplay: false`).
  */
 export function getUpFrontTarget(target: PlayerTarget): PlayerTarget {
   if (target.element !== 'iframe') return { ...target, autoplay: false };

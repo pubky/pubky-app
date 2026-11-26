@@ -13,11 +13,8 @@ import { expectNoThirdPartyLoads } from '@/test-utils/third-party';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { NativeEmbedResource, type RenderNativeEmbed } from './NativeEmbedResource';
 
-// These cases are for platform embeds up front (Settings, Links & Media) turned on; the default
-// is off (`defaultMediaPreferences`): a card, nothing loaded from the platform before Play.
-const upFrontMedia = { ...defaultMediaPreferences, embedsUpFront: true };
 beforeEach(() => {
-  useSettingsStore.setState({ media: upFrontMedia });
+  useSettingsStore.setState({ media: defaultMediaPreferences });
   xPostRead.post = null;
   xPostRead.pending = false;
   xPostRead.ids = [];
@@ -119,29 +116,22 @@ describe('NativeEmbedResource', () => {
     viewport.isVisible = true;
   });
 
-  it('gives the footer the card, on our card and under the platform’s embed, for its other links’ tags', () => {
+  it('gives the footer the card, on our card and with the drawn player, for its other links’ tags', () => {
     const withAlsoOn = { ...videoFixture, id: 'with-also-on' };
     mockCard(withAlsoOn);
     const { unmount } = render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
     expect(screen.getByTestId('resource-actions')).toHaveAttribute('data-card-id', 'with-also-on');
     unmount();
 
-    // An X post Pinakes knows nowhere else: the platform's own embed, and still the card for the footer.
+    // An X post Pinakes knows nowhere else: our card, the post from its data, and the card for the footer.
     mockCard({ ...POST_CARD, id: 'post-alone' });
     render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
-    expect(screen.getByTestId('platform-embed')).toBeInTheDocument();
+    expect(screen.getByTestId('resource-card')).toBeInTheDocument();
+    expect(embed).not.toHaveBeenCalled();
     expect(screen.getByTestId('resource-actions')).toHaveAttribute('data-card-id', 'post-alone');
   });
 
-  it('reads the card for the link as written and re-reads it while on screen', () => {
-    mockCard(VIDEO_ALONE);
-    render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
-
-    expect(usePinakesCard).toHaveBeenCalledWith(VIDEO_URL, { recheck: true, resolveOnView: false });
-  });
-
-  it('asks Pinakes to read a link it does not know once near the screen, with platform embeds up front off', () => {
-    useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
+  it('reads the card for the link as written, re-reads it while on screen, and asks Pinakes to read a link it does not know', () => {
     mockCard(VIDEO_ALONE);
     render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
 
@@ -149,7 +139,6 @@ describe('NativeEmbedResource', () => {
   });
 
   it('holds the skeleton while Pinakes reads a link it did not know on view, loading nothing', () => {
-    useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
     vi.mocked(usePinakesCard).mockReturnValue({ data: null, isLoading: false, isError: false, isResolving: true });
     render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
 
@@ -170,13 +159,14 @@ describe('NativeEmbedResource', () => {
 
     viewport.isVisible = true;
     rerender(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
-    expect(screen.getByTestId('platform-embed')).toBeInTheDocument();
+    expect(screen.getByTestId('resource-link-card')).toBeInTheDocument();
 
     // Scrolled away again: what was read stays, only the re-reads stop.
     viewport.isVisible = false;
     rerender(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
-    expect(screen.getByTestId('platform-embed')).toBeInTheDocument();
-    expect(usePinakesCard).toHaveBeenLastCalledWith(VIDEO_URL, { recheck: false, resolveOnView: false });
+    expect(screen.getByTestId('resource-link-card')).toBeInTheDocument();
+    expect(usePinakesCard).toHaveBeenLastCalledWith(VIDEO_URL, { recheck: false, resolveOnView: true });
+    expect(embed).not.toHaveBeenCalled();
   });
 
   it('reads the composer’s link at once, wherever the box is', () => {
@@ -188,15 +178,13 @@ describe('NativeEmbedResource', () => {
   });
 
   describe('a link with Also on', () => {
-    it('shows the video’s player up front in the resource frame, its other services in the header’s switch', () => {
+    it('draws the video’s player in the resource frame, its other services in the header’s switch', () => {
       mockCard(VIDEO_WITH_ALSO_ON);
       render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
 
       const frame = screen.getByTestId('resource-embed-frame');
-      expect(within(frame).getByTestId('resource-player-frame')).toHaveAttribute(
-        'src',
-        'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1&rel=0',
-      );
+      expect(within(frame).getByTestId('player-facade')).toBeInTheDocument();
+      expect(document.querySelector('iframe')).toBeNull();
       expect(embed).not.toHaveBeenCalled();
       expect(screen.queryByTestId('resource-card')).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /^Play on/ })).not.toBeInTheDocument();
@@ -209,6 +197,7 @@ describe('NativeEmbedResource', () => {
       mockCard(VIDEO_WITH_ALSO_ON);
       render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
 
+      fireEvent.click(screen.getByTestId('player-facade'));
       fireEvent.click(screen.getByTestId('resource-player'));
       fireEvent.click(screen.getByRole('button', { name: 'YouTube: choose another service' }));
       expect(mockPush).not.toHaveBeenCalled();
@@ -225,23 +214,7 @@ describe('NativeEmbedResource', () => {
       expect(screen.queryByTestId('embed-player')).not.toBeInTheDocument();
     });
 
-    it('shows an X post as X’s embed up front, its only source: no switch, no Card, its Also on in the ⋯ menu', () => {
-      mockCard(POST_WITH_ALSO_ON);
-      render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
-
-      const frame = screen.getByTestId('resource-embed-frame');
-      expect(within(frame).getByTestId('platform-embed')).toBeInTheDocument();
-      expect(screen.queryByTestId('resource-card')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('player-switch')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('show-embed')).not.toBeInTheDocument();
-      expect(within(frame).getByTestId('resource-actions')).toHaveAttribute('data-has-also-on', 'true');
-    });
-
-    it('with platform embeds up front off, shows an X post from its card’s data at once: author, handle, text, date, no press', () => {
-      useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
-      onTestFinished(() => {
-        useSettingsStore.setState({ media: upFrontMedia });
-      });
+    it('shows an X post from its card’s data at once: author, handle, text, date, no press', () => {
       mockCard({
         ...POST_WITH_ALSO_ON,
         facts: { author: 'someone', author_name: 'Some One', published: '2026-11-20' },
@@ -262,10 +235,8 @@ describe('NativeEmbedResource', () => {
     });
 
     it('shows the link preview’s image of an X post with no Pinakes image from the app’s image route only', () => {
-      useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
       og.metadata = { url: POST_URL, type: 'website', title: 'A post', image: 'https://pbs.twimg.com/media/og.jpg' };
       onTestFinished(() => {
-        useSettingsStore.setState({ media: upFrontMedia });
         og.metadata = null;
       });
       mockCard(POST_CARD);
@@ -280,10 +251,6 @@ describe('NativeEmbedResource', () => {
     });
 
     it('draws an X post Pinakes could not reach as the press in its card: the card says so, the post is one press away', () => {
-      useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
-      onTestFinished(() => {
-        useSettingsStore.setState({ media: upFrontMedia });
-      });
       mockCard({ ...POST_CARD, status: 'unreachable' });
       render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
 
@@ -303,10 +270,6 @@ describe('NativeEmbedResource', () => {
     });
 
     it('shows a video post’s text at once from its card and keeps a Play for its video', () => {
-      useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
-      onTestFinished(() => {
-        useSettingsStore.setState({ media: upFrontMedia });
-      });
       // The candidate's X card shape, with a video it carries.
       mockCard({
         ...POST_CARD,
@@ -334,10 +297,8 @@ describe('NativeEmbedResource', () => {
     ])(
       'keeps "Play on x.com" for a real X card whose video still is %s, loading X only on the press',
       (_case, image, ogImage) => {
-        useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
         og.metadata = ogImage ? { url: POST_URL, type: 'website', title: 'A post', image: ogImage } : null;
         onTestFinished(() => {
-          useSettingsStore.setState({ media: upFrontMedia });
           og.metadata = null;
         });
         // The candidate's X card shape: SocialMediaPosting, embed kind post, no stream.
@@ -370,9 +331,7 @@ describe('NativeEmbedResource', () => {
     );
 
     it('holds the pill’s place, invisible, while the X post’s link preview is read, and drops it for a photo', () => {
-      useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
       onTestFinished(() => {
-        useSettingsStore.setState({ media: upFrontMedia });
         og.metadata = null;
       });
       mockCard({ ...POST_CARD, group: null });
@@ -393,10 +352,6 @@ describe('NativeEmbedResource', () => {
     });
 
     it('holds no pill’s place in the composer, where no Show on comes', () => {
-      useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
-      onTestFinished(() => {
-        useSettingsStore.setState({ media: upFrontMedia });
-      });
       mockCard({ ...POST_CARD, group: null });
       render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} isComposing />);
 
@@ -406,10 +361,6 @@ describe('NativeEmbedResource', () => {
     });
 
     it('shows an X post’s image from the app’s image route only', () => {
-      useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
-      onTestFinished(() => {
-        useSettingsStore.setState({ media: upFrontMedia });
-      });
       mockCard({ ...POST_CARD, image: 'https://pbs.twimg.com/media/abc.jpg' });
       render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
 
@@ -420,11 +371,7 @@ describe('NativeEmbedResource', () => {
       expect(embed).not.toHaveBeenCalled();
     });
 
-    it('with platform embeds up front off, loads a post the card cannot tell (a video post) inside it from Show on, and the same pill closes it', () => {
-      useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
-      onTestFinished(() => {
-        useSettingsStore.setState({ media: upFrontMedia });
-      });
+    it('loads a post the card cannot tell (a video post) inside it from Show on, and the same pill closes it', () => {
       mockCard(POST_AS_VIDEO);
       render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
 
@@ -451,10 +398,6 @@ describe('NativeEmbedResource', () => {
     });
 
     it('gives Show on the post’s own pill on the post card’s surface (a quoted post, a collection’s item)', () => {
-      useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
-      onTestFinished(() => {
-        useSettingsStore.setState({ media: upFrontMedia });
-      });
       mockCard(POST_AS_VIDEO);
       const { unmount } = render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
       expect(screen.getByTestId('show-embed')).toHaveClass('bg-card');
@@ -482,13 +425,13 @@ describe('NativeEmbedResource', () => {
   });
 
   describe('a link without Also on', () => {
-    it('shows the video’s player in the resource frame, with the resource’s footer, no switch and no Play on', () => {
+    it('draws the video’s player in the resource frame, with the resource’s footer, no switch and no Play on', () => {
       mockCard(VIDEO_ALONE);
       render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
 
       const frame = screen.getByTestId('resource-embed-frame');
       expect(within(frame).getByTestId('resource-card-type')).toHaveTextContent('Video');
-      expect(within(frame).getByTestId('resource-player-frame')).toBeInTheDocument();
+      expect(within(frame).getByTestId('player-facade')).toBeInTheDocument();
       expect(embed).not.toHaveBeenCalled();
       expect(screen.queryByRole('button', { name: /choose another service$/ })).not.toBeInTheDocument();
       expect(within(frame).getByTestId('resource-actions')).toHaveAttribute('data-uri', VIDEO_URL);
@@ -508,38 +451,42 @@ describe('NativeEmbedResource', () => {
       expect(source).toHaveAttribute('rel', 'noopener noreferrer');
     });
 
-    it('shows the embed in the frame for a link Pinakes does not know, or has not read yet', () => {
+    it('shows a link Pinakes does not know, or has not read yet, as its own preview, the embed only on its press', () => {
       for (const data of [null, { ...POST_CARD, status: 'pending' as const }, { ...POST_CARD, name: null }]) {
+        embed.mockClear();
         mockCard(data);
         const { unmount } = render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
-        expect(screen.getByTestId('resource-embed-frame')).toBeInTheDocument();
-        expect(screen.getByTestId('platform-embed')).toBeInTheDocument();
-        // Without a card the type link still says what it is and opens the resource page.
-        expect(screen.getByTestId('resource-card-type')).toHaveAttribute('href', getResourceRoute(POST_URL));
-        expect(screen.getByTestId('resource-card-source')).toHaveTextContent('x.com');
+        const card = screen.getByTestId('resource-link-card');
+        // Without a card the type still says what it is.
+        expect(within(card).getByText('Post')).toBeInTheDocument();
+        expect(embed).not.toHaveBeenCalled();
+        fireEvent.click(within(card).getByRole('button', { name: 'Show on x.com' }));
+        expect(within(card).getByTestId('platform-embed')).toBeInTheDocument();
         unmount();
       }
     });
 
     describe('with Card (no player) above YouTube in Players', () => {
-      beforeEach(() => useSettingsStore.setState({ media: { ...upFrontMedia, playerOrder: ['card'] } }));
-      afterEach(() => useSettingsStore.setState({ media: upFrontMedia }));
+      beforeEach(() => useSettingsStore.setState({ media: { ...defaultMediaPreferences, playerOrder: ['card'] } }));
+      afterEach(() => useSettingsStore.setState({ media: defaultMediaPreferences }));
 
-      it('keeps the frame of a link Pinakes does not know, its embed only from Play on', () => {
+      it('keeps the link’s own preview of a link Pinakes does not know, its embed only from Play on', () => {
         mockCard(null);
         render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
 
-        const frame = screen.getByTestId('resource-embed-frame');
+        const card = screen.getByTestId('resource-link-card');
         expect(embed).not.toHaveBeenCalled();
         expect(document.querySelector('iframe')).toBeNull();
-        fireEvent.click(within(frame).getByRole('button', { name: 'Play on YouTube' }));
-        expect(within(frame).getByTestId('resource-embed-body')).toContainElement(screen.getByTestId('platform-embed'));
+        fireEvent.click(within(card).getByRole('button', { name: 'Play on YouTube' }));
+        expect(within(card).getByTestId('resource-link-card-player')).toContainElement(
+          screen.getByTestId('platform-embed'),
+        );
       });
     });
 
-    describe('with platform embeds up front off', () => {
-      beforeEach(() => useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } }));
-      afterEach(() => useSettingsStore.setState({ media: upFrontMedia }));
+    describe('nothing third-party before a press', () => {
+      beforeEach(() => useSettingsStore.setState({ media: defaultMediaPreferences }));
+      afterEach(() => useSettingsStore.setState({ media: defaultMediaPreferences }));
 
       const play = () => screen.getByRole('button', { name: `Play ${videoFixture.name} on YouTube` });
 
@@ -695,14 +642,17 @@ describe('NativeEmbedResource', () => {
     });
 
     it('gives way to the card when the platform cannot show the post', () => {
-      mockCard(POST_CARD);
+      mockCard(null);
       let fail: () => void = () => {};
       const failing = vi.fn<RenderNativeEmbed>(({ onError }) => {
         fail = onError;
         return <div data-testid="platform-embed" />;
       });
-      render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={failing} />);
-      expect(screen.getByTestId('resource-embed-frame')).toBeInTheDocument();
+      const { rerender } = render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={failing} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Show on x.com' }));
+      expect(screen.getByTestId('platform-embed')).toBeInTheDocument();
+      mockCard(POST_CARD);
+      rerender(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={failing} />);
 
       act(() => fail());
       expect(screen.getByTestId('resource-card')).toBeInTheDocument();
@@ -721,18 +671,7 @@ describe('NativeEmbedResource', () => {
         also_on: videoFixture.also_on.filter((entry) => entry.site === 'MusicBrainz'),
       });
 
-    it('shows the platform embed up front, its only source: no card, no switch, no Play on', () => {
-      gone();
-      render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
-
-      expect(within(screen.getByTestId('resource-embed-frame')).getByTestId('platform-embed')).toBeInTheDocument();
-      expect(screen.queryByTestId('resource-card')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('player-switch')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('show-embed')).not.toBeInTheDocument();
-    });
-
-    it('offers the platform embed from Play on, with platform embeds up front off', () => {
-      useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
+    it('offers the platform embed from Play on', () => {
       try {
         gone();
         render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
@@ -743,7 +682,7 @@ describe('NativeEmbedResource', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Play on YouTube' }));
         expect(within(screen.getByTestId('resource-card')).getByTestId('platform-embed')).toBeInTheDocument();
       } finally {
-        useSettingsStore.setState({ media: upFrontMedia });
+        useSettingsStore.setState({ media: defaultMediaPreferences });
       }
     });
   });
@@ -754,8 +693,7 @@ describe('NativeEmbedResource', () => {
       // player): the card player has nothing to play.
       useSettingsStore.setState({
         media: {
-          ...upFrontMedia,
-          embedsUpFront: false,
+          ...defaultMediaPreferences,
           hiddenPlayers: ['tidal', 'deezer', 'spotify', 'apple-music'],
         },
       });
@@ -771,11 +709,11 @@ describe('NativeEmbedResource', () => {
       expect(screen.getByTestId('show-embed')).toBeInTheDocument();
       expect(embed).not.toHaveBeenCalled();
     } finally {
-      useSettingsStore.setState({ media: upFrontMedia });
+      useSettingsStore.setState({ media: defaultMediaPreferences });
     }
   });
 
-  it('previews a dialog’s quoted video as the composer does: its player, paused, and its footer, no Play on', () => {
+  it('previews a dialog’s quoted video as the composer does: its player, paused on the press, and its footer, no Play on', () => {
     mockCard(VIDEO_WITH_ALSO_ON);
     render(
       <PostPreviewNavigableProvider navigable={false}>
@@ -785,12 +723,13 @@ describe('NativeEmbedResource', () => {
 
     const frame = screen.getByTestId('resource-embed-frame');
     expect(within(frame).getByTestId('resource-actions')).toBeInTheDocument();
+    fireEvent.click(within(frame).getByTestId('player-facade'));
     expect(within(frame).getByTestId('resource-player-frame').getAttribute('src')).not.toMatch(/autoplay/);
     expect(screen.queryByRole('button', { name: /^Play on/ })).not.toBeInTheDocument();
     expect(embed).not.toHaveBeenCalled();
   });
 
-  it('holds the place with the card’s skeleton while Pinakes reads, then shows the embed after 5 s', () => {
+  it('holds the place with the card’s skeleton while Pinakes reads, then shows the link’s own preview after 5 s', () => {
     vi.useFakeTimers();
     try {
       mockCard(undefined, true);
@@ -799,7 +738,8 @@ describe('NativeEmbedResource', () => {
       expect(embed).not.toHaveBeenCalled();
 
       act(() => vi.advanceTimersByTime(PINAKES_SLOW_READ_MS));
-      expect(screen.getByTestId('platform-embed')).toBeInTheDocument();
+      expect(screen.getByTestId('resource-link-card')).toBeInTheDocument();
+      expect(embed).not.toHaveBeenCalled();
     } finally {
       vi.useRealTimers();
     }
@@ -813,15 +753,12 @@ describe('NativeEmbedResource', () => {
       type_path: ['Thing', 'CreativeWork', 'MusicRecording'],
     };
 
-    it('shows the song’s player up front, paused, in the resource frame instead of the platform embed', () => {
+    it('draws the song’s player in the resource frame instead of the platform embed', () => {
       mockCard(SONG);
       render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
 
       const frame = screen.getByTestId('resource-embed-frame');
-      expect(within(frame).getByTestId('resource-player-frame')).toHaveAttribute(
-        'src',
-        'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?enablejsapi=1&rel=0',
-      );
+      expect(within(frame).getByTestId('player-facade')).toBeInTheDocument();
       expect(embed).not.toHaveBeenCalled();
       expect(screen.queryByTestId('resource-card')).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /^Play on/ })).not.toBeInTheDocument();
@@ -842,6 +779,7 @@ describe('NativeEmbedResource', () => {
           </PostPreviewNavigableProvider>,
         );
 
+        fireEvent.click(screen.getByTestId('player-facade'));
         const frame = screen.getByTestId('resource-player-frame') as HTMLIFrameElement;
         // YouTube says it plays (`useOnePlayer`): that makes it the page's player, not a press.
         act(() => {
@@ -863,7 +801,7 @@ describe('NativeEmbedResource', () => {
       mockCard(SONG);
       render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} isComposing />);
 
-      expect(screen.getByTestId('resource-player-frame')).toBeInTheDocument();
+      expect(screen.getByTestId('player-facade')).toBeInTheDocument();
       expect(embed).not.toHaveBeenCalled();
       expect(within(screen.getByTestId('resource-embed-frame')).getByTestId('resource-actions')).toHaveAttribute(
         'data-uri',
@@ -871,9 +809,9 @@ describe('NativeEmbedResource', () => {
       );
     });
 
-    describe('with platform embeds up front off', () => {
-      beforeEach(() => useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } }));
-      afterEach(() => useSettingsStore.setState({ media: upFrontMedia }));
+    describe('nothing third-party before a press', () => {
+      beforeEach(() => useSettingsStore.setState({ media: defaultMediaPreferences }));
+      afterEach(() => useSettingsStore.setState({ media: defaultMediaPreferences }));
 
       it('loads nothing from any service, and draws the song’s YouTube player from its card', () => {
         mockCard(SONG);
@@ -906,16 +844,13 @@ describe('NativeEmbedResource', () => {
       ],
     };
 
-    it('shows the song’s player up front, paused, with a switch, instead of our card with Play on', () => {
+    it('draws the song’s player with a switch, instead of our card with Play on', () => {
       expect(GET_LUCKY.type).toBe('VideoObject');
       mockCard(GET_LUCKY);
       render(<NativeEmbedResource url={GET_LUCKY_URL} kind="video" renderEmbed={embed} />);
 
       const frame = screen.getByTestId('resource-embed-frame');
-      expect(within(frame).getByTestId('resource-player-frame')).toHaveAttribute(
-        'src',
-        'https://www.youtube-nocookie.com/embed/5NV6Rdv1a3I?enablejsapi=1&rel=0',
-      );
+      expect(within(frame).getByTestId('player-facade')).toHaveAccessibleName(`Play ${GET_LUCKY.name} on YouTube`);
       expect(within(frame).getByRole('button', { name: 'YouTube: choose another service' })).toBeInTheDocument();
       // Its header keeps Pinakes' type, as its card does.
       expect(within(frame).getByTestId('resource-card-type')).toHaveTextContent('Video');
@@ -924,10 +859,8 @@ describe('NativeEmbedResource', () => {
     });
 
     it('shows our card, loading nothing, with Card (no player) first in Players', () => {
-      useSettingsStore.setState({ media: { ...upFrontMedia, playerOrder: ['card'] } });
-      onTestFinished(() => {
-        useSettingsStore.setState({ media: upFrontMedia });
-      });
+      useSettingsStore.setState({ media: { ...defaultMediaPreferences, playerOrder: ['card'] } });
+      onTestFinished(() => {});
       mockCard(GET_LUCKY);
       render(<NativeEmbedResource url={GET_LUCKY_URL} kind="video" renderEmbed={embed} />);
 
@@ -939,10 +872,8 @@ describe('NativeEmbedResource', () => {
     });
 
     it('shows an ordinary video Pinakes knows nowhere else as our card, its switch offering YouTube, with Card (no player) above YouTube', () => {
-      useSettingsStore.setState({ media: { ...upFrontMedia, playerOrder: ['card'] } });
-      onTestFinished(() => {
-        useSettingsStore.setState({ media: upFrontMedia });
-      });
+      useSettingsStore.setState({ media: { ...defaultMediaPreferences, playerOrder: ['card'] } });
+      onTestFinished(() => {});
       mockCard({ ...GET_LUCKY, also_on: [] });
       render(<NativeEmbedResource url={GET_LUCKY_URL} kind="video" renderEmbed={embed} />);
 
@@ -963,10 +894,7 @@ describe('NativeEmbedResource', () => {
       });
       render(<NativeEmbedResource url={GET_LUCKY_URL} kind="video" renderEmbed={embed} />);
 
-      expect(screen.getByTestId('resource-player-frame')).toHaveAttribute(
-        'src',
-        'https://www.youtube-nocookie.com/embed/5NV6Rdv1a3I?enablejsapi=1&rel=0',
-      );
+      expect(screen.getByTestId('player-facade')).toHaveAccessibleName(`Play ${GET_LUCKY.name} on YouTube`);
       expect(screen.getByRole('button', { name: 'YouTube: choose another service' })).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /^Play on/ })).not.toBeInTheDocument();
     });
@@ -978,7 +906,7 @@ describe('NativeEmbedResource', () => {
       render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} isComposing />);
 
       expect(usePinakesCard).toHaveBeenCalledWith(VIDEO_URL, { resolve: true });
-      expect(screen.getByTestId('resource-player-frame')).toBeInTheDocument();
+      expect(screen.getByTestId('player-facade')).toBeInTheDocument();
       const actions = within(screen.getByTestId('resource-embed-frame')).getByTestId('resource-actions');
       expect(actions).toHaveAttribute('data-uri', VIDEO_URL);
       expect(actions).toHaveAttribute('data-has-also-on', 'true');
@@ -991,43 +919,34 @@ describe('NativeEmbedResource', () => {
       render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} isComposing />);
 
       const frame = screen.getByTestId('resource-embed-frame');
-      expect(within(frame).getByTestId('resource-player-frame')).toBeInTheDocument();
+      expect(within(frame).getByTestId('player-facade')).toBeInTheDocument();
       expect(within(frame).getByTestId('resource-actions')).toHaveAttribute('data-uri', VIDEO_URL);
     });
   });
 
-  it('keeps an embed the viewer has pressed in when a card with Also on is read later', () => {
-    vi.useFakeTimers();
-    try {
-      mockCard(null);
-      const withFrame = vi.fn<RenderNativeEmbed>(() => <iframe title="player" data-testid="platform-embed" />);
-      const { rerender } = render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={withFrame} />);
-      const frame = screen.getByTestId('platform-embed');
-      act(() => {
-        fireEvent.mouseOver(frame);
-        frame.focus();
-        window.dispatchEvent(new Event('blur'));
-        vi.advanceTimersByTime(1);
-      });
+  it('keeps an embed the viewer opened in the link’s own preview when a card with Also on is read later', () => {
+    mockCard(null);
+    const withFrame = vi.fn<RenderNativeEmbed>(() => <iframe title="player" data-testid="platform-embed" />);
+    const { rerender } = render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={withFrame} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Play on YouTube' }));
+    const frame = screen.getByTestId('platform-embed');
 
-      mockCard(VIDEO_WITH_ALSO_ON);
-      rerender(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={withFrame} />);
-      expect(screen.getByTestId('platform-embed')).toBe(frame);
-      expect(screen.queryByTestId('resource-card')).not.toBeInTheDocument();
-    } finally {
-      vi.useRealTimers();
-    }
+    mockCard(VIDEO_WITH_ALSO_ON);
+    rerender(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={withFrame} />);
+    expect(screen.getByTestId('platform-embed')).toBe(frame);
+    expect(screen.queryByTestId('resource-card')).not.toBeInTheDocument();
   });
 
-  it('swaps an untouched embed for the card’s player when the card is read later', () => {
+  it('swaps the link’s own preview for the card’s drawn player when the card is read later', () => {
     mockCard(null);
     const { rerender } = render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
-    expect(screen.getByTestId('platform-embed')).toBeInTheDocument();
+    expect(screen.getByTestId('resource-link-card')).toBeInTheDocument();
 
     mockCard(VIDEO_WITH_ALSO_ON);
     rerender(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
-    expect(screen.getByTestId('resource-player-frame')).toBeInTheDocument();
-    expect(screen.queryByTestId('platform-embed')).not.toBeInTheDocument();
+    expect(screen.getByTestId('player-facade')).toBeInTheDocument();
+    expect(screen.queryByTestId('resource-link-card')).not.toBeInTheDocument();
+    expect(embed).not.toHaveBeenCalled();
   });
 
   describe('in a box hidden from the page (a feed kept behind an open post)', () => {
@@ -1077,12 +996,13 @@ describe('NativeEmbedResource', () => {
     it('unloads the platform’s video while its box is hidden, and loads it again once shown', () => {
       mockCard(null);
       render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Play on YouTube' }));
       expect(screen.getByTestId('platform-embed')).toBeInTheDocument();
 
       setHidden(true);
       expect(screen.queryByTestId('platform-embed')).not.toBeInTheDocument();
-      // The resource stays: its frame and footer, ready to load the video again.
-      expect(screen.getByTestId('resource-embed-frame')).toBeInTheDocument();
+      // The resource stays: its card and footer, ready to load the video again.
+      expect(screen.getByTestId('resource-link-card')).toBeInTheDocument();
       expect(screen.getByTestId('resource-actions')).toBeInTheDocument();
 
       setHidden(false);
@@ -1090,11 +1010,7 @@ describe('NativeEmbedResource', () => {
     });
 
     it('unloads a video opened from Play on in our card while hidden, still open once shown', () => {
-      // Platform embeds up front off: a video the card player cannot play is our card, its embed from Play on.
-      useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
-      onTestFinished(() => {
-        useSettingsStore.setState({ media: upFrontMedia });
-      });
+      // A video the card player cannot play is our card, its embed from Play on.
       mockCard({ ...VIDEO_ALONE, status: 'missing' });
       render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
       fireEvent.click(screen.getByTestId('show-embed'));
@@ -1111,6 +1027,7 @@ describe('NativeEmbedResource', () => {
     it('keeps the video while only scrolled away: laid out, out of the viewport', () => {
       mockCard(null);
       const { rerender } = render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Play on YouTube' }));
       viewport.isVisible = false;
       rerender(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
       setHidden(false);
@@ -1122,6 +1039,7 @@ describe('NativeEmbedResource', () => {
       hidden = true;
       mockCard(null);
       render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Play on YouTube' }));
 
       expect(screen.getByTestId('platform-embed')).toBeInTheDocument();
     });
@@ -1129,6 +1047,7 @@ describe('NativeEmbedResource', () => {
     it('leaves the card player’s hosted frame to its host (`PlayerHost`)', () => {
       mockCard(VIDEO_ALONE);
       render(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} />);
+      fireEvent.click(screen.getByTestId('player-facade'));
 
       setHidden(true);
       expect(screen.getByTestId('resource-player-frame')).toBeInTheDocument();
@@ -1138,6 +1057,7 @@ describe('NativeEmbedResource', () => {
     it('keeps an X post, which has no frame of its own to unload', () => {
       mockCard(null);
       render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Show on x.com' }));
 
       setHidden(true);
       expect(screen.getByTestId('platform-embed')).toBeInTheDocument();
@@ -1152,7 +1072,7 @@ describe('NativeEmbedResource', () => {
 
     mockCard(VIDEO_WITH_ALSO_ON);
     rerender(<NativeEmbedResource url={VIDEO_URL} kind="video" renderEmbed={embed} isComposing />);
-    expect(screen.getByTestId('resource-player-frame')).toBeInTheDocument();
+    expect(screen.getByTestId('player-facade')).toBeInTheDocument();
     expect(embed).not.toHaveBeenCalled();
   });
 });
@@ -1178,7 +1098,7 @@ describe('NativeEmbedResource: an X post’s video and a link Pinakes is still r
   beforeEach(() => {
     vi.clearAllMocks();
     viewport.isVisible = true;
-    useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
+    useSettingsStore.setState({ media: defaultMediaPreferences });
   });
 
   it('shows the still and our Play; the press plays the MP4 in the app’s player inside the post, nothing from X before', () => {
@@ -1275,7 +1195,7 @@ describe('NativeEmbedResource: an X post the card cannot tell, read by the app�
   beforeEach(() => {
     vi.clearAllMocks();
     viewport.isVisible = true;
-    useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } });
+    useSettingsStore.setState({ media: defaultMediaPreferences });
   });
 
   it('shows a post Pinakes has no card for as a post, its image from the app’s route only, nothing to press', () => {
@@ -1330,14 +1250,11 @@ describe('NativeEmbedResource: an X post the card cannot tell, read by the app�
     expect(screen.getByRole('button', { name: 'Show on x.com' })).toBeInTheDocument();
   });
 
-  it('reads nothing for a card that tells the post, a post gone upstream, or with platform embeds up front on', () => {
+  it('reads nothing for a card that tells the post, or a post gone upstream', () => {
     mockCard(POST_CARD);
     const { unmount } = render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
     unmount();
     mockCard({ ...POST_CARD, status: 'missing' });
-    render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />).unmount();
-    useSettingsStore.setState({ media: upFrontMedia });
-    mockCard(null);
     render(<NativeEmbedResource url={POST_URL} kind="post" renderEmbed={embed} />);
 
     expect(xPostRead.ids.every((id) => id === null)).toBe(true);

@@ -24,7 +24,6 @@ import { AnimatedHeight } from '@/molecules/ResourcePlayer/ResourcePlayerFrame';
 import { useCardPlayer } from '@/molecules/ResourcePlayer/useCardPlayer';
 import { ResourceActions } from '@/organisms/ResourceActions/ResourceActions';
 import { PinakesStatus, type TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
-import { useSettingsStore } from '@/stores/settings/settings.store';
 import { GenericPreview } from './GenericPreview';
 import { useSlowRead } from './useSlowRead';
 
@@ -85,13 +84,12 @@ interface GenericResourcePreviewProps {
  * shows or plays the file inline.
  *
  * Embed or card (`useCardPlayer`): a link on a service with a player (a Spotify track or artist
- * page) shows that service's player up front, in the resource frame (`ResourceEmbedFrame`); a
- * generic link Pinakes knows on such services (a MusicBrainz or Wikipedia page) shows our card up
- * front. Either has the embed/card switch in its header when there is a choice (Card, then the
- * services), and no Play on in its action row; in a post, the composer and a collection alike. A
- * player plays only on a press inside it, and never docks in a post being written. A viewer who
- * turned platform embeds up front off (Settings, Links & Media) gets the card, with the switch and
- * Play in its header: nothing loads until Play, which loads the player inside the card.
+ * page) shows that service's player as the app draws it, in the resource frame (`ResourceEmbedFrame`);
+ * a generic link Pinakes knows on such services (a MusicBrainz or Wikipedia page) shows our card.
+ * Either has the embed/card switch in its header when there is a choice (Card, then the services),
+ * and no Play on in its action row; in a post, the composer and a collection alike. Nothing loads
+ * from the service until the viewer's press on the drawing or pick in the switch, which loads its
+ * player in place; it never docks in a post being written.
  *
  * A link Pinakes does not know yet (a post published seconds ago) is read again while the preview
  * is on screen (`usePinakesCard`'s `recheck`), and its card replaces the link's own preview in the
@@ -127,7 +125,6 @@ function ResourcePreview({
   // card's surface: its player's pills are the post's own, as its footer's (`ResourceActions`).
   const actionSurface = useResourceSurface() === 'card' ? 'default' : undefined;
   const navigable = useIsPostPreviewNavigable();
-  const embedsUpFront = useSettingsStore((state) => state.media.embedsUpFront);
   // A post being written (the composer, the Reply and Repost dialogs) previews the resource.
   const isPreview = isComposing || !navigable;
   const lookupUrl = isPinakesConfigured() && !isDirectMediaFile(url) ? url : null;
@@ -200,8 +197,8 @@ function ResourcePreview({
       isOnScreen={isOnScreen}
       headerControl={switcher}
       player={player}
-      // With platform embeds up front off a social post shows as a post, from its card's data.
-      asPost={!embedsUpFront}
+      // A social post shows as a post, from its card's data.
+      asPost
     />
   );
 }

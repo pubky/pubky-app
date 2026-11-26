@@ -86,9 +86,9 @@ export function hasPostVideo(card: TPostCard, previewImage?: string | null): boo
 }
 
 /**
- * The one rule for "a post shows from its card's data alone, with nothing to press" (platform embeds up
- * front off): a post the card tells (`getResourcePost`) that carries no video (`hasPostVideo`). Its
- * site's own embed (X's, a Mastodon frame) is then never offered; any other post keeps it.
+ * The one rule for "a post shows from its card's data alone, with nothing to press": a post the
+ * card tells (`getResourcePost`) that carries no video (`hasPostVideo`). Its site's own embed (X's,
+ * a Mastodon frame) is then never offered; any other post keeps it.
  */
 export function showsPostFromCard(card: TPostCard, previewImage?: string | null): boolean {
   return getResourcePost(card) !== null && !hasPostVideo(card, previewImage);

@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { usePinakesCard } from '@/hooks/usePinakesCard/usePinakesCard';
 import musicFixture from '@/services/pinakes/fixtures/by-uri.music-recording.json';
 import articleFixture from '@/services/pinakes/fixtures/by-uri.video.json';
@@ -88,7 +88,7 @@ describe('GenericLinkPreview', () => {
       givenCard(SONG);
     });
 
-    it('draws its player in the resource frame with platform embeds up front off, loading nothing before a press', () => {
+    it('draws its player in the resource frame, loading nothing before a press', () => {
       useSettingsStore.setState({ media: defaultMediaPreferences });
       render(<GenericLinkPreview url={SONG.uri} />);
 
@@ -97,19 +97,6 @@ describe('GenericLinkPreview', () => {
       expect(frame).toContainElement(screen.getByTestId('player-facade'));
       expect(document.querySelector('iframe')).toBeNull();
       expectNoThirdPartyLoads();
-    });
-
-    it('keeps its card with platform embeds up front on, as before', () => {
-      useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: true } });
-      onTestFinished(() => {
-        useSettingsStore.setState({ media: defaultMediaPreferences });
-      });
-      render(<GenericLinkPreview url={SONG.uri} />);
-
-      expect(screen.getByTestId('resource-card-title')).toHaveTextContent(SONG.name!);
-      expect(screen.queryByTestId('resource-embed-frame')).not.toBeInTheDocument();
-      expect(screen.queryByTestId('player-facade')).not.toBeInTheDocument();
-      expect(document.querySelector('iframe')).toBeNull();
     });
   });
 

@@ -518,11 +518,10 @@ image's own address. A card image that is a YouTube thumbnail (`getYouTubeThumbn
 `hqdefault`, which has bars above and below the video) shows the video's 16:9 `hq720`, else `mqdefault`, from
 `?youtube=`, and the image as the card names it only when neither loads; a song's, album's or playlist's cover then
 shows the thumbnail's middle square, where a label upload's cover sits.
-A link straight to an image file (`GenericPreview`), with platform embeds up front off, is read by Pinakes on view
+A link straight to an image file (`GenericPreview`) is read by Pinakes on view
 like a platform's link (`resolveOnView`): its card is an image's whose image is the file, served by `?uri=<link>&src=`
-as any card's; with no card it shows as a finished link card (its name and site). Up front on, the file loads from
-its host as before. A link straight to a video or
-audio file shows, with platform embeds up front off, a card from the app's origin (its kind, site and file name) with
+as any card's; with no card it shows as a finished link card (its name and site). A link straight to a video or
+audio file shows a card from the app's origin (its kind, site and file name) with
 Play in its header; the press loads the file's player inside the card, started by it, and the same pill closes it.
 What remains, route by route: `/api/image` reads any public raster image that a real, settled card or a real page's
 preview names (anyone can have Pinakes read a page of theirs), within those caps; with `?xpost=` only a photo or video
@@ -531,10 +530,9 @@ still on `pbs.twimg.com` of an X post the app's server read; with `?youtube=` on
 on `video.twimg.com`, loaded only on the press of its Play, with no Referer (a frame of its own). `/api/map` reads only the allow-listed paths of
 `tiles.openfreemap.org`. A calendar occurrence's image other than its calendar's is not one the image route serves.
 
-**Players and posts in a card.** With "Show platform embeds up front" off (Settings, Links & Media; the default),
-a link with a Pinakes card looks as it does with them on, on every surface (a post's embed, the composer, Edit and
-Repost, feeds and collections, the resource page, and a YouTube, Vimeo or X link that is only in a post's text), and
-nothing is asked from the service before a press. Where a service's player would show up front (a link that is
+**Players and posts in a card.** On every surface (a post's embed, the composer, Edit and Repost, feeds and
+collections, the resource page, and a YouTube, Vimeo or X link that is only in a post's text), nothing is asked from
+the service before a press. Where a service's player shows first (a link that is
 itself on that service, unless Card (no player) ranks above it in Players), the app draws that player from the card's
 data in its place (`useCardPlayer`'s `embed` → `ResourcePlayerFacade`): the player's height (a video's 16:9 box, an
 audio player's own height), the cover or still through `/api/image`, the title, the card's summary line and the
@@ -594,7 +592,6 @@ is sent the same way only when its own preview says nothing (no title and no ima
 `ResourceLinkCard`: the page's title and site, a YouTube video's thumbnail from `?youtube=`, else the page's preview
 image from `?link=`), the platform's Play (Show for a post) in its header, its embed loading inside the card on the
 press.
-With platform embeds up front on, the service's player or embed shows up front in place of the card's body.
 
 **Places and events (maps, agenda, dates).** A place's or an event's card shows where it is with `ResourceLocation`
 (`src/components/molecules/ResourceMap/`): a map of its `point` when that is on the map (`getMapPoint`), else, with
@@ -607,7 +604,7 @@ end, a selected pin's card; its `geo:` entry ("Default maps app") shows on Andro
   never holds one WebGL context per card. Until the style is read the box shows a loading skeleton; the pins go on
   then, before the tiles. Every request of a map (style, TileJSON, tiles, fonts, sprites) goes to the app's own
   `/api/map?p=<path>` (`toPrivateMapRequest` → `toMapRouteUrl`), without credentials or a referrer, so a map is
-  drawn at once, also with platform embeds up front off, with nothing asked from another host. The route reads
+  drawn at once, with nothing asked from another host. The route reads
   `tiles.openfreemap.org` only, and only the paths `toMapTileRequest` allows (the two styles, the planet's TileJSON
   and vector tiles to zoom 14 of a tile set that TileJSON named in the last two days; a set newer than every one
   seen has the TileJSON read again past the cache, at most once a minute, before it is refused, Natural Earth relief to zoom 6, the styles' Noto Sans font ranges, the sprites; any
@@ -618,8 +615,8 @@ end, a selected pin's card; its `geo:` entry ("Default maps app") shows on Andro
   files), at most 24 reads at once, others waiting their turn up to 4 s (a cold map asks for 12-16 files, two maps
   20-30; MapLibre never asks again for a tile that failed), from a per-instance budget; a read whose body breaks
   off is a failure, not a missing file, and the host is not asked for 10 s after it failed. An address on another
-  host, or with a query, goes to the route with no path (refused), never to that host. With platform embeds up front
-  off, a card that draws its own map offers no map service's frame (Pinakes' OpenStreetMap `embed`, `useCardPlayer`): it would be a second map; a
+  host, or with a query, goes to the route with no path (refused), never to that host. A card that draws its own
+  map offers no map service's frame (Pinakes' OpenStreetMap `embed`, `useCardPlayer`): it would be a second map; a
   card with no map drawn (no point, a row) keeps it. Nothing of the resource or the viewer is put into a tile
   address or an "Open in Maps" link.
 - The library, its stylesheet and its worker file are one lazily imported unit (`src/libs/maps/maplibre.runtime.ts`),
