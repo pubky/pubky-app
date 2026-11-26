@@ -6,4 +6,7 @@ export function generateStaticParams() {
   return placeholderParams('pubky');
 }
 
-export default DynamicProfileLayout;
+// A server component of its own: Next ignores `generateStaticParams` beside a client default export.
+export default function Layout({ children }: { children: React.ReactNode }) {
+  return <DynamicProfileLayout>{children}</DynamicProfileLayout>;
+}
