@@ -3,6 +3,7 @@ import { db } from '@/database/franky/franky';
 import { type BrowserCoordination, createBrowserCoordination } from '@/libs/indexer/browserCoordination';
 import { createIdbStore } from '@/libs/indexer/idbStore';
 import { createSocialIndexer, type SocialChange } from '@/libs/indexer/social/socialIndexer';
+import { resetRuntimeConfigForTests } from '@/libs/runtime-config/runtime-config';
 import type { Pubky } from '@/models/models.types';
 import { UserStreamTypes } from '@/models/stream/user/userStream.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
@@ -82,6 +83,8 @@ const write = (path: string) => {
   for (const listener of fakes.writeListeners) listener(path);
 };
 
+const WINDOW_ENV = 'PUBKY_RUNTIME_INDEXER_WINDOW_MS';
+
 const ALICE = 'alice-pubky' as Pubky;
 const BOB = 'bob-pubky' as Pubky;
 
@@ -131,6 +134,21 @@ describe('IndexerService', () => {
     expect(HomeserverService.subscribeOwnedWrites).not.toHaveBeenCalled();
     expect(fakes.indexers[0].start).toHaveBeenCalledExactlyOnceWith(null);
     expect(IndexerService.current()).toBe(fakes.indexers[0]);
+  });
+
+  it('hands the index the configured window of recent activity, in days', () => {
+    process.env[WINDOW_ENV] = String(6 * 60 * 60 * 1000);
+    resetRuntimeConfigForTests();
+    try {
+      IndexerService.start(ALICE);
+    } finally {
+      delete process.env[WINDOW_ENV];
+      resetRuntimeConfigForTests();
+    }
+
+    expect(createSocialIndexer).toHaveBeenCalledWith(
+      expect.objectContaining({ options: { savedIndex: true, crawler: { windowDays: 0.25 } } }),
+    );
   });
 
   it('stops the visitor’s index and deletes its database when an account starts', () => {

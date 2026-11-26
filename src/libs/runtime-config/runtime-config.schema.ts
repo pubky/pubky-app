@@ -304,6 +304,11 @@ export const runtimeConfigValueSchema = networkConfigValueSchema.extend({
   profileLocalEditTtlMs: positiveIntValue.default(APP_RUNTIME_DEFAULTS.profileLocalEditTtlMs),
   /** Where Nexus reads are answered, in order: Nexus itself, the index this browser builds, or the index first. */
   indexerSources: indexerSourcesValue.default([...APP_RUNTIME_DEFAULTS.indexerSources]),
+  /**
+   * How far back the local index loads each author's recent activity before older history is asked for. Absent =
+   * the index's own default.
+   */
+  indexerWindowMs: positiveIntValue.optional(),
   moderationId: pubkyValue.optional(),
   moderatedTags: z.array(nonEmptyStringValue).default([...APP_RUNTIME_DEFAULTS.moderatedTags]),
   exchangeRateApi: urlValue.default(APP_RUNTIME_DEFAULTS.exchangeRateApi),
@@ -408,6 +413,7 @@ export const runtimeEnvInputSchema = z
     ttlRetryDelayMs: optionalPositiveIntFromString,
     profileLocalEditTtlMs: optionalPositiveIntFromString,
     indexerSources: indexerSourcesFromString,
+    indexerWindowMs: optionalPositiveIntFromString,
     moderationId: optionalTrimmedString,
     moderatedTags: optionalStringArrayFromString('MODERATED_TAGS'),
     exchangeRateApi: optionalUrlFromString,
@@ -521,6 +527,7 @@ export const runtimeEnvInputSchemaWithDefaults = z
     ttlRetryDelayMs: optionalPositiveIntFromString,
     profileLocalEditTtlMs: optionalPositiveIntFromString,
     indexerSources: indexerSourcesFromString,
+    indexerWindowMs: optionalPositiveIntFromString,
     moderationId: optionalTrimmedString,
     moderatedTags: optionalStringArrayFromString('MODERATED_TAGS'),
     exchangeRateApi: optionalUrlFromString,
@@ -613,6 +620,7 @@ export const PUBKY_RUNTIME_ENV_NAMES: Record<keyof RuntimeConfig, string> = {
   ttlRetryDelayMs: 'PUBKY_RUNTIME_TTL_RETRY_DELAY_MS',
   profileLocalEditTtlMs: 'PUBKY_RUNTIME_PROFILE_LOCAL_EDIT_TTL_MS',
   indexerSources: 'PUBKY_RUNTIME_INDEXER_SOURCES',
+  indexerWindowMs: 'PUBKY_RUNTIME_INDEXER_WINDOW_MS',
   moderationId: 'PUBKY_RUNTIME_MODERATION_ID',
   moderatedTags: 'PUBKY_RUNTIME_MODERATED_TAGS',
   exchangeRateApi: 'PUBKY_RUNTIME_EXCHANGE_RATE_API',

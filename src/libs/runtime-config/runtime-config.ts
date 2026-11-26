@@ -209,6 +209,8 @@ export const getTtlRetryDelayMs = (): number => getRuntimeConfig().ttlRetryDelay
 export const getProfileLocalEditTtlMs = (): number => getRuntimeConfig().profileLocalEditTtlMs;
 /** Where Nexus reads are answered, in the order they are asked. */
 export const getIndexerSources = (): readonly IndexerSource[] => getRuntimeConfig().indexerSources;
+/** The local index's window of recent activity, `undefined` for the index's own default. */
+export const getIndexerWindowMs = (): number | undefined => getRuntimeConfig().indexerWindowMs;
 export const getModerationId = (): string | undefined => getRuntimeConfig().moderationId;
 export const getModeratedTags = (): string[] => getRuntimeConfig().moderatedTags;
 export const getExchangeRateApi = (): string => getRuntimeConfig().exchangeRateApi;

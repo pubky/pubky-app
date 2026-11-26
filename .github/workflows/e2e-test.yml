@@ -180,7 +180,7 @@ jobs:
         # worker, which Firefox never activates under Cypress, and they have no phone subset.
         browser: ${{ fromJSON(inputs.indexer_sources == 'local' && '["chrome"]' || (github.event.schedule == '0 4 * * 1,4' || inputs.browsers == 'firefox') && '["firefox"]' || '["chrome"]') }}
         viewport: ${{ fromJSON(inputs.indexer_sources == 'local' && '["desktop"]' || (github.event.schedule == '0 4 * * 1,4' || inputs.browsers == 'firefox') && '["desktop"]' || github.event_name == 'schedule' && '["mobile"]' || inputs.target == 'both' && '["desktop","mobile"]' || format('["{0}"]', inputs.target || 'desktop')) }}
-        spec: ${{ fromJSON(inputs.indexer_sources == 'local' && '["network.cy.ts","writes.cy.ts","visitor.cy.ts"]' || (github.event.schedule == '0 4 * * 1,4' || inputs.browsers == 'firefox') && '["onboarding.cy.ts","posts.cy.ts","profile.cy.ts"]' || '["contacts.cy.ts","feed.cy.ts","notifications.cy.ts","onboarding.cy.ts","posts.cy.ts","profile.cy.ts","search.cy.ts","settings.cy.ts","collections.cy.ts","pagination.cy.ts","collections-pagination.cy.ts","deep-links.cy.ts","locks.cy.ts"]') }}
+        spec: ${{ fromJSON(inputs.indexer_sources == 'local' && '["network.cy.ts","writes.cy.ts","visitor.cy.ts","history.cy.ts"]' || (github.event.schedule == '0 4 * * 1,4' || inputs.browsers == 'firefox') && '["onboarding.cy.ts","posts.cy.ts","profile.cy.ts"]' || '["contacts.cy.ts","feed.cy.ts","notifications.cy.ts","onboarding.cy.ts","posts.cy.ts","profile.cy.ts","search.cy.ts","settings.cy.ts","collections.cy.ts","pagination.cy.ts","collections-pagination.cy.ts","deep-links.cy.ts","locks.cy.ts"]') }}
         # Phones run a smoke subset: the `itMobile` tests (cypress/support/mobile.ts). The specs
         # excluded below have none, because every phone-only path they reach is covered by the specs
         # that remain (onboarding.cy.ts runs the Pubky Ring deeplink sign-in and sign-up on phones).
@@ -333,6 +333,17 @@ jobs:
                 PUBKY_RUNTIME_INDEXER_SOURCES: "local"
                 PUBKY_RUNTIME_NEXUS_URL: ""
                 PUBKY_RUNTIME_CDN_URL: ""
+          EOF
+          cat docker-compose.override.yml
+
+      # The history spec alone runs with a window of minutes, so it seeds posts outside it without backdating them.
+      # The other local-index specs read their network minutes after seeding it and need the default window.
+      - name: Shorten the local index window for the history spec
+        if: inputs.indexer_sources == 'local' && matrix.spec == 'history.cy.ts'
+        working-directory: pubky-stack/docker
+        run: |
+          cat >> docker-compose.override.yml <<'EOF'
+                PUBKY_RUNTIME_INDEXER_WINDOW_MS: "120000"
           EOF
           cat docker-compose.override.yml
 

@@ -7,6 +7,7 @@ import type { RuntimeStatus } from '@/libs/indexer/runtime.types';
 import type { SocialData } from '@/libs/indexer/social/social.types';
 import { createSocialIndexer, type SocialChange, type SocialIndexer } from '@/libs/indexer/social/socialIndexer';
 import { Logger } from '@/libs/logger/logger';
+import { getIndexerWindowMs } from '@/libs/runtime-config/runtime-config';
 import { markPhase } from '@/libs/timing/timing';
 import type { Pubky } from '@/models/models.types';
 import { UserStreamTypes } from '@/models/stream/user/userStream.types';
@@ -20,6 +21,14 @@ const databaseName = (owner: Pubky | null) =>
   owner === null ? INDEXER_VISITOR_DATABASE : `${INDEXER_DATABASE_PREFIX}${owner}`;
 
 const PUBLIC_PATH_PREFIX = '/pub/';
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** The configured window of recent activity in the index's own unit, nothing for the index's default. */
+const crawlerWindow = (): { crawler?: { windowDays: number } } => {
+  const windowMs = getIndexerWindowMs();
+  return windowMs === undefined ? {} : { crawler: { windowDays: windowMs / DAY_MS } };
+};
 
 type RunningIndex = {
   /** `null` for a signed-out visitor. */
@@ -100,7 +109,7 @@ export class IndexerService {
       now: () => Date.now(),
       coordination,
       // The account's other devices start warm from the file this one saves under its private tree; a visitor has none.
-      options: { savedIndex: owner !== null },
+      options: { savedIndex: owner !== null, ...crawlerWindow() },
     });
     // Every app write lands through HomeserverService; a refresh of the account makes it part of the answers.
     const stopRefreshing =

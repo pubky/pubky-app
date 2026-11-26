@@ -122,6 +122,17 @@ describe('runtimeEnvInputSchema', () => {
     expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, indexerSources: value })).toThrow();
   });
 
+  it('leaves the local index window to the index unless set', () => {
+    expect(runtimeEnvInputSchema.parse(VALID_ENV_INPUT).indexerWindowMs).toBeUndefined();
+    expect(runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, indexerWindowMs: '120000' }).indexerWindowMs).toBe(
+      120_000,
+    );
+  });
+
+  it.each(['0', '-5', '1.5', 'week'])('rejects the local index window %j', (value) => {
+    expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, indexerWindowMs: value })).toThrow();
+  });
+
   it('requires the Nexus URL only while nexus is an indexer source', () => {
     const { nexusUrl: _nexusUrl, ...withoutNexus } = VALID_ENV_INPUT;
 
