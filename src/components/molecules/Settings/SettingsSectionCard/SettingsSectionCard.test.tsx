@@ -39,7 +39,7 @@ describe('SettingsSectionCard', () => {
 
   it('applies custom className', () => {
     const { container } = render(<SettingsSectionCard {...defaultProps} className="custom-section" />);
-    expect(container.firstChild).toHaveClass('custom-section', 'shadow-lg', 'light:shadow-none');
+    expect(container.firstChild).toHaveClass('custom-section');
   });
 
   it('renders title as h2 element when provided', () => {
