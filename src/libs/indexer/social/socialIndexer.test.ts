@@ -331,6 +331,41 @@ describe('createSocialIndexer', () => {
     expect(await indexer.backfill(ALICE, SOCIAL_ACTIVITY, 1, { force: true })).toEqual(empty);
   });
 
+  it('resolves a backfill with the next rebuild while changes keep coming, as a fill brings files', async () => {
+    const { network, indexerOf, store } = socialWorld({ hops: 1, windowDays: 0.5 });
+    const later = at(14, () => buildPost(ALICE, { content: 'Written last' }));
+    network.put(ALICE, later.path, later.body);
+    // A build that reads the store across turns, as IndexedDB does, so changes arrive while it runs.
+    const slow: IndexStore<SocialData> = {
+      ...store,
+      readCoverage: async (scope) => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        return store.readCoverage(scope);
+      },
+    };
+    const indexer = indexerOf(network, slow);
+    indexer.start(ALICE);
+    await indexer.whenSynced();
+    let poking = true;
+    let pokes = 0;
+    const poke = async () => {
+      // Each asks for a rebuild, the way a file the fill commits does.
+      for (; poking && pokes < 500; pokes += 1) {
+        indexer.setExcluded([]);
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      }
+    };
+    const pokedUntil = poke();
+
+    const outcome = await indexer.backfill(ALICE, SOCIAL_ACTIVITY, 1);
+    const pokedBefore = pokes;
+    poking = false;
+    await pokedUntil;
+
+    expect(outcome.status).toBe('ran');
+    expect(pokedBefore).toBeLessThan(500);
+  });
+
   it('is ready from a store a previous session filled, without calling the transport', async () => {
     const { fixture, indexerOf } = socialWorld();
     const { image, quote, repost } = fixture.posts;

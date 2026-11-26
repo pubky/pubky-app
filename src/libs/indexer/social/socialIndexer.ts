@@ -358,6 +358,14 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
   let excluded: ReadonlySet<string> = new Set(params.options?.crawler?.excluded ?? []);
   let rebuilding: Promise<void> | null = null;
   let again = false;
+  /** Rebuilds started so far, and the callers waiting for the one numbered `after` or a later one to end. */
+  let builds = 0;
+  let waiting: Array<{ after: number; resolve: () => void }> = [];
+  const endBuild = (number: number) => {
+    const done = waiting.filter(({ after }) => after <= number);
+    waiting = waiting.filter(({ after }) => after > number);
+    for (const { resolve } of done) resolve();
+  };
   const listeners = new Set<(change: SocialChange) => void>();
 
   /** Nothing the answers depend on is still to come: the first sync settled and no file is pending. */
@@ -525,6 +533,8 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
       const run = generation;
       const forSeed = seed;
       if (!started) break;
+      builds += 1;
+      const number = builds;
       const settled = firstSyncSettled;
       const completion = runtimeComplete ? completions : -1;
       const changed = pendingAuthors;
@@ -564,20 +574,27 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
         pendingActivity = pendingActivity || activity;
         viewError = asError(error);
         if (error instanceof ViewMismatchError) mismatch = error;
+      } finally {
+        endBuild(number);
       }
     } while (again);
     rebuilding = null;
+    // Stopped: nothing more will be built for whoever still waits.
+    endBuild(Number.POSITIVE_INFINITY);
   }
 
-  /** Resolves when a rebuild that started after this call has finished. */
+  /**
+   * Resolves when a rebuild that started after this call has finished, not when rebuilds stop: changes that keep
+   * coming, such as a fill's files, would otherwise hold a load's caller until they end.
+   */
   function requestRebuild(authors: Iterable<string>): Promise<void> {
     for (const author of authors) pendingAuthors.add(author);
-    if (rebuilding !== null) {
-      again = true;
-      return rebuilding;
-    }
-    rebuilding = runRebuilds();
-    return rebuilding;
+    const built = new Promise<void>((resolve) => {
+      waiting.push({ after: builds + 1, resolve });
+    });
+    if (rebuilding !== null) again = true;
+    else rebuilding = runRebuilds();
+    return built;
   }
 
   runtime.onChange((change) => {
