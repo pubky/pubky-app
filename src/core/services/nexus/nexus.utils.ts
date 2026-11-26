@@ -1,4 +1,8 @@
-import { INDEXER_HINT_BACKFILL_PAGES } from '@/config/indexer';
+import {
+  INDEXER_HINT_BACKFILL_PAGES,
+  INDEXER_PAGE_BACKFILL_AUTHORS,
+  INDEXER_PAGE_BACKFILL_IDLE_ROUNDS,
+} from '@/config/indexer';
 import {
   getCdnUrl,
   getNexusUrl,
@@ -15,7 +19,7 @@ import { ErrorService } from '@/libs/error/error.types';
 import { toAppError } from '@/libs/error/error.utils';
 import { HttpMethod, HttpStatusCode, JSON_HEADERS } from '@/libs/http/http.types';
 import { parseResponseOrThrow } from '@/libs/http/response.utils';
-import type { NexusRequest } from '@/libs/indexer/social/nexusRouter';
+import type { NexusRequest, NexusResponse } from '@/libs/indexer/social/nexusRouter';
 import { InvalidQueryError, UnavailableQueryError } from '@/libs/indexer/social/queries/queries.errors';
 import type { MoreHint } from '@/libs/indexer/social/queries/queries.types';
 import { SOCIAL_ACTIVITY } from '@/libs/indexer/social/social.domain';
@@ -243,22 +247,26 @@ const LOCAL_INDEX_METHODS: Partial<Record<HttpMethod, NexusRequest['method']>> =
 const isOneEntityRead = (url: string): boolean =>
   new RegExp(`/${NEXUS_API_VERSION}/(?:post|user)/`).test(new URL(url, 'http://local.invalid').pathname);
 
-function startHintLoad(indexer: SocialIndexer, hint: MoreHint): Promise<void> {
+/**
+ * `force` skips the index's rate limit on an author's older history. A stream page asks for it once per scroll, and
+ * a load skipped there would serve a short page, which ends the feed.
+ */
+function startHintLoad(indexer: SocialIndexer, hint: MoreHint, force: boolean): Promise<void> {
   switch (hint.kind) {
     case 'user':
       return indexer.ensureUser(hint.user);
     case 'post':
       return indexer.ensurePost(hint.author, hint.postId);
     case 'backfill':
-      return indexer.backfill(hint.author, SOCIAL_ACTIVITY, INDEXER_HINT_BACKFILL_PAGES);
+      return indexer.backfill(hint.author, SOCIAL_ACTIVITY, INDEXER_HINT_BACKFILL_PAGES, { force });
   }
 }
 
 /** Loads one hint, logging how long the read waited for it. */
-async function loadHint(indexer: SocialIndexer, hint: MoreHint): Promise<void> {
+async function loadHint(indexer: SocialIndexer, hint: MoreHint, force = false): Promise<void> {
   const startedAt = Date.now();
   try {
-    await startHintLoad(indexer, hint);
+    await startHintLoad(indexer, hint, force);
   } finally {
     Logger.debug('Local index loaded on demand', { hint, ms: Date.now() - startedAt });
   }
@@ -268,16 +276,83 @@ async function loadHint(indexer: SocialIndexer, hint: MoreHint): Promise<void> {
  * The hints worth one load before asking again. A user or post the answer lacks is always loaded: the app reads one
  * post or user through `by_ids` and a profile's posts through its author stream, and each answers without it rather
  * than with a 404. Older history only for a 404 the index cannot vouch for or a read about one post or user; a
- * stream page leaves it to pagination.
+ * stream page gets it from `extendStreamPage`.
  */
 function hintsToLoad(more: readonly MoreHint[], url: string, unproven: boolean): MoreHint[] {
   const extendsHistory = unproven || isOneEntityRead(url);
   return more.filter((hint) => hint.kind !== 'backfill' || extendsHistory);
 }
 
+const STREAM_PAGE_PATH = new RegExp(`/${NEXUS_API_VERSION}/stream/posts/keys$`);
+
+/**
+ * The page size of a post stream page that older history can extend, `null` for any other read. A page bounded from
+ * below (`end`) asks for posts newer than a score, as a head poll does, which no older post can join.
+ */
+function extendablePageLimit(url: string): number | null {
+  const parsed = new URL(url, 'http://local.invalid');
+  if (!STREAM_PAGE_PATH.test(parsed.pathname) || parsed.searchParams.has('end')) return null;
+  const limit = Number(parsed.searchParams.get('limit'));
+  return Number.isInteger(limit) && limit > 0 ? limit : null;
+}
+
+const pageKeysOf = (response: NexusResponse): readonly unknown[] | null => {
+  if (response.status !== 200) return null;
+  const keys = (response.json as { post_keys?: unknown } | null)?.post_keys;
+  return Array.isArray(keys) ? keys : null;
+};
+
+/**
+ * The authors a short page loads older history for, at most `INDEXER_PAGE_BACKFILL_AUTHORS`: those whose loaded
+ * history starts latest, whose gap the page reached first. An author with no known start goes first.
+ */
+function authorsToExtend(indexer: SocialIndexer, more: readonly MoreHint[]): string[] {
+  const authors = [...new Set(more.flatMap((hint) => (hint.kind === 'backfill' ? [hint.author] : [])))];
+  const view = indexer.view();
+  const startOf = (author: string) => view.historyOf(author).sinceMs ?? Number.POSITIVE_INFINITY;
+  return authors
+    .map((author) => ({ author, since: startOf(author) }))
+    .sort((a, b) => (a.since === b.since ? 0 : a.since > b.since ? -1 : 1))
+    .slice(0, INDEXER_PAGE_BACKFILL_AUTHORS)
+    .map(({ author }) => author);
+}
+
+/**
+ * Keeps loading older history into a stream page that came back short while its answer names authors whose history
+ * is not complete, one step per author and round, and asks again after each round. The app reads a short page as
+ * the end of the feed, so the page is served short only when no author has older history left, when every load of
+ * a round failed, or after `INDEXER_PAGE_BACKFILL_IDLE_ROUNDS` rounds in a row that added no post. A full page is
+ * served as it came, so a feed's first page waits for nothing it does not show.
+ */
+async function extendStreamPage(
+  indexer: SocialIndexer,
+  request: NexusRequest,
+  first: NexusResponse,
+  limit: number,
+): Promise<NexusResponse> {
+  let response = first;
+  let idleRounds = 0;
+  for (;;) {
+    const keys = pageKeysOf(response);
+    if (keys === null || keys.length >= limit) return response;
+    const authors = authorsToExtend(indexer, response.more ?? []);
+    if (authors.length === 0) return response;
+    const loads = await Promise.allSettled(
+      authors.map((author) => loadHint(indexer, { kind: 'backfill', author }, true)),
+    );
+    if (loads.every(({ status }) => status === 'rejected')) return response;
+    const next = await indexer.request(request);
+    const seen = new Set(keys);
+    idleRounds = (pageKeysOf(next) ?? []).some((key) => !seen.has(key)) ? 0 : idleRounds + 1;
+    response = next;
+    if (idleRounds >= INDEXER_PAGE_BACKFILL_IDLE_ROUNDS) return response;
+  }
+}
+
 /**
  * Answers a Nexus read from the local index. When the answer names what could be loaded to improve it
- * (`hintsToLoad`), that is loaded once and the read asked once more. A route the index cannot serve (global search
+ * (`hintsToLoad`), that is loaded once and the read asked once more; a short post stream page then gets older
+ * history until it is full or proven to end (`extendStreamPage`). A route the index cannot serve (global search
  * and rankings, and for a signed-out visitor's index every feed, ranking and search over a scope it does not have)
  * is `unavailable`.
  */
@@ -300,6 +375,8 @@ async function askLocalIndex({
       await Promise.allSettled(hints.map((hint) => loadHint(indexer, hint)));
       response = await indexer.request(request);
     }
+    const pageLimit = method === HttpMethod.GET ? extendablePageLimit(url) : null;
+    if (pageLimit !== null) response = await extendStreamPage(indexer, request, response, pageLimit);
     if (response.status === 200) return { kind: 'answer', json: response.json };
     return { kind: 'not_found', known: response.coverage.kind === 'exact' };
   } catch (error) {

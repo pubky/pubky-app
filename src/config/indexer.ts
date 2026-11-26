@@ -34,3 +34,15 @@ export const INDEXER_VISITOR_DATABASE = `${INDEXER_DATABASE_PREFIX}visitor`;
 
 /** Pages of an author's older activity loaded when a local answer asks for more. */
 export const INDEXER_HINT_BACKFILL_PAGES = 1;
+
+/**
+ * Authors whose older activity one round loads for a stream page that came back short. A feed of many authors names
+ * every one whose loaded history the page reached; loading them all on each scroll would crawl the whole network.
+ */
+export const INDEXER_PAGE_BACKFILL_AUTHORS = 3;
+
+/**
+ * Rounds in a row that may load older activity without adding a post to a short stream page before it is served as
+ * it is, which ends its feed. A round can hold only tags, so one empty round does not prove the end.
+ */
+export const INDEXER_PAGE_BACKFILL_IDLE_ROUNDS = 3;
