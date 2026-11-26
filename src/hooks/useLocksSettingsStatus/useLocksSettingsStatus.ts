@@ -46,8 +46,6 @@ export function useLocksSettingsStatus({
     if (session) setAnswer({ session, status: 'set-up' });
   };
 
-  // TODO:[Locks] pubky/locks#114 — also ask whether the Lock Server's grant is still live; today the
-  // Lock Server answers from its cached session, so a revoke in Pubky Ring is not seen.
   useEffect(() => {
     if (!session || needsSessionUpgrade) return;
     let isCurrent = true;
@@ -55,7 +53,14 @@ export function useLocksSettingsStatus({
     void (async () => {
       let next: PaykitAnswer['status'] = 'error';
       try {
-        next = PAYKIT_STATUS_TO_SETTINGS[await LocksController.fetchPaykitSetupStatus('BTC')];
+        // Not in parallel: without the grant the Paykit check can fail, and its error would show before "not set up".
+        const authorized = await LocksController.fetchCreatorAuthorized();
+        // Stale by now: the Paykit check would report an auth error without the session, or supersede the
+        // setup dialog's own check.
+        if (!isCurrent || generation !== answerGeneration.current) return;
+        next = authorized
+          ? PAYKIT_STATUS_TO_SETTINGS[await LocksController.fetchPaykitSetupStatus('BTC')]
+          : 'not-set-up';
       } catch {
         // Already reported by the Err factory.
       }

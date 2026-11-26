@@ -15,11 +15,12 @@ import { LOCKS_REQUEST_TIMEOUT_MS, LOCKS_TRANSFER_TIMEOUT_MS, READYZ_TIMEOUT_MS 
 const mocks = vi.hoisted(() => {
   const setLockServicePointer = vi.fn(async () => {});
   const paykitSetupStatus = vi.fn(async (): Promise<unknown> => ({ status: 'ready' }));
+  const creatorAuthorityStatus = vi.fn(async () => ({ authorized: true }));
   const fakeSession = {
     exportSecret: vi.fn(() => 'secret-abc'),
     creatorPubky: vi.fn((): string | undefined => 'pubkyaccount'),
     signout: vi.fn(async () => {}),
-    creator: { setLockServicePointer, paykitSetupStatus },
+    creator: { setLockServicePointer, paykitSetupStatus, creatorAuthorityStatus },
   };
   const fakeViewer = {
     id: 'viewer',
@@ -46,6 +47,7 @@ const mocks = vi.hoisted(() => {
     getE2eLocksStubUrl: vi.fn((): string | undefined => undefined),
     setLockServicePointer,
     paykitSetupStatus,
+    creatorAuthorityStatus,
     fakeSession,
     fakeLocks,
     fakeViewer,
@@ -284,11 +286,34 @@ describe('LocksService (auth)', () => {
     });
   });
 
+  it.each([true, false])('lookupCreatorAuthorized returns authorized %s from the Lock Server', async (authorized) => {
+    useLocksAuthStore
+      .getState()
+      .init({ session: mocks.fakeSession as never, secret: 'secret-abc', creatorPubky: 'account' });
+    mocks.creatorAuthorityStatus.mockResolvedValueOnce({ authorized });
+
+    await expect(LocksService.lookupCreatorAuthorized()).resolves.toBe(authorized);
+  });
+
+  // pubky/locks#136 answers 503 when it cannot check the grant; that must not read as revoked.
+  it('lookupCreatorAuthorized rejects when the Lock Server cannot check the grant', async () => {
+    useLocksAuthStore
+      .getState()
+      .init({ session: mocks.fakeSession as never, secret: 'secret-abc', creatorPubky: 'account' });
+    mocks.creatorAuthorityStatus.mockRejectedValueOnce(new Error('Lock Server request failed with HTTP 503'));
+
+    const error = await LocksService.lookupCreatorAuthorized().catch((caught: unknown) => caught);
+
+    expect(isAppError(error)).toBe(true);
+    expect(error).toMatchObject({ operation: 'LocksService.lookupCreatorAuthorized' });
+  });
+
   // Session-backed auth calls share the content calls' 401 → typed-auth-error promotion.
   it.each([
     ['signout', () => LocksService.signout(), () => mocks.fakeSession.signout],
     ['setLockServiceConfig', () => LocksService.setLockServiceConfig(), () => mocks.setLockServicePointer],
     ['lookupPaykitSetupStatus', () => LocksService.lookupPaykitSetupStatus('BTC'), () => mocks.paykitSetupStatus],
+    ['lookupCreatorAuthorized', () => LocksService.lookupCreatorAuthorized(), () => mocks.creatorAuthorityStatus],
   ])('%s promotes an HTTP 401 to an auth error', async (_name, call, mock) => {
     useLocksAuthStore
       .getState()

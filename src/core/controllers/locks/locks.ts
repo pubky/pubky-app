@@ -75,6 +75,16 @@ export class LocksController {
     };
   }
 
+  /** `captureSessionOwner`, plus the Locks session the operation started on. */
+  private static captureLocksSession(): { session: LocksSdkSession | null; isCurrent: () => boolean } {
+    const ownsAccount = this.captureSessionOwner();
+    const session = useLocksAuthStore.getState().selectLocksSession();
+    return {
+      session,
+      isCurrent: () => ownsAccount() && useLocksAuthStore.getState().selectLocksSession() === session,
+    };
+  }
+
   /**
    * Builds the `/connect` URL to load in the iframe auth modal.
    *
@@ -239,7 +249,20 @@ export class LocksController {
    * so a late rejection of an old session cannot discard its replacement.
    */
   static clearSession(): void {
-    this.clearLocalSession(true);
+    // Tabs do not share the in-memory store: a secret another tab saved since then is not the dead one.
+    this.clearLocalSession(!this.isPersistedSecretFromAnotherTab());
+  }
+
+  private static isPersistedSecretFromAnotherTab(): boolean {
+    const { storage, name } = useLocksAuthStore.persist.getOptions();
+    if (!storage || !name) return false;
+    try {
+      const persisted = storage.getItem(name);
+      if (!persisted || persisted instanceof Promise) return false;
+      return persisted.state.locksSessionSecret !== useLocksAuthStore.getState().selectLocksSessionSecret();
+    } catch {
+      return false;
+    }
   }
 
   static markPaykitConnected(): void {
@@ -257,10 +280,8 @@ export class LocksController {
    * session (401 → Auth) is cleared, as on restore, so the creator signs in again instead of retrying.
    */
   static async fetchPaykitSetupStatus(asset: TLockPriceAsset): Promise<TPaykitSetupStatus> {
-    const isCurrentSession = this.captureSessionOwner();
-    const session = useLocksAuthStore.getState().selectLocksSession();
+    const { isCurrent } = this.captureLocksSession();
     const generation = ++this.paykitSetupGeneration;
-    const isCurrent = () => isCurrentSession() && useLocksAuthStore.getState().selectLocksSession() === session;
     try {
       const status = await LocksApplication.fetchPaykitSetupStatus(asset);
       if (!isCurrent()) return 'unavailable';
@@ -277,13 +298,33 @@ export class LocksController {
   }
 
   /**
+   * Whether the Lock Server still holds the creator's grant. On `false` (revoked in Pubky Ring) the Locks
+   * session is cleared, so the setup dialog starts again at the Lock Server step.
+   */
+  static async fetchCreatorAuthorized(): Promise<boolean> {
+    const { session, isCurrent } = this.captureLocksSession();
+    try {
+      const authorized = await LocksApplication.fetchCreatorAuthorized();
+      if (!authorized && isCurrent()) {
+        this.clearSession();
+        // The session is useless without the grant, so close it now instead of leaving it open until it expires.
+        if (session) void LocksApplication.signout(session).catch(() => {});
+      }
+      return authorized;
+    } catch (error) {
+      if (isCurrent() && isAppError(error) && isAuthError(error)) this.clearSession();
+      throw error;
+    }
+  }
+
+  /**
    * On app load, rebuilds the live Locks session from the persisted bearer secret, then validates it
    * against the Lock Server. No-op if nothing to restore or a session is already live.
    *
    * `restoreSession` is offline, so a server-expired secret would rebuild a session that looks live —
    * the composer would show "authenticated", let the creator configure a lock, and only surprise them
-   * with a sign-in prompt when publishing makes the first real call. The SDK exposes no read to probe
-   * with, so validate via the idempotent config write: a rejected session (401 → Auth) is cleared now.
+   * with a sign-in prompt when publishing makes the first real call. So validate via the idempotent config
+   * write, chosen before the SDK had `creatorAuthorityStatus`: a rejected session (401 → Auth) is cleared now.
    * Other failures (network / 5xx) keep the session — they don't prove it's dead.
    */
   static async restorePersistedLocksSession(): Promise<void> {

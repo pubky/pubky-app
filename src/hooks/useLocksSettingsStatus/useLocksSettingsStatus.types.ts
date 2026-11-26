@@ -2,7 +2,11 @@
 export type LocksSettingsStatus = 'loading' | 'not-set-up' | 'set-up' | 'unavailable' | 'error';
 
 export type UseLocksSettingsStatusOptions = {
-  /** Skips the recheck when the tab is shown again, while a setup dialog runs its own checks. */
+  /**
+   * True while a setup dialog runs its own checks: no recheck when the tab is shown again, and a check sent
+   * before the dialog opened is dropped. When it turns false with Paykit connected, the page shows set up,
+   * also after **Cancel** or Esc, which close the dialog without `onSuccess`.
+   */
   paused?: boolean;
 };
 

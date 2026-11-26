@@ -8,12 +8,14 @@ import { useLocksSettingsStatus } from './useLocksSettingsStatus';
 
 const mocks = vi.hoisted(() => ({
   fetchPaykitSetupStatus: vi.fn(),
+  fetchCreatorAuthorized: vi.fn(),
   needsSessionUpgrade: false,
 }));
 
 vi.mock('@/controllers/locks/locks', () => ({
   LocksController: {
     fetchPaykitSetupStatus: mocks.fetchPaykitSetupStatus,
+    fetchCreatorAuthorized: mocks.fetchCreatorAuthorized,
     markPaykitConnected: () => useLocksAuthStore.getState().setPaykitConnected(true),
   },
 }));
@@ -40,7 +42,67 @@ describe('useLocksSettingsStatus', () => {
     vi.restoreAllMocks();
     mocks.needsSessionUpgrade = false;
     mocks.fetchPaykitSetupStatus.mockResolvedValue('ready');
+    mocks.fetchCreatorAuthorized.mockResolvedValue(true);
     useLocksAuthStore.setState({ ...locksAuthInitialState, hasHydrated: true });
+  });
+
+  it('is not set up once the Lock Server grant was revoked in Pubky Ring, even with Paykit ready', async () => {
+    signIn(true);
+    // The real controller clears the Locks session on `false`.
+    mocks.fetchCreatorAuthorized.mockImplementation(async () => {
+      useLocksAuthStore.setState({ ...locksAuthInitialState, hasHydrated: true });
+      return false;
+    });
+    const { result } = renderHook(() => useLocksSettingsStatus());
+
+    await waitFor(() => expect(result.current.status).toBe('not-set-up'));
+    expect(mocks.fetchPaykitSetupStatus).not.toHaveBeenCalled();
+  });
+
+  it('is not set up on a revoked grant even when the controller keeps the session', async () => {
+    signIn();
+    mocks.fetchCreatorAuthorized.mockResolvedValue(false);
+    const { result } = renderHook(() => useLocksSettingsStatus());
+
+    await waitFor(() => expect(result.current.status).toBe('not-set-up'));
+    expect(mocks.fetchPaykitSetupStatus).not.toHaveBeenCalled();
+  });
+
+  it('does not ask Paykit when the Locks session ended during the authority check', async () => {
+    signIn();
+    mocks.fetchCreatorAuthorized.mockImplementation(async () => {
+      useLocksAuthStore.setState({ ...locksAuthInitialState, hasHydrated: true });
+      return true;
+    });
+    const { result } = renderHook(() => useLocksSettingsStatus());
+
+    await waitFor(() => expect(result.current.status).toBe('not-set-up'));
+    expect(mocks.fetchPaykitSetupStatus).not.toHaveBeenCalled();
+  });
+
+  it('does not ask Paykit when a setup dialog opened during the authority check', async () => {
+    signIn();
+    const authority = Promise.withResolvers<boolean>();
+    mocks.fetchCreatorAuthorized.mockReturnValueOnce(authority.promise);
+    const { rerender } = renderHook(({ paused }) => useLocksSettingsStatus({ paused }), {
+      initialProps: { paused: false },
+    });
+    expect(mocks.fetchCreatorAuthorized).toHaveBeenCalledTimes(1);
+
+    rerender({ paused: true });
+    await act(async () => {
+      authority.resolve(true);
+    });
+
+    expect(mocks.fetchPaykitSetupStatus).not.toHaveBeenCalled();
+  });
+
+  it('is an error, never "not set up", when the Lock Server cannot check its grant', async () => {
+    signIn();
+    mocks.fetchCreatorAuthorized.mockRejectedValue(new Error('HTTP 503'));
+    const { result } = renderHook(() => useLocksSettingsStatus());
+
+    await waitFor(() => expect(result.current.status).toBe('error'));
   });
 
   it('is loading until the store has hydrated', () => {
@@ -55,6 +117,7 @@ describe('useLocksSettingsStatus', () => {
     const { result } = renderHook(() => useLocksSettingsStatus());
 
     expect(result.current.status).toBe('loading');
+    expect(mocks.fetchCreatorAuthorized).not.toHaveBeenCalled();
     expect(mocks.fetchPaykitSetupStatus).not.toHaveBeenCalled();
   });
 
@@ -62,6 +125,7 @@ describe('useLocksSettingsStatus', () => {
     const { result } = renderHook(() => useLocksSettingsStatus());
 
     expect(result.current.status).toBe('not-set-up');
+    expect(mocks.fetchCreatorAuthorized).not.toHaveBeenCalled();
     expect(mocks.fetchPaykitSetupStatus).not.toHaveBeenCalled();
   });
 
@@ -71,6 +135,8 @@ describe('useLocksSettingsStatus', () => {
     const { result } = renderHook(() => useLocksSettingsStatus());
 
     expect(result.current.status).toBe('not-set-up');
+    expect(mocks.fetchCreatorAuthorized).not.toHaveBeenCalled();
+    expect(mocks.fetchPaykitSetupStatus).not.toHaveBeenCalled();
   });
 
   it('is set up once the Lock Server says the Paykit setup is ready', async () => {
@@ -140,7 +206,7 @@ describe('useLocksSettingsStatus', () => {
     mocks.fetchPaykitSetupStatus.mockReturnValue(new Promise(() => {}));
     showTab('visible');
 
-    expect(mocks.fetchPaykitSetupStatus).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(mocks.fetchPaykitSetupStatus).toHaveBeenCalledTimes(2));
     expect(result.current.status).toBe('unavailable');
   });
 
@@ -149,14 +215,15 @@ describe('useLocksSettingsStatus', () => {
     const { rerender } = renderHook(({ paused }) => useLocksSettingsStatus({ paused }), {
       initialProps: { paused: true },
     });
-    await waitFor(() => expect(mocks.fetchPaykitSetupStatus).toHaveBeenCalledTimes(1));
+    expect(mocks.fetchCreatorAuthorized).toHaveBeenCalledTimes(1);
 
     showTab('visible');
-    expect(mocks.fetchPaykitSetupStatus).toHaveBeenCalledTimes(1);
+    expect(mocks.fetchCreatorAuthorized).toHaveBeenCalledTimes(1);
 
     rerender({ paused: false });
     showTab('visible');
-    await waitFor(() => expect(mocks.fetchPaykitSetupStatus).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(mocks.fetchPaykitSetupStatus).toHaveBeenCalledTimes(1));
+    expect(mocks.fetchCreatorAuthorized).toHaveBeenCalledTimes(2);
   });
 
   // A grant revoked in Pubky Ring after the page showed set up (#2984).
@@ -180,7 +247,7 @@ describe('useLocksSettingsStatus', () => {
     const pendingCheck = Promise.withResolvers<string>();
     mocks.fetchPaykitSetupStatus.mockReturnValueOnce(pendingCheck.promise);
     showTab('visible');
-    expect(mocks.fetchPaykitSetupStatus).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(mocks.fetchPaykitSetupStatus).toHaveBeenCalledTimes(2));
 
     act(() => {
       result.current.markSetUp();
@@ -204,6 +271,7 @@ describe('useLocksSettingsStatus', () => {
     const pendingCheck = Promise.withResolvers<string>();
     mocks.fetchPaykitSetupStatus.mockReturnValueOnce(pendingCheck.promise);
     showTab('visible');
+    await waitFor(() => expect(mocks.fetchPaykitSetupStatus).toHaveBeenCalledTimes(2));
     rerender({ paused: true });
     await act(async () => {
       pendingCheck.resolve('ready');

@@ -8,6 +8,7 @@ import type { TUnlockedContent } from '@/services/locks/locks.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
 import { locksAuthInitialState } from '@/stores/locksAuth/locksAuth.types';
+import { LOCKS_AUTH_PERSIST_KEY } from '@/stores/persistedKeys';
 import { MOCK_LOCK_AUTHOR_PUBKY, mockLockFile } from '@/test-utils/locks';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { LocksController } from './locks';
@@ -20,6 +21,7 @@ const mocks = vi.hoisted(() => ({
   signout: vi.fn(),
   setLockServiceConfig: vi.fn(),
   fetchPaykitSetupStatus: vi.fn(),
+  fetchCreatorAuthorized: vi.fn(),
   generatePaykitReconnectUrl: vi.fn(),
   fetchPaykitCreatorHeld: vi.fn(),
   createLockContent: vi.fn(),
@@ -48,6 +50,7 @@ vi.mock('@/application/locks/locks', () => ({
     signout: mocks.signout,
     setLockServiceConfig: mocks.setLockServiceConfig,
     fetchPaykitSetupStatus: mocks.fetchPaykitSetupStatus,
+    fetchCreatorAuthorized: mocks.fetchCreatorAuthorized,
     generatePaykitReconnectUrl: mocks.generatePaykitReconnectUrl,
     fetchPaykitCreatorHeld: mocks.fetchPaykitCreatorHeld,
     createLockContent: mocks.createLockContent,
@@ -571,6 +574,155 @@ describe('LocksController (auth)', () => {
 
       expect(useLocksAuthStore.getState().selectIsPaykitConnected()).toBe(false);
       expect(useLocksAuthStore.getState().selectLocksSession()).toBe(fakeSession);
+    });
+  });
+
+  describe('fetchCreatorAuthorized', () => {
+    beforeEach(() => {
+      useLocksAuthStore
+        .getState()
+        .init({ session: fakeSession, secret: 'secret-abc', creatorPubky: MOCK_LOCK_AUTHOR_PUBKY });
+    });
+
+    it('keeps the session while the Lock Server still holds the grant', async () => {
+      mocks.fetchCreatorAuthorized.mockResolvedValueOnce(true);
+
+      await expect(LocksController.fetchCreatorAuthorized()).resolves.toBe(true);
+
+      expect(useLocksAuthStore.getState().selectLocksSession()).toBe(fakeSession);
+      expect(mocks.signout).not.toHaveBeenCalled();
+    });
+
+    it('clears and signs out the session once the grant is revoked', async () => {
+      mocks.fetchCreatorAuthorized.mockResolvedValueOnce(false);
+
+      await expect(LocksController.fetchCreatorAuthorized()).resolves.toBe(false);
+
+      const store = useLocksAuthStore.getState();
+      expect(store.selectIsLocksAuthenticated()).toBe(false);
+      expect(store.selectLocksSessionSecret()).toBeNull();
+      expect(mocks.signout).toHaveBeenCalledWith(fakeSession);
+    });
+
+    it('keeps a session adopted while the revoked answer was in flight', async () => {
+      const otherSession = asOpaque<LocksSdkSession>({ id: 'other' });
+      mocks.fetchCreatorAuthorized.mockImplementationOnce(async () => {
+        useLocksAuthStore
+          .getState()
+          .init({ session: otherSession, secret: 'other', creatorPubky: MOCK_LOCK_AUTHOR_PUBKY });
+        return false;
+      });
+
+      await expect(LocksController.fetchCreatorAuthorized()).resolves.toBe(false);
+
+      expect(useLocksAuthStore.getState().selectLocksSession()).toBe(otherSession);
+      expect(mocks.signout).not.toHaveBeenCalled();
+    });
+
+    it('clears the session when the Lock Server rejects it (401 → Auth)', async () => {
+      const rejected = Err.auth(AuthErrorCode.SESSION_EXPIRED, 'rejected', {
+        service: ErrorService.Locks,
+        operation: 'test',
+      });
+      mocks.fetchCreatorAuthorized.mockRejectedValueOnce(rejected);
+
+      await expect(LocksController.fetchCreatorAuthorized()).rejects.toBe(rejected);
+
+      expect(useLocksAuthStore.getState().selectIsLocksAuthenticated()).toBe(false);
+    });
+
+    it('does not clear a new session when the old authority check is rejected', async () => {
+      mocks.fetchCreatorAuthorized.mockImplementationOnce(async () => {
+        useLocksAuthStore.getState().init({
+          session: asOpaque<LocksSdkSession>({ id: 'other' }),
+          secret: 'other',
+          creatorPubky: MOCK_LOCK_AUTHOR_PUBKY,
+        });
+        throw Err.auth(AuthErrorCode.SESSION_EXPIRED, 'rejected', { service: ErrorService.Locks, operation: 'test' });
+      });
+
+      await expect(LocksController.fetchCreatorAuthorized()).rejects.toThrow('rejected');
+
+      expect(useLocksAuthStore.getState().selectLocksSessionSecret()).toBe('other');
+    });
+
+    it('answers false even when signing out the revoked session fails', async () => {
+      mocks.fetchCreatorAuthorized.mockResolvedValueOnce(false);
+      mocks.signout.mockRejectedValueOnce(new Error('network down'));
+
+      await expect(LocksController.fetchCreatorAuthorized()).resolves.toBe(false);
+
+      expect(mocks.signout).toHaveBeenCalledWith(fakeSession);
+      expect(useLocksAuthStore.getState().selectIsLocksAuthenticated()).toBe(false);
+    });
+
+    it('keeps the session when the Lock Server cannot check the grant', async () => {
+      mocks.fetchCreatorAuthorized.mockRejectedValueOnce(new Error('HTTP 503'));
+
+      await expect(LocksController.fetchCreatorAuthorized()).rejects.toThrow('HTTP 503');
+
+      expect(useLocksAuthStore.getState().selectLocksSession()).toBe(fakeSession);
+    });
+  });
+
+  // Tabs do not share the in-memory store, so another tab may have saved a newer sign-in meanwhile.
+  describe('clearing a dead session while another tab saved a new one', () => {
+    const persistedSecret = () =>
+      JSON.parse(localStorage.getItem(LOCKS_AUTH_PERSIST_KEY) ?? 'null')?.state?.locksSessionSecret ?? null;
+    const expired = () =>
+      Err.auth(AuthErrorCode.SESSION_EXPIRED, 'rejected', { service: ErrorService.Locks, operation: 'test' });
+
+    beforeEach(() => {
+      useLocksAuthStore
+        .getState()
+        .init({ session: fakeSession, secret: 'secret-abc', creatorPubky: MOCK_LOCK_AUTHOR_PUBKY });
+    });
+
+    it.each([
+      [
+        'a revoked grant',
+        () => {
+          mocks.fetchCreatorAuthorized.mockResolvedValueOnce(false);
+          return LocksController.fetchCreatorAuthorized();
+        },
+      ],
+      [
+        'a rejected authority check (401)',
+        () => {
+          mocks.fetchCreatorAuthorized.mockRejectedValueOnce(expired());
+          return LocksController.fetchCreatorAuthorized().catch(() => {});
+        },
+      ],
+      [
+        'a rejected Paykit check (401)',
+        () => {
+          mocks.fetchPaykitSetupStatus.mockRejectedValueOnce(expired());
+          return LocksController.fetchPaykitSetupStatus('BTC').catch(() => {});
+        },
+      ],
+    ])("keeps the other tab's saved secret and clears only this tab on %s", async (_, check) => {
+      localStorage.setItem(
+        LOCKS_AUTH_PERSIST_KEY,
+        JSON.stringify({
+          state: { locksSessionSecret: 'other-tab-secret', creatorPubky: MOCK_LOCK_AUTHOR_PUBKY, hasHydrated: false },
+          version: 0,
+        }),
+      );
+
+      await check();
+
+      expect(useLocksAuthStore.getState().selectIsLocksAuthenticated()).toBe(false);
+      expect(useLocksAuthStore.getState().selectLocksSessionSecret()).toBeNull();
+      expect(persistedSecret()).toBe('other-tab-secret');
+    });
+
+    it("removes this tab's own saved secret on a revoked grant", async () => {
+      expect(persistedSecret()).toBe('secret-abc');
+      mocks.fetchCreatorAuthorized.mockResolvedValueOnce(false);
+
+      await LocksController.fetchCreatorAuthorized();
+
+      expect(persistedSecret()).toBeNull();
     });
   });
 
