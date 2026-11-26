@@ -42,7 +42,15 @@ export const INDEXER_HINT_BACKFILL_PAGES = 1;
 export const INDEXER_PAGE_BACKFILL_AUTHORS = 3;
 
 /**
- * Rounds in a row that may load older activity without adding a post to a short stream page before it is served as
- * it is, which ends its feed. A round can hold only tags, so one empty round does not prove the end.
+ * Rounds of older activity one stream page request may run, a safety net only: the outcome of each step ends the
+ * extension (history complete, a step skipped or failed) and the time budget below bounds it. 20 rounds read up to
+ * 2000 events per author, more than the budget leaves time for at real homeserver latency, so the cap fires only
+ * when steps settle without reading anything new.
  */
-export const INDEXER_PAGE_BACKFILL_IDLE_ROUNDS = 3;
+export const INDEXER_PAGE_BACKFILL_MAX_ROUNDS = 20;
+
+/**
+ * Wall-clock time one stream page request may spend loading older activity before the page is served as it is. An
+ * author with sparse posts can take many rounds of a few seconds each to fill a page.
+ */
+export const INDEXER_PAGE_BACKFILL_BUDGET_MS = 8_000;

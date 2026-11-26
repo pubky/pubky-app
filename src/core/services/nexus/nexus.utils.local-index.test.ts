@@ -35,6 +35,7 @@ const keysOf = (from: number, count: number) => Array.from({ length: count }, (_
 
 /** A step that read a page of older history short of the start. */
 const STEP: BackfillOutcome = { status: 'ran', complete: false, events: 100, posts: 1, sinceMs: 50 };
+const COMPLETE: BackfillOutcome = { ...STEP, complete: true, sinceMs: null };
 
 /** A view whose authors' loaded history starts at these times, unknown for anyone else. */
 const viewSince = (since: Record<string, number> = {}) =>
@@ -202,7 +203,7 @@ describe('queryNexus routing by indexer sources', () => {
 
       await expect(queryNexus({ url: uniqueUrl('user/alice/counts') })).resolves.toEqual({ posts: 9 });
 
-      expect(indexer.backfill).toHaveBeenCalledExactlyOnceWith('alice', 'activity', 1, { force: false });
+      expect(indexer.backfill).toHaveBeenCalledExactlyOnceWith('alice', 'activity', 1);
     });
 
     it('loads the posts a by_ids read lacks, once, and asks once more', async () => {
@@ -259,7 +260,17 @@ describe('queryNexus routing by indexer sources', () => {
         expect(indexer.request).toHaveBeenCalledOnce();
       });
 
-      it('ends at a short page once the history is complete', async () => {
+      it('ends at a short page once a step reaches the start of the history', async () => {
+        const indexer = fakeIndexer(page(keysOf(0, 1), [olderOf('alice')]), page(keysOf(0, 2), [olderOf('alice')]));
+        indexer.backfill.mockResolvedValueOnce(COMPLETE);
+
+        await expect(queryNexus({ url: uniqueUrl(AUTHOR_PAGE) })).resolves.toMatchObject({ post_keys: keysOf(0, 2) });
+
+        expect(indexer.backfill).toHaveBeenCalledOnce();
+        expect(indexer.request).toHaveBeenCalledTimes(2);
+      });
+
+      it('ends at a short page the index names no older history for', async () => {
         const indexer = fakeIndexer(page(keysOf(0, 1), [olderOf('alice')]), page(keysOf(0, 2)));
 
         await expect(queryNexus({ url: uniqueUrl(AUTHOR_PAGE) })).resolves.toMatchObject({ post_keys: keysOf(0, 2) });
@@ -268,23 +279,66 @@ describe('queryNexus routing by indexer sources', () => {
         expect(indexer.request).toHaveBeenCalledTimes(2);
       });
 
-      it('ends after three rounds in a row that add no post', async () => {
+      it('keeps stepping through rounds that add no post while the history moves back', async () => {
         const short = page(keysOf(0, 1), [olderOf('alice')]);
-        const indexer = fakeIndexer(short, short, short, short, page(keysOf(0, 3)));
+        const indexer = fakeIndexer(short, short, short, short, page(keysOf(0, 3), [olderOf('alice')]));
 
-        await expect(queryNexus({ url: uniqueUrl(AUTHOR_PAGE) })).resolves.toMatchObject({ post_keys: keysOf(0, 1) });
+        await expect(queryNexus({ url: uniqueUrl(AUTHOR_PAGE) })).resolves.toMatchObject({ post_keys: keysOf(0, 3) });
 
-        expect(indexer.backfill).toHaveBeenCalledTimes(3);
-        expect(indexer.request).toHaveBeenCalledTimes(4);
+        expect(indexer.backfill).toHaveBeenCalledTimes(4);
+        expect(indexer.request).toHaveBeenCalledTimes(5);
       });
 
-      it('ends when every load of a round fails', async () => {
-        const indexer = fakeIndexer(page(keysOf(0, 1), [olderOf('alice')]));
-        indexer.backfill.mockRejectedValue(new Error('homeserver down'));
+      it('ends without asking again when every step of a round fails or is skipped', async () => {
+        const indexer = fakeIndexer(page(keysOf(0, 1), [olderOf('alice'), olderOf('bob')]));
+        indexer.backfill.mockRejectedValueOnce(new Error('homeserver down'));
+        indexer.backfill.mockResolvedValueOnce({ ...STEP, status: 'skipped', events: 0, posts: 0 });
 
         await expect(queryNexus({ url: uniqueUrl(AUTHOR_PAGE) })).resolves.toMatchObject({ post_keys: keysOf(0, 1) });
 
+        expect(indexer.backfill).toHaveBeenCalledTimes(2);
         expect(indexer.request).toHaveBeenCalledOnce();
+      });
+
+      it('steps no further for an author whose step failed, and goes on with the others', async () => {
+        const both = [olderOf('ann'), olderOf('ben')];
+        const indexer = fakeIndexer(page([], both), page(['ben:1'], both), page(['ben:1', 'ben:2', 'ben:3'], both));
+        indexer.backfill.mockImplementation(async (author) => {
+          if (author === 'ann') throw new Error('homeserver down');
+          return STEP;
+        });
+
+        await queryNexus({ url: uniqueUrl('stream/posts/keys?source=following&observer_id=me&limit=3&start=900') });
+
+        expect(indexer.backfill.mock.calls.map(([author]) => author)).toEqual(['ann', 'ben', 'ben']);
+        expect(indexer.request).toHaveBeenCalledTimes(3);
+      });
+
+      it('stops after 20 rounds, a safety net for steps that never end the extension', async () => {
+        const short = page(keysOf(0, 1), [olderOf('alice')]);
+        const indexer = fakeIndexer(...Array.from({ length: 21 }, () => short), page(keysOf(0, 3)));
+
+        await expect(queryNexus({ url: uniqueUrl(AUTHOR_PAGE) })).resolves.toMatchObject({ post_keys: keysOf(0, 1) });
+
+        expect(indexer.backfill).toHaveBeenCalledTimes(20);
+        expect(indexer.request).toHaveBeenCalledTimes(21);
+      });
+
+      it('serves the page as it is once 8 s ran out, asking once more for what landed meanwhile', async () => {
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+        try {
+          const indexer = fakeIndexer(page(keysOf(0, 1), [olderOf('alice')]), page(keysOf(0, 2), [olderOf('alice')]));
+          indexer.backfill.mockReturnValue(new Promise<BackfillOutcome>(() => undefined));
+
+          const served = queryNexus({ url: uniqueUrl(AUTHOR_PAGE) });
+          await vi.advanceTimersByTimeAsync(8_000);
+
+          await expect(served).resolves.toMatchObject({ post_keys: keysOf(0, 2) });
+          expect(indexer.backfill).toHaveBeenCalledOnce();
+          expect(indexer.request).toHaveBeenCalledTimes(2);
+        } finally {
+          vi.useRealTimers();
+        }
       });
 
       it('loads the three authors whose loaded history starts latest, in a feed of many', async () => {
@@ -299,8 +353,8 @@ describe('queryNexus routing by indexer sources', () => {
         expect(indexer.request).toHaveBeenCalledTimes(2);
       });
 
-      it('leaves a page of newer posts as it is', async () => {
-        const indexer = fakeIndexer(page([], [olderOf('alice')]));
+      it('leaves a head poll as it came, the index naming no older history for it', async () => {
+        const indexer = fakeIndexer(page([]));
 
         await queryNexus({ url: uniqueUrl('stream/posts/keys?source=author&author_id=alice&limit=3&end=100') });
 

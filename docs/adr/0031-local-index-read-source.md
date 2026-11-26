@@ -44,13 +44,19 @@ default, today's behavior), `local`, or `local,nexus`. Without `nexus` the Nexus
   read, the stream of an author not loaded, an unproven 404) gets one load of it and one more ask; older history is
   loaded that way only for a 404 the index cannot vouch for or an answer about one post or user. A post stream page
   differs, because the stream layer reads a page shorter than its `limit` as the end of the feed, as Nexus means
-  it. A page that comes back short while its answer names authors with older history gets one forced step of that
-  history for at most `INDEXER_PAGE_BACKFILL_AUTHORS` of them per round, those whose loaded history starts latest,
-  and is asked again, round after round, until it is full. It is served short, ending the feed, only when no author
-  has older history left, when every step of a round failed, or after `INDEXER_PAGE_BACKFILL_IDLE_ROUNDS` rounds in
-  a row added no post. A full page is served as it came, so the first page of a feed waits on nothing it does not
-  show, and a page bounded from below (`end`, a head poll) is never extended. The wait shows as the feed's
-  loading-more state. Only the author streams and Following name older history; the All, friends and web of trust
+  it. The index names an author's older history on a page only when an older post of theirs could join it: the page
+  is short, or it would continue past what is loaded for them. A head poll (`end` at the newest post shown) names
+  none. A page that comes back short while its answer names such authors gets one forced step of that history for at
+  most `INDEXER_PAGE_BACKFILL_AUTHORS` of them per round, those whose loaded history starts latest, and is asked
+  again, round after round, until it is full. Each step resolves once the index's answers hold it and says whether it
+  ran, how many events it read and whether the history now reaches the author's first event. An author leaves the
+  extension once complete, or once a step of theirs was skipped, failed or read nothing; the page is served short,
+  ending the feed, once no named author is left. `INDEXER_PAGE_BACKFILL_MAX_ROUNDS` (20) caps the rounds as a safety
+  net, and `INDEXER_PAGE_BACKFILL_BUDGET_MS` (8 s) bounds the time one page request spends: past it the page is served
+  as it is. The stream layer reads only the page length (`reachedEnd: rawPageIds.length < limit`) and has no way to
+  say short but not ended, so a page served short on the budget ends the feed too; the step still running lands in
+  the index and the next open of the feed continues from there. A full page is served as it came, so the first page
+  of a feed waits on nothing it does not show. The wait shows as the feed's loading-more state. Only the author streams and Following name older history; the All, friends and web of trust
   feeds end at the loaded window. With `local,nexus`, an unavailable read
   or an unproven 404 goes on to Nexus. Local answers bypass the Nexus transport cache and carry no response start
   stamp: they reflect the index's last sync, not the time of the call.
