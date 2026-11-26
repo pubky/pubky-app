@@ -223,6 +223,35 @@ describe('createIdbStore', () => {
     expect(await store.readScope(META)).toEqual(mergeRuns([runOf(2, 4)]));
   });
 
+  it('reads rows earlier window rules wrote, ignoring their window fields, and grows a clock on them', async () => {
+    const name = nextName();
+    const first = open(name);
+    await first.applyRuns([runOf(0, 2)]);
+    first.close();
+    const old = new Dexie(name);
+    old.version(3).stores({ scopes: '++id, &[author+homeserver+group], homeserver', homeserverStates: 'homeserver' });
+    await old
+      .table('scopes')
+      .toCollection()
+      .modify({ end: c(1) });
+    await old.table('homeserverStates').put({
+      homeserver: 'hs1',
+      state: { highWater: { cursor: c(2), author: 'alice' }, epoch: 0, windowStart: { cursor: c(1), foundAt: 5 } },
+    });
+    old.close();
+
+    const store = open(name);
+    await store.applyRuns([runOf(2, 4)]);
+    await store.patchHomeserverState('hs1', { clock: [{ cursor: c(3), ms: 30, writer: 'alice' }] });
+
+    expect(await store.readScope(META)).toEqual(mergeRuns([runOf(0, 2), runOf(2, 4)]));
+    expect(await store.readHomeserverState('hs1')).toEqual({
+      ...EMPTY_HOMESERVER_STATE,
+      highWater: { cursor: c(2), author: 'alice' },
+      clock: [{ cursor: c(3), ms: 30, writer: 'alice' }],
+    });
+  });
+
   it('keeps meta values across a reopen, null for a key never written', async () => {
     const name = nextName();
     const first = open(name);

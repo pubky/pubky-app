@@ -23,8 +23,16 @@ export interface CrawlerOptions {
    * 6 connections per host over HTTP/1.1. Raise it for a transport that runs more, such as HTTP/2 or Node's fetch.
    */
   homeserverConcurrency: number;
-  /** Age of the oldest events a windowed group indexes before a backfill. */
+  /**
+   * Age of the oldest events a windowed group indexes before a backfill, by the homeserver's clock: the window is the
+   * part of each user's log above the cursor the clock places this long ago.
+   */
   windowDays: number;
+  /**
+   * Most paths of one user a window read takes, their newest, counting those their top range already holds when it
+   * continues below it: a cost bound, so a user who wrote more within the window starts later.
+   */
+  windowMaxEntries: number;
   /** How long a resolved homeserver is used before resolving the user again. */
   homeserverTtlMs: number;
   /** Most users in a scope, seed included; nearer hops win. */
@@ -48,6 +56,7 @@ export const DEFAULT_CRAWLER_OPTIONS: Readonly<CrawlerOptions> = Object.freeze({
   lookupConcurrency: 8,
   homeserverConcurrency: 6,
   windowDays: 30,
+  windowMaxEntries: 1000,
   homeserverTtlMs: 6 * 60 * 60 * 1000,
   maxUsers: 2000,
   excluded: new Set<string>(),

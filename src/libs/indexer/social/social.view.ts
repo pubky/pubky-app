@@ -1,5 +1,6 @@
 import type { KnownPostKind } from 'pubky-social-specs';
 import type { Cursor } from '../indexer.types';
+import { buildTimeTable, estimateMs, type TimeSample } from '../timeTable';
 import {
   type AuthorPart,
   authorPartOf,
@@ -12,7 +13,6 @@ import {
 } from './social.author';
 import { type AuthorChange, combine, type Combined, patchCombined } from './social.combine';
 import type { AuthorRecords, FileData, Membership, PostData, TagData, UserData } from './social.types';
-import { buildTimeTable, estimateMs, type TimeSample } from './timeTable';
 
 /** A logical post: its newest live version. */
 export interface SocialPost {
@@ -140,9 +140,26 @@ export interface SocialState {
   /** By author, in the order the records came. */
   readonly parts: ReadonlyMap<string, AuthorPart>;
   readonly combined: Combined;
-  /** Each homeserver's time table, built on first use. */
-  readonly tables: Map<string, readonly TimeSample[]>;
+  /**
+   * Each homeserver's time table, built on first use, until the time of its earliest sample dated after `nowMs`, which
+   * it leaves out until then.
+   */
+  readonly tables: Map<string, Table>;
+  /** Each homeserver's stored clock, which its table is built from with the loaded records' samples. */
+  readonly clocks: Clocks;
+  /** When the state was built: a sample dated later is a lie for now. */
+  readonly nowMs: number;
 }
+
+interface Table {
+  table: readonly TimeSample[];
+  until: number;
+}
+
+/** Each homeserver's stored clock, by homeserver. */
+export type Clocks = ReadonlyMap<string, readonly TimeSample[]>;
+
+const NO_CLOCKS: Clocks = new Map();
 
 /** Labels by number of taggers, most first, then by label. */
 function groupTags(taggersByLabel: ReadonlyMap<string, ReadonlySet<string>> | undefined): TagGroup[] {
@@ -155,18 +172,22 @@ function groupTags(taggersByLabel: ReadonlyMap<string, ReadonlySet<string>> | un
 function stateOf(
   parts: ReadonlyMap<string, AuthorPart>,
   combined: Combined,
-  tables: Map<string, readonly TimeSample[]>,
+  tables: Map<string, Table>,
+  clocks: Clocks,
+  nowMs: number,
 ): SocialState {
   const { followers: followersOf, tagsOn, edges } = combined;
   const tableOf = (homeserver: string): readonly TimeSample[] => {
     const known = tables.get(homeserver);
-    if (known !== undefined) return known;
-    const samples: TimeSample[] = [];
+    if (known !== undefined) return known.table;
+    // The stored clock holds the writes the crawl read and did not keep, such as those below the window.
+    const samples: TimeSample[] = [...(clocks.get(homeserver) ?? [])];
     for (const part of parts.values()) {
       if (part.records.homeserver === homeserver) for (const sample of part.samples) samples.push(sample);
     }
-    const table = buildTimeTable(samples);
-    tables.set(homeserver, table);
+    const table = buildTimeTable(samples, nowMs);
+    const until = samples.reduce((first, { ms }) => (ms > nowMs && ms < first ? ms : first), Number.POSITIVE_INFINITY);
+    tables.set(homeserver, { table, until });
     return table;
   };
   const timeOf = (author: string, cursor: Cursor): number | null => {
@@ -268,7 +289,7 @@ function stateOf(
       return cursor === undefined ? null : timeOf(follower, cursor);
     },
   };
-  return { view, parts, combined, tables };
+  return { view, parts, combined, tables, clocks, nowMs };
 }
 
 /** Each author's part, a later entry of an author replacing an earlier one; `previous` lends its unchanged parts. */
@@ -281,15 +302,33 @@ function partsOf(records: Iterable<AuthorRecords>, previous: SocialState | null)
   return parts;
 }
 
-/** The view of the records, built from scratch. Records name each author once; a later entry replaces an earlier one. */
-export function buildSocialState(records: Iterable<AuthorRecords>): SocialState {
+/**
+ * The view of the records and the homeservers' stored clocks, built from scratch. Records name each author once; a
+ * later entry replaces an earlier one.
+ */
+export function buildSocialState(
+  records: Iterable<AuthorRecords>,
+  clocks: Clocks = NO_CLOCKS,
+  nowMs = Number.POSITIVE_INFINITY,
+): SocialState {
   const parts = partsOf(records, null);
-  return stateOf(parts, combine(parts.values()), new Map());
+  return stateOf(parts, combine(parts.values()), new Map(), clocks, nowMs);
 }
 
-export function buildSocialView(records: Iterable<AuthorRecords>): SocialView {
-  return buildSocialState(records).view;
+export function buildSocialView(
+  records: Iterable<AuthorRecords>,
+  clocks: Clocks = NO_CLOCKS,
+  nowMs = Number.POSITIVE_INFINITY,
+): SocialView {
+  return buildSocialState(records, clocks, nowMs).view;
 }
+
+const sameClock = (a: readonly TimeSample[] | undefined, b: readonly TimeSample[] | undefined): boolean =>
+  a === b ||
+  (a !== undefined &&
+    b !== undefined &&
+    a.length === b.length &&
+    a.every(({ cursor, ms, writer }, i) => cursor === b[i].cursor && ms === b[i].ms && writer === b[i].writer));
 
 const sameSamples = (a: AuthorPart | undefined, b: AuthorPart | undefined): boolean =>
   a !== undefined &&
@@ -303,9 +342,14 @@ const sameList = (a: readonly string[], b: readonly string[]) => a.length === b.
 /**
  * The state of the records, from `previous` and the authors whose records changed: an author whose `AuthorRecords`
  * is the same object as in `previous` is unchanged, so callers hand over the same object for unchanged records and
- * never mutate one. Answers exactly as `buildSocialState(records)`.
+ * never mutate one. Answers exactly as `buildSocialState(records, clocks, nowMs)`.
  */
-export function updateSocialState(previous: SocialState, records: Iterable<AuthorRecords>): SocialState {
+export function updateSocialState(
+  previous: SocialState,
+  records: Iterable<AuthorRecords>,
+  clocks: Clocks = previous.clocks,
+  nowMs = previous.nowMs,
+): SocialState {
   const parts = partsOf(records, previous);
   const changes: AuthorChange[] = [];
   for (const [author, after] of parts) {
@@ -314,8 +358,16 @@ export function updateSocialState(previous: SocialState, records: Iterable<Autho
   }
   for (const [author, before] of previous.parts) if (!parts.has(author)) changes.push({ before, after: undefined });
   const members = [...parts.values()].filter(({ records }) => records.membership === 'member');
+  // A table stays valid while its homeserver's clock and every sample of its authors stay the same.
+  const stale = new Set<string>();
+  for (const homeserver of new Set([...previous.clocks.keys(), ...clocks.keys()])) {
+    if (!sameClock(previous.clocks.get(homeserver), clocks.get(homeserver))) stale.add(homeserver);
+  }
+  for (const [homeserver, { until }] of previous.tables) if (until <= nowMs) stale.add(homeserver);
   if (
     changes.length === 0 &&
+    stale.size === 0 &&
+    nowMs === previous.nowMs &&
     sameList(
       previous.view.authors,
       members.map(({ records }) => records.author),
@@ -323,8 +375,6 @@ export function updateSocialState(previous: SocialState, records: Iterable<Autho
   ) {
     return previous;
   }
-  // A table stays valid while no author of its homeserver changed a sample.
-  const stale = new Set<string>();
   for (const { before, after } of changes) {
     if (sameSamples(before, after)) continue;
     if (before !== undefined) stale.add(before.records.homeserver);
@@ -334,5 +384,5 @@ export function updateSocialState(previous: SocialState, records: Iterable<Autho
   // Past about an eighth of the authors, combining everyone again costs less than patching.
   const combined =
     changes.length * 8 > parts.size ? combine(parts.values()) : patchCombined(previous.combined, changes);
-  return stateOf(parts, combined, tables);
+  return stateOf(parts, combined, tables, clocks, nowMs);
 }

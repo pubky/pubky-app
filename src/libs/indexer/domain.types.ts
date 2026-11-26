@@ -1,8 +1,8 @@
 import type { Entry, RecordEntry } from './indexer.types';
 
 /**
- * A set of path prefixes crawled together. `full` keeps an author's whole history; `window` starts where the
- * author's writes date older than the window and grows backwards only on demand.
+ * A set of path prefixes crawled together. `full` keeps an author's whole history; `window` starts at the cursor the
+ * homeserver's clock places at the start of the window and grows backwards only on demand.
  */
 export interface PathGroup {
   id: string;
@@ -29,8 +29,9 @@ export interface Domain<D> {
   /** Parses and validates a fetched file. `null` means invalid: the record is kept without data. */
   reduce(author: string, path: string, bytes: Uint8Array): D | null;
   /**
-   * When the record at the path was written, in microseconds, when the path encodes it, else `null`. Ends an author's
-   * window, so it is the time of the write itself: a new version of an old record is new.
+   * When the record at the path was written, in microseconds, when the path encodes it, else `null`. Each write that
+   * has one is a sample of the homeserver's clock, so it is the time of the write itself: a new version of an old
+   * record is new. A writer may claim any time; the clock keeps only what most writers agree on.
    */
   timeOfPath(path: string): bigint | null;
   /**

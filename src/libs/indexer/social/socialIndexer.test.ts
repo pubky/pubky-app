@@ -276,8 +276,8 @@ describe('createSocialIndexer', () => {
 
   it('proves a post deleted from the tombstones of its loaded history, outside the window', async () => {
     const { fixture, network, indexerOf } = socialWorld({ hops: 1, windowDays: 0.5 });
-    // Every write is older than the half-day window, and only writes end it: alice's last ones, written after the
-    // delete, put the tombstone below where her window ends, outside what the scope sync reads.
+    // Every write is older than the half-day window: alice's last ones, written after the delete, put the tombstone
+    // below the window's start, outside what the scope sync reads.
     const later = at(14, () => buildPost(ALICE, { content: 'Written after the delete' }));
     network.put(ALICE, later.path, later.body);
     const url = `/v1/post/${ALICE}/${fixture.posts.gone.id}`;
@@ -302,7 +302,7 @@ describe('createSocialIndexer', () => {
 
   it('resolves a backfill once the view holds the step, before the debounced change, saying what it did', async () => {
     const { fixture, network, indexerOf } = socialWorld({ hops: 1, windowDays: 0.5 });
-    // Every write is older than the window, so alice's posts all lie below where her window ends.
+    // Every write is older than the window, so alice's posts all lie below its start.
     const later = at(14, () => buildPost(ALICE, { content: 'Written last' }));
     network.put(ALICE, later.path, later.body);
     const indexer = indexerOf();

@@ -12,6 +12,7 @@ import {
   type ScopeKey,
   type StoreBatch,
 } from './store.types';
+import { mergeClock } from './timeTable';
 
 // Rules every `IndexStore` applies the same way, so the stores differ only in where they keep the data.
 
@@ -85,10 +86,6 @@ export function runsOfScope<D>(scope: ScopeKey, { entries, coverage }: MergedRun
   }));
 }
 
-/** A window end an eviction at `cutoff` keeps: one above it. */
-export const keptEnd = (end: Cursor | undefined, cutoff: Cursor): Cursor | undefined =>
-  end !== undefined && end > cutoff ? end : undefined;
-
 /** `coverage` without anything at or below `cutoff`, as the pure `evictBelow` trims runs. */
 export function evictCoverage(coverage: readonly Range[], cutoff: Cursor): Coverage {
   return coverage
@@ -102,10 +99,14 @@ export function homeserverStateOf(stored: Partial<HomeserverState> | undefined):
     highWater: stored?.highWater ?? null,
     epoch: stored?.epoch ?? EMPTY_HOMESERVER_STATE.epoch,
     failure: stored?.failure ?? null,
+    clock: stored?.clock ?? [],
   };
 }
 
-/** `current` with the fields `patch` sets; a field left out keeps its value, and the mark only rises. */
+/**
+ * `current` with the fields `patch` sets; a field left out keeps its value, the mark only rises and new clock samples
+ * merge into the clock.
+ */
 export function patchedState(current: Readonly<HomeserverState>, patch: HomeserverPatch): HomeserverState {
   const { highWater } = patch;
   const rises = highWater !== undefined && (current.highWater === null || highWater.cursor > current.highWater.cursor);
@@ -113,14 +114,17 @@ export function patchedState(current: Readonly<HomeserverState>, patch: Homeserv
     highWater: rises ? highWater : current.highWater,
     epoch: current.epoch,
     failure: patch.failure !== undefined ? patch.failure : current.failure,
+    clock:
+      patch.clock === undefined || patch.clock.length === 0 ? current.clock : mergeClock(current.clock, patch.clock),
   };
 }
 
-/** The state a deletion leaves: the next epoch, no mark. */
+/** The state a deletion leaves: the next epoch, no mark, no clock. */
 export const deletedState = (current: Readonly<HomeserverState>): HomeserverState => ({
   highWater: null,
   epoch: current.epoch + 1,
   failure: current.failure,
+  clock: [],
 });
 
 /** Whether every epoch the batch read under is still current. */

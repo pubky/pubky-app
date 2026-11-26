@@ -21,7 +21,7 @@ import {
   withPartialActivity,
 } from './social.fixtures';
 import type { AuthorRecords, SocialData } from './social.types';
-import { buildSocialView, type SocialPost } from './social.view';
+import { buildSocialState, buildSocialView, type SocialPost, updateSocialState } from './social.view';
 
 const network = socialNetwork();
 const { a1, b1, c1, gone, orphan, repost, quote, article, articleEdit, broken, image, collection } = network.posts;
@@ -283,7 +283,45 @@ describe('buildSocialView time estimates', () => {
     expect(split.timeOf(ALICE, BigInt(13))).toBe(minute(5));
   });
 
-  it('ignores a backdated and a future-dated post when estimating', () => {
+  it("dates by a homeserver's stored clock too, and a state follows a new clock", () => {
+    const moved = recordsOf(network).map((entry) =>
+      entry.author === DION
+        ? { ...entry, homeserver: 'hs2', activity: new Map<string, RecordEntry<SocialData>>() }
+        : entry,
+    );
+    const clock = (top: number) => [
+      { cursor: BigInt(5), ms: minute(1), writer: 'someone' },
+      { cursor: BigInt(top), ms: minute(16), writer: 'another' },
+    ];
+    const state = buildSocialState(moved, new Map([['hs2', clock(20)]]));
+    const updated = updateSocialState(state, moved, new Map([['hs2', clock(29)]]));
+
+    expect(state.view.timeOf(DION, BigInt(13))).toBe(minute(9));
+    expect(updated.view.timeOf(DION, BigInt(13))).toBe(minute(6));
+    expect(updated.view.timeOf(ALICE, BigInt(13))).toBe(minute(5));
+  });
+
+  it('takes in a sample dated after the view was built once its time comes', () => {
+    const files: SocialFile[] = [
+      { author: ALICE, ...at(10, () => buildPost(ALICE, { content: 'ten' })) },
+      { author: BRAN, ...at(30, () => buildPost(BRAN, { content: 'early' })) },
+      { author: ALICE, ...at(20, () => buildPost(ALICE, { content: 'twenty' })) },
+    ];
+    const records = recordsFrom(
+      files,
+      new Map([
+        [ALICE, 0],
+        [BRAN, 1],
+      ]),
+    );
+    const before = buildSocialState(records, undefined, minute(25));
+    const after = updateSocialState(before, records, undefined, minute(31));
+
+    expect(before.view.timeOf(ALICE, BigInt(2))).toBe(minute(15));
+    expect(after.view.timeOf(ALICE, BigInt(2))).toBe(minute(30));
+  });
+
+  it('ignores a backdated post and one dated after the view was built when estimating', () => {
     const files: SocialFile[] = [
       { author: ALICE, ...at(10, () => buildPost(ALICE, { content: 'ten' })) },
       { author: BRAN, ...at(20, () => buildPost(BRAN, { content: 'twenty' })) },
@@ -301,6 +339,8 @@ describe('buildSocialView time estimates', () => {
           [BRAN, 1],
         ]),
       ),
+      undefined,
+      minute(1000),
     );
 
     expect(timed.timeOf(ALICE, BigInt(3))).toBe(minute(25));

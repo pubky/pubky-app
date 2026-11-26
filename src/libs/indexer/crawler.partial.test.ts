@@ -80,7 +80,7 @@ describe('syncUsers', () => {
 
     await crawler.syncUsers(['carol']);
 
-    // One page of four events, read backwards from the newest: no window end looked for, no range read twice.
+    // One page of four events, read backwards from the newest: no cutoff looked for, no range read twice.
     const carolReads = network.reads.filter((read) => read.users.includes('carol'));
     expect(carolReads.filter((read) => read.reverse).map((read) => read.events.length)).toEqual([4]);
     expect(await store.readCoverage(scope)).toEqual([{ tail: oldCursor - BigInt(1), head }]);
@@ -97,7 +97,7 @@ describe('syncUsers', () => {
     const mark = network.reads.length;
     await crawler.syncUsers(['carol']);
     expect(await store.readCoverage(scope)).toEqual([{ tail: oldCursor - BigInt(1), head: fresh }]);
-    // Only the restore check reads backwards, one event: no window end looked for.
+    // Only the restore check reads backwards, one event: no cutoff looked for.
     expect(network.reads.slice(mark).filter((read) => read.reverse && read.events.length > 1)).toEqual([]);
 
     // More than a page behind: the newest page, above a gap that backfill closes, after which one range holds all.

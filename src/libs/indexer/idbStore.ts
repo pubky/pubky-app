@@ -7,7 +7,6 @@ import {
   deletedState,
   evictCoverage,
   homeserverStateOf,
-  keptEnd,
   patchedState,
   readsCurrent,
   runsOfScope,
@@ -27,7 +26,6 @@ import {
 interface ScopeRow extends ScopeKey {
   id: number;
   coverage: Coverage;
-  end?: Cursor;
 }
 
 type NewScopeRow = Omit<ScopeRow, 'id'> & { id?: number };
@@ -173,10 +171,8 @@ export function createIdbStore<D>(databaseName: string): IdbIndexStore<D> {
         const evicted = (await entriesOf(row.id)).filter((entry) => entry.cursor <= cutoff);
         await paths.bulkDelete(evicted.map((entry): PathKey => [row.id, entry.path]));
         const kept = evictCoverage(row.coverage, cutoff);
-        const { end, ...rest } = row;
-        const keptAt = keptEnd(end, cutoff);
         if (kept.length === 0) await scopes.delete(row.id);
-        else await scopes.put({ ...rest, coverage: kept, ...(keptAt === undefined ? {} : { end: keptAt }) });
+        else await scopes.put({ ...row, coverage: kept });
       }
       for (const run of copy.applyRuns ?? []) {
         // Reads and writes only the rows of the run's own paths; a new scope has none to read.
@@ -204,10 +200,6 @@ export function createIdbStore<D>(databaseName: string): IdbIndexStore<D> {
         const filled = withData(value === undefined ? undefined : unpackEntry(path, value), cursor, data);
         if (filled !== null) await paths.put(packEntry(filled), [row.id, path]);
       }
-      for (const { scope, cursor } of copy.windowEnds ?? []) {
-        const row = await scopeRow(scope);
-        if (row !== undefined) await scopes.put({ ...row, end: cursor });
-      }
       await userHomeservers.bulkPut((copy.userHomeservers ?? []).map(({ user, value }) => ({ user, value })));
       for (const { homeserver, patch } of copy.homeserverStates ?? []) {
         await homeserverStates.put({ homeserver, state: patchedState(await stateOfHomeserver(homeserver), patch) });
@@ -232,7 +224,6 @@ export function createIdbStore<D>(databaseName: string): IdbIndexStore<D> {
     readScope,
     readScopes,
     readCoverage: async (scope) => (await scopeRow(scope))?.coverage ?? [],
-    readWindowEnd: async (scope) => (await scopeRow(scope))?.end ?? null,
     exportRuns: async (scope) => runsOfScope(scope, await readScope(scope)),
     evictBelow: (scope, cutoff) => commit({ evictions: [{ scope, cutoff }] }),
     listScopes: async () => (await scopes.toArray()).map(scopeOf),

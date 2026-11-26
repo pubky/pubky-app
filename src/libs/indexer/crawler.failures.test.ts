@@ -157,6 +157,9 @@ describe('syncScope failures', () => {
       ]),
     );
     expect(await served(store, 'alice', 'hs1', GRAPH)).toEqual(network.liveOf('alice', [FOLLOWS]));
+    // The clock restarted with the log: no sample of the old cursors is left to date the new ones.
+    const live = [...network.lastEvents('bob', [POSTS]).values()].map(({ cursor }) => cursor);
+    expect((await store.readHomeserverState('hs1')).clock.map(({ cursor }) => cursor)).toEqual(live);
   });
 });
 
@@ -386,7 +389,7 @@ describe('backfill', () => {
     await crawler.syncScope('alice');
     const scope = { author: 'alice', homeserver: 'hs1', group: ACTIVITY };
 
-    // The window ends at the newest old post, which lies outside the range: the first page reads it too.
+    // The window starts at the newest old post, which lies outside the range: the first page reads it too.
     expect(await crawler.backfill('alice', ACTIVITY, 2)).toEqual({ tail: old[0] - BigInt(1), pages: 2, events: 10 });
     expect(await store.readCoverage(scope)).toHaveLength(1);
     expect(await crawler.backfill('alice', ACTIVITY, 5)).toEqual({ tail: CURSOR_ZERO, pages: 1, events: 0 });

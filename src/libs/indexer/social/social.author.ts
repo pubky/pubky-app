@@ -1,9 +1,9 @@
 import { idMicros } from 'pubky-social-specs';
 import type { Cursor, RecordEntry } from '../indexer.types';
+import type { TimeSample } from '../timeTable';
 import { socialV1Tree } from './social.domain';
 import type { AuthorRecords, SocialData, SocialTarget, SocialTree, TagData, UserData } from './social.types';
 import type { SocialFile, SocialPost } from './social.view';
-import type { TimeSample } from './timeTable';
 
 export const NONE: readonly never[] = Object.freeze([]);
 const NO_RECORDS: ReadonlyMap<string, RecordEntry<SocialData>> = new Map();
@@ -114,7 +114,7 @@ function samplesOf(
 ): void {
   for (const [path, record] of records) {
     const key = tree.keyOf(author, path);
-    if (key !== null && key.kind === 'post') into.push({ cursor: record.cursor, ms: msOf(key.editId) });
+    if (key !== null && key.kind === 'post') into.push({ cursor: record.cursor, ms: msOf(key.editId), writer: author });
   }
 }
 

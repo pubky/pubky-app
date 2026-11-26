@@ -6,13 +6,21 @@ import type { Coverage, Cursor, Entry, MergedRuns, RecordEntry } from '../indexe
 import type { Coordination, RuntimeOptions, RuntimeStatus, Schedule } from '../runtime.types';
 import { scopeId } from '../store.helpers';
 import type { IndexStore, ScopeKey } from '../store.types';
+import type { TimeSample } from '../timeTable';
 import type { IndexerTransport } from '../transport.types';
 import { createNexusRouter, type NexusRequest, type NexusResponse, type NexusRouter } from './nexusRouter';
 import { createSocialQueries } from './queries/socialQueries';
 import { createSocialDomain, SOCIAL_ACTIVITY, SOCIAL_GRAPH, type SocialDomain } from './social.domain';
 import type { AuthorRecords, GroupHistory, Membership, SocialData, SocialTree } from './social.types';
 import { findViewMismatch, ViewMismatchError } from './social.verify';
-import { buildSocialState, buildSocialView, type SocialState, type SocialView, updateSocialState } from './social.view';
+import {
+  buildSocialState,
+  buildSocialView,
+  type Clocks,
+  type SocialState,
+  type SocialView,
+  updateSocialState,
+} from './social.view';
 
 /**
  * What one tab keeps loaded on demand. Past a limit the least recently ensured item leaves the view and its scopes
@@ -479,10 +487,11 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
   }
 
   /** The view of the records, updated from the current state for the authors whose records changed. */
-  function viewOf(records: readonly AuthorRecords[]): SocialState {
-    const next = updateSocialState(state, records);
+  function viewOf(records: readonly AuthorRecords[], clocks: Clocks): SocialState {
+    const nowMs = now();
+    const next = updateSocialState(state, records, clocks, nowMs);
     if (verifyView) {
-      const difference = findViewMismatch(buildSocialView(records), next.view, records);
+      const difference = findViewMismatch(buildSocialView(records, clocks, nowMs), next.view, records);
       if (difference !== null) throw new ViewMismatchError(difference);
     }
     return next;
@@ -503,7 +512,11 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
     await addProfiles(loaded);
     for (const author of built.keys()) if (!loaded.has(author)) built.delete(author);
     const records = [...loaded].map(([author, entry]) => recordsOf(author, entry));
-    return { next: viewOf(records), memberships: membershipsOf(loaded), hasScope: members.size > 0 };
+    const clocks = new Map<string, readonly TimeSample[]>();
+    for (const { homeserver } of loaded.values()) {
+      if (!clocks.has(homeserver)) clocks.set(homeserver, (await store.readHomeserverState(homeserver)).clock);
+    }
+    return { next: viewOf(records, clocks), memberships: membershipsOf(loaded), hasScope: members.size > 0 };
   }
 
   async function runRebuilds(): Promise<void> {
