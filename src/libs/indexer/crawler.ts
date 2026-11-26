@@ -698,7 +698,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
   }
 
   /**
-   * Commits backwards reads of one homeserver as one stream: their events in slices of `backfillPageLimit`, newest
+   * Commits backwards reads of one homeserver as one stream: their events in slices of `sliceLimit`, newest
    * first. A slice commits once its files to render and every newer slice are in, so the top range only grows
    * downwards and a failure keeps every slice above it; the files of all slices are fetched together.
    */
@@ -706,9 +706,9 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     const newestFirst = parts.flatMap(({ events }) => events).sort((a, b) => (a.cursor > b.cursor ? -1 : 1));
     const slices: Run<D>[][] = [];
     let high: Cursor | null = null;
-    for (let i = 0; i === 0 || i < newestFirst.length; i += options.backfillPageLimit) {
-      const slice = newestFirst.slice(i, i + options.backfillPageLimit);
-      const last = i + options.backfillPageLimit >= newestFirst.length;
+    for (let i = 0; i === 0 || i < newestFirst.length; i += options.sliceLimit) {
+      const slice = newestFirst.slice(i, i + options.sliceLimit);
+      const last = i + options.sliceLimit >= newestFirst.length;
       const low = last ? null : slice[slice.length - 1].cursor - ONE;
       const runs: Run<D>[] = [];
       for (const part of parts) {
@@ -787,14 +787,14 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
   }
 
   /**
-   * Reads one page of `backfillPageLimit` events forward from the scope's head and commits it when it is not full,
+   * Reads one page of `sliceLimit` events forward from the scope's head and commits it when it is not full,
    * the scope then holding everything up to the newest event. False, with nothing committed, for a scope with no
    * history or one more than a page behind.
    */
   async function catchUp(ctx: OperationContext, scope: ScopeKey, group: PathGroup): Promise<boolean> {
     const head = headOf(await store.readCoverage(scope));
     if (head === null) return false;
-    const limit = options.backfillPageLimit;
+    const limit = options.sliceLimit;
     const page = await reader(ctx, scope.homeserver, group.paths, limit)([{ user: scope.author, cursor: head }], false);
     if (page.length >= limit) return false;
     if (page.length === 0) return true;
@@ -1002,7 +1002,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
   }
 
   /**
-   * Reads the page of `backfillPageLimit` events below `below`, a tail of the scope, or the newest page when `null`,
+   * Reads the page of `sliceLimit` events below `below`, a tail of the scope, or the newest page when `null`,
    * fetches the files the page needs to render and commits it. Its events, `null` when the newest page was empty:
    * the author has no event in the group.
    */
@@ -1012,7 +1012,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     group: PathGroup,
     below: Cursor | null,
   ): Promise<number | null> {
-    const limit = options.backfillPageLimit;
+    const limit = options.sliceLimit;
     // The tail itself is outside its range, so the read starts one above it.
     const page = await reader(
       ctx,

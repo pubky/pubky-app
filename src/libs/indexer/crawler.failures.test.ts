@@ -316,7 +316,7 @@ describe('syncScope bodies', () => {
 
 describe('backfill', () => {
   it('extends the windowed tail page by page down to the stream start', async () => {
-    const { network, store, crawler } = harness({ backfillPageLimit: 5 });
+    const { network, store, crawler } = harness({ sliceLimit: 5 });
     network.addHomeserver('hs1').addUser('alice', 'hs1');
     const old = Array.from({ length: 12 }, (_, i) => network.putJson('alice', postPath((60 - i) * DAY_MS), { i }));
     network.putJson('alice', postPath(2 * DAY_MS), { text: 'recent' });
@@ -337,7 +337,7 @@ describe('backfill', () => {
   });
 
   it('shares one restore check between steps that follow each other under its epoch', async () => {
-    const { network, store, crawler, clock } = harness({ backfillPageLimit: 2 });
+    const { network, store, crawler, clock } = harness({ sliceLimit: 2 });
     network.addHomeserver('hs1').addUser('alice', 'hs1');
     for (let i = 0; i < 12; i += 1) network.putJson('alice', postPath((60 - i) * DAY_MS), { i });
     network.putJson('alice', postPath(2 * DAY_MS), { text: 'recent' });
@@ -365,7 +365,7 @@ describe('backfill', () => {
   });
 
   it('starts at the newest event of an author whose window held none of theirs', async () => {
-    const { network, store, crawler } = harness({ backfillPageLimit: 5 });
+    const { network, store, crawler } = harness({ sliceLimit: 5 });
     network.addHomeserver('hs1').addUser('alice', 'hs1');
     const old = Array.from({ length: 3 }, (_, i) => network.putJson('alice', postPath((60 - i) * DAY_MS), { i }));
     await crawler.syncScope('alice');
@@ -379,7 +379,7 @@ describe('backfill', () => {
   });
 
   it('reads pages of its own size, fetching and committing each page before the next', async () => {
-    const { network, store, crawler, crawlerOf } = harness({ backfillPageLimit: 4 });
+    const { network, store, crawler, crawlerOf } = harness({ sliceLimit: 4 });
     network.addHomeserver('hs1').addUser('alice', 'hs1');
     Array.from({ length: 10 }, (_, i) => network.putJson('alice', postPath((60 - i) * DAY_MS), { i }));
     network.putJson('alice', postPath(2 * DAY_MS), { text: 'recent' });
@@ -416,7 +416,7 @@ describe('backfill', () => {
   });
 
   it('ends an exactly full page below its lowest cursor, and the empty page after it at the stream start', async () => {
-    const { network, store, crawler } = harness({ backfillPageLimit: 5 });
+    const { network, store, crawler } = harness({ sliceLimit: 5 });
     network.addHomeserver('hs1').addUser('alice', 'hs1').addUser('zed', 'hs1');
     // Someone else's event first, so alice's oldest post is not at cursor 1 and its page ends above zero.
     network.putJson('zed', postPath(90 * DAY_MS), { text: 'zed' });

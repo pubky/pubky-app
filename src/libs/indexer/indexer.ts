@@ -58,8 +58,11 @@ const NO_STEP: BackfillResult = Object.freeze({ tail: null, pages: 0, events: 0 
 
 const done = (settled: Promise<Settled>): Promise<void> => settled.then(() => undefined);
 
-interface Task {
-  request: CrawlRequest;
+/** What the request queue runs: a scope sync runs beside it, not in it. */
+type QueuedRequest = Exclude<CrawlRequest, { kind: 'scope' }>;
+
+interface Task<R extends CrawlRequest = CrawlRequest> {
+  request: R;
   resolve: (settled?: Settled) => void;
   reject: (error: unknown) => void;
   /** Asked by another tab, which asks the next crawling tab again if this one steps down. */
@@ -117,7 +120,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
   /** The homeservers the last fill could not reach while files of theirs were missing. */
   let fillFailing: string[] = [];
   /** Requests for one user, leaf or backfill, in arrival order. */
-  let queue: Task[] = [];
+  let queue: Task<QueuedRequest>[] = [];
   /** Requests for a whole scope sync: the next one to start settles them all. */
   let scopeDue: Task[] = [];
   let periodicDue = false;
@@ -330,11 +333,8 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     }, delay);
   }
 
-  async function crawl(request: CrawlRequest, current: string | null, signal: AbortSignal): Promise<Settled> {
+  async function crawl(request: QueuedRequest, signal: AbortSignal): Promise<Settled> {
     switch (request.kind) {
-      case 'scope':
-        if (current !== null) await crawler.syncScope(current, signal);
-        return;
       case 'users':
         await crawler.syncUsers(request.users, signal);
         return;
@@ -347,9 +347,9 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
   }
 
   /** Never rejects: the outcome goes to the task, and a failure to the status. */
-  async function execute(task: Task, current: string | null, signal: AbortSignal): Promise<void> {
+  async function execute(task: Task<QueuedRequest>, signal: AbortSignal): Promise<void> {
     try {
-      task.resolve(await crawl(task.request, current, signal));
+      task.resolve(await crawl(task.request, signal));
     } catch (error) {
       if (!signal.aborted) lastError = asError(error);
       task.reject(error);
@@ -357,7 +357,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
   }
 
   /** Runs leaf requests together as one crawl, each settled with its own outcome. Never rejects. */
-  async function executeLeaves(tasks: Task[], signal: AbortSignal): Promise<void> {
+  async function executeLeaves(tasks: Task<QueuedRequest>[], signal: AbortSignal): Promise<void> {
     const leaves = tasks.flatMap(({ request }) => (request.kind === 'leaf' ? [request.leaf] : []));
     try {
       const { refused } = await crawler.syncLeaves(leaves, signal);
@@ -373,15 +373,16 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
   }
 
   /** The queued leaf requests after `first`, taken out of the queue to run with it. */
-  function takeLeaves(first: Task): Task[] {
+  function takeLeaves(first: Task<QueuedRequest>): Task<QueuedRequest>[] {
     const leaves = [first, ...queue.filter(({ request }) => request.kind === 'leaf')];
     queue = queue.filter(({ request }) => request.kind !== 'leaf');
     return leaves;
   }
 
   function enqueue(task: Task) {
-    if (task.request.kind === 'scope') scopeDue.push(task);
-    else queue.push(task);
+    const { request } = task;
+    if (request.kind === 'scope') scopeDue.push(task);
+    else queue.push({ ...task, request });
   }
 
   /** Never rejects. A stopped sync settles its waiters with the abort; what it committed stays valid. */
@@ -489,7 +490,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     if (task === undefined) return null;
     // Leaves are small and independent: the ones waiting run together, so a page's post and profiles load at once.
     if (task.request.kind === 'leaf') return executeLeaves(takeLeaves(task), controller.signal);
-    return execute(task, current, controller.signal);
+    return execute(task, controller.signal);
   }
 
   /**

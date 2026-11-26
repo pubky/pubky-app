@@ -88,7 +88,7 @@ function recorded(network: FakeNetwork, options: Partial<CrawlerOptions>, fails 
     domain: testDomain,
     now: () => clock.now,
     sleep: async () => undefined,
-    options: { backfillPageLimit: 10, ...options },
+    options: { sliceLimit: 10, ...options },
   });
   return { crawler, store, steps, runs, clock };
 }

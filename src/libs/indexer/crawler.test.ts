@@ -535,7 +535,7 @@ describe('syncScope window', () => {
   });
 
   it('continues a window a sync left halfway, and reads a finished one no further', async () => {
-    const { network, store, crawlerOf } = harness({ pageLimit: 4, backfillPageLimit: 4 });
+    const { network, store, crawlerOf } = harness({ pageLimit: 4, sliceLimit: 4 });
     network.addHomeserver('hs1').addUser('alice', 'hs1');
     const olds = [40, 39, 38].map((age) => network.putJson('alice', postPath(age * DAY_MS), { text: 'old' }));
     let top = CURSOR_ZERO;

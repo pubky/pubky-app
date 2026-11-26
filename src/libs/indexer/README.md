@@ -63,7 +63,7 @@ full-history groups in batches from each user's stored head, and follows the lin
 the next hop. A hop's windowed groups are read beside its full-history ones, since that read needs no link, and the
 next hop starts as soon as this hop's scope group is in, while its activity is still read; each homeserver is checked
 for a restore once, before any of those reads. Windowed groups reach back to the start of the window, and grow older
-only through `backfill`, which reads pages of `backfillPageLimit` events (100) and fetches and commits each page before
+only through `backfill`, which reads pages of `sliceLimit` events (100) and fetches and commits each page before
 reading the next, so older history shows up a screen at a time.
 
 The window is a range of cursors read off the homeserver's clock. A cursor says when something was written, a path's
@@ -90,7 +90,7 @@ on, ranges keep growing forward, and only `forget`, for what was loaded on deman
 
 The batches of a homeserver's window read commit as one stream in cursor order: each reads its first page, then a round
 commits everything above the highest point a batch still reading has reached, while that batch reads its next page.
-A round commits the way `backfill` does, in slices of `backfillPageLimit` events, newest first, each once its files to
+A round commits the way `backfill` does, in slices of `sliceLimit` events, newest first, each once its files to
 render are in, the files of a round fetched together. So a feed's newest page is in after its own files, not after the
 window's, whichever batch its authors fell in, and the top range only grows downwards. A user loaded on demand (`syncUsers`) with
 no history of a windowed group starts with one such page from their newest event instead: a profile shows the newest

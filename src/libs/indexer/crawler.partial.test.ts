@@ -67,7 +67,7 @@ describe('syncUsers', () => {
   });
 
   it('reads a user with no history newest page first, keeping its tombstones, then forward from its head', async () => {
-    const { network, store, crawler } = twoCircles({ backfillPageLimit: 4 });
+    const { network, store, crawler } = twoCircles({ sliceLimit: 4 });
     network.putJson('carol', postPath(60 * DAY_MS), { text: 'oldest' });
     const old = postPath(50 * DAY_MS);
     const oldCursor = network.putJson('carol', old, { text: 'old' });

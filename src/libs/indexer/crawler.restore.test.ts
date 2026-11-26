@@ -115,7 +115,7 @@ describe('operations racing over one homeserver', () => {
   });
 
   it('keeps nothing a backfill read before another operation found the homeserver restored', async () => {
-    const { network, store, crawlerOf } = harness({ backfillPageLimit: 4 });
+    const { network, store, crawlerOf } = harness({ sliceLimit: 4 });
     network.addHomeserver('hs1').addUser('alice', 'hs1');
     for (let i = 0; i < 10; i += 1) {
       network.putJson('alice', postPath(3 * DAY_MS + i), { text: 'gone' });

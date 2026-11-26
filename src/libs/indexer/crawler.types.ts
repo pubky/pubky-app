@@ -12,10 +12,11 @@ export interface CrawlerOptions {
   /** Events per stream request, for the whole batch; a homeserver takes at most 1000. */
   pageLimit: number;
   /**
-   * Events per `backfill` page. Each page's files to render are fetched and the page committed before the next is
-   * read, so a small page puts older history on screen in small steps instead of one long wait.
+   * Events per slice of history read newest first: a `backfill` step reads one slice, and a window read commits in
+   * slices. Each slice's files to render are fetched and the slice committed before the next, so a small slice puts
+   * history on screen in small steps instead of one long wait.
    */
-  backfillPageLimit: number;
+  sliceLimit: number;
   lookupConcurrency: number;
   /**
    * Requests in flight to one homeserver at once, stream reads and file fetches of every operation together. The
@@ -57,7 +58,7 @@ export const DEFAULT_CRAWLER_OPTIONS: Readonly<CrawlerOptions> = Object.freeze({
   hops: 2,
   batchSize: 50,
   pageLimit: 1000,
-  backfillPageLimit: 100,
+  sliceLimit: 100,
   lookupConcurrency: 8,
   homeserverConcurrency: 6,
   windowDays: 30,
@@ -168,7 +169,7 @@ export interface Crawler {
    */
   syncScope(seed: string, signal?: AbortSignal): Promise<SyncResult>;
   /**
-   * Extends the author's top contiguous coverage of the group backwards by up to `pages` pages of `backfillPageLimit`
+   * Extends the author's top contiguous coverage of the group backwards by up to `pages` pages of `sliceLimit`
    * events. Without any coverage, as after a window that held none of the author's events, it starts at their newest
    * event.
    */
