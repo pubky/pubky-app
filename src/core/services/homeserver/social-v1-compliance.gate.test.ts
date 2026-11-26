@@ -75,6 +75,29 @@ const PERMANENT: Record<string, { patterns: readonly PatternName[]; reason: stri
 };
 
 /**
+ * Folders whose every file may use the listed spellings, each with the reason. Only the local index's reader of the
+ * 0.x tree: an optional part of the index (`PUBKY_RUNTIME_INDEXER_LEGACY_TREE`) that shows the network of authors who
+ * have not migrated yet, and the one place that names their paths. Nothing outside it may.
+ */
+const PERMANENT_DIRECTORIES: Record<string, { patterns: readonly PatternName[]; reason: string }> = {
+  'src/libs/indexer/social/legacy/': {
+    patterns: ['legacyTree', 'blobs'],
+    reason:
+      'the local index reads the 0.x profile, follows, posts and tags, and an attachment through its File record ' +
+      'and blob, for authors who have not migrated, when the deploy turns it on; it never writes there',
+  },
+};
+
+/** The spellings `file` may use: its own entry, or its folder's. */
+function allowedPatterns(file: string): readonly PatternName[] {
+  const folder = Object.keys(PERMANENT_DIRECTORIES).find((directory) => file.startsWith(directory));
+  return [
+    ...(PERMANENT[file]?.patterns ?? []),
+    ...(folder === undefined ? [] : PERMANENT_DIRECTORIES[folder].patterns),
+  ];
+}
+
+/**
  * Files still on the 0.x model while `feat/social-v1` ported the app (55 when the gate landed on
  * 2026-10-30; 36 after the posts, media, articles, collections and Locks port; 3 after the bookmarks
  * port). Empty since the cleanup PR: a new match is ported, never listed.
@@ -166,7 +189,7 @@ describe('social v1 compliance gate', () => {
   const matches = new Map<string, PatternName[]>();
   for (const path of sourceFiles(SRC)) {
     const file = relative(ROOT, path);
-    const allowed = PERMANENT[file]?.patterns ?? [];
+    const allowed = allowedPatterns(file);
     const found = matchingPatterns(withoutComments(readFileSync(path, 'utf8'))).filter(
       (name) => !allowed.includes(name),
     );
@@ -235,6 +258,20 @@ describe('social v1 compliance gate', () => {
     const stale = LEGACY_RATCHET.filter((file) => !matches.has(file));
 
     expect(stale).toEqual([]);
+  });
+
+  it('keeps the folder exemption to the one folder, which needs it', () => {
+    const [folder, ...others] = Object.keys(PERMANENT_DIRECTORIES);
+    const inside = sourceFiles(join(ROOT, folder)).map((path) => relative(ROOT, path));
+    const legacyTree = new RegExp(PATTERNS.legacyTree.source);
+
+    expect(others).toEqual([]);
+    expect(folder.endsWith('/')).toBe(true);
+    expect(inside.some((file) => legacyTree.test(withoutComments(readFileSync(join(ROOT, file), 'utf8'))))).toBe(true);
+    expect(allowedPatterns(`${folder}legacyTree.ts`)).toEqual(['legacyTree', 'blobs']);
+    expect(allowedPatterns(`${folder.slice(0, -1)}.ts`)).toEqual([]);
+    expect(allowedPatterns(`${folder.slice(0, -1)}-other/reader.ts`)).toEqual([]);
+    expect(allowedPatterns('src/libs/indexer/social/social.domain.ts')).toEqual([]);
   });
 
   it('lists every file once, sorted, and names only files that exist', () => {

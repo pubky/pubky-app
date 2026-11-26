@@ -231,6 +231,8 @@ Two gate tests keep the branch honest while it lives, and ship to `dev` with the
   fallback paths, and the author check that still accepts 0.x File and blob URIs in articles); `LEGACY_RATCHET`
   listed every file that matched when the gate landed (55 files on 2026-10-30), each child PR shrank it, and PR-F
   emptied it. A file that matches outside `PERMANENT` fails the gate: a new 0.x spelling is ported, never listed.
+  `PERMANENT_DIRECTORIES` holds one folder, `src/libs/indexer/social/legacy/`, the local index's optional reader of
+  the 0.x tree (`PUBKY_RUNTIME_INDEXER_LEGACY_TREE`, ADR-0031); a test keeps that exemption to the one folder.
   The same test (FIX-6) fails on `.session(` chained onto `eventStreamForUser` / `eventStreamFor`, directly or
   through variables, anywhere in non-test `src/**`: no session-bound event stream may be held open (ADR-0014).
 - ESLint `no-restricted-imports` bans `pubky-app-specs`, the package and every subpath, everywhere linted (`cypress/` is

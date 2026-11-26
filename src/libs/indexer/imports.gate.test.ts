@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
@@ -11,6 +11,8 @@ import { describe, expect, it } from 'vitest';
 
 const ROOT = join(__dirname, '../../..');
 const INDEXER = __dirname;
+/** The older social tree: optional, so nothing else in the library may depend on it. */
+const LEGACY = join(INDEXER, 'social', 'legacy');
 
 const IMPORT_SPECIFIER = /(?:\bfrom\s*|\bimport\s*\(?\s*|\brequire\s*\(\s*)['"]([^'"\n]+)['"]/g;
 const SDK = /^@synonymdev\/pubky(?:\/|$)/;
@@ -86,6 +88,22 @@ describe('indexer import isolation', () => {
       }
     }
 
+    expect(offenders).toEqual([]);
+  });
+
+  it('lets no file outside the older tree folder import it', () => {
+    const inside = (path: string) => path === LEGACY || path.startsWith(`${LEGACY}${sep}`);
+    const offenders: string[] = [];
+    for (const file of files) {
+      if (inside(file)) continue;
+      for (const specifier of importSpecifiers(readFileSync(file, 'utf8'))) {
+        if (specifier.startsWith('.') && inside(resolve(dirname(file), specifier))) {
+          offenders.push(`${relative(ROOT, file)}: ${specifier}`);
+        }
+      }
+    }
+
+    expect(files.some(inside)).toBe(true);
     expect(offenders).toEqual([]);
   });
 

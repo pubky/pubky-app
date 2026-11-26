@@ -144,6 +144,32 @@ committed. Leaf requests are the exception: the ones waiting, or asked in the sa
 user is shared by every operation that needs it. A scope sync pre-empted three times in a row runs its next pass to
 the end before yielding again.
 
+## Older social tree
+
+Social v1 lives under `/pub/social/v1/`. Accounts that have not opened a v1 app yet still have everything in the tree
+every account wrote before, and a deploy can read it too: `createSocialIndexer({ ..., legacyTree: legacySocialTree })`,
+off by default. `social/legacy/` holds all of it, and nothing else in the library imports that folder
+(`imports.gate.test.ts`).
+
+The social domain is made of trees (`SocialTree`): each one names its path groups and reduces its own files into the
+same `SocialData`, with references read as `(author, postId)` targets whatever their spelling, so a reply, a quote, a
+collection item or a tag resolves to the same post in either tree. The view never parses a path itself: each
+author's records carry the tree they were read from, and its `keyOf` says which post, version, followee or profile a
+path is. With an older tree the two groups read both trees' prefixes in the same stream requests, under group ids of
+their own (`graph+legacy`, `activity+legacy`, and the leaves likewise), so history stored or saved without it never
+passes for history read with it; switching the option reads the scope again from the start.
+
+Each author is read through one tree (`SocialDomain.treeOf`), as the central indexer does: social v1 once any of
+their scopes holds a v1 profile event, a tombstone included, because the move copies the older records into v1 and
+writes the profile last; the older tree while only it holds their records; social v1 otherwise. Records of the other
+tree are left out of the view, so a moved author's posts never show twice, and the next sync after a move drops the
+older ones. Links for the next hop follow the same rule.
+
+An older post was one file rewritten in place by an edit: it becomes one version whose edit id is the post id, and the
+window dates it by that id, so an edit of an old post dates as old. An older article or collection keeps its JSON in
+`content`; a long post without a title reads as a note. `legacyMedia.ts` reads an older attachment or avatar: the file
+record names the type and a blob of the same owner holds the bytes.
+
 ## Saved index
 
 With `savedIndex: true` each device keeps its index in one file of the user's own storage, through the
