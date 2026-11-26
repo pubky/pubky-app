@@ -7,7 +7,6 @@ import {
   FOLLOWS,
   GRAPH,
   harness,
-  NOW,
   type Post,
   postPath,
   POSTS,

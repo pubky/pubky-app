@@ -130,7 +130,6 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
   const fullGroups = domain.groups.filter((group) => group.history === 'full');
   const windowGroups = domain.groups.filter((group) => group.history === 'window');
   const allPaths = domain.groups.flatMap((group) => group.paths);
-  const windowPaths = windowGroups.flatMap((group) => group.paths);
 
   /** Every request to a homeserver, of every operation, queues here, so the crawler and not the browser orders them. */
   const gate = createRequestGate(options.homeserverConcurrency);
