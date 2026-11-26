@@ -161,6 +161,7 @@ describe('crawler files fetched after the commit', () => {
       writer: 'w2',
       now: NOW,
       expiryMs: DAY_MS,
+      groups: taggedDomain.groups.map(({ id }) => id),
       reviveData: (author, path, value) => taggedDomain.reviveData?.(author, path, value) ?? null,
     });
     expect(outcome.loaded).toBe(1);

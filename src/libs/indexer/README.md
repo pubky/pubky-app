@@ -91,7 +91,8 @@ that need their file get it fetched and reduced; a file that is gone or fails it
 homeserver whose request keeps failing is skipped for the rest of the sync with exponential backoff, and one whose
 log went backwards (a restore) loses everything stored for it and is synced again. Every operation, `backfill` and
 `hydrate` included, reads a homeserver under the epoch it found, so a restore one operation finds also voids what
-the others read before it.
+the others read before it. The check reads the newest event of the high-water mark's author, which a homeserver never
+drops: it deletes no event, and a disabled user's events still stream.
 
 Requests to a homeserver queue in the crawler, at most `homeserverConcurrency` (6) in flight at once across every
 operation, so the order is the crawler's and not the browser's: a browser runs 6 connections per host over HTTP/1.1
@@ -262,7 +263,9 @@ leaf scopes are no members' domain groups, so what the user opened is never writ
 sealed before writing and opened after reading; a file that does not open is ignored.
 
 At start the crawling tab applies the files of the same seed before its first sync: the runs merge in any order,
-the homeservers spare their lookups, the high-water marks let the next sync catch a restore. Files that could not be
+the homeservers spare their lookups, the high-water marks let the next sync catch a restore. A file with runs of
+groups this domain does not read was written reading other paths, such as with the older tree on, and is ignored: its
+mark could name an author with no event in this domain's paths, and the restore check would read that as a restore. Files that could not be
 listed or read, such as an account's before its session is restored, are read again after the next scope
 sync. A record without data
 never erases a stored body at the same cursor. Other writers' files older than `writerExpiryMs` are deleted. The

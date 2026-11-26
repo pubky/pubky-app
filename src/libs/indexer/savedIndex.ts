@@ -13,7 +13,7 @@ import {
 } from './indexFile';
 import { evictBelow } from './merge';
 import { scopeId, scopeOf } from './store.helpers';
-import type { HighWater, IndexStore, ScopeKey, UserHomeserver } from './store.types';
+import type { IndexStore, ScopeKey, UserHomeserver } from './store.types';
 import type { IndexerTransport } from './transport.types';
 
 // Saving this device's index to a file in the user's storage, and starting from the files of other devices.
@@ -206,6 +206,8 @@ export interface LoadParams<D> {
   now: number;
   /** Other writers' files older than this are deleted after loading. */
   expiryMs: number;
+  /** The domain's group ids. A file with runs of another group was written reading other paths, such as another tree. */
+  groups: readonly string[];
   /** Checks each stored payload; without it the records load without data. */
   reviveData?: ReviveData<D>;
   /** Opens a sealed file's bytes; a file it cannot open is ignored. */
@@ -215,7 +217,7 @@ export interface LoadParams<D> {
 export interface LoadOutcome {
   /** Files applied to the store. */
   loaded: number;
-  /** Files that did not decode, had an unknown version, another seed, or runs the store refused. */
+  /** Files that did not decode, had an unknown version, another seed or other groups, or runs the store refused. */
   ignored: number;
   /** Other writers' files deleted for their age. */
   expired: number;
@@ -224,7 +226,7 @@ export interface LoadOutcome {
   writtenAt: number | null;
 }
 
-/** Applies one file: its runs, the homeservers the store lacks, and each high-water mark above the stored one. */
+/** Applies one file: its runs, the homeservers the store lacks, and its high-water marks, which only raise the stored. */
 async function applyFile<D>(store: IndexStore<D>, model: IndexFileModel<D>): Promise<void> {
   const userHomeservers: Array<{ user: string; value: UserHomeserver }> = [];
   for (const { user, homeserver } of model.members) {
@@ -232,12 +234,7 @@ async function applyFile<D>(store: IndexStore<D>, model: IndexFileModel<D>): Pro
       userHomeservers.push({ user, value: homeserver });
     }
   }
-  const homeserverStates: Array<{ homeserver: string; patch: { highWater: HighWater } }> = [];
-  for (const { homeserver, highWater } of model.highWater) {
-    const stored = (await store.readHomeserverState(homeserver)).highWater;
-    if (stored === null || highWater.cursor > stored.cursor)
-      homeserverStates.push({ homeserver, patch: { highWater } });
-  }
+  const homeserverStates = model.highWater.map(({ homeserver, highWater }) => ({ homeserver, patch: { highWater } }));
   await store.commit({ applyRuns: model.runs, userHomeservers, homeserverStates });
 }
 
@@ -277,7 +274,8 @@ export async function loadSavedIndex<D>(params: LoadParams<D>): Promise<LoadOutc
       continue;
     }
     if (!own && now - model.writtenAt > params.expiryMs) expired.push(name);
-    if (model.seed !== seed) {
+    // A mark read over other paths could name an author with no event in this domain's, which reads as a restore.
+    if (model.seed !== seed || model.runs.some(({ group }) => !params.groups.includes(group))) {
       ignored += 1;
       continue;
     }

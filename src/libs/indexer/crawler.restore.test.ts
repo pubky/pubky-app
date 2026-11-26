@@ -1,7 +1,21 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { ACTIVITY, DAY_MS, FOLLOWS, GRAPH, harness, type Post, postPath, POSTS, served } from './crawler.fixtures';
+import {
+  ACTIVITY,
+  DAY_MS,
+  FOLLOWS,
+  GRAPH,
+  harness,
+  NOW,
+  type Post,
+  postPath,
+  POSTS,
+  served,
+  testDomain,
+} from './crawler.fixtures';
 import type { FakeNetwork } from './fakeNetwork';
+import { encodeIndexFile } from './indexFile';
+import { indexFileName, loadSavedIndex } from './savedIndex';
 import { scopeId } from './store.helpers';
 import type { IndexStore } from './store.types';
 import type { IndexerTransport, ReadEventsRequest } from './transport.types';
@@ -174,5 +188,42 @@ describe('operations racing over one homeserver', () => {
     expect((await store.readHomeserverState('hs1')).epoch).toBe(1);
     expect([...(await served(store, 'u1', 'hs1', ACTIVITY)).keys()]).toEqual([fresh]);
     expect(await served(store, 'alice', 'hs1', GRAPH)).toEqual(network.liveOf('alice', [FOLLOWS]));
+  });
+
+  it('ignores a saved index read over other paths, whose mark could name an author with no event in these', async () => {
+    const { network, store, crawler } = shrinking();
+    await crawler.syncScope('alice');
+    const before = await everything(store);
+    const mark = (await store.readHomeserverState('hs1')).highWater;
+    // Written by a device reading another tree: its groups and its mark's author are none of this domain's.
+    const file = await encodeIndexFile({
+      writer: 'w1',
+      writtenAt: NOW,
+      seed: 'alice',
+      hops: 2,
+      windowDays: 30,
+      members: [{ user: 'alice', hop: 0, homeserver: { homeserver: 'hs1', resolvedAt: NOW } }],
+      highWater: [{ homeserver: 'hs1', highWater: { cursor: BigInt(1000), author: 'bob' } }],
+      runs: [
+        { author: 'alice', homeserver: 'hs1', group: `${GRAPH}+legacy`, tail: BigInt(0), head: BigInt(5), entries: [] },
+      ],
+    });
+    await network.writeIndexFile(indexFileName('w1'), file);
+
+    const outcome = await loadSavedIndex({
+      transport: network,
+      store,
+      seed: 'alice',
+      writer: 'w2',
+      now: NOW,
+      expiryMs: DAY_MS,
+      groups: testDomain.groups.map(({ id }) => id),
+    });
+    await crawler.syncScope('alice');
+
+    expect(outcome).toMatchObject({ loaded: 0, ignored: 1 });
+    expect((await store.readHomeserverState('hs1')).highWater).toEqual(mark);
+    expect((await store.readHomeserverState('hs1')).epoch).toBe(0);
+    expect(await everything(store)).toEqual(before);
   });
 });

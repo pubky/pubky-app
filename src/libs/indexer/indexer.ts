@@ -230,6 +230,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
         writer,
         now: now(),
         expiryMs: options.writerExpiryMs,
+        groups: domain.groups.map(({ id }) => id),
         reviveData: domain.reviveData?.bind(domain),
         open: sealer === undefined ? undefined : (bytes, name) => sealer.open(bytes, name),
       });
