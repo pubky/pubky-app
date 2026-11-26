@@ -218,6 +218,20 @@ describe('backfill', () => {
     expect(await store.readCoverage(scope)).toEqual([{ tail: CURSOR_ZERO, head: network.headOf('hs1') }]);
   });
 
+  it('starts at the newest event of an author whose window held none of theirs', async () => {
+    const { network, store, crawler } = harness({ backfillPageLimit: 5 });
+    network.addHomeserver('hs1').addUser('alice', 'hs1');
+    const old = Array.from({ length: 3 }, (_, i) => network.putJson('alice', postPath((60 - i) * DAY_MS), { i }));
+    await crawler.syncScope('alice');
+    const scope = { author: 'alice', homeserver: 'hs1', group: ACTIVITY };
+    expect(await store.readCoverage(scope)).toEqual([]);
+
+    expect(await crawler.backfill('alice', ACTIVITY, 1)).toEqual({ tail: CURSOR_ZERO, pages: 1, events: 3 });
+
+    expect(await store.readCoverage(scope)).toEqual([{ tail: CURSOR_ZERO, head: old[2] }]);
+    expect(await served(store, 'alice', 'hs1', ACTIVITY)).toEqual(network.liveOf('alice', [POSTS]));
+  });
+
   it('reads pages of its own size, fetching and committing each page before the next', async () => {
     const { network, store, crawler, crawlerOf } = harness({ backfillPageLimit: 4 });
     network.addHomeserver('hs1').addUser('alice', 'hs1');

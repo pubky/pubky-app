@@ -141,7 +141,8 @@ export interface Crawler {
   syncScope(seed: string, signal?: AbortSignal): Promise<SyncResult>;
   /**
    * Extends the author's top contiguous coverage of the group backwards by up to `pages` pages of `backfillPageLimit`
-   * events.
+   * events. Without any coverage, as after a window that held none of the author's events, it starts at their newest
+   * event.
    */
   backfill(author: string, groupId: string, pages: number, signal?: AbortSignal): Promise<BackfillResult>;
   /** Syncs the domain's groups of these users alone: the scope members stay and no link is followed. */

@@ -572,17 +572,20 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
       // Re-read each time: the new run may join a lower stored range, and reading resumes below it.
       const coverage = await store.readCoverage(scope);
       const trusted = coverage.length === 0 ? null : coverage[coverage.length - 1];
-      if (trusted === null) return { tail: null, pages: done, events };
-      if (done >= pages || trusted.tail === CURSOR_ZERO) return { tail: trusted.tail, pages: done, events };
-      // The tail itself is outside the range, so read from one above it.
-      const page = await read([{ user: author, cursor: trusted.tail + ONE }], true);
+      const stored = trusted === null ? null : trusted.tail;
+      if (done >= pages || stored === CURSOR_ZERO) return { tail: stored, pages: done, events };
+      // The tail itself is outside the range, so read from one above it. A window that held none of the author's
+      // events stored no range at all: then the read starts at their newest event.
+      const page = await read([{ user: author, cursor: stored === null ? null : stored + ONE }], true);
+      if (stored === null && page.length === 0) return { tail: null, pages: done, events };
       const lowest = page.reduce<Cursor | null>(
         (low, event) => (low === null || event.cursor < low ? event.cursor : low),
         null,
       );
+      const highest = page.reduce((high, event) => (event.cursor > high ? event.cursor : high), CURSOR_ZERO);
       // A full page holds every event down to its lowest cursor; a shorter one reached the stream start.
       const tail = page.length >= limit && lowest !== null ? lowest - ONE : CURSOR_ZERO;
-      const run = foldEvents<D>(scope, tail, trusted.tail, page);
+      const run = foldEvents<D>(scope, tail, stored ?? highest, page);
       await attachBodies(ctx, [run]);
       await commit({ applyRuns: [run] }, { scopes: [scopeOf(run)], seeds: [] });
       events += page.length;
