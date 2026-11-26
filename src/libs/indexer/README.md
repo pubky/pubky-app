@@ -59,10 +59,22 @@ be structured-cloneable; cursors stay `bigint` and are never part of a key.
 full-history groups in batches from each user's stored head, and follows the links in the scope group to
 the next hop. Windowed groups start at the homeserver's window start, the newest event older than
 `windowDays`, and grow older only through `backfill`, which reads pages of `backfillPageLimit` events (100) and
-fetches and commits each page before reading the next, so older history shows up a screen at a time. Records
+fetches and commits each page before reading the next, so older history shows up a screen at a time. A user loaded on
+demand (`syncUsers`) with no history of a windowed group starts with one such page from their newest event instead: a
+profile shows the newest posts first, so it needs neither the window start, a search over up to 1000 events, nor a
+forward read of the range that search already went through. The page's run is `(tail, newest]`, a full page's tail
+just below its lowest cursor, a short one's at the stream start; it holds the page's tombstones like any run, and is
+the scope's only range, so it is trusted. Later syncs of that user go on forward from its head, and backfills below it,
+keeping one range. Records
 that need their file get it fetched and reduced; a file that is gone or fails its hash leaves the record without data until a later event. A
 homeserver whose request keeps failing is skipped for the rest of the sync with exponential backoff, and one whose
 log went backwards (a restore) loses everything stored for it and is synced again.
+
+Requests to a homeserver queue in the crawler, at most `homeserverConcurrency` (6) in flight at once across every
+operation, foreground first, so the order is the crawler's and not the browser's: a browser runs 6 connections per host
+over HTTP/1.1 and queues the rest where nothing can reorder them. Background requests, those of `hydrate`, start only
+while no foreground one waits and leave one slot free, so a foreground request arriving beside them starts at once. A
+request that started always runs to its end: on HTTP/1.1 an aborted request costs its connection.
 
 Every transport call runs under a deadline of the library's own, timed by the injected `schedule`, so a transport
 whose request never settles cannot stall a crawl: a stream read or file fetch past `requestTimeoutMs` (30 s) has
@@ -159,12 +171,14 @@ committed. Leaf requests are the exception: the ones waiting, or asked in the sa
 user is shared by every operation that needs it. A scope sync pre-empted three times in a row runs its next pass to
 the end before yielding again.
 
-The files crawls leave for later are fetched when nothing else waits: after each crawl that left some, the runtime
-runs a fill (`hydrate`), which any other crawl, a request or a scope sync, pre-empts. A fill commits each file as it
-arrives, so a pre-empted one loses only the files in flight and goes on at the next idle moment; it needs no
-starvation guard. A fill that could not finish, on a failing homeserver, waits for the next crawl instead of
-looping. The first fill after a start, and the first after a saved index loaded, also looks through every stored
-scope, since a session that closed before its fill, or a file, can leave records without data.
+The files crawls leave for later are fetched by a fill (`hydrate`) that starts once no crawl runs and then runs beside
+the crawls that follow, its requests behind theirs at every homeserver. Nothing pre-empts it, so it never aborts a
+request: a crawl's request takes a free slot or the next one a fill request frees. It commits each file as it arrives,
+setting the data only on a record still stored at that cursor, so a crawl that replaced the record, a restore that
+dropped its homeserver or a `forget` meanwhile wins. Only a stop or a step down aborts it. A fill that could not finish,
+on a failing homeserver, waits for the next crawl instead of looping. The first fill after a start, and the first after
+a saved index loaded, also looks through every stored scope, since a session that closed before its fill, or a file,
+can leave records without data.
 
 ## Older social tree
 

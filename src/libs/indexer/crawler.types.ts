@@ -17,7 +17,12 @@ export interface CrawlerOptions {
    */
   backfillPageLimit: number;
   lookupConcurrency: number;
-  bodyConcurrency: number;
+  /**
+   * Requests in flight to one homeserver at once, stream reads and file fetches of every operation together. The
+   * crawler queues the rest itself, foreground first, instead of leaving the queue to the browser: a browser opens
+   * 6 connections per host over HTTP/1.1. Raise it for a transport that runs more, such as HTTP/2 or Node's fetch.
+   */
+  homeserverConcurrency: number;
   /** Age of the oldest events a windowed group indexes before a backfill. */
   windowDays: number;
   /** How long a resolved homeserver is used before resolving the user again. */
@@ -41,7 +46,7 @@ export const DEFAULT_CRAWLER_OPTIONS: Readonly<CrawlerOptions> = Object.freeze({
   pageLimit: 1000,
   backfillPageLimit: 100,
   lookupConcurrency: 8,
-  bodyConcurrency: 16,
+  homeserverConcurrency: 6,
   windowDays: 30,
   homeserverTtlMs: 6 * 60 * 60 * 1000,
   maxUsers: 2000,
@@ -134,8 +139,9 @@ export interface BackfillResult {
 }
 
 /**
- * Crawls scopes into the store. Run one operation at a time: they share the counters. An aborted operation
- * rejects with `IndexerAbortedError`, and everything it committed before stays valid.
+ * Crawls scopes into the store. Run one operation at a time, except `hydrate`, which may run beside one: its requests
+ * go after theirs, and it only sets the data of records still stored. An aborted operation rejects with
+ * `IndexerAbortedError`, and everything it committed before stays valid.
  */
 export interface Crawler {
   syncScope(seed: string, signal?: AbortSignal): Promise<SyncResult>;
@@ -156,7 +162,8 @@ export interface Crawler {
   syncLeaves(leaves: readonly LeafRequest[], signal?: AbortSignal): Promise<LeavesOutcome>;
   /**
    * Fetches the files of served records that need one and have no data, newest cursor first, at most `limit`, and
-   * commits each as it arrives. It looks in `scopes`, such as every stored scope after a start or the scopes of a
+   * commits each as it arrives, on the record if it is still stored. Its requests are background ones: at each
+   * homeserver they wait while a request of another operation does, and never take its last free slot. It looks in `scopes`, such as every stored scope after a start or the scopes of a
    * saved index, and in the scopes left unfilled: those a crawl committed with `later` records, and those a call
    * could not finish, on a failing homeserver or past the limit. A record is tried once per crawler: one whose file
    * stays gone or invalid is not fetched again until a later event replaces it.

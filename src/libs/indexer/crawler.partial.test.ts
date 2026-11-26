@@ -1,7 +1,8 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
 import { ACTIVITY, DAY_MS, FOLLOWS, GRAPH, harness, postPath, POSTS, served, servedData } from './crawler.fixtures';
-import type { StoreChange } from './crawler.types';
+import type { CrawlerOptions, StoreChange } from './crawler.types';
+import { CURSOR_ZERO } from './cursor';
 import type { FakeNetwork } from './fakeNetwork';
 import { InvalidIndexInputError } from './indexer.errors';
 import { scopeId } from './store.helpers';
@@ -23,8 +24,8 @@ const changedIds = (changes: readonly StoreChange[]) =>
 const idsOf = (scopes: readonly ScopeKey[]) => scopes.map(scopeId).sort();
 
 /** alice follows bob; carol, outside the scope, follows dave. Everyone on hs1 posted once recently. */
-function twoCircles() {
-  const setup = harness();
+function twoCircles(options: Partial<CrawlerOptions> = {}) {
+  const setup = harness(options);
   const { network } = setup;
   network.addHomeserver('hs1');
   for (const user of ['alice', 'bob', 'carol', 'dave']) {
@@ -63,6 +64,42 @@ describe('syncUsers', () => {
     expect(forwardEvents(network, mark)).toBe(1);
     expect(network.reads.slice(mark).every((read) => read.users.every((user) => user === 'alice'))).toBe(true);
     expect(await served(store, 'alice', 'hs1', ACTIVITY)).toEqual(network.liveOf('alice', [POSTS]));
+  });
+
+  it('reads a user with no history newest page first, keeping its tombstones, then forward from its head', async () => {
+    const { network, store, crawler } = twoCircles({ backfillPageLimit: 4 });
+    network.putJson('carol', postPath(60 * DAY_MS), { text: 'oldest' });
+    const old = postPath(50 * DAY_MS);
+    const oldCursor = network.putJson('carol', old, { text: 'old' });
+    const deleted = postPath(3 * DAY_MS);
+    network.putJson('carol', deleted, { text: 'deleted' });
+    const kept = postPath(2 * DAY_MS);
+    network.putJson('carol', kept, { text: 'kept' });
+    const head = network.del('carol', deleted);
+    const scope = { author: 'carol', homeserver: 'hs1', group: ACTIVITY };
+
+    await crawler.syncUsers(['carol']);
+
+    // One page of four events, read backwards from the newest: no window start searched, no range read twice.
+    const carolReads = network.reads.filter((read) => read.users.includes('carol'));
+    expect(carolReads.filter((read) => read.reverse).map((read) => read.events.length)).toEqual([4]);
+    expect(await store.readCoverage(scope)).toEqual([{ tail: oldCursor - BigInt(1), head }]);
+    expect((await store.readScope(scope)).entries.get(deleted)?.kind).toBe('tombstone');
+    expect(await servedData(store, 'carol', 'hs1', ACTIVITY)).toEqual(
+      new Map([
+        [old, { text: 'old' }],
+        [kept, { text: 'kept' }],
+      ]),
+    );
+
+    // With history, the next sync goes on forward from the head, and backfill below the same single range.
+    const fresh = network.putJson('carol', postPath(DAY_MS / 2), { text: 'fresh' });
+    await crawler.syncUsers(['carol']);
+    expect(await store.readCoverage(scope)).toEqual([{ tail: oldCursor - BigInt(1), head: fresh }]);
+
+    expect(await crawler.backfill('carol', ACTIVITY, 5)).toMatchObject({ tail: CURSOR_ZERO, pages: 1 });
+    expect(await store.readCoverage(scope)).toEqual([{ tail: CURSOR_ZERO, head: fresh }]);
+    expect(await served(store, 'carol', 'hs1', ACTIVITY)).toEqual(network.liveOf('carol', [POSTS]));
   });
 
   it('reports a dead homeserver instead of throwing', async () => {

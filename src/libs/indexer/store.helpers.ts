@@ -18,6 +18,14 @@ export function assertValidBatch<D>(batch: StoreBatch<D>): void {
     if (!isValidCursor(cutoff)) throw new InvalidIndexInputError(`cutoff ${cutoff} is out of range`);
   }
   for (const run of batch.applyRuns ?? []) assertValidRun(run);
+  for (const { cursor } of batch.recordData ?? []) {
+    if (!isValidCursor(cursor)) throw new InvalidIndexInputError(`record cursor ${cursor} is out of range`);
+  }
+}
+
+/** The stored entry with `data` when it is the record at `cursor`, else `null`: it was replaced since. */
+export function withData<D>(stored: Entry<D> | undefined, cursor: Cursor, data: D): RecordEntry<D> | null {
+  return stored?.kind === 'record' && stored.cursor === cursor ? { ...stored, data } : null;
 }
 
 export interface AppliedRun<D> {

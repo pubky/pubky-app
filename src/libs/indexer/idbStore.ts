@@ -9,6 +9,7 @@ import {
   runsOfScope,
   scopeOf,
   scopeState,
+  withData,
 } from './store.helpers';
 import {
   EMPTY_HOMESERVER_STATE,
@@ -182,6 +183,13 @@ export function createIdbStore<D>(databaseName: string): IdbIndexStore<D> {
         }
         // Dexie types `bulkPut` keys as plain values, so compound keys go one `put` each, all in flight at once.
         await Promise.all(applied.changed.map((entry) => paths.put(packEntry(entry), [id, entry.path])));
+      }
+      for (const { scope, path, cursor, data } of copy.recordData ?? []) {
+        const row = await scopeRow(scope);
+        if (row === undefined) continue;
+        const value = await paths.get([row.id, path]);
+        const filled = withData(value === undefined ? undefined : unpackEntry(path, value), cursor, data);
+        if (filled !== null) await paths.put(packEntry(filled), [row.id, path]);
       }
       await userHomeservers.bulkPut((copy.userHomeservers ?? []).map(({ user, value }) => ({ user, value })));
       for (const { homeserver, patch } of copy.homeserverStates ?? []) {

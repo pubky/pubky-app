@@ -1,4 +1,14 @@
-import { chunks, mapLimit, sleep, throwIfAborted, timerSchedule, untilAborted, withDeadline } from './concurrency';
+import {
+  chunks,
+  createRequestGate,
+  mapLimit,
+  type Priority,
+  sleep,
+  throwIfAborted,
+  timerSchedule,
+  untilAborted,
+  withDeadline,
+} from './concurrency';
 import {
   type Crawler,
   type CrawlerParams,
@@ -42,6 +52,8 @@ const ONE = BigInt(1);
 /** What one operation learned about homeservers, so each is checked once per operation. */
 interface OperationContext {
   signal?: AbortSignal;
+  /** Where its requests queue at each homeserver. */
+  priority: Priority;
   /** Homeservers already checked for a restore. */
   checked: Set<string>;
   highWater: Map<string, HighWater | null>;
@@ -50,8 +62,9 @@ interface OperationContext {
   failed: Set<string>;
 }
 
-const contextOf = (signal?: AbortSignal): OperationContext => ({
+const contextOf = (signal?: AbortSignal, priority: Priority = 'foreground'): OperationContext => ({
   signal,
+  priority,
   checked: new Set(),
   highWater: new Map(),
   windowStart: new Map(),
@@ -62,6 +75,10 @@ type Counter = 'lookups' | 'streamRequests' | 'bodyRequests' | 'events';
 
 const headOf = (coverage: Coverage): Cursor | null =>
   coverage.length === 0 ? null : coverage[coverage.length - 1].head;
+
+/** The tail of the top contiguous range, the only trusted one. */
+const topTailOf = (coverage: Coverage): Cursor | null =>
+  coverage.length === 0 ? null : coverage[coverage.length - 1].tail;
 
 /** A run changes what is served when it brings entries or does not extend the stored top range. */
 const changesServed = (run: Run<unknown>, storedHead: Cursor | null): boolean =>
@@ -90,6 +107,8 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
   const allPaths = domain.groups.flatMap((group) => group.paths);
   const windowPaths = windowGroups.flatMap((group) => group.paths);
 
+  /** Every request to a homeserver, of every operation, queues here, so the crawler and not the browser orders them. */
+  const gate = createRequestGate(options.homeserverConcurrency);
   const counters = { usersPerHop: [] as number[], lookups: 0, streamRequests: 0, bodyRequests: 0, events: 0 };
   let seedReach: CrawlerStats['seed'];
   let excluded: ReadonlySet<string> = new Set(options.excluded);
@@ -162,10 +181,18 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     }
   }
 
-  /** One call to the homeserver under the request deadline; past it the request fails as unreachable. */
+  /**
+   * One call to the homeserver once the gate lets it go, under the request deadline from then on; past it the
+   * request fails as unreachable.
+   */
   async function call<T>(ctx: OperationContext, homeserver: string, request: (signal: AbortSignal) => Promise<T>) {
     try {
-      return await withDeadline(request, options.requestTimeoutMs, schedule, ctx.signal);
+      return await gate.run(
+        homeserver,
+        ctx.priority,
+        () => withDeadline(request, options.requestTimeoutMs, schedule, ctx.signal),
+        ctx.signal,
+      );
     } catch (error) {
       if (error instanceof RequestTimeoutError) throw new HomeserverUnreachableError(homeserver, { cause: error });
       throw error;
@@ -276,7 +303,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
           : [],
       ),
     );
-    await mapLimit(records, options.bodyConcurrency, async ({ homeserver, author, record }) => {
+    await mapLimit(records, options.homeserverConcurrency, async ({ homeserver, author, record }) => {
       const data = await bodyOf(ctx, homeserver, author, record);
       if (data !== null) record.data = data;
     });
@@ -385,12 +412,35 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     });
   }
 
+  /** The tail a windowed read starts from: the stored head, or the window start past a gap or without one. */
+  const fromStart = (start: Cursor) => (head: Cursor | null) => (head === null || head < start ? start : head);
+
   async function syncWindow(ctx: OperationContext, homeserver: string, users: readonly string[]) {
     if (windowGroups.length === 0 || !(await ready(ctx, homeserver))) return;
     await guard(ctx, homeserver, async () => {
       const start = await windowStartOf(ctx, homeserver, users);
-      const fromStart = (head: Cursor | null) => (head === null || head < start ? start : head);
-      for (const group of windowGroups) await syncGroup(ctx, homeserver, group, users, fromStart);
+      for (const group of windowGroups) await syncGroup(ctx, homeserver, group, users, fromStart(start));
+    });
+  }
+
+  /**
+   * The windowed groups of users loaded one by one. A user with no history of a group gets their newest page of it,
+   * read backwards as `backfill` reads: what a profile shows first, with no window start to search for and no range
+   * read twice. A user with history goes on forward from its head, as a scope member does.
+   */
+  async function syncNewest(ctx: OperationContext, homeserver: string, users: readonly string[]) {
+    if (windowGroups.length === 0 || !(await ready(ctx, homeserver))) return;
+    await guard(ctx, homeserver, async () => {
+      for (const group of windowGroups) {
+        const heads = await storedHeads(homeserver, group, users);
+        const known = users.filter((user) => heads.get(user) !== null);
+        for (const user of users) {
+          if (heads.get(user) === null) await readBack(ctx, { author: user, homeserver, group: group.id }, group);
+        }
+        if (known.length === 0) continue;
+        const start = await windowStartOf(ctx, homeserver, known);
+        await syncGroup(ctx, homeserver, group, known, fromStart(start));
+      }
     });
   }
 
@@ -530,7 +580,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     const ctx = contextOf(signal);
     const { byHomeserver } = await resolveAll(ctx, [...new Set(users)]);
     await eachHomeserver(byHomeserver, (homeserver, batch) => syncFull(ctx, homeserver, batch));
-    await eachHomeserver(byHomeserver, (homeserver, batch) => syncWindow(ctx, homeserver, batch));
+    await eachHomeserver(byHomeserver, (homeserver, batch) => syncNewest(ctx, homeserver, batch));
     throwIfAborted(signal);
     return { failedHomeservers: [...ctx.failed] };
   }
@@ -573,6 +623,38 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     return { failedHomeservers };
   }
 
+  /**
+   * Reads the page of `backfillPageLimit` events below the scope's top contiguous range, or its newest page when it
+   * has no range, fetches the files the page needs to render and commits it. Its events, `null` when there was
+   * nothing to read: the range reaches the stream start, or the author has no event in the group.
+   */
+  async function readBack(ctx: OperationContext, scope: ScopeKey, group: PathGroup): Promise<number | null> {
+    // Read each time: the last run may have joined a lower stored range, and reading resumes below it.
+    const stored = topTailOf(await store.readCoverage(scope));
+    if (stored === CURSOR_ZERO) return null;
+    const limit = options.backfillPageLimit;
+    // The tail itself is outside the range, so the read starts one above it; with no range, at the newest event.
+    const page = await reader(
+      ctx,
+      scope.homeserver,
+      group.paths,
+      limit,
+    )([{ user: scope.author, cursor: stored === null ? null : stored + ONE }], true);
+    if (stored === null && page.length === 0) return null;
+    const lowest = page.reduce<Cursor | null>(
+      (low, event) => (low === null || event.cursor < low ? event.cursor : low),
+      null,
+    );
+    const highest = page.reduce((high, event) => (event.cursor > high ? event.cursor : high), CURSOR_ZERO);
+    // A full page holds every event down to its lowest cursor; a shorter one reached the stream start. Without a
+    // range, nothing above the newest event read exists yet, so the run ends there.
+    const tail = page.length >= limit && lowest !== null ? lowest - ONE : CURSOR_ZERO;
+    const run = foldEvents<D>(scope, tail, stored ?? highest, page);
+    await attachBodies(ctx, [run]);
+    await commitRuns({ applyRuns: [run] }, { scopes: [scopeOf(run)], seeds: [] });
+    return page.length;
+  }
+
   async function backfill(author: string, groupId: string, pages: number, signal?: AbortSignal) {
     const group = domain.groups.find(({ id }) => id === groupId);
     if (group === undefined) throw new InvalidIndexInputError(`unknown group ${groupId}`);
@@ -580,31 +662,14 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     const homeserver = (await store.readUserHomeserver(author))?.homeserver ?? null;
     if (homeserver === null) return { tail: null, pages: 0, events: 0 };
     const scope = { author, homeserver, group: group.id };
-    const limit = options.backfillPageLimit;
-    const read = reader(ctx, homeserver, group.paths, limit);
     let events = 0;
-    for (let done = 0; ; done += 1) {
-      // Re-read each time: the new run may join a lower stored range, and reading resumes below it.
-      const coverage = await store.readCoverage(scope);
-      const trusted = coverage.length === 0 ? null : coverage[coverage.length - 1];
-      const stored = trusted === null ? null : trusted.tail;
-      if (done >= pages || stored === CURSOR_ZERO) return { tail: stored, pages: done, events };
-      // The tail itself is outside the range, so read from one above it. A window that held none of the author's
-      // events stored no range at all: then the read starts at their newest event.
-      const page = await read([{ user: author, cursor: stored === null ? null : stored + ONE }], true);
-      if (stored === null && page.length === 0) return { tail: null, pages: done, events };
-      const lowest = page.reduce<Cursor | null>(
-        (low, event) => (low === null || event.cursor < low ? event.cursor : low),
-        null,
-      );
-      const highest = page.reduce((high, event) => (event.cursor > high ? event.cursor : high), CURSOR_ZERO);
-      // A full page holds every event down to its lowest cursor; a shorter one reached the stream start.
-      const tail = page.length >= limit && lowest !== null ? lowest - ONE : CURSOR_ZERO;
-      const run = foldEvents<D>(scope, tail, stored ?? highest, page);
-      await attachBodies(ctx, [run]);
-      await commitRuns({ applyRuns: [run] }, { scopes: [scopeOf(run)], seeds: [] });
-      events += page.length;
+    let done = 0;
+    for (; done < pages; done += 1) {
+      const read = await readBack(ctx, scope, group);
+      if (read === null) break;
+      events += read;
     }
+    return { tail: topTailOf(await store.readCoverage(scope)), pages: done, events };
   }
 
   async function hydrate(
@@ -612,7 +677,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     limit = Infinity,
     signal?: AbortSignal,
   ): Promise<HydrateResult> {
-    const ctx = contextOf(signal);
+    const ctx = contextOf(signal, 'background');
     for (const scope of scopes) unfilled.set(scopeId(scope), scopeOf(scope));
     const missing: Array<{ scope: ScopeKey; record: RecordEntry<D>; key: string }> = [];
     const scanned = [...unfilled];
@@ -642,26 +707,24 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
       }
       // A failing homeserver leaves its records untried, for a later call.
       await guard(ctx, homeserver, async () => {
-        await mapLimit(items, options.bodyConcurrency, async ({ scope, record, key }) => {
+        await mapLimit(items, options.homeserverConcurrency, async ({ scope, record, key }) => {
           const data = await bodyOf(ctx, scope.homeserver, scope.author, record);
           hydrated.add(key);
           tried += 1;
           if (data === null) return;
-          // Committed at once, so a pre-empted call keeps every file it got. The one event at this cursor: a run of it
-          // alone lies inside the stored coverage and changes no range.
-          const run: Run<D> = {
-            ...scopeOf(scope),
-            tail: record.cursor - ONE,
-            head: record.cursor,
-            entries: [{ ...record, data }],
-          };
-          await commit({ applyRuns: [run] }, { scopes: [scopeOf(scope)], seeds: [] });
+          // Committed at once, so a stopped call keeps every file it got. Crawls run beside it: one that replaced,
+          // forgot or dropped the record meanwhile wins, and the data is set on nothing.
+          await commit(
+            { recordData: [{ scope: scopeOf(scope), path: record.path, cursor: record.cursor, data }] },
+            { scopes: [scopeOf(scope)], seeds: [] },
+          );
           fetched += 1;
         });
       });
     });
     const untried = new Set(missing.filter(({ key }) => !hydrated.has(key)).map(({ scope }) => scopeId(scope)));
-    for (const [id] of scanned) if (!untried.has(id)) unfilled.delete(id);
+    // A scope a crawl committed `later` records to again since the scan stays for the next call.
+    for (const [id, scope] of scanned) if (!untried.has(id) && unfilled.get(id) === scope) unfilled.delete(id);
     return { fetched, remaining: missing.length - tried };
   }
 

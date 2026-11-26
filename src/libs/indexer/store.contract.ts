@@ -183,6 +183,41 @@ export function describeIndexStoreContract<S extends IndexStore<Payload>>(
       await expectScopeOf(store, elsewhere, [runOf(0, 3, elsewhere)]);
     });
 
+    it('sets record data only on the record still stored at that cursor, as its one-event run would', async () => {
+      const store = fresh();
+      const bare = (path: string, cursor: number): Entry<Payload> => ({ kind: 'record', path, cursor: c(cursor) });
+      const elsewhere: RunMeta = { ...META, homeserver: 'hs2' };
+      const runs = [
+        runWith(0, 10, [bare('a', 4), tomb('b', 7), bare('d', 9)]),
+        runWith(0, 3, [bare('a', 3)], elsewhere),
+      ];
+      await store.applyRuns(runs);
+      const fill = (scope: RunMeta, path: string, cursor: number) => ({
+        scope,
+        path,
+        cursor: c(cursor),
+        data: { n: cursor },
+      });
+
+      await store.commit({
+        // The record at its cursor; a tombstone; an older cursor of a path; a path and a scope never stored.
+        recordData: [
+          fill(META, 'a', 4),
+          fill(META, 'b', 7),
+          fill(META, 'd', 8),
+          fill(META, 'e', 5),
+          fill({ ...META, author: 'bob' }, 'a', 4),
+        ],
+      });
+
+      await expectScopeOf(store, META, [runs[0], runWith(3, 4, [rec('a', 4)])]);
+      expect(sortedScopes(await store.listScopes())).toEqual(sortedScopes([META, elsewhere]));
+      await store.deleteHomeserver('hs2');
+      await store.commit({ recordData: [fill(elsewhere, 'a', 3)] });
+      expect(await store.listScopes()).toEqual([META]);
+      await expect(store.commit({ recordData: [fill(META, 'a', -1)] })).rejects.toThrow(InvalidIndexInputError);
+    });
+
     it('evicts at or below a cutoff as the pure eviction does, and drops a scope evicted whole', async () => {
       const store = fresh();
       const other: RunMeta = { ...META, author: 'bob' };

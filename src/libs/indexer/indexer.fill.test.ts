@@ -37,7 +37,7 @@ function world() {
   network.putJson('bob', `${TAGS}t1`, { text: 't1' });
   network.putJson('bob', `${TAGS}t2`, { text: 't2' });
   network.putJson('carol', post, { text: 'carol' });
-  const tags = { hold: false, fail: false, held: new Set<() => void>(), asked: 0 };
+  const tags = { hold: false, fail: false, held: new Set<() => void>(), asked: 0, aborted: 0 };
   const transport: IndexerTransport = {
     resolveHomeserver: (user) => network.resolveHomeserver(user),
     readEvents: (request) => network.readEvents(request),
@@ -56,6 +56,7 @@ function world() {
               'abort',
               () => {
                 tags.held.delete(release);
+                tags.aborted += 1;
                 reject(new Error('fetch aborted'));
               },
               { once: true },
@@ -125,7 +126,7 @@ describe('createIndexerRuntime fill', () => {
     expect(runtime.status()).toMatchObject({ state: 'idle', lastError: null });
   });
 
-  it('yields the fill to a request and finishes it after', async () => {
+  it('runs a request beside the fill, aborting none of its fetches, and keeps the files they bring', async () => {
     const { post, tags, open, store, runtime, bob } = world();
     runtime.start(null);
     tags.hold = true;
@@ -133,19 +134,21 @@ describe('createIndexerRuntime fill', () => {
     await settle();
     expect(tags.held.size).toBe(2);
 
+    // Settles while the tag fetches still hang: the request waited for none of them.
     await runtime.ensureUser('carol');
 
     expect((await servedData(store, 'carol', 'hs1', ACTIVITY)).get(post)).toEqual({ text: 'carol' });
-    await settle();
-    // The fill started again after the request, asking for the tags anew.
-    expect(tags.asked).toBe(4);
     expect(tags.held.size).toBe(2);
+    expect(tags.aborted).toBe(0);
     open();
     await settle();
     expect((await bob()).get(`${TAGS}t1`)).toEqual({ text: 't1' });
+    expect((await bob()).get(`${TAGS}t2`)).toEqual({ text: 't2' });
+    expect(tags.asked).toBe(2);
+    expect(runtime.status()).toMatchObject({ state: 'idle', lastError: null });
   });
 
-  it('lets a scope sync asked during the fill go first', async () => {
+  it('runs a scope sync beside the fill without aborting its fetches', async () => {
     const { tags, open, runtime, bob } = world();
     tags.hold = true;
     runtime.start('alice');
@@ -156,7 +159,41 @@ describe('createIndexerRuntime fill', () => {
 
     expect(runtime.status().lastSyncAt).toBe(NOW);
     expect((await bob()).get(`${TAGS}t1`)).toBeUndefined();
+    expect(tags.aborted).toBe(0);
     open();
+    await settle();
+    expect((await bob()).get(`${TAGS}t1`)).toEqual({ text: 't1' });
+  });
+
+  it('stores nothing from a file that arrives after its user was forgotten', async () => {
+    const { tags, open, store, runtime } = world();
+    runtime.start(null);
+    tags.hold = true;
+    await runtime.ensureUser('bob');
+    await settle();
+    expect(tags.held.size).toBe(2);
+
+    await runtime.forget({ users: ['bob'] });
+    open();
+    await settle();
+
+    expect((await store.listScopes()).filter(({ author }) => author === 'bob')).toEqual([]);
+    expect(await store.readCoverage(BOB)).toEqual([]);
+  });
+
+  it('stops the fill with the runtime, which fetches the rest after the next start', async () => {
+    const { tags, open, runtime, bob } = world();
+    runtime.start(null);
+    tags.hold = true;
+    await runtime.ensureUser('bob');
+    await settle();
+
+    runtime.stop();
+    await settle();
+    expect(tags.aborted).toBe(2);
+
+    open();
+    runtime.start(null);
     await settle();
     expect((await bob()).get(`${TAGS}t1`)).toEqual({ text: 't1' });
   });

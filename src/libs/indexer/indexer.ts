@@ -96,10 +96,13 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
   let leading = false;
   let controller = new AbortController();
   let running: Promise<void> | null = null;
-  /** Aborts the running scope sync or fill so that other work goes first; `null` while none runs or may yield. */
+  /** Aborts the running scope sync so that a request goes first; `null` while none runs or may yield. */
   let preempt: AbortController | null = null;
-  /** Whether the running work is a fill, which yields to every other crawl. */
-  let filling = false;
+  /** Whether the running work reads the saved index, which a fill waits for. */
+  let loading = false;
+  /** The fill running beside the crawls, and what stops it. */
+  let filling: Promise<void> | null = null;
+  let stopFill: AbortController | null = null;
   /** Scope syncs pre-empted since one last ran to its end. */
   let preempted = 0;
   /** Requests that pre-empted the last allowed time, still run ahead of the pass that may not yield. */
@@ -142,7 +145,13 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
   const statusListeners = new Set<(status: RuntimeStatus) => void>();
 
   const status = (): RuntimeStatus => ({
-    state: !started ? 'stopped' : running !== null ? 'syncing' : lastError !== null ? 'error' : 'idle',
+    state: !started
+      ? 'stopped'
+      : running !== null || filling !== null
+        ? 'syncing'
+        : lastError !== null
+          ? 'error'
+          : 'idle',
     seed,
     lastSyncAt,
     lastError,
@@ -385,42 +394,64 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
   }
 
   /**
-   * Fetches the files that crawls left to fetch, and with a scan due those any stored record lacks. Never rejects. It
-   * commits each file as it arrives, so a pre-empted fill loses only the files in flight and goes on at the next idle
-   * moment: it never needs the starvation guard of the scope sync.
+   * Starts fetching the files that crawls left to fetch, and with a scan due those any stored record lacks, once no
+   * crawl runs and the saved index is read. The fill then runs beside the crawls that follow: at each homeserver their
+   * requests go before its own, and it commits each file as it arrives, so it never aborts a request or holds up a
+   * crawl, and only a stop or a step down aborts it.
    */
-  async function fill(): Promise<void> {
-    filling = true;
-    preempt = new AbortController();
-    const { signal } = preempt;
+  function startFill(): void {
+    if (filling !== null || loading || loadDue || !(scanDue || fillDue)) return;
     const scan = scanDue;
-    try {
-      await crawler.hydrate(scan ? await store.listScopes() : [], undefined, signal);
-    } catch (error) {
-      if (signal.aborted) return;
-      lastError = asError(error);
-    }
+    scanDue = false;
     fillDue = false;
-    if (scan) scanDue = false;
+    const stopper = new AbortController();
+    stopFill = stopper;
+    const run = async () => {
+      try {
+        await crawler.hydrate(scan ? await store.listScopes() : [], undefined, stopper.signal);
+      } catch (error) {
+        if (!stopper.signal.aborted) {
+          lastError = asError(error);
+          return;
+        }
+        // Due again for whichever run crawls next.
+        scanDue = scanDue || scan;
+        fillDue = true;
+      }
+    };
+    filling = run().then(() => {
+      filling = null;
+      stopFill = null;
+      emitStatus();
+      pump();
+    });
+    emitStatus();
+  }
+
+  /** What runs now, settled once all of it is; `null` when nothing does. */
+  function busy(): Promise<void> | null {
+    const work = [running, filling, saving].filter((item): item is Promise<void> => item !== null);
+    return work.length === 0 ? null : Promise.all(work).then(() => undefined);
   }
 
   /**
    * Starts the next crawl: after a start the saved index first, then requests, then a scope sync, unless the scope
-   * sync was pre-empted too often: then only the requests that pre-empted it go first, and last a fill. A request
-   * arriving during a scope sync that may yield aborts it at its next safe point, and any crawl aborts a fill.
+   * sync was pre-empted too often: then only the requests that pre-empted it go first. With none to start, a fill. A
+   * request arriving during a scope sync that may yield aborts it at its next safe point.
    */
   function pump() {
     const current = seed;
     if (!canCrawl()) return;
     const scopeWanted = current !== null && (periodicDue || scopeDue.length > 0);
     if (running !== null) {
-      if (queue.length > 0 || (filling && scopeWanted)) preempt?.abort();
+      if (queue.length > 0) preempt?.abort();
       return;
     }
     const forced = scopeWanted && preempted >= MAX_PREEMPTIONS && aheadOfForced === 0;
     let work: Promise<void>;
     if (loadDue && current !== null) {
       loadDue = false;
+      loading = true;
       work = loadIndex(current);
     } else {
       const task = forced ? undefined : queue.shift();
@@ -430,15 +461,17 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
       if (batch !== null) work = executeLeaves(batch, controller.signal);
       else if (task !== undefined) work = execute(task, current, controller.signal);
       else if (scopeWanted && current !== null) work = startScopeSync(current);
-      else if (scanDue || fillDue) work = fill();
-      else return;
+      else {
+        startFill();
+        return;
+      }
     }
     running = work.then(() => {
       running = null;
       preempt = null;
+      loading = false;
       // A fill that could not finish waits for the next crawl, never looping over a failing homeserver.
-      if (!filling && crawler.unfilled() > 0) fillDue = true;
-      filling = false;
+      if (crawler.unfilled() > 0) fillDue = true;
       emitStatus();
       pump();
     });
@@ -527,12 +560,14 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
       queue = [];
       scopeDue = [];
     }
+    // Only the crawling tab fetches; the next one fills what this one left.
+    stopFill?.abort();
     const release = releaseLock;
     releaseLock = null;
     if (release === null) return;
-    const busy = [running, saving].filter((work): work is Promise<void> => work !== null);
-    if (busy.length === 0) release();
-    else void Promise.all(busy).then(release);
+    const settled = busy();
+    if (settled === null) release();
+    else void settled.then(release);
   }
 
   function onMessage(message: CoordinationMessage) {
@@ -646,6 +681,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     started = false;
     controller.abort();
     preempt?.abort();
+    stopFill?.abort();
     stepDown();
     unsubscribe?.();
     unsubscribe = null;
@@ -693,7 +729,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     pause() {
       if (paused) return;
       paused = true;
-      if (leading) save(true, running);
+      if (leading) save(true, busy());
       stepDown();
       emitStatus();
     },

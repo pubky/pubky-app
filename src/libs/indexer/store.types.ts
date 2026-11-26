@@ -42,8 +42,16 @@ export const EMPTY_HOMESERVER_STATE: Readonly<HomeserverState> = Object.freeze({
   failure: null,
 });
 
+/** The data of the record a scope stores for `path` at `cursor`. */
+export interface RecordData<D> {
+  scope: ScopeKey;
+  path: string;
+  cursor: Cursor;
+  data: D;
+}
+
 /**
- * Changes applied together by `commit`, in this order: homeserver deletions, evictions, runs, then user
+ * Changes applied together by `commit`, in this order: homeserver deletions, evictions, runs, record data, then user
  * homeservers, homeserver state patches and scope members.
  */
 export interface StoreBatch<D> {
@@ -53,6 +61,11 @@ export interface StoreBatch<D> {
   evictions?: Array<{ scope: ScopeKey; cutoff: Cursor }>;
   /** Merged into their scopes, in order. */
   applyRuns?: Run<D>[];
+  /**
+   * Each set on its record while the scope's entry of the path is still that record, at that cursor: the same as
+   * applying the run of that one event with its data. Once the entry is replaced, evicted or deleted, it sets nothing.
+   */
+  recordData?: RecordData<D>[];
   userHomeservers?: Array<{ user: string; value: UserHomeserver }>;
   /** Fields left out keep their stored value. */
   homeserverStates?: Array<{ homeserver: string; patch: Partial<HomeserverState> }>;

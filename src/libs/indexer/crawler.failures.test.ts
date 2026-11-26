@@ -207,7 +207,7 @@ describe('syncScope request retries', () => {
   });
 
   it('asks a dead homeserver at most four times per fetch in flight, then nothing while it backs off', async () => {
-    const { network, store, crawlerOf } = harness({ bodyConcurrency: 4 });
+    const { network, store, crawlerOf } = harness({ homeserverConcurrency: 4 });
     network.addHomeserver('hs1').addHomeserver('hs2').addUser('alice', 'hs1').addUser('bob', 'hs2');
     network.put('alice', `${FOLLOWS}bob`);
     for (let i = 0; i < 40; i += 1) network.putJson('bob', postPath(DAY_MS + i), { text: `bob ${i}` });

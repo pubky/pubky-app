@@ -8,6 +8,7 @@ import {
   scopeId,
   scopeOf,
   scopeState,
+  withData,
 } from './store.helpers';
 import {
   EMPTY_HOMESERVER_STATE,
@@ -89,6 +90,11 @@ export function createMemoryStore<D>(): IndexStore<D> {
           for (const entry of applied.changed) writes.set(target, entry.path, entry);
         }
         writes.set(coverage, id, { scope: scopeOf(run), coverage: applied.coverage });
+      }
+      for (const { scope, path, cursor, data } of copy.recordData ?? []) {
+        const paths = entries.get(scopeId(scope));
+        const filled = withData(paths?.get(path), cursor, data);
+        if (paths !== undefined && filled !== null) writes.set(paths, path, filled);
       }
     } catch (error) {
       writes.rollback();
