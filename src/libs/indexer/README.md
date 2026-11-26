@@ -58,6 +58,13 @@ be structured-cloneable; cursors stay `bigint` and are never part of a key.
 
 ## Crawler
 
+The crawler is five files. `crawler.ts` composes the operations: the scope sync, the user and leaf syncs, `backfill`
+and the restore check. `crawler.request.ts` makes every request to a homeserver, retried, through the gate in
+`concurrency.ts`, and keeps a failure to its homeserver. `crawler.window.ts` reads the windowed groups newest first off
+the homeserver's clock (`timeTable.ts`) and commits them in slices. `crawler.fill.ts` keeps the records stored without
+their files and fetches them (`hydrate`). `crawler.context.ts` holds what one operation knows of each homeserver, which
+all of them share.
+
 `createCrawler` walks a scope hop by hop from the seed: it resolves each user's homeserver, syncs the
 full-history groups in batches from each user's stored head, and follows the links in the scope group to
 the next hop. A hop's windowed groups are read beside its full-history ones, since that read needs no link, and the
