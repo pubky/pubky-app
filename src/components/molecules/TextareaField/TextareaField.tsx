@@ -1,6 +1,7 @@
 import { Container } from '@/atoms/Container/Container';
 import { Textarea } from '@/atoms/Textarea/Textarea';
 import { Typography } from '@/atoms/Typography/Typography';
+import { FIELD_MESSAGE_CLASSES, FIELD_STATUS_CLASSES } from '@/config/forms';
 import { cn } from '@/libs/utils/utils';
 
 interface TextareaFieldProps {
@@ -45,28 +46,15 @@ export function TextareaField({
   message,
   messageType = 'default',
 }: TextareaFieldProps) {
-  const statusClasses = {
-    default: '',
-    success: 'border-brand text-brand',
-    error: 'border-red-500 text-red-500',
-  };
-
   const textAreaClasses = cn('h-25 px-5 py-4', textareaClassName);
   const containerClasses = cn(
     'w-full flex-1 cursor-pointer flex-row items-center gap-0 rounded-md border border-input !bg-background/20 font-medium',
     variant === 'dashed' && 'border-dashed',
   );
-  const messageClasses = {
-    default: 'text-muted-foreground',
-    info: 'text-blue-500',
-    alert: 'text-yellow-500',
-    error: 'text-error-foreground',
-    success: 'text-brand',
-  } as const;
 
   return (
     <>
-      <Container className={cn(containerClasses, statusClasses[status], className)}>
+      <Container className={cn(containerClasses, FIELD_STATUS_CLASSES[status], className)}>
         <Textarea
           id={id}
           name={name}
@@ -86,7 +74,7 @@ export function TextareaField({
         />
       </Container>
       {message && (
-        <Typography as="small" size="sm" className={cn('ml-1', messageClasses[messageType])}>
+        <Typography as="small" size="sm" className={cn('ml-1', FIELD_MESSAGE_CLASSES[messageType])}>
           {message}
         </Typography>
       )}

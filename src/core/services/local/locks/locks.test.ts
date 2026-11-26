@@ -35,6 +35,35 @@ describe('LocalLocksService', () => {
     expect((await LocalLocksService.get('second'))?.creator).toBe(descriptor.creator);
   });
 
+  describe('a replica read from the social root of builds before #3206', () => {
+    const at = (root: string, content = 'secret'): ReplicatedPost => ({
+      content,
+      kind: 'image',
+      attachments: [{ url: `pubky://reader${root}LOCK1/img1`, content_type: 'image/png' }],
+    });
+    const APP = '/priv/app.pubky/v1/locks/unlocked/';
+    const SOCIAL = '/priv/social/unlocked/';
+
+    // A read that picked the social marker and ended after the copy replaced the row.
+    it('does not replace a row already on the app namespace', async () => {
+      await LocalLocksService.upsertPost({ lockId: 'LOCK1', post: at(APP), unlockedAt: 100 });
+      await LocalLocksService.upsertPost({ lockId: 'LOCK1', post: at(SOCIAL), unlockedAt: 50 });
+
+      expect(await LocalLocksService.get('LOCK1')).toMatchObject({ post: at(APP), unlockedAt: 100 });
+    });
+
+    it.each([
+      ['a row on the social root, by the copy', SOCIAL, APP],
+      ['a row on the social root, by a later social read', SOCIAL, SOCIAL],
+      ['a row on the app namespace, by a later app read', APP, APP],
+    ])('replaces %s', async (_label, from, to) => {
+      await LocalLocksService.upsertPost({ lockId: 'LOCK1', post: at(from, 'old'), unlockedAt: 100 });
+      await LocalLocksService.upsertPost({ lockId: 'LOCK1', post: at(to, 'new'), unlockedAt: 100 });
+
+      expect((await LocalLocksService.get('LOCK1'))?.post).toEqual(at(to, 'new'));
+    });
+  });
+
   it('stores a consistent creator key while preserving an unknown creator', async () => {
     await LocalLocksService.upsertPost({ lockId: 'raw', creator: 'other', post });
     await LocalLocksService.upsertPost({ lockId: 'unknown', creator: '', post });

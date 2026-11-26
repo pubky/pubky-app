@@ -63,7 +63,7 @@ describe('Button', () => {
 
     rerender(<Button size="icon">Icon</Button>);
     button = screen.getByRole('button');
-    expect(button).toHaveClass('size-9');
+    expect(button).toHaveClass('size-9', 'font-semibold');
   });
 
   it('handles click events', () => {
@@ -195,13 +195,13 @@ describe('Button', () => {
     render(<Button tabIndex={0}>Focusable Button</Button>);
     const button = screen.getByRole('button');
     expect(button).toHaveAttribute('tabIndex', '0');
-    expect(button).toHaveClass('focus-visible:border-ring', 'focus-visible:ring-ring/50');
+    expect(button).toHaveClass('focus-visible:border-brand', 'focus-visible:bg-brand/32', 'focus-visible:ring-ring');
   });
 
   it('handles hover states correctly', () => {
     render(<Button variant="default">Hover Button</Button>);
     const button = screen.getByRole('button');
-    expect(button).toHaveClass('hover:!bg-brand/30');
+    expect(button).toHaveClass('hover:!bg-brand/32');
   });
 
   it('handles invalid states correctly', () => {
@@ -233,10 +233,10 @@ describe('Button', () => {
       'text-sm',
       'transition-all',
       'disabled:pointer-events-none',
-      'disabled:opacity-50',
+      'disabled:opacity-30',
       'shrink-0',
       'outline-none',
-      'font-semibold',
+      'font-bold',
       'cursor-pointer',
       'rounded-full',
       'border',

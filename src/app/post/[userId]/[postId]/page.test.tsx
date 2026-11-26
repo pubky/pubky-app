@@ -56,7 +56,7 @@ describe('generateMetadata', () => {
     const metadata = await generateMetadata({
       params: Promise.resolve({
         userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy',
-        postId: 'missing-post',
+        postId: '0032PARTQP4G1',
       }),
     });
 
@@ -105,11 +105,14 @@ describe('generateMetadata', () => {
       .mockResolvedValueOnce(jsonResponse({ kind: 'collection', content: '{"name":"Art"}' }));
 
     const metadata = await generateMetadata({
-      params: Promise.resolve({ userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy', postId: 'post-1' }),
+      params: Promise.resolve({
+        userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy',
+        postId: '0032PARTQP4G0',
+      }),
     });
 
     expect(metadata).toEqual({
-      alternates: { canonical: '/collections/o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy/post-1' },
+      alternates: { canonical: '/collections/o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy/0032PARTQP4G0' },
     });
   });
 
@@ -120,7 +123,10 @@ describe('generateMetadata', () => {
       .mockResolvedValueOnce(jsonResponse({ kind: 'note', content: 'hello world' }));
 
     const metadata = await generateMetadata({
-      params: Promise.resolve({ userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy', postId: 'post-1' }),
+      params: Promise.resolve({
+        userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy',
+        postId: '0032PARTQP4G0',
+      }),
     });
 
     expect(metadata.title).toBe('Alice on Pubky');
@@ -139,7 +145,10 @@ describe('generateMetadata', () => {
       .mockResolvedValueOnce(jsonResponse({ id: mentioned, name: 'Bob' }));
 
     const metadata = await generateMetadata({
-      params: Promise.resolve({ userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy', postId: 'post-1' }),
+      params: Promise.resolve({
+        userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy',
+        postId: '0032PARTQP4G0',
+      }),
     });
 
     expect(metadata.description).toBe('gm @Bob and @Bob');
@@ -157,7 +166,10 @@ describe('generateMetadata', () => {
       );
 
     const metadata = await generateMetadata({
-      params: Promise.resolve({ userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy', postId: 'post-1' }),
+      params: Promise.resolve({
+        userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy',
+        postId: '0032PARTQP4G0',
+      }),
     });
 
     expect(metadata.description).toBe(`About pk:${mentioned}`);
@@ -172,7 +184,10 @@ describe('generateMetadata', () => {
       .mockResolvedValueOnce(jsonResponse({ id: mentioned, name: 'Bob' }));
 
     const metadata = await generateMetadata({
-      params: Promise.resolve({ userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy', postId: 'post-1' }),
+      params: Promise.resolve({
+        userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy',
+        postId: '0032PARTQP4G0',
+      }),
     });
 
     expect(metadata.description).toBe('gm @Bob welcome');
@@ -185,7 +200,10 @@ describe('generateMetadata', () => {
       .mockResolvedValueOnce(jsonResponse({ kind: 'note', content: '' }));
 
     const metadata = await generateMetadata({
-      params: Promise.resolve({ userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy', postId: 'post-1' }),
+      params: Promise.resolve({
+        userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy',
+        postId: '0032PARTQP4G0',
+      }),
     });
 
     // Title is present (not an empty {} that would fall back to parent metadata),
@@ -219,10 +237,10 @@ describe('PostPage (collection redirect)', () => {
 
       await expect(
         PostPage({
-          params: Promise.resolve({ userId, postId: 'post-1' }),
+          params: Promise.resolve({ userId, postId: '0032PARTQP4G0' }),
         }),
       ).rejects.toThrow('NEXT_REDIRECT');
-      expect(permanentRedirect).toHaveBeenCalledWith(`/collections/${userId}/post-1`);
+      expect(permanentRedirect).toHaveBeenCalledWith(`/collections/${userId}/0032PARTQP4G0`);
     },
   );
 
@@ -232,7 +250,10 @@ describe('PostPage (collection redirect)', () => {
       .mockResolvedValueOnce(jsonResponse({ kind: 'note', content: 'hi' }));
 
     const element = await PostPage({
-      params: Promise.resolve({ userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy', postId: 'post-1' }),
+      params: Promise.resolve({
+        userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy',
+        postId: '0032PARTQP4G0',
+      }),
     });
 
     expect(permanentRedirect).not.toHaveBeenCalled();
@@ -243,7 +264,10 @@ describe('PostPage (collection redirect)', () => {
     vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('nexus down'));
 
     const element = await PostPage({
-      params: Promise.resolve({ userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy', postId: 'post-1' }),
+      params: Promise.resolve({
+        userId: 'o1gg96ewuojmopcjbz8895478wdtxtzzber7aezq6ror5a91j7dy',
+        postId: '0032PARTQP4G0',
+      }),
     });
 
     expect(permanentRedirect).not.toHaveBeenCalled();
@@ -268,7 +292,7 @@ describe('PostPage (cover preload)', () => {
       .mockResolvedValueOnce(jsonResponse({ name: 'Alice' }))
       .mockResolvedValueOnce(jsonResponse(post));
 
-    const element = await PostPage({ params: Promise.resolve({ userId: AUTHOR, postId: 'post-1' }) });
+    const element = await PostPage({ params: Promise.resolve({ userId: AUTHOR, postId: '0032PARTQP4G0' }) });
     return render(element);
   };
 

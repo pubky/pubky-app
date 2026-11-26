@@ -302,6 +302,11 @@ export const replicatedPostSchema = z.object({
    * composite id, and failing the whole schema would lose the reader's unlocked content instead.
    */
   announcement: z.string().startsWith('pubky://').optional().catch(undefined),
+  /**
+   * Unlock time in ms, set only on a marker copied from `/priv/social/unlocked/` (#3206): the copy's
+   * write time is not the unlock time. Every other marker's unlock time is its homeserver write time.
+   */
+  unlocked_at: z.number().int().nonnegative().optional().catch(undefined),
 });
 
 export type ReplicatedPost = z.infer<typeof replicatedPostSchema>;
@@ -315,7 +320,7 @@ export const purchaseFileSchema = z.object({ bundle_id: z.string().min(1) });
 export interface TUnlockedListItem {
   lockId: string;
   post: ReplicatedPost;
-  /** Homeserver write time of the marker — the unlock time, and the list's sort key. */
+  /** The marker's unlock time (`unlocked_at`, else its homeserver write time), and the list's sort key. */
   unlockedAt: number;
   /** From the marker's `announcement` URI. Absent when it has none, or the URI is unparseable. */
   announcementPostId?: string;

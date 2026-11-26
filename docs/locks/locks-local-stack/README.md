@@ -507,8 +507,9 @@ docker logs --since 5m pubky-locks-paykit-demo-locks-server-1 2>&1 | grep 'compl
 Notes:
 
 1. A completed purchase is never paid again; to pay again, use a new lock. The app stores each purchase id in
-   the reader's homeserver at `/priv/social/purchases/<lock_id>/<bundle_id>.json` (older purchases:
-   `/priv/social/purchases/<lock_id>.json`) and reuses a saved id that can still pay (#2831). After a failed
+   the reader's homeserver at `/priv/app.pubky/v1/locks/purchases/<lock_id>/<bundle_id>.json` (builds before #3206:
+   `/priv/social/purchases/`, copied in the background the first time the reader opens a locked post or the Unlocked
+   screen) and reuses a saved id that can still pay (#2831). After a failed
    or expired purchase, Try again saves a new id for the same lock.
 2. Since rc9, Lock Server creates the invoice in the background. It retries for up to 10 minutes. If Paykit is down
    longer, the task fails with `invoice admission deadline exceeded`, and the reader presses Try again in the app.

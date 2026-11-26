@@ -36,10 +36,10 @@ it('handles click events', () => {
   expect(handleClick).toHaveBeenCalledTimes(1);
 });
 
-it('handles hover states correctly', () => {
+it('uses the default button hover fill', () => {
   render(<Button variant="default">Hover Button</Button>);
   const button = screen.getByRole('button');
-  expect(button).toHaveClass('hover:!bg-brand/30');
+  expect(button).toHaveClass('hover:!bg-brand/32');
 });
 ```
 

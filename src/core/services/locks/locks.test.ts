@@ -870,7 +870,11 @@ describe('LocksService.lookupPaykitCreatorHeld', () => {
     expect(url.pathname).toBe('/api/paykit-creator');
     expect(url.searchParams.get('creator')).toBe(`pubky${creator}`);
     expect([...url.searchParams.keys()]).toEqual(['creator']);
-    expect(vi.mocked(fetch).mock.calls[0][1]).toMatchObject({ method: 'GET', credentials: 'omit', cache: 'no-store' });
+    expect(vi.mocked(fetch).mock.calls[0][1]).toMatchObject({
+      method: 'GET',
+      credentials: 'same-origin',
+      cache: 'no-store',
+    });
   });
 
   it('answers false when Paykit does not hold the creator', async () => {

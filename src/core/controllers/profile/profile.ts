@@ -1,4 +1,5 @@
 import { ProfileApplication } from '@/application/profile/profile';
+import { LocksController } from '@/controllers/locks/locks';
 import type {
   TCommitSetDetailsParams,
   TCommitUpdateDetailsParams,
@@ -74,7 +75,13 @@ export class ProfileController {
    * @param setProgress - The function to set the progress
    */
   static async commitDelete({ pubky, setProgress }: TDeleteAccountInput) {
-    await ProfileApplication.commitDelete({ pubky, setProgress });
+    await LocksController.stopReaderFileCopy();
+    try {
+      await ProfileApplication.commitDelete({ pubky, setProgress });
+    } catch (error) {
+      LocksController.resumeReaderFileCopy();
+      throw error;
+    }
     useOnboardingStore.getState().clearExperienceCompleted(pubky);
   }
 
