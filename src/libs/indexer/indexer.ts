@@ -147,7 +147,10 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
   const waitingFor = new Set<string>();
   /** This tab's requests sent to the crawling tab, by id. */
   const forwarded = new Map<string, Task>();
-  /** The `ensureUser` and `ensureLeaf` calls by key, and the backfills by author and group. */
+  /**
+   * The `ensureUser` and `ensureLeaf` calls by key, and the backfills by author and group. Each lives while it runs
+   * and for as long after it settles as a call reads it: `ensureTtlMs`, and `backfillMinIntervalMs` for a backfill.
+   */
   const ensured = new Map<string, Ensured<void>>();
   const backfills = new Map<string, Ensured<BackfillResult>>();
   const changeListeners = new Set<(change: StoreChange) => void>();
@@ -668,6 +671,13 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     });
   }
 
+  /** Drops the entries that settled `keepMs` ago or longer, which no call reads again. */
+  function release<T>(entries: Map<string, Ensured<T>>, keepMs: number): void {
+    for (const [key, entry] of entries) {
+      if (entry.settledAt !== null && now() - entry.settledAt >= keepMs) entries.delete(key);
+    }
+  }
+
   /** Shares the call with a pending one of the same key, or one finished less than `ttlMs` ago. */
   function ensure<T>(
     entries: Map<string, Ensured<T>>,
@@ -795,13 +805,18 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
       // Visitor mode has no scope to sync.
       return started && seed === null ? Promise.resolve() : done(submit({ kind: 'scope' }));
     },
-    ensureUser: (user) =>
-      ensure(ensured, userKey(user), options.ensureTtlMs, () => done(submit({ kind: 'users', users: [user] }))),
-    ensureLeaf: (leaf) =>
-      ensure(ensured, leafKey(leaf.author, leaf.group), options.ensureTtlMs, () =>
+    ensureUser(user) {
+      release(ensured, options.ensureTtlMs);
+      return ensure(ensured, userKey(user), options.ensureTtlMs, () => done(submit({ kind: 'users', users: [user] })));
+    },
+    ensureLeaf(leaf) {
+      release(ensured, options.ensureTtlMs);
+      return ensure(ensured, leafKey(leaf.author, leaf.group), options.ensureTtlMs, () =>
         done(submit({ kind: 'leaf', leaf: { author: leaf.author, group: leaf.group, paths: [...leaf.paths] } })),
-      ),
+      );
+    },
     backfill(author, group, pages, backfillOptions) {
+      release(backfills, options.backfillMinIntervalMs);
       const key = backfillKey(author, group);
       const known = backfills.get(key);
       const force = backfillOptions?.force === true;
