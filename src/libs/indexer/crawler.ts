@@ -395,14 +395,14 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
   }
 
   /** Runs `work` for every homeserver at once, so a slow one holds up none of the others; rethrows after all end. */
-  async function eachHomeserver(
-    byHomeserver: ReadonlyMap<string, string[]>,
-    work: (homeserver: string, users: string[]) => Promise<void>,
+  async function eachHomeserver<T>(
+    byHomeserver: ReadonlyMap<string, T>,
+    work: (homeserver: string, items: T) => Promise<void>,
   ) {
     const errors: unknown[] = [];
     await Promise.all(
-      [...byHomeserver].map(([homeserver, users]) =>
-        work(homeserver, users).catch((error: unknown) => {
+      [...byHomeserver].map(([homeserver, items]) =>
+        work(homeserver, items).catch((error: unknown) => {
           errors.push(error);
         }),
       ),

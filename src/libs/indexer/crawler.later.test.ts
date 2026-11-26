@@ -161,7 +161,7 @@ describe('crawler files fetched after the commit', () => {
       writer: 'w2',
       now: NOW,
       expiryMs: DAY_MS,
-      reviveData: taggedDomain.reviveData,
+      reviveData: (author, path, value) => taggedDomain.reviveData?.(author, path, value) ?? null,
     });
     expect(outcome.loaded).toBe(1);
     expect(await servedData(other, 'bob', 'hs1', ACTIVITY)).toEqual(await servedData(store, 'bob', 'hs1', ACTIVITY));
