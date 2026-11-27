@@ -440,8 +440,8 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
 
   /**
    * Starts fetching the files that crawls left to fetch, and with a scan due those any stored record lacks, once the
-   * saved index is read: as soon as a crawl commits a record whose file comes later, beside that crawl and the ones
-   * that follow. Its requests queue with a scope sync's, behind a request someone waits for, and it commits each file
+   * crawls no longer wait for the saved index: as soon as a crawl commits a record whose file comes later, beside that
+   * crawl and the ones that follow. Its requests queue with a scope sync's, behind a request someone waits for, and it commits each file
    * as it arrives, so it never aborts a request, and only a stop or a step down aborts it. Whether it started.
    */
   function startFill(): boolean {
