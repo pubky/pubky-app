@@ -2,6 +2,7 @@
 import { gunzipSync, gzipSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 import { shortHash } from './hash';
+import { InvalidIndexInputError } from './indexer.errors';
 import type { Entry, Run } from './indexer.types';
 import { decodeIndexFile, encodeIndexFile, type IndexFileModel, type ReviveData } from './indexFile';
 import { int, randomCase, type Rng, seeded } from './merge.generators';
@@ -13,6 +14,13 @@ interface Body {
 const FULL = 'AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=';
 
 const FIXED: IndexFileModel<Body> = {
+  part: {
+    kind: 'hot',
+    shards: 4,
+    folded: [{ writer: 'w2', gen: 3 }],
+    packs: [{ bucket: 1, bytes: 2048, authors: 2, writtenAt: 1699999990000 }],
+    cut: [{ homeserver: 'hs1', cursor: BigInt(5) }],
+  },
   writer: 'w1',
   writtenAt: 1700000000000,
   seed: 'alice',
@@ -22,7 +30,7 @@ const FIXED: IndexFileModel<Body> = {
     { user: 'alice', hop: 0, homeserver: { homeserver: 'hs1', resolvedAt: 1699999999000 } },
     { user: 'bob', hop: 1, homeserver: null },
   ],
-  highWater: [{ homeserver: 'hs1', highWater: { cursor: BigInt(9), author: 'bob' } }],
+  homeservers: [{ homeserver: 'hs1', epoch: 1, highWater: { cursor: BigInt(9), author: 'bob' } }],
   runs: [
     {
       author: 'alice',
@@ -46,11 +54,25 @@ const FIXED: IndexFileModel<Body> = {
   ],
 };
 
-// The reference vector of format version 2, for a reader in any language: FIXED gunzipped.
-const FIXED_JSON =
-  '[2,"w1",1700000000000,0,2,30,["alice","hs1","bob"],[[0,0,1,1699999999000],[2,1]],[[1,"9",2]],' +
+const RUNS_JSON =
   '[[0,1,"graph","0","4","/follows/",[["bob","2",0],["carol","4",1]]],' +
-  '[2,1,"activity","5","9","",[["/posts/1","9",0,"AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=",{"text":"hi"}]]]]]';
+  '[2,1,"activity","5","9","",[["/posts/1","9",0,"AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=",{"text":"hi"}]]]]';
+
+// The reference vector of format version 3, for a reader in any language: FIXED gunzipped.
+const FIXED_JSON =
+  '[3,"hot","w1",1700000000000,0,2,30,["alice","hs1","bob"],[[0,0,1,1699999999000],[2,1]],[[1,1,"9",2]],' +
+  `${RUNS_JSON},[4,[["w2",3]],[[1,2048,2,1699999990000]],[[1,"5"]]]]`;
+
+// Version 2, one file per writer, which earlier releases wrote: no kind, no extra, marks without an epoch.
+const VERSION_2_JSON =
+  '[2,"w1",1700000000000,0,2,30,["alice","hs1","bob"],[[0,0,1,1699999999000],[2,1]],[[1,"9",2]],' + `${RUNS_JSON}]`;
+
+/** FIXED as a version 2 file reads. */
+const FIXED_V2: IndexFileModel<Body> = {
+  ...FIXED,
+  part: { kind: 'single' },
+  homeservers: [{ homeserver: 'hs1', epoch: 0, highWater: { cursor: BigInt(9), author: 'bob' } }],
+};
 
 // Version 1, which the format still reads: records without data, hashes cut to 16 bytes.
 const VERSION_1_JSON =
@@ -97,6 +119,18 @@ function revived<D>(model: IndexFileModel<D>): IndexFileModel<D> {
 
 const base64Of = (rng: Rng) => btoa(String.fromCharCode(...Array.from({ length: 32 }, () => int(rng, 0, 255))));
 
+const PARTS: ReadonlyArray<(rng: Rng) => IndexFileModel['part']> = [
+  (rng) => ({ kind: 'delta', gen: int(rng, 1, 99), base: int(rng, 0, 9) }),
+  (rng) => ({ kind: 'pack', shards: 8, bucket: int(rng, 0, 7) }),
+  (rng) => ({
+    kind: 'hot',
+    shards: 0,
+    folded: [{ writer: `w${int(rng, 0, 9)}`, gen: int(rng, 0, 99) }],
+    packs: [],
+    cut: rng() < 0.5 ? [] : [{ homeserver: 'hs2', cursor: BigInt(int(rng, 0, 99)) }],
+  }),
+];
+
 function randomModel(rng: Rng): IndexFileModel<Body> {
   const users = ['alice', 'bob', 'carol'];
   const runs = users.flatMap((author) =>
@@ -112,6 +146,7 @@ function randomModel(rng: Rng): IndexFileModel<Body> {
     })),
   );
   return {
+    part: PARTS[int(rng, 0, PARTS.length - 1)](rng),
     writer: `w${int(rng, 0, 999)}`,
     writtenAt: int(rng, 0, 2 ** 40),
     seed: 'alice',
@@ -122,7 +157,10 @@ function randomModel(rng: Rng): IndexFileModel<Body> {
       hop,
       homeserver: rng() < 0.3 ? null : { homeserver: rng() < 0.2 ? null : 'hs1', resolvedAt: int(rng, 0, 2 ** 40) },
     })),
-    highWater: [{ homeserver: 'hs2', highWater: { cursor: BigInt(int(rng, 0, 1000)), author: 'carol' } }],
+    homeservers: [
+      { homeserver: 'hs2', epoch: int(rng, 0, 3), highWater: { cursor: BigInt(int(rng, 0, 1000)), author: 'carol' } },
+      { homeserver: 'hs1', epoch: int(rng, 0, 3), highWater: null },
+    ],
     runs,
   };
 }
@@ -135,7 +173,7 @@ describe('index file codec', () => {
 
       expect(await decodeIndexFile(bytes, revive), `seed ${seed}`).toEqual(revived(model));
       expect(await decodeIndexFile(bytes), `seed ${seed}`).toEqual(stripped(model));
-      const [, , , , , , keys] = JSON.parse(gunzipJson(bytes)) as unknown[];
+      const [, , , , , , , keys] = JSON.parse(gunzipJson(bytes)) as unknown[];
       expect(new Set(keys as string[]).size, `seed ${seed}`).toBe((keys as string[]).length);
     }
   });
@@ -148,10 +186,18 @@ describe('index file codec', () => {
     expect(await decodeIndexFile(gzipJson(fixedValue()))).toEqual(stripped(FIXED));
   });
 
+  it('still reads version 2, each mark at epoch 0', async () => {
+    expect(await decodeIndexFile(gzipJson(JSON.parse(VERSION_2_JSON)), revive)).toEqual(FIXED_V2);
+  });
+
+  it('refuses to write a version 2 file', async () => {
+    await expect(encodeIndexFile(FIXED_V2)).rejects.toBeInstanceOf(InvalidIndexInputError);
+  });
+
   it('still reads version 1, pointers without data', async () => {
     const read = await decodeIndexFile(gzipJson(JSON.parse(VERSION_1_JSON)), revive);
 
-    expect(read).toEqual(revived({ ...FIXED, runs: stripped(FIXED).runs }));
+    expect(read).toEqual(revived({ ...FIXED_V2, runs: stripped(FIXED).runs }));
     expect(read.runs[1].entries).toEqual([
       { kind: 'record', path: '/posts/1', cursor: BigInt(9), hash: 'AQIDBAUGBwgJCgsMDQ4PEA==' },
     ]);
@@ -159,7 +205,7 @@ describe('index file codec', () => {
 
   it('loads a record whose payload the reviver refuses without data, keeping its whole hash', async () => {
     const value = fixedValue();
-    ((value[9] as unknown[][])[1][6] as unknown[][])[0][4] = { text: 42 };
+    ((value[10] as unknown[][])[1][6] as unknown[][])[0][4] = { text: 42 };
 
     const read = await decodeIndexFile(gzipJson(value), revive);
 
@@ -177,17 +223,24 @@ describe('index file codec', () => {
   });
 
   it.each<[string, (value: unknown[]) => void]>([
-    ['a writtenAt that is no number', (value) => (value[2] = '1700000000000')],
-    ['a seed outside the key table', (value) => (value[3] = 3)],
-    ['a repeated key', (value) => ((value[6] as unknown[])[2] = 'alice')],
-    ['a high water author outside the key table', (value) => ((value[8] as unknown[][])[0][2] = -1)],
-    ['a cursor with a leading zero', (value) => ((value[9] as unknown[][])[0][4] = '04')],
-    ['a cursor above 64 bits', (value) => ((value[9] as unknown[][])[0][4] = '18446744073709551616')],
-    ['an entry outside its run', (value) => ((value[9] as unknown[][][])[0][6] = [['bob', '5', 0]])],
-    ['an entry of no kind', (value) => ((value[9] as unknown[][][])[0][6] = [['bob', '2', 2]])],
+    ['a writtenAt that is no number', (value) => (value[3] = '1700000000000')],
+    ['a seed outside the key table', (value) => (value[4] = 3)],
+    ['a repeated key', (value) => ((value[7] as unknown[])[2] = 'alice')],
+    ['a high water author outside the key table', (value) => ((value[9] as unknown[][])[0][3] = -1)],
+    ['an epoch that is no count', (value) => ((value[9] as unknown[][])[0][1] = -1)],
+    ['a cursor with a leading zero', (value) => ((value[10] as unknown[][])[0][4] = '04')],
+    ['a cursor above 64 bits', (value) => ((value[10] as unknown[][])[0][4] = '18446744073709551616')],
+    ['an entry outside its run', (value) => ((value[10] as unknown[][][])[0][6] = [['bob', '5', 0]])],
+    ['an entry of no kind', (value) => ((value[10] as unknown[][][])[0][6] = [['bob', '2', 2]])],
     ['a missing field', (value) => value.pop()],
-    ['a hash that is no string', (value) => (((value[9] as unknown[][])[1][6] as unknown[][])[0][3] = 7)],
-    ['a record of six fields', (value) => ((value[9] as unknown[][][])[0][6] = [['bob', '2', 0, null, {}, 1]])],
+    ['a hash that is no string', (value) => (((value[10] as unknown[][])[1][6] as unknown[][])[0][3] = 7)],
+    ['a record of six fields', (value) => ((value[10] as unknown[][][])[0][6] = [['bob', '2', 0, null, {}, 1]])],
+    ['an unknown kind', (value) => (value[1] = 'cold')],
+    ['shards that are no power of two', (value) => ((value[11] as unknown[])[0] = 3)],
+    ['a pack bucket outside the shards', (value) => ((value[11] as unknown[][][])[2][0][0] = 4)],
+    ['a folded writer twice', (value) => (value[11] as unknown[][])[1].push(['w2', 1])],
+    ['a pack of no shards', (value) => ((value[1] = 'pack'), (value[11] = [0, 0]))],
+    ['a delta of no generation', (value) => ((value[1] = 'delta'), (value[11] = ['1', 0]))],
   ])('rejects %s', async (_name, change) => {
     const value = fixedValue();
     change(value);
@@ -197,11 +250,11 @@ describe('index file codec', () => {
 
   it('rejects an unknown version with its own code, and data in a version 1 file', async () => {
     const value = fixedValue();
-    value[0] = 3;
+    value[0] = 4;
 
     await expect(decodeIndexFile(gzipJson(value))).rejects.toMatchObject({ code: 'unknown-version' });
-    await expect(decodeIndexFile(gzipJson([3]))).rejects.toMatchObject({ code: 'unknown-version' });
-    const old = fixedValue();
+    await expect(decodeIndexFile(gzipJson([4]))).rejects.toMatchObject({ code: 'unknown-version' });
+    const old = JSON.parse(VERSION_2_JSON) as unknown[];
     old[0] = 1;
     await expect(decodeIndexFile(gzipJson(old))).rejects.toMatchObject({ code: 'malformed' });
   });
