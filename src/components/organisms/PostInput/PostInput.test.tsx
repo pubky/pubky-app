@@ -1266,6 +1266,12 @@ describe('PostInput', () => {
       expect(mockToggleFullscreen).toHaveBeenCalledTimes(1);
     });
 
+    it('leaves the fullscreen toggle out of the action bar when the host dialog shows it', () => {
+      render(<PostInput variant={POST_INPUT_VARIANT.POST} hideFullscreenToggle />);
+
+      expect(screen.queryByTestId('fullscreen-button')).not.toBeInTheDocument();
+    });
+
     it('leaves the fullscreen toggle out where the browser has no Fullscreen API', () => {
       mockUseFullscreenReturn.isSupported = false;
       render(<PostInput variant={POST_INPUT_VARIANT.POST} />);

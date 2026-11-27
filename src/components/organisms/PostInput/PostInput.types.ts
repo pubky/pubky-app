@@ -52,6 +52,8 @@ interface PostInputBaseProps {
   ) => void;
   /** Callback when article mode changes */
   onArticleModeChange?: (isArticle: boolean) => void;
+  /** Leaves the article fullscreen toggle out of the action bar, for a host dialog that shows it in its header. */
+  hideFullscreenToggle?: boolean;
   /** Fires when the lock switch flips, so the compose dialog can retitle itself. */
   onLockModeChange?: (isLockEnabled: boolean) => void;
   /** Data Cy for the post input */

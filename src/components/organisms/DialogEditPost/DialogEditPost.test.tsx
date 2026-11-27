@@ -104,6 +104,12 @@ vi.mock('@/molecules/DialogConfirmDiscard/DialogConfirmDiscard', () => {
   };
 });
 
+vi.mock('@/molecules/DialogFullscreenToggle/DialogFullscreenToggle', () => ({
+  DialogFullscreenToggle: ({ enabled }: { enabled: boolean }) => (
+    <div data-testid="dialog-fullscreen-toggle" data-enabled={String(enabled)} />
+  ),
+}));
+
 vi.mock('../PostInput/PostInput', () => ({
   PostInput: vi.fn(
     ({
@@ -466,6 +472,28 @@ describe('DialogEditPost', () => {
       }),
       undefined,
     );
+  });
+
+  it('shows the fullscreen toggle in the header instead of the composer action bar for an article', () => {
+    vi.mocked(usePostDetails).mockReturnValue({
+      postDetails: {
+        id: 'test-article-123',
+        content: articleContent,
+        kind: 'long',
+      } as ReturnType<typeof usePostDetails>['postDetails'],
+      isLoading: false,
+    });
+
+    render(<DialogEditPost postId="test-article-123" open={true} onOpenChangeAction={vi.fn()} />);
+
+    expect(PostInput).toHaveBeenCalledWith(expect.objectContaining({ hideFullscreenToggle: true }), undefined);
+    expect(screen.getByTestId('dialog-fullscreen-toggle')).toHaveAttribute('data-enabled', 'true');
+  });
+
+  it('keeps the fullscreen toggle off for a short post', () => {
+    render(<DialogEditPost postId="test-post-123" open={true} onOpenChangeAction={vi.fn()} />);
+
+    expect(screen.getByTestId('dialog-fullscreen-toggle')).toHaveAttribute('data-enabled', 'false');
   });
 
   it('calls onOpenChangeAction when PostInput onSuccess is called', async () => {

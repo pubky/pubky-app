@@ -4,6 +4,10 @@ import { Dialog as DialogPrimitive } from 'radix-ui';
 import { useDialogKeyboardOrchestrator } from '@/hooks/useDialogKeyboardOrchestrator/useDialogKeyboardOrchestrator';
 import { cn } from '@/libs/utils/utils';
 
+// Shared with buttons placed beside the close button, so they keep its round style.
+const dialogCornerButtonClassName =
+  'cursor-pointer rounded-full bg-secondary p-2 transition-all duration-300 ease-in-out outline-none hover:bg-secondary/80 focus-visible:bg-transparent focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50';
+
 function Dialog({ ...props }: React.ComponentProps<typeof DialogPrimitive.Root>) {
   return <DialogPrimitive.Root data-slot="dialog" data-testid="dialog" {...props} />;
 }
@@ -148,11 +152,7 @@ function DialogContent({
           )}
           <DialogClose
             ref={closeRef}
-            className={cn(
-              showCloseButton
-                ? 'absolute top-4 right-4 cursor-pointer rounded-full bg-secondary p-2 transition-all duration-300 ease-in-out outline-none hover:bg-secondary/80 focus-visible:bg-transparent focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50'
-                : 'hidden',
-            )}
+            className={showCloseButton ? cn('absolute top-4 right-4', dialogCornerButtonClassName) : 'hidden'}
           >
             <X className="h-4 w-4 text-secondary-foreground opacity-70" />
             <span className="sr-only">Close</span>
@@ -207,6 +207,7 @@ export {
   Dialog,
   DialogClose,
   DialogContent,
+  dialogCornerButtonClassName,
   DialogDescription,
   DialogFooter,
   DialogHeader,

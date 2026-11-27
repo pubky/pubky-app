@@ -91,6 +91,7 @@ export function PostInput({
   expanded = false,
   onContentChange,
   onArticleModeChange,
+  hideFullscreenToggle = false,
   onLockModeChange,
   editContent,
   editIsArticle,
@@ -828,7 +829,7 @@ export function PostInput({
                           ) : undefined
                         }
                         fullscreen={
-                          isArticle && isFullscreenSupported
+                          isArticle && isFullscreenSupported && !hideFullscreenToggle
                             ? { isFullscreen, onToggle: () => void toggleFullscreen() }
                             : undefined
                         }
