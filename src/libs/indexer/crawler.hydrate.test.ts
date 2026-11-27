@@ -104,9 +104,9 @@ describe('createCrawler hydrate', () => {
         work.entriesRead += merged.entries.size;
         return merged;
       },
-      commit: async (batch) => {
+      commit: (batch) => {
         work.commits += 1;
-        await memory.commit(batch);
+        return memory.commit(batch);
       },
     };
     const crawler = createCrawler<Post>({

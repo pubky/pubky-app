@@ -110,8 +110,15 @@ export interface ScopesExport<D> {
   homeservers: Map<string, HomeserverState>;
   /** By `scopeId`, the coverage of each asked scope that has any. */
   coverage: Map<string, Coverage>;
+  /**
+   * By `scopeId`, for each asked scope with coverage, the stamp of the last commit that changed it: its entries, the
+   * data of one, or its coverage. Every commit that changes a scope stamps it higher than any stamp before.
+   */
+  stamps: Map<string, number>;
   /** With `runs`, by `scopeId`, each asked scope with coverage as `exportRuns` gives it; empty otherwise. */
   runs: Map<string, Run<D>[]>;
+  /** With `runs`, by `scopeId` then path, the stamp of the commit that wrote each of those runs' entries. */
+  written: Map<string, Map<string, number>>;
 }
 
 /**
@@ -130,7 +137,10 @@ export interface IndexStore<D> {
   readCoverage(scope: ScopeKey): Promise<Coverage>;
   /** The scope as one run per contiguous range of its coverage. */
   exportRuns(scope: ScopeKey): Promise<Run<D>[]>;
-  /** The scopes' coverage, with `runs` their runs too, and their homeservers' states, all in one read. */
+  /**
+   * The scopes' coverage and stamps, with `runs` their runs and the stamps of their entries too, and their homeservers'
+   * states, all in one read.
+   */
   exportScopes(scopes: readonly ScopeKey[], options: { runs: boolean }): Promise<ScopesExport<D>>;
   /** What the pure `evictBelow` makes of the scope's exported runs. */
   evictBelow(scope: ScopeKey, cutoff: Cursor): Promise<void>;
@@ -147,7 +157,8 @@ export interface IndexStore<D> {
   /** An empty map for a seed never written. */
   readScopeMembers(seed: string): Promise<Map<string, number>>;
   writeScopeMembers(seed: string, members: ReadonlyMap<string, number>): Promise<void>;
-  commit(batch: StoreBatch<D>): Promise<void>;
+  /** The stamp the commit gave the scopes it changed (`ScopesExport.stamps`), `null` when it changed none. */
+  commit(batch: StoreBatch<D>): Promise<number | null>;
   /** A value the indexer keeps for itself, such as its writer id; `null` when never written. */
   readMeta?(key: string): Promise<string | null>;
   /** Optional with `readMeta`: a store without both keeps no saved index. */

@@ -9,6 +9,7 @@ import {
   patchedState,
   readsCurrent,
   runsOfScope,
+  sameCoverage,
   scopeId,
   scopeOf,
   scopeState,
@@ -25,6 +26,8 @@ import {
 interface CoverageRow {
   scope: ScopeKey;
   coverage: Coverage;
+  /** Of the last commit that changed the scope. */
+  stamp: number;
 }
 
 /** Map writes that can be undone, newest first, so a commit that throws halfway leaves nothing behind. */
@@ -51,60 +54,86 @@ function journal() {
  * store makes, so payloads must be structured-cloneable here too.
  */
 export function createMemoryStore<D>(): IndexStore<D> {
-  // Per scope id: its winning entry per path, and its coverage. A scope with entries always has coverage.
+  // Per scope id: its winning entry per path, the stamp of the commit that wrote each, and its coverage. A scope with
+  // entries always has coverage.
   const entries = new Map<string, Map<string, Entry<D>>>();
+  const written = new Map<string, Map<string, number>>();
   const coverage = new Map<string, CoverageRow>();
+  let lastStamp = 0;
   const userHomeservers = new Map<string, UserHomeserver>();
   const homeserverStates = new Map<string, HomeserverState>();
   const scopeMembers = new Map<string, Map<string, number>>();
   const meta = new Map<string, string>();
 
-  async function commit(batch: StoreBatch<D>): Promise<void> {
+  async function commit(batch: StoreBatch<D>): Promise<number | null> {
     const copy = structuredClone(batch);
     assertValidBatch(copy);
     const stateOfHomeserver = (homeserver: string) => homeserverStateOf(homeserverStates.get(homeserver));
-    if (!readsCurrent(copy.readAt, (homeserver) => stateOfHomeserver(homeserver).epoch)) return;
+    if (!readsCurrent(copy.readAt, (homeserver) => stateOfHomeserver(homeserver).epoch)) return null;
 
     // Only a run that disagrees with a stored entry can still throw; the journal undoes what came before it.
     const writes = journal();
+    const stamp = lastStamp + 1;
+    let stamped = false;
+    /** Writes the entry, or deletes the path for `undefined`, stamped. */
+    const writeEntry = (id: string, path: string, entry: Entry<D> | undefined) => {
+      let paths = entries.get(id);
+      let stamps = written.get(id);
+      if (paths === undefined || stamps === undefined) {
+        if (entry === undefined) return;
+        paths = new Map();
+        stamps = new Map();
+        writes.set(entries, id, paths);
+        writes.set(written, id, stamps);
+      }
+      writes.set(paths, path, entry);
+      writes.set(stamps, path, entry === undefined ? undefined : stamp);
+    };
+    const writeRow = (id: string, row: CoverageRow | undefined) => {
+      writes.set(coverage, id, row);
+      if (row === undefined) {
+        writes.set(entries, id, undefined);
+        writes.set(written, id, undefined);
+      }
+      stamped = true;
+    };
     try {
       for (const { homeserver } of copy.deleteHomeservers ?? []) {
-        for (const [id, row] of coverage) {
-          if (row.scope.homeserver !== homeserver) continue;
-          writes.set(coverage, id, undefined);
-          writes.set(entries, id, undefined);
-        }
+        for (const [id, row] of coverage) if (row.scope.homeserver === homeserver) writeRow(id, undefined);
       }
       for (const { scope, cutoff } of copy.evictions ?? []) {
         const id = scopeId(scope);
         const row = coverage.get(id);
         if (row === undefined) continue;
-        const paths = entries.get(id) ?? new Map<string, Entry<D>>();
-        for (const [path, entry] of paths) if (entry.cursor <= cutoff) writes.set(paths, path, undefined);
-        if (paths.size === 0) writes.set(entries, id, undefined);
+        const evicted = [...(entries.get(id) ?? [])].filter(([, entry]) => entry.cursor <= cutoff);
+        for (const [path] of evicted) writeEntry(id, path, undefined);
         const kept = evictCoverage(row.coverage, cutoff);
-        writes.set(coverage, id, kept.length === 0 ? undefined : { scope: row.scope, coverage: kept });
+        if (evicted.length > 0 || !sameCoverage(kept, row.coverage)) {
+          writeRow(id, kept.length === 0 ? undefined : { scope: row.scope, coverage: kept, stamp });
+        }
       }
       for (const run of copy.applyRuns ?? []) {
         const id = scopeId(run);
-        const paths = entries.get(id);
-        const applied = applyRun(run, (path) => paths?.get(path), coverage.get(id)?.coverage ?? []);
-        if (applied.changed.length > 0) {
-          const target = paths ?? new Map<string, Entry<D>>();
-          if (paths === undefined) writes.set(entries, id, target);
-          for (const entry of applied.changed) writes.set(target, entry.path, entry);
+        const row = coverage.get(id);
+        const applied = applyRun(run, (path) => entries.get(id)?.get(path), row?.coverage ?? []);
+        for (const entry of applied.changed) writeEntry(id, entry.path, entry);
+        if (row === undefined || applied.changed.length > 0 || !sameCoverage(row.coverage, applied.coverage)) {
+          writeRow(id, { scope: scopeOf(run), coverage: applied.coverage, stamp });
         }
-        writes.set(coverage, id, { scope: scopeOf(run), coverage: applied.coverage });
       }
       for (const { scope, path, cursor, data } of copy.recordData ?? []) {
-        const paths = entries.get(scopeId(scope));
-        const filled = withData(paths?.get(path), cursor, data);
-        if (paths !== undefined && filled !== null) writes.set(paths, path, filled);
+        const id = scopeId(scope);
+        const row = coverage.get(id);
+        const filled = withData(entries.get(id)?.get(path), cursor, data);
+        if (row === undefined || filled === null) continue;
+        writeEntry(id, path, filled);
+        writeRow(id, { ...row, stamp });
       }
     } catch (error) {
       writes.rollback();
       throw error;
     }
+    if (stamped) lastStamp = stamp;
 
     for (const { homeserver, epoch } of copy.deleteHomeservers ?? []) {
       homeserverStates.set(homeserver, deletedState(stateOfHomeserver(homeserver), epoch));
@@ -114,6 +143,7 @@ export function createMemoryStore<D>(): IndexStore<D> {
       homeserverStates.set(homeserver, patchedState(stateOfHomeserver(homeserver), patch));
     }
     for (const { seed, members } of copy.scopeMembers ?? []) scopeMembers.set(seed, new Map(members));
+    return stamped ? stamp : null;
   }
 
   const stateOf = (scope: ScopeKey) => {
@@ -123,7 +153,9 @@ export function createMemoryStore<D>(): IndexStore<D> {
 
   return {
     commit,
-    applyRuns: (runs) => commit({ applyRuns: runs }),
+    applyRuns: async (runs) => {
+      await commit({ applyRuns: runs });
+    },
     readScope: async (scope) => structuredClone(stateOf(scope)),
     readCoverage: async (scope) => structuredClone(coverage.get(scopeId(scope))?.coverage ?? []),
     exportRuns: async (scope) => structuredClone(runsOfScope(scope, stateOf(scope))),
@@ -138,19 +170,32 @@ export function createMemoryStore<D>(): IndexStore<D> {
         const row = coverage.get(id);
         if (row === undefined) continue;
         out.coverage.set(id, row.coverage);
-        if (runs) out.runs.set(id, runsOfScope(scope, stateOf(scope)));
+        out.stamps.set(id, row.stamp);
+        if (!runs) continue;
+        out.runs.set(id, runsOfScope(scope, stateOf(scope)));
+        out.written.set(id, new Map(written.get(id) ?? []));
       }
       return structuredClone(out);
     },
-    evictBelow: (scope, cutoff) => commit({ evictions: [{ scope, cutoff }] }),
+    evictBelow: async (scope, cutoff) => {
+      await commit({ evictions: [{ scope, cutoff }] });
+    },
     listScopes: async () => [...coverage.values()].map(({ scope }) => scopeOf(scope)),
-    deleteHomeserver: (homeserver, epoch) => commit({ deleteHomeservers: [{ homeserver, epoch }] }),
+    deleteHomeserver: async (homeserver, epoch) => {
+      await commit({ deleteHomeservers: [{ homeserver, epoch }] });
+    },
     readUserHomeserver: async (user) => structuredClone(userHomeservers.get(user) ?? null),
-    writeUserHomeserver: (user, value) => commit({ userHomeservers: [{ user, value }] }),
+    writeUserHomeserver: async (user, value) => {
+      await commit({ userHomeservers: [{ user, value }] });
+    },
     readHomeserverState: async (homeserver) => structuredClone(homeserverStateOf(homeserverStates.get(homeserver))),
-    patchHomeserverState: (homeserver, patch) => commit({ homeserverStates: [{ homeserver, patch }] }),
+    patchHomeserverState: async (homeserver, patch) => {
+      await commit({ homeserverStates: [{ homeserver, patch }] });
+    },
     readScopeMembers: async (seed) => new Map(scopeMembers.get(seed) ?? []),
-    writeScopeMembers: (seed, members) => commit({ scopeMembers: [{ seed, members }] }),
+    writeScopeMembers: async (seed, members) => {
+      await commit({ scopeMembers: [{ seed, members }] });
+    },
     readMeta: async (key) => meta.get(key) ?? null,
     writeMeta: async (key, value) => {
       meta.set(key, value);

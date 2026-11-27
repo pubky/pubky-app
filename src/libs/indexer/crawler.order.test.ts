@@ -60,9 +60,10 @@ function recorded(network: FakeNetwork, options: Partial<CrawlerOptions>, fails 
   const store: IndexStore<Post> = {
     ...memory,
     async commit(batch) {
-      await memory.commit(batch);
+      const stamp = await memory.commit(batch);
       steps.push({ kind: 'commit' });
       for (const run of batch.applyRuns ?? []) runs.push({ step: steps.length - 1, run: structuredClone(run) });
+      return stamp;
     },
   };
   const transport: IndexerTransport = {

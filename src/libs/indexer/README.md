@@ -52,7 +52,9 @@ rises. Its epoch names the log a device read from it (`epoch.ts`): the crawler n
 homeserver and names it anew when it finds a restore, deleting everything stored for it. A batch names the epochs it
 read under, and changes nothing once one of them is over, so what an operation read before another one dropped the
 homeserver never comes back. `exportScopes` reads scopes together with their homeservers' states in one read, so a
-run leaves the store only with the epoch of the log it was read from. `createMemoryStore` keeps it in memory, for tests and short-lived
+run leaves the store only with the epoch of the log it was read from. Each commit that changes a scope, its entries,
+the data of one or its coverage, stamps it higher than any stamp before, and each entry it writes with the same
+stamp, which `commit` returns: what changed since any moment is exact, wherever it lies. `createMemoryStore` keeps it in memory, for tests and short-lived
 use. `createIdbStore` keeps it in IndexedDB through Dexie, each `commit` in one read-write transaction.
 Entries are keyed by scope then path, so a scope is one range of the primary key, and a run reads and
 writes only the rows of its own paths. Payloads and cursors are stored by structured clone, so `D` must
@@ -304,8 +306,8 @@ SHA-256 of the domain's sorted group ids, so a deploy reading other paths (the o
 - `p/<S>/<b>`, shared: every run of the members whose key hashes to bucket `b` (FNV-1a of the key, modulo `S`), about
   256 KB each. `S` is a power of two: 4 when the index outgrows `hot`, doubled when the mean pack passes 512 KB, which
   splits bucket `b` into `b` and `b + S`, halved under 128 KB, and back to none under half of `hot`'s size.
-- `d/<writer>`, one per device, written only by it: the runs of what it synced since its changes were last folded,
-  rewritten whole by each save that found a member's scope changed. A save writes nothing when none did.
+- `d/<writer>`, one per device, written only by it: the runs of what changed in its store since its changes were last
+  folded, rewritten whole by each save that found a member's scope changed. A save writes nothing when none did.
 
 Every file is the version 3 format of `indexFile.ts`: gzipped positional JSON with a key table, records with their
 data and whole hash, so a device that loads it shows the feed with no body fetch; a record whose file was still to
@@ -326,9 +328,13 @@ sync, since a scope's coverage, not luck, says where each read starts. The lock 
 never what keeps an index true. On a homeserver without locks the same fold runs unlocked: two folds at once lose the
 work of the one that wrote first, never truth.
 
-A save, after a scope sync or when the tab is paused, writes the delta: per member scope what lies above the head
-this writer last knew the shared files hold, its base, or the whole scope where the base is unknown, gapped or under
-an older epoch. Right after a scope sync, whose members are whole, it folds instead when the delta passes 48 KB, its
+A save, after a scope sync or when the tab is paused, writes the delta: per member scope what its base lacks, the base
+being what the writer knows the shared files hold in its store's terms (`savedIndex.known.ts`): the epoch, the stamps
+of the entries they hold and their ranges. Each part of the delta is a valid run on its own: a range that only grew at
+the top goes from the known head up, any other new or changed range goes whole, and an entry stamped since inside a
+known range, such as a tag's file a fill fetched, goes as the run of its one event. The whole scope goes where the base
+is unknown or of another epoch. Applying files tells the base what they brought: the commit's stamp and their ranges,
+so a fill that lands meanwhile still counts as unshared. Right after a scope sync, whose members are whole, it folds instead when the delta passes 48 KB, its
 oldest change is a day old, the folder has no `hot` yet, or a version 2 file was found: it takes in `hot`, every other
 writer's delta and the version 2 files, writes each pack their changed authors fall in, then `hot`, then deletes what
 nothing needs any more (packs of another `S`, the version 2 files it folded, another writer's delta it folded once

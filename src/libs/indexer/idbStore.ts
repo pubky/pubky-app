@@ -12,6 +12,7 @@ import {
   patchedState,
   readsCurrent,
   runsOfScope,
+  sameCoverage,
   scopeId,
   scopeOf,
   scopeState,
@@ -29,6 +30,8 @@ import {
 interface ScopeRow extends ScopeKey {
   id: number;
   coverage: Coverage;
+  /** Of the last commit that changed the scope; absent on a row written before stamps. */
+  stamp?: number;
 }
 
 type NewScopeRow = Omit<ScopeRow, 'id'> & { id?: number };
@@ -37,10 +40,15 @@ const TOMBSTONE = 0;
 const RECORD = 1;
 
 /**
- * A path's winning entry, stored under the key `[scope id, path]`, so the value holds neither. A tombstone is
- * `[0, cursor]`, a record `[1, cursor, hash, data]` with absent trailing fields cut off.
+ * A path's winning entry, stored under the key `[scope id, path]`, so the value holds neither, with the stamp of the
+ * commit that wrote it. A tombstone is `[0, cursor, stamp]`, a record `[1, cursor, stamp, hash, data]` with absent
+ * trailing fields cut off. A row written before stamps lacks the stamp: `[kind, cursor, hash, data]`.
  */
-type StoredEntry<D> = [kind: typeof TOMBSTONE | typeof RECORD, cursor: Cursor, hash?: string, data?: D];
+type StoredEntry<D> = [kind: typeof TOMBSTONE | typeof RECORD, cursor: Cursor, stamp: number, hash?: string, data?: D];
+type EarlierEntry<D> = [kind: typeof TOMBSTONE | typeof RECORD, cursor: Cursor, hash?: string, data?: D];
+
+/** The meta row holding the stamp of the last commit that changed a scope. */
+const STAMP_KEY = 'store.stamp';
 
 type PathKey = [number, string];
 
@@ -68,13 +76,16 @@ const SCOPE_INDEX = '[author+homeserver+group]';
 
 const scopeTuple = ({ author, homeserver, group }: ScopeKey): [string, string, string] => [author, homeserver, group];
 
-function packEntry<D>(entry: Entry<D>): StoredEntry<D> {
-  if (entry.kind === 'tombstone') return [TOMBSTONE, entry.cursor];
-  if (entry.data !== undefined) return [RECORD, entry.cursor, entry.hash, entry.data];
-  return entry.hash === undefined ? [RECORD, entry.cursor] : [RECORD, entry.cursor, entry.hash];
+function packEntry<D>(entry: Entry<D>, stamp: number): StoredEntry<D> {
+  if (entry.kind === 'tombstone') return [TOMBSTONE, entry.cursor, stamp];
+  if (entry.data !== undefined) return [RECORD, entry.cursor, stamp, entry.hash, entry.data];
+  return entry.hash === undefined ? [RECORD, entry.cursor, stamp] : [RECORD, entry.cursor, stamp, entry.hash];
 }
 
-function unpackEntry<D>(path: string, [kind, cursor, hash, data]: StoredEntry<D>): Entry<D> {
+const isStamped = <D>(stored: StoredEntry<D> | EarlierEntry<D>): stored is StoredEntry<D> =>
+  typeof stored[2] === 'number';
+
+function entryOf<D>(path: string, kind: number, cursor: Cursor, hash?: string, data?: D): Entry<D> {
   if (kind === TOMBSTONE) return { kind: 'tombstone', path, cursor };
   const record: RecordEntry<D> = { kind: 'record', path, cursor };
   if (hash !== undefined) record.hash = hash;
@@ -82,8 +93,17 @@ function unpackEntry<D>(path: string, [kind, cursor, hash, data]: StoredEntry<D>
   return record;
 }
 
-const sameCoverage = (a: Coverage, b: Coverage) =>
-  a.length === b.length && a.every((range, i) => range.tail === b[i].tail && range.head === b[i].head);
+function unpackStamped<D>(path: string, stored: StoredEntry<D> | EarlierEntry<D>): { entry: Entry<D>; stamp: number } {
+  if (isStamped(stored)) {
+    const [kind, cursor, stamp, hash, data] = stored;
+    return { entry: entryOf(path, kind, cursor, hash, data), stamp };
+  }
+  const [kind, cursor, hash, data] = stored;
+  return { entry: entryOf(path, kind, cursor, hash, data), stamp: 0 };
+}
+
+const unpackEntry = <D>(path: string, stored: StoredEntry<D> | EarlierEntry<D>): Entry<D> =>
+  unpackStamped(path, stored).entry;
 
 export type IdbIndexStore<D> = IndexStore<D> &
   Required<Pick<IndexStore<D>, 'readMeta' | 'writeMeta'>> &
@@ -125,22 +145,24 @@ export function createIdbStore<D>(databaseName: string): IdbIndexStore<D> {
     meta: 'key',
   });
   const scopes = db.table<ScopeRow, number, NewScopeRow>('scopes');
-  const paths = db.table<StoredEntry<D>, PathKey>('paths');
+  const paths = db.table<StoredEntry<D> | EarlierEntry<D>, PathKey>('paths');
   const userHomeservers = db.table<UserHomeserverRow, string>('userHomeservers');
   const homeserverStates = db.table<HomeserverStateRow, string>('homeserverStates');
   const scopeMembers = db.table<ScopeMembersRow, string>('scopeMembers');
   const meta = db.table<MetaRow, string>('meta');
-  const tables = [scopes, paths, userHomeservers, homeserverStates, scopeMembers];
+  const tables = [scopes, paths, userHomeservers, homeserverStates, scopeMembers, meta];
 
   const scopeRow = (scope: ScopeKey) => scopes.where(SCOPE_INDEX).equals(scopeTuple(scope)).first();
 
   const pathsOf = (id: number) => paths.where(':id').between([id, Dexie.minKey], [id, Dexie.maxKey]);
 
-  /** A scope's entries in path order, its keys and values read as two batches over the same range. */
-  async function entriesOf(id: number): Promise<Entry<D>[]> {
+  /** A scope's entries in path order with their stamps, its keys and values read as two batches over the same range. */
+  async function stampedOf(id: number): Promise<Array<{ entry: Entry<D>; stamp: number }>> {
     const [keys, values] = await Promise.all([pathsOf(id).primaryKeys(), pathsOf(id).toArray()]);
-    return values.map((value, i) => unpackEntry(keys[i][1], value));
+    return values.map((value, i) => unpackStamped(keys[i][1], value));
   }
+
+  const entriesOf = async (id: number): Promise<Entry<D>[]> => (await stampedOf(id)).map(({ entry }) => entry);
 
   async function stateOf(row: ScopeRow | undefined): Promise<MergedRuns<D>> {
     if (row === undefined) return scopeState([], []);
@@ -149,24 +171,27 @@ export function createIdbStore<D>(databaseName: string): IdbIndexStore<D> {
     return scopeState(await entriesOf(row.id), coverage);
   }
 
-  async function commit(batch: StoreBatch<D>): Promise<void> {
+  async function commit(batch: StoreBatch<D>): Promise<number | null> {
     // Validate and copy before the transaction: a rejected batch never touches the database.
     const copy = structuredClone(batch);
     assertValidBatch(copy);
 
     // One transaction for the whole batch, so a throw or a crash leaves all of it or none.
-    await db.transaction('rw', tables, async () => {
+    return db.transaction('rw', tables, async (): Promise<number | null> => {
       const stateOfHomeserver = async (homeserver: string) =>
         homeserverStateOf((await homeserverStates.get(homeserver))?.state);
       const epochs = new Map<string, Epoch>();
       for (const { homeserver } of copy.readAt ?? [])
         epochs.set(homeserver, (await stateOfHomeserver(homeserver)).epoch);
-      if (!readsCurrent(copy.readAt, (homeserver) => epochs.get(homeserver) ?? NO_EPOCH)) return;
+      if (!readsCurrent(copy.readAt, (homeserver) => epochs.get(homeserver) ?? NO_EPOCH)) return null;
+      const stamp = Number((await meta.get(STAMP_KEY))?.value ?? '0') + 1;
+      let stamped = false;
       for (const { homeserver, epoch } of copy.deleteHomeservers ?? []) {
         const ids = await scopes.where('homeserver').equals(homeserver).primaryKeys();
         for (const id of ids) await pathsOf(id).delete();
         await scopes.bulkDelete(ids);
         await homeserverStates.put({ homeserver, state: deletedState(await stateOfHomeserver(homeserver), epoch) });
+        stamped = stamped || ids.length > 0;
       }
       for (const { scope, cutoff } of copy.evictions ?? []) {
         const row = await scopeRow(scope);
@@ -174,8 +199,10 @@ export function createIdbStore<D>(databaseName: string): IdbIndexStore<D> {
         const evicted = (await entriesOf(row.id)).filter((entry) => entry.cursor <= cutoff);
         await paths.bulkDelete(evicted.map((entry): PathKey => [row.id, entry.path]));
         const kept = evictCoverage(row.coverage, cutoff);
+        if (evicted.length === 0 && sameCoverage(kept, row.coverage)) continue;
+        stamped = true;
         if (kept.length === 0) await scopes.delete(row.id);
-        else await scopes.put({ ...row, coverage: kept });
+        else await scopes.put({ ...row, coverage: kept, stamp });
       }
       for (const run of copy.applyRuns ?? []) {
         // Reads and writes only the rows of the run's own paths; a new scope has none to read.
@@ -189,20 +216,26 @@ export function createIdbStore<D>(databaseName: string): IdbIndexStore<D> {
           });
         }
         const applied = applyRun(run, (path) => stored.get(path), row?.coverage ?? []);
-        const id = row?.id ?? (await scopes.add({ ...scopeOf(run), coverage: applied.coverage }));
-        if (row !== undefined && !sameCoverage(row.coverage, applied.coverage)) {
-          await scopes.put({ ...row, coverage: applied.coverage });
-        }
+        const changed =
+          row === undefined || applied.changed.length > 0 || !sameCoverage(row.coverage, applied.coverage);
+        if (!changed) continue;
+        stamped = true;
+        const id = row?.id ?? (await scopes.add({ ...scopeOf(run), coverage: applied.coverage, stamp }));
+        if (row !== undefined) await scopes.put({ ...row, coverage: applied.coverage, stamp });
         // Dexie types `bulkPut` keys as plain values, so compound keys go one `put` each, all in flight at once.
-        await Promise.all(applied.changed.map((entry) => paths.put(packEntry(entry), [id, entry.path])));
+        await Promise.all(applied.changed.map((entry) => paths.put(packEntry(entry, stamp), [id, entry.path])));
       }
       for (const { scope, path, cursor, data } of copy.recordData ?? []) {
         const row = await scopeRow(scope);
         if (row === undefined) continue;
         const value = await paths.get([row.id, path]);
         const filled = withData(value === undefined ? undefined : unpackEntry(path, value), cursor, data);
-        if (filled !== null) await paths.put(packEntry(filled), [row.id, path]);
+        if (filled === null) continue;
+        stamped = true;
+        await paths.put(packEntry(filled, stamp), [row.id, path]);
+        await scopes.put({ ...row, stamp });
       }
+      if (stamped) await meta.put({ key: STAMP_KEY, value: String(stamp) });
       await userHomeservers.bulkPut((copy.userHomeservers ?? []).map(({ user, value }) => ({ user, value })));
       for (const { homeserver, patch } of copy.homeserverStates ?? []) {
         await homeserverStates.put({ homeserver, state: patchedState(await stateOfHomeserver(homeserver), patch) });
@@ -210,6 +243,7 @@ export function createIdbStore<D>(databaseName: string): IdbIndexStore<D> {
       await scopeMembers.bulkPut(
         (copy.scopeMembers ?? []).map(({ seed, members }) => ({ seed, members: new Map(members) })),
       );
+      return stamped ? stamp : null;
     });
   }
 
@@ -231,8 +265,22 @@ export function createIdbStore<D>(databaseName: string): IdbIndexStore<D> {
         }
         const row = await scopeRow(scope);
         if (row === undefined) continue;
-        out.coverage.set(scopeId(scope), row.coverage);
-        if (runs) out.runs.set(scopeId(scope), runsOfScope(scope, await stateOf(row)));
+        const id = scopeId(scope);
+        out.coverage.set(id, row.coverage);
+        out.stamps.set(id, row.stamp ?? 0);
+        if (!runs) continue;
+        const stamped = await stampedOf(row.id);
+        out.runs.set(
+          id,
+          runsOfScope(
+            scope,
+            scopeState(
+              stamped.map(({ entry }) => entry),
+              row.coverage,
+            ),
+          ),
+        );
+        out.written.set(id, new Map(stamped.map(({ entry, stamp }) => [entry.path, stamp])));
       }
       return out;
     });
@@ -240,21 +288,33 @@ export function createIdbStore<D>(databaseName: string): IdbIndexStore<D> {
   // Reads need no copy: IndexedDB hands out a fresh structured clone on every read.
   return {
     commit,
-    applyRuns: (runs) => commit({ applyRuns: runs }),
+    applyRuns: async (runs) => {
+      await commit({ applyRuns: runs });
+    },
     readScope,
     readScopes,
     readCoverage: async (scope) => (await scopeRow(scope))?.coverage ?? [],
     exportRuns: async (scope) => runsOfScope(scope, await readScope(scope)),
     exportScopes,
-    evictBelow: (scope, cutoff) => commit({ evictions: [{ scope, cutoff }] }),
+    evictBelow: async (scope, cutoff) => {
+      await commit({ evictions: [{ scope, cutoff }] });
+    },
     listScopes: async () => (await scopes.toArray()).map(scopeOf),
-    deleteHomeserver: (homeserver, epoch) => commit({ deleteHomeservers: [{ homeserver, epoch }] }),
+    deleteHomeserver: async (homeserver, epoch) => {
+      await commit({ deleteHomeservers: [{ homeserver, epoch }] });
+    },
     readUserHomeserver: async (user) => (await userHomeservers.get(user))?.value ?? null,
-    writeUserHomeserver: (user, value) => commit({ userHomeservers: [{ user, value }] }),
+    writeUserHomeserver: async (user, value) => {
+      await commit({ userHomeservers: [{ user, value }] });
+    },
     readHomeserverState: async (homeserver) => homeserverStateOf((await homeserverStates.get(homeserver))?.state),
-    patchHomeserverState: (homeserver, patch) => commit({ homeserverStates: [{ homeserver, patch }] }),
+    patchHomeserverState: async (homeserver, patch) => {
+      await commit({ homeserverStates: [{ homeserver, patch }] });
+    },
     readScopeMembers: async (seed) => (await scopeMembers.get(seed))?.members ?? new Map<string, number>(),
-    writeScopeMembers: (seed, members) => commit({ scopeMembers: [{ seed, members }] }),
+    writeScopeMembers: async (seed, members) => {
+      await commit({ scopeMembers: [{ seed, members }] });
+    },
     readMeta: async (key) => (await meta.get(key))?.value ?? null,
     writeMeta: async (key, value) => {
       await meta.put({ key, value });

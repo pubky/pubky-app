@@ -16,6 +16,7 @@ import {
   TAGS,
   testDomain,
 } from './crawler.fixtures';
+import { CURSOR_ZERO } from './cursor';
 import type { Domain } from './domain.types';
 import { restoreEpoch } from './epoch';
 import { FakeIndexFiles, FakeNetwork } from './fakeNetwork';
@@ -609,6 +610,104 @@ describe('saved index folder', () => {
     await fresh.load();
     await expectTruthful(fresh.store, w.network, 'a new device');
     expect(await servedAll(fresh.store, USERS)).toEqual(truthOf(w.network, USERS));
+  });
+
+  it('shares the files a fill fetched after the last save as runs of their one event, and no other device fetches them', async () => {
+    const w = world();
+    w.network.put('bob', `${TAGS}t1`, new TextEncoder().encode(JSON.stringify({ text: 'tag' })));
+    const a = device(w, 'wa', { domain: taggedDomain });
+    await a.sync();
+    expect(await a.flush()).toBe('folded');
+    expect(await a.crawler.hydrate(await a.store.listScopes())).toMatchObject({ fetched: 1 });
+
+    expect(await a.flush(false)).toBe('delta');
+    const delta = await decoded(w.files, deltaPath(FOLDER, 'wa'));
+    const tag = w.network.liveOf('bob', [TAGS]).get(`${TAGS}t1`) ?? BigInt(-1);
+    expect(delta.runs.map(({ author, tail, head, entries }) => [author, tail, head, entries.length])).toEqual([
+      ['bob', tag - BigInt(1), tag, 1],
+    ]);
+    expect(await a.flush(false)).toBe('unchanged');
+
+    const b = device(w, 'wb', { domain: taggedDomain });
+    await b.load();
+    const scope = { author: 'bob', homeserver: 'hs1', group: ACTIVITY };
+    const loaded = (await b.store.readScope(scope)).entries.get(`${TAGS}t1`);
+    expect(loaded?.kind === 'record' ? loaded.data : null).toEqual({ text: 'tag' });
+    expect(await b.crawler.hydrate(await b.store.listScopes())).toMatchObject({ fetched: 0, remaining: 0 });
+  });
+
+  it('shares history a backfill read below the head, which another device then loads', async () => {
+    const network = new FakeNetwork().addHomeserver('hs1');
+    const w = { network, clock: { now: NOW }, files: network.indexFiles };
+    network.indexFiles.now = () => w.clock.now;
+    for (const user of USERS) network.addUser(user, 'hs1');
+    // Older than the window, written first: the window stops above them.
+    for (const user of USERS) network.putJson(user, postPath(41 * DAY_MS), { text: `${user} older` });
+    for (let i = 0; i < 5; i += 1) network.putJson('bob', postPath(40 * DAY_MS - i * HOUR_MS), { text: `old ${i}` });
+    network.put('alice', `${FOLLOWS}bob`);
+    network.put('bob', `${FOLLOWS}carol`);
+    for (const user of USERS) network.putJson(user, postPath(HOUR_MS), { text: `${user} recent` });
+    const recent = device(w, 'wa');
+    await recent.sync();
+    expect(await recent.flush()).toBe('folded');
+    const scope = { author: 'bob', homeserver: 'hs1', group: ACTIVITY };
+    const before = await recent.store.readCoverage(scope);
+    expect(await recent.crawler.backfill('bob', ACTIVITY, 5)).toMatchObject({ tail: CURSOR_ZERO });
+    expect(await recent.store.readCoverage(scope)).not.toEqual(before);
+
+    expect(await recent.flush(false)).toBe('delta');
+    const b = device(w, 'wb');
+    await b.load();
+    expect(await b.store.readCoverage(scope)).toEqual(await recent.store.readCoverage(scope));
+    expect(await served(b.store, 'bob', 'hs1', ACTIVITY)).toEqual(w.network.liveOf('bob', [POSTS]));
+  });
+
+  it('never takes a fill that lands while a fold reads for shared, wherever it lands', async () => {
+    for (let at = 1; ; at += 1) {
+      const w = world();
+      w.network.put('bob', `${TAGS}t1`, new TextEncoder().encode(JSON.stringify({ text: 'tag' })));
+      const inner = createMemoryStore<Post>();
+      let calls = 0;
+      let armed = false;
+      let fired = false;
+      const tag = `${TAGS}t1`;
+      const scope = { author: 'bob', homeserver: 'hs1', group: ACTIVITY };
+      /** What a fill running beside the fold commits, at the `at`-th store read of the fold. */
+      const read =
+        <A extends unknown[], R>(call: (...args: A) => Promise<R>) =>
+        async (...args: A): Promise<R> => {
+          if (armed && ++calls === at) {
+            fired = true;
+            const entry = (await inner.readScope(scope)).entries.get(tag);
+            if (entry !== undefined) {
+              await inner.commit({ recordData: [{ scope, path: tag, cursor: entry.cursor, data: { text: 'tag' } }] });
+            }
+          }
+          return call(...args);
+        };
+      const store: IndexStore<Post> = {
+        ...inner,
+        exportScopes: read(inner.exportScopes),
+        readHomeserverState: read(inner.readHomeserverState),
+        readScopeMembers: read(inner.readScopeMembers),
+        readUserHomeserver: read(inner.readUserHomeserver),
+      };
+      const a = device(w, 'wa', { store, domain: taggedDomain, limits: { deltaFoldBytes: 0 } });
+      await a.sync();
+      expect(await a.flush()).toBe('folded');
+      w.network.putJson('carol', postPath(HOUR_MS / 2), { text: 'carol new' });
+      await a.sync();
+      armed = true;
+      expect(await a.flush()).toBe('folded');
+      armed = false;
+      if (!fired) break;
+      await a.flush(false);
+
+      const b = device(w, 'wb', { domain: taggedDomain });
+      await b.load();
+      const loaded = (await b.store.readScope(scope)).entries.get(tag);
+      expect(loaded?.kind === 'record' ? loaded.data : null, `fill at read ${at}`).toEqual({ text: 'tag' });
+    }
   });
 
   it('writes its delta when a fold fails on any request, whichever it is', async () => {

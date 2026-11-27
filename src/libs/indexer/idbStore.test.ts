@@ -8,6 +8,7 @@ import { benchIndexStore, type BenchPayload } from './idbStore.bench';
 import type { MergedRuns, Run } from './indexer.types';
 import { mergeRuns } from './merge';
 import { c, describeIndexStoreContract, META, type Payload, rec, runOf, runWith, tomb } from './store.contract';
+import { scopeId } from './store.helpers';
 import { EMPTY_HOMESERVER_STATE } from './store.types';
 
 let databases = 0;
@@ -60,7 +61,7 @@ describe('createIdbStore', () => {
     return (store) => writes.get(store) ?? 0;
   }
 
-  it('writes only the entry rows a run wins, and the scope row only when its coverage grows', async () => {
+  it('writes only the entry rows a run wins, and the scope row only when the scope changes', async () => {
     const store = open(nextName());
     const run = runWith(0, 10, [rec('a', 3), rec('b', 5), tomb('c', 7)]);
     const writes = countWrites();
@@ -73,9 +74,10 @@ describe('createIdbStore', () => {
     expect(writes('paths')).toBe(3);
     expect(writes('scopes')).toBe(1);
 
+    // The second run moves no coverage but writes an entry, which stamps the scope.
     await store.applyRuns([runWith(10, 12, [rec('a', 11)]), runWith(0, 4, [rec('a', 2), tomb('d', 4)])]);
     expect(writes('paths')).toBe(5);
-    expect(writes('scopes')).toBe(2);
+    expect(writes('scopes')).toBe(3);
     expect([...(await store.readScope(META)).entries.keys()]).toEqual(['a', 'b', 'c', 'd']);
   });
 
@@ -93,8 +95,8 @@ describe('createIdbStore', () => {
     raw.close();
 
     expect(scopes).toEqual([
-      { id: 1, ...META, coverage: [{ tail: c(0), head: c(2) }] },
-      { id: 2, ...META, author: 'bob', coverage: [{ tail: c(0), head: c(3) }] },
+      { id: 1, ...META, coverage: [{ tail: c(0), head: c(2) }], stamp: 1 },
+      { id: 2, ...META, author: 'bob', coverage: [{ tail: c(0), head: c(3) }], stamp: 1 },
     ]);
     expect(keys).toEqual([
       [1, 'a'],
@@ -102,9 +104,9 @@ describe('createIdbStore', () => {
       [2, 'a'],
     ]);
     expect(values).toEqual([
-      [1, c(1), 'h', { n: 1 }],
-      [0, c(2)],
-      [1, c(3), undefined, { n: 3 }],
+      [1, c(1), 1, 'h', { n: 1 }],
+      [0, c(2), 1],
+      [1, c(3), 1, undefined, { n: 3 }],
     ]);
   });
 
@@ -229,11 +231,14 @@ describe('createIdbStore', () => {
     await first.applyRuns([runOf(0, 2)]);
     first.close();
     const old = new Dexie(name);
-    old.version(3).stores({ scopes: '++id, &[author+homeserver+group], homeserver', homeserverStates: 'homeserver' });
+    old
+      .version(3)
+      .stores({ scopes: '++id, &[author+homeserver+group], homeserver', homeserverStates: 'homeserver', paths: '' });
     await old
       .table('scopes')
       .toCollection()
       .modify({ end: c(1) });
+    await old.table('paths').put([1, c(1), 'h', { n: 1 }], [1, 'z']);
     await old.table('homeserverStates').put({
       homeserver: 'hs1',
       state: { highWater: { cursor: c(2), author: 'alice' }, epoch: 0, windowStart: { cursor: c(1), foundAt: 5 } },
@@ -244,7 +249,16 @@ describe('createIdbStore', () => {
     await store.applyRuns([runOf(2, 4)]);
     await store.patchHomeserverState('hs1', { clock: [{ cursor: c(3), ms: 30, writer: 'alice' }] });
 
-    expect(await store.readScope(META)).toEqual(mergeRuns([runOf(0, 2), runOf(2, 4)]));
+    expect(await store.readScope(META)).toEqual(
+      mergeRuns([runOf(0, 2), runOf(2, 4), runWith(0, 1, [rec('z', 1, 'h')])]),
+    );
+    const exported = await store.exportScopes([META], { runs: true });
+    expect(exported.written.get(scopeId(META))).toEqual(
+      new Map([
+        ['a', 2],
+        ['z', 0],
+      ]),
+    );
     expect(await store.readHomeserverState('hs1')).toEqual({
       ...EMPTY_HOMESERVER_STATE,
       highWater: { cursor: c(2), author: 'alice' },

@@ -443,6 +443,65 @@ export function describeIndexStoreContract<S extends IndexStore<Payload>>(
       expect((await store.readHomeserverState('hs1')).highWater).toEqual({ cursor: c(4), author: 'alice' });
     });
 
+    it('stamps a scope higher at each commit that changes it, and each entry with the commit that wrote it', async () => {
+      const store = fresh();
+      const other: RunMeta = { ...META, author: 'bob' };
+      const bare = (path: string, cursor: number): Entry<Payload> => ({ kind: 'record', path, cursor: c(cursor) });
+      const read = async () => {
+        const exported = await store.exportScopes([META, other], { runs: true });
+        return {
+          stamp: exported.stamps.get(scopeId(META)) ?? -1,
+          written: exported.written.get(scopeId(META)) ?? new Map<string, number>(),
+          other: exported.stamps.get(scopeId(other)) ?? -1,
+        };
+      };
+
+      await store.applyRuns([runWith(10, 20, [bare('a', 12), rec('b', 15)])]);
+      const first = await read();
+      expect(first.written).toEqual(
+        new Map([
+          ['a', first.stamp],
+          ['b', first.stamp],
+        ]),
+      );
+      expect((await store.exportScopes([META], { runs: false })).stamps.get(scopeId(META))).toBe(first.stamp);
+
+      // The same run again, another scope, data for a record no longer stored: nothing of the scope changes.
+      await store.applyRuns([runWith(10, 20, [bare('a', 12), rec('b', 15)])]);
+      await store.applyRuns([runOf(0, 3, other)]);
+      await store.commit({ recordData: [{ scope: META, path: 'a', cursor: c(11), data: { n: 1 } }] });
+      const still = await read();
+      expect([still.stamp, still.written]).toEqual([first.stamp, first.written]);
+      expect(still.other).toBeGreaterThan(first.stamp);
+
+      await store.commit({ recordData: [{ scope: META, path: 'a', cursor: c(12), data: { n: 12 } }] });
+      const filled = await read();
+      expect(filled.stamp).toBeGreaterThan(still.other);
+      expect(filled.written).toEqual(
+        new Map([
+          ['a', filled.stamp],
+          ['b', first.stamp],
+        ]),
+      );
+      expect(filled.other).toBe(still.other);
+
+      // Coverage alone moves it, below as above.
+      await store.applyRuns([runWith(5, 10, [])]);
+      const below = await read();
+      expect(below.stamp).toBeGreaterThan(filled.stamp);
+      expect(below.written).toEqual(filled.written);
+      await store.evictBelow(META, c(12));
+      const evicted = await read();
+      expect(evicted.stamp).toBeGreaterThan(below.stamp);
+      expect(evicted.written).toEqual(new Map([['b', first.stamp]]));
+
+      await store.deleteHomeserver('hs1', 'r5.a');
+      await store.applyRuns([runWith(10, 20, [rec('b', 15)])]);
+      const again = await read();
+      expect(again.stamp).toBeGreaterThan(evicted.stamp);
+      expect(again.written).toEqual(new Map([['b', again.stamp]]));
+    });
+
     it('merges clock samples into the stored clock, which a deletion empties', async () => {
       const store = fresh();
       const HOUR = 60 * 60 * 1000;
