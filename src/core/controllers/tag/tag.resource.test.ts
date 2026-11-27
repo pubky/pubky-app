@@ -115,6 +115,25 @@ describe('TagController, external resources', () => {
     expect(viewerTag).toEqual({ uri: SHARE, label: 'punk', viewerId: VIEWER });
   });
 
+  it('removes a tag the viewer put on a card’s identifier from that identifier, not from the web link acted on', async () => {
+    const ISBN = 'isbn:9780140328721';
+    const own = (uri: string) => TagNormalizer.to(uri, 'punk', VIEWER).url;
+    vi.mocked(TagApplication.getViewerResourceTagLinks).mockReturnValue([{ uri: ISBN, tagUri: own(ISBN) }]);
+
+    // `getResourceTarget` acts on the web link and reads the identifier along, first.
+    await TagController.commitDeleteResource({ taggerId: VIEWER, uri: URI, label: 'punk', spellings: [ISBN] });
+
+    expect(TagApplication.getViewerResourceTagLinks).toHaveBeenCalledWith({
+      uris: [URI, ISBN],
+      viewerId: VIEWER,
+      label: 'punk',
+    });
+    expect(TagApplication.commitDeleteResource).toHaveBeenCalledTimes(1);
+    const [files, viewerTag] = vi.mocked(TagApplication.commitDeleteResource).mock.calls[0];
+    expect(files.tagUri).toBe(own(ISBN));
+    expect(viewerTag).toEqual({ uri: ISBN, label: 'punk', viewerId: VIEWER });
+  });
+
   it('removes a tag the viewer holds on two spellings on both, and stops at a failed delete', async () => {
     const SHARE = `${URI}/u`;
     vi.mocked(TagApplication.getViewerResourceTagLinks).mockReturnValue([

@@ -536,7 +536,7 @@ function HostedFrame({
 interface PlayerSlotProps {
   /** The page's player the card's frame is (`useResourcePlayer`'s owner). */
   owner: string;
-  /** The card's resource (`getResourceTarget`): a card of the same with the same service takes the frame. */
+  /** The card's own link (`uri`): a card of the same with the same service takes the frame. */
   resource: string;
   target: PlayerTarget;
   title: string;

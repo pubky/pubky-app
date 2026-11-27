@@ -406,7 +406,8 @@ describe('ResourceDetails', () => {
       renderDetails(bookFixture.uri);
 
       const actions = screen.getByTestId('resource-actions');
-      expect(actions).toHaveAttribute('data-uri', 'isbn:9780140328721');
+      // Written to the ISBN's page as Pinakes publishes it.
+      expect(actions).toHaveAttribute('data-uri', 'https://openlibrary.org/isbn/9780140328721');
       expect(actions).toHaveAttribute('data-link-url', 'none');
       expect(actions).toHaveAttribute('data-title', 'Fantastic Mr. Fox');
     });
@@ -426,14 +427,14 @@ describe('ResourceDetails', () => {
       expect(actions).toHaveAttribute('data-post-uri', 'https://music.apple.com/gb/song/1440717826');
     });
 
-    it('acts on the canonical link on any spelling’s page, that spelling and the others read along', () => {
+    it('acts on the page’s link on any spelling’s page, the canonical link and the others read along', () => {
       const alias = 'https://youtu.be/dQw4w9WgXcQ';
       read = settled({ ...VIDEO, refs: [VIDEO.uri, alias], aliases: ['https://m.youtube.com/watch?v=dQw4w9WgXcQ'] });
       renderDetails(alias);
 
       const actions = screen.getByTestId('resource-actions');
-      expect(actions).toHaveAttribute('data-uri', VIDEO.uri);
-      expect(actions).toHaveAttribute('data-spellings', `${alias} https://m.youtube.com/watch?v=dQw4w9WgXcQ`);
+      expect(actions).toHaveAttribute('data-uri', alias);
+      expect(actions).toHaveAttribute('data-spellings', `${VIDEO.uri} https://m.youtube.com/watch?v=dQw4w9WgXcQ`);
     });
 
     it('posts about the first web link of a resource whose own link is not one', () => {
@@ -441,7 +442,7 @@ describe('ResourceDetails', () => {
       renderDetails(bookFixture.uri);
 
       const actions = screen.getByTestId('resource-actions');
-      expect(actions).toHaveAttribute('data-uri', 'isbn:9780140328721');
+      expect(actions).toHaveAttribute('data-uri', 'https://openlibrary.org/isbn/9780140328721');
       expect(actions).toHaveAttribute('data-post-uri', bookFixture.also_on[0].uri);
     });
 
@@ -914,7 +915,8 @@ describe('ResourceDetails', () => {
     expect(within(skeleton).queryByTestId('resource-card-source')).not.toBeInTheDocument();
     expect(within(skeleton).queryByRole('link')).not.toBeInTheDocument();
     const actions = within(skeleton).getByTestId('resource-actions');
-    expect(actions).toHaveAttribute('data-uri', 'isbn:0000000000');
+    // Written to the ISBN's page while the card loads, as once it is known.
+    expect(actions).toHaveAttribute('data-uri', 'https://openlibrary.org/isbn/9780000000002');
     expect(actions).toHaveAttribute('data-post-uri', 'none');
     expect(actions).toHaveAttribute('data-link-url', 'none');
   });
@@ -1051,7 +1053,7 @@ describe('ResourceDetails', () => {
       expect(screen.getByTestId('new-post-dialog-stub')).toHaveAttribute('data-content', NOT_KNOWN);
     });
 
-    it('keeps the Reply dialog on the link pressed when the card read has another canonical link', () => {
+    it('keeps the footer and the Reply dialog on the link pressed when the card read has another canonical link', () => {
       read = RESOLVING;
       const { rerender } = renderDetails(NOT_KNOWN);
       fireEvent.click(screen.getByTestId('reply-button-stub'));
@@ -1059,7 +1061,8 @@ describe('ResourceDetails', () => {
       read = settled({ ...ORDINARY_VIDEO, refs: [NOT_KNOWN], aliases: [], group: null });
       rerender(<ResourceDetails uri={NOT_KNOWN} read={read} onRetry={onRetry} replies={pageReplies()} />);
 
-      expect(screen.getByTestId('resource-actions')).toHaveAttribute('data-uri', ORDINARY_VIDEO.uri);
+      expect(screen.getByTestId('resource-actions')).toHaveAttribute('data-uri', NOT_KNOWN);
+      expect(screen.getByTestId('resource-actions')).toHaveAttribute('data-spellings', ORDINARY_VIDEO.uri);
       expect(screen.getByTestId('reply-dialog-stub')).toHaveAttribute('data-uri', NOT_KNOWN);
     });
 
@@ -1173,14 +1176,18 @@ describe('ResourceDetails', () => {
       );
     });
 
-    it.each(['isbn:0000000000', 'geo:47.3769,8.5417'])('shows %s as written, as text, with the footer on it', (uri) => {
+    it.each([
+      ['isbn:0000000000', 'https://openlibrary.org/isbn/9780000000002'],
+      ['geo:47.3769,8.5417', 'geo:47.3769,8.5417'],
+    ])('shows %s as written, as text, with the footer on it', (uri, target) => {
       read = settled(null);
       renderDetails(uri);
 
       expect(screen.getByTestId('resource-link-card-title')).toHaveTextContent(uri);
       expect(screen.queryByRole('link')).not.toBeInTheDocument();
       const actions = screen.getByTestId('resource-actions');
-      expect(actions).toHaveAttribute('data-uri', uri);
+      // An identifier with a page is written to it.
+      expect(actions).toHaveAttribute('data-uri', target);
       // No web address to post about or copy.
       expect(actions).toHaveAttribute('data-post-uri', 'none');
       expect(actions).toHaveAttribute('data-link-url', 'none');
@@ -1195,12 +1202,14 @@ describe('ResourceDetails', () => {
       expect(screen.queryByTestId('resource-actions')).not.toBeInTheDocument();
     });
 
-    it('gives a link with credentials no footer, so they are not tagged, saved or replied to', () => {
+    it('tags, saves and replies to a link with credentials without them, so they are never written', () => {
       read = settled(null);
       renderDetails('https://user:secret@example.com/private');
 
       expect(screen.getByTestId('resource-link-card')).toHaveAttribute('data-size', 'large');
-      expect(screen.queryByTestId('resource-actions')).not.toBeInTheDocument();
+      const actions = screen.getByTestId('resource-actions');
+      expect(actions).toHaveAttribute('data-uri', 'https://example.com/private');
+      expect(actions.getAttribute('data-spellings') ?? '').not.toContain('secret');
     });
   });
 

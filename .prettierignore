@@ -38,8 +38,12 @@ public/
 
 # Generated files
 next-env.d.ts
+# Pinakes' link rules, written by scripts/pinakes-link-rules.mjs
+src/libs/post/linkRules.data.json
 
 tsconfig.json
 
 # Captured API responses, kept byte-for-byte as served (see the README next to them)
 src/core/services/pinakes/fixtures/*.json
+# pubky-social-specs test vectors, kept byte-for-byte as published
+src/libs/post/fixtures/*.json

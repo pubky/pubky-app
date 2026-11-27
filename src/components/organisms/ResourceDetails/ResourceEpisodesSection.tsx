@@ -237,22 +237,23 @@ function OlderEpisodesItem({ link }: { link: TOlderEpisodesLink }) {
 }
 
 /**
- * An episode's own tags, read by its link with its other links along (the entry's `aliases`, such as
- * its feed item once `uri` names its page; deduped and capped as a card's spellings), as a card's
+ * An episode's own tags, on its link as every resource's (`getResourceTarget`: folded) with its other
+ * links read along (the entry's `aliases`, such as its feed item once `uri` names its page; deduped and
+ * capped as a card's spellings), as a card's
  * footer shows them (`ResourceTagBar`) but inline: the chips only, nothing for an episode nobody
  * tagged. The rows of a page mount together, so their reads go to Nexus as one `by_ids` batch (one
  * `by-uri` read per row on a Nexus without it).
  */
 function EpisodeTags({ uri, aliases, title }: { uri: string; aliases?: string[]; title: string }) {
-  const { spellings } = getResourceTarget({ uri, refs: [], aliases }, uri);
-  const resourceTags = useResourceTags(uri, { spellings });
+  const target = getResourceTarget({ uri, refs: [], aliases }, uri);
+  const resourceTags = useResourceTags(target.uri, { spellings: target.spellings });
   if (resourceTags.tags.length === 0) return null;
   return (
     <Container overrideDefaults className="pl-14 sm:mt-0.5 sm:max-w-1/2 sm:pl-0">
       <ResourceTagBar
         resourceTags={resourceTags}
         label={`Tags on ${title}`}
-        uri={uri}
+        uri={target.uri}
         isExpanded={false}
         isAdding={false}
         onAddingChange={() => undefined}

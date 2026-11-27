@@ -595,7 +595,7 @@ describe('useAddContentForm', () => {
       expect(result.current.form.getValues(ADD_CONTENT_FORM_FIELDS.POST_URL)).toBe('');
     });
 
-    it("writes the card's canonical link, with the link as written among its spellings", async () => {
+    it("writes the link as written, never the card's canonical link, which is read along", async () => {
       const canonical = 'https://www.youtube.com/watch?v=P65ZQL_m9zs&canonical';
       const shareLink = 'https://youtu.be/P65ZQL_m9zs';
       mocks.fetchCardByUri.mockResolvedValue({ uri: canonical, refs: [shareLink], aliases: [] });
@@ -605,13 +605,13 @@ describe('useAddContentForm', () => {
       expect(saved).toBe(true);
       expect(mocks.commitUpdateCollectionResource).toHaveBeenCalledWith({
         collectionId: COLLECTION_ID,
-        uri: canonical,
-        spellings: [YOUTUBE_URL, shareLink],
+        uri: YOUTUBE_URL,
+        spellings: [canonical, shareLink],
         shouldAdd: true,
       });
     });
 
-    it('hands a canonical link a collection cannot hold to the collection write with its spellings', async () => {
+    it('adds the web link as written for a card whose own link is an identifier, the identifier read along', async () => {
       const shareLink = 'https://youtu.be/P65ZQL_m9zs';
       mocks.fetchCardByUri.mockResolvedValue({
         uri: 'isbn:9781119473862',
@@ -622,22 +622,21 @@ describe('useAddContentForm', () => {
       const { saved } = await submitTo(collectionTarget, YOUTUBE_URL);
 
       expect(saved).toBe(true);
-      // `commitUpdateCollectionResource` writes the first spelling a collection can hold.
       expect(mocks.commitUpdateCollectionResource).toHaveBeenCalledWith({
         collectionId: COLLECTION_ID,
-        uri: 'isbn:9781119473862',
-        spellings: [YOUTUBE_URL, shareLink],
+        uri: YOUTUBE_URL,
+        spellings: ['isbn:9781119473862', shareLink],
         shouldAdd: true,
       });
     });
 
-    it('bookmarks the canonical link, whatever its scheme', async () => {
+    it('bookmarks a web link, never a card’s identifier', async () => {
       mocks.fetchCardByUri.mockResolvedValue({ uri: 'isbn:9781119473862', refs: [], aliases: [] });
 
       const { saved } = await submitTo({ type: 'bookmarks' }, YOUTUBE_URL);
 
       expect(saved).toBe(true);
-      expect(mocks.commitCreateResourceBookmark).toHaveBeenCalledWith({ uri: 'isbn:9781119473862', userId: VIEWER });
+      expect(mocks.commitCreateResourceBookmark).toHaveBeenCalledWith({ uri: YOUTUBE_URL, userId: VIEWER });
     });
 
     it('reports nothing saved when the link bookmark was skipped for a changed account', async () => {

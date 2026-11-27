@@ -426,6 +426,157 @@ describe('usePostInput', () => {
 
       expect(mockSetContent).toHaveBeenCalledWith(exactLimitText);
     });
+
+    describe('tracking parameters', () => {
+      const LINK = 'https://open.spotify.com/track/6LgJvl0Xdtc73RJ1mmpotq';
+      const nextFrame = () =>
+        act(async () => {
+          await new Promise((resolve) => requestAnimationFrame(() => resolve(undefined)));
+        });
+      const textareaWith = (value: string) => {
+        const textarea = document.createElement('textarea');
+        textarea.value = value;
+        document.body.appendChild(textarea);
+        return textarea;
+      };
+      afterEach(() => {
+        document.body.innerHTML = '';
+      });
+
+      it('drops them from a pasted link after the paste, the caret after the link', async () => {
+        const pasted = `Listen ${LINK}?si=4f1e2d3c&utm_source=copy now`;
+        const caret = pasted.length - ' now'.length;
+        mockContent = 'Listen  now';
+        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+        const textarea = textareaWith(pasted);
+        result.current.textareaRef.current = textarea;
+
+        act(() => {
+          result.current.handleChange(
+            asOpaque<React.ChangeEvent<HTMLTextAreaElement>>({ target: { value: pasted, selectionStart: caret } }),
+          );
+        });
+        expect(mockSetContent).toHaveBeenLastCalledWith(pasted);
+
+        await nextFrame();
+        expect(textarea.value).toBe(`Listen ${LINK} now`);
+        expect(textarea.selectionStart).toBe(`Listen ${LINK}`.length);
+        expect(mockSetContent).toHaveBeenLastCalledWith(`Listen ${LINK} now`);
+      });
+
+      it('keeps the word a link is pasted in front of', async () => {
+        const pasted = `see ${LINK}?si=XYZhere now`;
+        const caret = `see ${LINK}?si=XYZ`.length;
+        mockContent = 'see here now';
+        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+        const textarea = textareaWith(pasted);
+        result.current.textareaRef.current = textarea;
+
+        act(() => {
+          result.current.handleChange(
+            asOpaque<React.ChangeEvent<HTMLTextAreaElement>>({ target: { value: pasted, selectionStart: caret } }),
+          );
+        });
+        await nextFrame();
+
+        expect(textarea.value).toBe(pasted);
+        expect(mockSetContent).toHaveBeenLastCalledWith(pasted);
+      });
+
+      it('puts the caret after a cleaned link pasted inside closing punctuation', async () => {
+        const pasted = 'see (https://a.com/?utm_source=x.)';
+        const caret = 'see (https://a.com/?utm_source=x'.length;
+        mockContent = 'see (.)';
+        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+        const textarea = textareaWith(pasted);
+        result.current.textareaRef.current = textarea;
+
+        act(() => {
+          result.current.handleChange(
+            asOpaque<React.ChangeEvent<HTMLTextAreaElement>>({ target: { value: pasted, selectionStart: caret } }),
+          );
+        });
+        await nextFrame();
+
+        expect(textarea.value).toBe('see (https://a.com/.)');
+        expect(textarea.selectionStart).toBe('see (https://a.com/'.length);
+      });
+
+      it('replaces the link through execCommand so one undo brings it back', async () => {
+        const pasted = `${LINK}?si=4f1e2d3c`;
+        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+        const textarea = textareaWith(pasted);
+        const setSelectionRange = vi.spyOn(textarea, 'setSelectionRange');
+        result.current.textareaRef.current = textarea;
+        const doc = document as typeof document & {
+          execCommand?: (cmd: string, ui?: boolean, value?: string) => boolean;
+        };
+        const original = doc.execCommand;
+        const execCommand = vi.fn().mockReturnValue(true);
+        doc.execCommand = execCommand;
+
+        try {
+          act(() => {
+            result.current.handleChange(
+              asOpaque<React.ChangeEvent<HTMLTextAreaElement>>({
+                target: { value: pasted, selectionStart: pasted.length },
+              }),
+            );
+          });
+          await nextFrame();
+
+          expect(setSelectionRange).toHaveBeenCalledWith(0, pasted.length);
+          expect(execCommand).toHaveBeenCalledWith('insertText', false, LINK);
+        } finally {
+          if (original === undefined) {
+            Reflect.deleteProperty(doc, 'execCommand');
+          } else {
+            doc.execCommand = original;
+          }
+        }
+      });
+
+      it('keeps a link being typed until a space ends it', async () => {
+        const typed = 'https://example.com/a?utm_source=x';
+        mockContent = typed.slice(0, -1);
+        const { result, rerender } = renderHook(() => usePostInput({ variant: 'post' }));
+
+        act(() => {
+          result.current.handleChange(asOpaque<React.ChangeEvent<HTMLTextAreaElement>>({ target: { value: typed } }));
+        });
+        await nextFrame();
+        expect(mockSetContent).toHaveBeenLastCalledWith(typed);
+
+        mockContent = typed;
+        rerender();
+        act(() => {
+          result.current.handleChange(
+            asOpaque<React.ChangeEvent<HTMLTextAreaElement>>({ target: { value: `${typed} ` } }),
+          );
+        });
+        await nextFrame();
+        expect(mockSetContent).toHaveBeenLastCalledWith('https://example.com/a ');
+      });
+
+      it('leaves the text alone when it changed again before the frame', async () => {
+        const pasted = `${LINK}?si=4f1e2d3c`;
+        const { result } = renderHook(() => usePostInput({ variant: 'post' }));
+        const textarea = textareaWith(`${pasted}x`);
+        result.current.textareaRef.current = textarea;
+
+        act(() => {
+          result.current.handleChange(
+            asOpaque<React.ChangeEvent<HTMLTextAreaElement>>({
+              target: { value: pasted, selectionStart: pasted.length },
+            }),
+          );
+        });
+        await nextFrame();
+
+        expect(textarea.value).toBe(`${pasted}x`);
+        expect(mockSetContent).toHaveBeenLastCalledWith(pasted);
+      });
+    });
   });
 
   describe('handleSubmit', () => {

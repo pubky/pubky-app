@@ -244,7 +244,8 @@ const QUOTED = `${QUOTED_AUTHOR}:0034QUOTED001`;
 const BURIED = `${OUTER_AUTHOR}:0034BURIED001`;
 const LINKED = `${QUOTED_AUTHOR}:0034LINKED001`;
 
-// Each resource is written as an alias: its tags, replies and saves go to the card's canonical link.
+// Each resource is written as an alias: its tags, replies and saves go to the link as written, never the card's
+// canonical link.
 const VIDEO_WRITTEN = 'https://youtu.be/dQw4w9WgXcQ';
 const VIDEO_CARD: TPinakesResourceDetail = {
   ...videoFixture,
@@ -406,7 +407,7 @@ describe('PostLinkEmbeds - an external resource inside a post preview (integrati
 
   describe('outer post → quoted post → external resource', () => {
     it.each(RESOURCES)(
-      'keeps the full resource frame with its own footer on the canonical link for $name',
+      'keeps the full resource frame with its own footer on the link as written for $name',
       ({ written, card, frames }) => {
         givenQuoteOfResource(written, card);
         show(<PostContent postId={OUTER} />);
@@ -417,7 +418,7 @@ describe('PostLinkEmbeds - an external resource inside a post preview (integrati
         // The footer belongs to the resource's own frame, not to the quote or the outer post
         expect(within(frame).getByTestId('resource-actions')).toBeInTheDocument();
         expect(within(frame).getByTestId('resource-tag-bar')).toBeInTheDocument();
-        expect(new Set(mocks.tagUris)).toEqual(new Set([card.uri]));
+        expect(new Set(mocks.tagUris)).toEqual(new Set([written]));
         expect(card.uri).not.toBe(written);
         expectNoPostTargets();
         // The quoted post has its own footer, on its own id, outside the resource's frame
@@ -450,7 +451,7 @@ describe('PostLinkEmbeds - an external resource inside a post preview (integrati
       const resource = resourceIn(quoteCard());
       const input = await addResourceTag(resource, 'punk');
 
-      expect(mocks.tagUris.at(-1)).toBe(card.uri);
+      expect(mocks.tagUris.at(-1)).toBe(written);
       // Neither the "+" click nor Enter in the input reaches the quote's click/keyboard navigation
       expect(mocks.navigateToPost).not.toHaveBeenCalled();
       expect(mocks.routerPush).not.toHaveBeenCalled();
@@ -575,7 +576,7 @@ describe('PostLinkEmbeds - an external resource inside a post preview (integrati
 
         const input = await addResourceTag(resource, 'punk');
 
-        expect(mocks.tagUris.at(-1)).toBe(card.uri);
+        expect(mocks.tagUris.at(-1)).toBe(written);
         expectNoPostTargets();
         expect(PostController.commitCreate).not.toHaveBeenCalled();
         expect(mocks.navigateToPost).not.toHaveBeenCalled();
@@ -590,7 +591,7 @@ describe('PostLinkEmbeds - an external resource inside a post preview (integrati
 
   describe('the Reply dialog of an external resource', () => {
     it.each(RESOURCES)(
-      'shows $name with its footer, tags it on its canonical link, and opens no other composer',
+      'shows $name with its footer, tags it on the link as written, and opens no other composer',
       async ({ written, card }) => {
         mocks.cards.set(written, card);
         show(<DialogReply resourceUri={written} open onOpenChangeAction={vi.fn()} />);
@@ -602,7 +603,7 @@ describe('PostLinkEmbeds - an external resource inside a post preview (integrati
 
         const input = await addResourceTag(resource, 'punk');
 
-        expect(mocks.tagUris.at(-1)).toBe(card.uri);
+        expect(mocks.tagUris.at(-1)).toBe(written);
         expectNoPostTargets();
         expect(PostController.commitCreate).not.toHaveBeenCalled();
         expect(mocks.routerPush).not.toHaveBeenCalled();
@@ -620,7 +621,7 @@ describe('PostLinkEmbeds - an external resource inside a post preview (integrati
       const { container } = show(<PostContent postId={QUOTED} />);
       expect(document.querySelectorAll('[data-cy="post-preview-card"]')).toHaveLength(0);
       await addResourceTag(resourceIn(container), 'punk');
-      expect(new Set(mocks.tagUris)).toEqual(new Set([card.uri]));
+      expect(new Set(mocks.tagUris)).toEqual(new Set([written]));
       expect(mocks.navigateToPost).not.toHaveBeenCalled();
     });
 
@@ -634,7 +635,7 @@ describe('PostLinkEmbeds - an external resource inside a post preview (integrati
       const resource = resourceIn(screen.getByTestId('collection-resource-items'));
       expect(within(resource).getByTestId('resource-actions')).toBeInTheDocument();
       await addResourceTag(resource, 'punk');
-      expect(new Set(mocks.tagUris)).toEqual(new Set([card.uri]));
+      expect(new Set(mocks.tagUris)).toEqual(new Set([written]));
       expect(mocks.routerPush).not.toHaveBeenCalled();
       expect(iframes()).toHaveLength(frames);
     });
@@ -667,7 +668,7 @@ describe('PostLinkEmbeds - an external resource inside a post preview (integrati
     ]);
 
     it.each(composers)(
-      'tags $name in $composer on its canonical link, keeping the draft, its embed and focus',
+      'tags $name in $composer on the link as written, keeping the draft, its embed and focus',
       async ({ written, card, ui, type }) => {
         mocks.cards.set(written, card);
         show(ui);
@@ -682,7 +683,7 @@ describe('PostLinkEmbeds - an external resource inside a post preview (integrati
 
         const input = await addResourceTag(resource, 'punk');
 
-        expect(mocks.tagUris.at(-1)).toBe(card.uri);
+        expect(mocks.tagUris.at(-1)).toBe(written);
         expectNoPostTargets();
         expect(PostController.commitCreate).not.toHaveBeenCalled();
         expect(PostController.commitEdit).not.toHaveBeenCalled();

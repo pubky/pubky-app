@@ -148,6 +148,17 @@ describe('ResourceEpisodesSection', () => {
     expect(mocks.tagSpellings['https://lexfridman.com/episode-503/']).toEqual([]);
   });
 
+  it('reads and writes an episode’s tags on its link folded as every resource’s, its spelling read along', async () => {
+    const written = 'HTTPS://LexFridman.com/episode-505/#t';
+    mocks.fetchEpisodes.mockResolvedValueOnce({ items: [{ ...episode(505), uri: written }], next_offset: null });
+    render(<ResourceEpisodesSection card={SHOW} />);
+
+    await waitFor(() => expect(items()).toHaveLength(1));
+    expect(mocks.tagReads).toContain('https://lexfridman.com/episode-505/');
+    expect(mocks.tagReads).not.toContain(written);
+    expect(mocks.tagSpellings['https://lexfridman.com/episode-505/']).toEqual([written]);
+  });
+
   it('plays an episode in place on Play, its title still opening the episode’s page', async () => {
     mocks.fetchEpisodes.mockResolvedValueOnce({ items: [episode(504)], next_offset: null });
     const before = window.location.href;

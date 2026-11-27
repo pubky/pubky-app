@@ -26,7 +26,7 @@ interface UseResourceCountsOptions {
  *
  * Network only (ADR-0011): the counts live in the Nexus query cache, shared by every reader.
  *
- * @param uri - The link exactly as written, or the card's canonical link; `null` reads nothing
+ * @param uri - The link `getResourceTarget` picks (the link as written, folded), or a link exactly as written; `null` reads nothing
  */
 export function useResourceCounts(
   uri: string | null,

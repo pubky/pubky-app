@@ -2,7 +2,7 @@
 
 import { type ReactNode, useEffect, useId, useRef, useState } from 'react';
 import { pauseMedia, tellsWhenPlaying } from '@/libs/utils/mediaPlayback';
-import { getResourceStatus, getResourceTarget, playsInCard } from '@/molecules/ResourceCard/ResourceCard.utils';
+import { getResourceStatus, playsInCard } from '@/molecules/ResourceCard/ResourceCard.utils';
 import { getResourceSummary } from '@/molecules/ResourceCard/ResourceFacts.utils';
 import type { PostActionSurface } from '@/organisms/PostActionsBar/PostActionButton';
 import { PinakesStatus, type TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
@@ -119,7 +119,7 @@ export function useCardPlayer(
   const hosted = usePlayerHost() !== null && !preview;
   const player = useResourcePlayer(owner, targets, { hosted });
   if (!card || targets.length === 0) return {};
-  const pagePlayer = hosted ? { owner, resource: getResourceTarget(card, href ?? card.uri).uri } : undefined;
+  const pagePlayer = hosted ? { owner, resource: card.uri } : undefined;
 
   const title = card.name?.trim() || href || card.uri;
   // Another resource starts over: nothing picked; a generic link's card, else the Players order

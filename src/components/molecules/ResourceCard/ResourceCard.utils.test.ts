@@ -580,31 +580,194 @@ describe('getResourceTarget', () => {
   const TIDAL = 'https://tidal.com/track/3524506';
   const SHARE = `${TIDAL}/u`;
 
-  it('acts on the card’s canonical link, with the written link, refs and aliases as spellings, each once', () => {
+  it('acts on the link as written, the card’s own link read along first, each spelling once', () => {
     expect(getResourceTarget({ uri: TIDAL, refs: [SHARE], aliases: [SHARE] }, SHARE)).toEqual({
-      uri: TIDAL,
-      spellings: [SHARE],
+      uri: SHARE,
+      spellings: [TIDAL],
     });
     expect(
       getResourceTarget(
         { uri: TIDAL, refs: [TIDAL, `${TIDAL}/`], aliases: [SHARE] },
         'https://www.tidal.com/track/3524506',
       ),
-    ).toEqual({ uri: TIDAL, spellings: ['https://www.tidal.com/track/3524506', `${TIDAL}/`, SHARE] });
+    ).toEqual({ uri: 'https://www.tidal.com/track/3524506', spellings: [TIDAL, `${TIDAL}/`, SHARE] });
+    expect(getResourceTarget({ uri: TIDAL, refs: [SHARE] }, TIDAL)).toEqual({ uri: TIDAL, spellings: [SHARE] });
   });
 
-  it('keeps the link as written when the canonical link is not one the app writes', () => {
-    expect(getResourceTarget({ uri: 'pubky://someone/pub/x', refs: [SHARE] }, SHARE)).toEqual({
-      uri: SHARE,
-      spellings: [],
+  it('never acts on the card’s own web link in place of the link as written', () => {
+    // Pinakes may have the card's link from a fetch (`rel=canonical`, a redirect).
+    const short = 'https://short.example/x';
+    const card = { uri: 'https://example.com/canonical', refs: [short] };
+    expect(getResourceTarget(card, short)).toEqual({ uri: short, spellings: ['https://example.com/canonical'] });
+  });
+
+  it('folds the link as written the way every writer stores it, its own spelling read along', () => {
+    const card = { uri: 'https://Example.COM/a', refs: [] };
+    expect(getResourceTarget(card, 'HTTPS://Example.com:443/a#top')).toEqual({
+      uri: 'https://example.com/a',
+      spellings: ['https://Example.COM/a', 'HTTPS://Example.com:443/a#top'],
     });
-    // An identifier scheme the app writes (`isbn:`) stays the canonical link.
-    expect(getResourceTarget({ uri: 'isbn:9780140328721', refs: [] }, SHARE).uri).toBe('isbn:9780140328721');
+    expect(getResourceTarget(null, ' https://Example.com/a#top ')).toEqual({
+      uri: 'https://example.com/a',
+      spellings: [' https://Example.com/a#top '],
+    });
+  });
+
+  it('writes a link with credentials without them, and never reads one along', () => {
+    const link = 'https://user:pw@example.com/b';
+    expect(getResourceTarget(null, link)).toEqual({ uri: 'https://example.com/b', spellings: [] });
+    expect(getResourceTarget({ uri: TIDAL, refs: [`https://u@${TIDAL.slice(8)}`] }, link)).toEqual({
+      uri: 'https://example.com/b',
+      spellings: [TIDAL],
+    });
+  });
+
+  it('acts on the same link whether a Pinakes answered or not, and whichever did', () => {
+    const links = [SHARE, 'https://Example.com:443/a?utm_source=x#top', 'https://user:pw@example.com/b'];
+    const cards = [
+      { uri: TIDAL, refs: [SHARE] },
+      { uri: 'https://example.com/a', refs: [], open_in: [{ client: 'web', url: 'https://example.com/page' }] },
+      { uri: 'isbn:9780140328721', refs: ['https://openlibrary.org/isbn/9780140328721'] },
+      { uri: 'pubky://someone/pub/app.example/decks/1', refs: [] },
+    ];
+    for (const link of links) {
+      const { uri } = getResourceTarget(null, link);
+      for (const card of cards) expect(getResourceTarget(card, link).uri).toBe(uri);
+    }
+    // The tracking parameters Pinakes lists are dropped; the rest of the query stays.
+    expect(getResourceTarget(null, links[1]).uri).toBe('https://example.com/a');
+    // Credentials are never written.
+    expect(getResourceTarget(null, links[2]).uri).toBe('https://example.com/b');
+  });
+
+  describe('with no web link as written (a search row of an identifier, its own page)', () => {
+    const BLOCK = 'btc:block/000000000000000000012345';
+    const MEMPOOL = 'https://mempool.space/block/000000000000000000012345';
+    const ISBN = 'isbn:9780140328721';
+    const BOOK = 'https://openlibrary.org/isbn/9780140328721';
+    // An identifier the app could write that has no page (`getIdentifierPage`).
+    const URN = 'urn:x-test:1';
+
+    it('acts on the link as written when it is a web link, the card’s identifier read along first', () => {
+      expect(getResourceTarget({ uri: BLOCK, refs: ['https://blockstream.info/block/1', MEMPOOL] }, MEMPOOL)).toEqual({
+        uri: MEMPOOL,
+        spellings: [BLOCK, 'https://blockstream.info/block/1'],
+      });
+      // An identifier the app could write (`isbn:`) gives way to the web link too; its old tags are read along.
+      expect(getResourceTarget({ uri: ISBN, refs: [] }, BOOK)).toEqual({ uri: BOOK, spellings: [ISBN] });
+    });
+
+    it('acts on the card’s own web link, else the first web link people wrote, else the page Pinakes gives', () => {
+      expect(getResourceTarget({ uri: BOOK, refs: [MEMPOOL] }, ISBN)).toEqual({
+        uri: BOOK,
+        spellings: [ISBN, MEMPOOL],
+      });
+      const open_in = [{ client: 'wikidata', url: 'https://www.wikidata.org/wiki/Q42' }];
+      // The page was the target before anyone wrote a web link: it is read along, after the card's own link.
+      expect(getResourceTarget({ uri: ISBN, refs: ['doi:10.1/x', BOOK], open_in }, ISBN)).toEqual({
+        uri: BOOK,
+        spellings: [ISBN, 'https://www.wikidata.org/wiki/Q42', 'doi:10.1/x'],
+      });
+      // A catalogue card nobody wrote a link for yet: its page.
+      expect(getResourceTarget({ uri: 'wikidata:Q42', refs: [], open_in }, 'wikidata:Q42')).toEqual({
+        uri: 'https://www.wikidata.org/wiki/Q42',
+        spellings: ['wikidata:Q42'],
+      });
+    });
+
+    it('writes a web link of the card folded: no credentials, no spaces, no tracking', () => {
+      const refs = ['https://user:pw@Example.com/a?utm_source=x', ' https://example.com/b'];
+      expect(getResourceTarget({ uri: URN, refs }, URN).uri).toBe('https://example.com/a');
+      expect(getResourceTarget({ uri: URN, refs: refs.slice(1) }, URN).uri).toBe('https://example.com/b');
+      expect(getResourceTarget({ uri: URN, refs: ['https://exam ple.com/c'] }, URN).uri).toBe(URN);
+    });
+
+    it('writes any link the fold takes as folded, card or not, even one a browser would not open', () => {
+      const odd = 'https://Example.com:8x/a#top';
+      expect(getResourceTarget(null, odd).uri).toBe('https://example.com:8x/a');
+      expect(getResourceTarget({ uri: ISBN, refs: [BOOK] }, odd).uri).toBe('https://example.com:8x/a');
+      // A web link of the card, picked when the user had none, is one a browser opens.
+      expect(getResourceTarget({ uri: ISBN, refs: [odd, BOOK] }, ISBN).uri).toBe(BOOK);
+      // With none, still folded.
+      expect(getResourceTarget({ uri: odd, refs: [] }, ISBN).uri).toBe('https://example.com:8x/a');
+    });
+
+    it('acts on the card’s link when nothing of it is on the web, else on the link as written', () => {
+      expect(getResourceTarget({ uri: URN, refs: [], open_in: [] }, URN)).toEqual({ uri: URN, spellings: [] });
+      expect(getResourceTarget({ uri: URN, refs: ['doi:10.1/x'] }, 'doi:10.1/x')).toEqual({
+        uri: URN,
+        spellings: ['doi:10.1/x'],
+      });
+      // `btc:` is no link the app writes: the link as written when it is one.
+      expect(getResourceTarget({ uri: BLOCK, refs: [] }, ISBN).uri).toBe(ISBN);
+    });
+
+    it('acts on the identifier’s page Pinakes publishes, whichever Pinakes answered', () => {
+      const open_in = [{ client: 'web', url: 'https://openlibrary.org/books/OL7353617M' }];
+      expect(getResourceTarget({ uri: ISBN, refs: ['https://example.com/a'], open_in }, ISBN)).toEqual({
+        uri: BOOK,
+        spellings: [ISBN, 'https://openlibrary.org/books/OL7353617M', 'https://example.com/a'],
+      });
+      expect(getResourceTarget({ uri: ISBN, refs: [] }, ISBN).uri).toBe(BOOK);
+      const tx = 'a1075db55d416d3ca199f55b6084e2115b9345e16c5cf302fc80e9d5fbf5d48d';
+      expect(
+        getResourceTarget({ uri: `btc:tx/${tx}`, refs: [`https://blockstream.info/tx/${tx}`] }, `btc:tx/${tx}`).uri,
+      ).toBe(`https://mempool.space/tx/${tx}`);
+      expect(
+        getResourceTarget(
+          { uri: 'wikidata:Q42', refs: ['https://en.wikipedia.org/wiki/Douglas_Adams'] },
+          'wikidata:Q42',
+        ).uri,
+      ).toBe('https://www.wikidata.org/wiki/Q42');
+    });
+
+    it('keeps the card’s web links for an identifier with no page (mbid:, imdb:, barcodes, podcast keys)', () => {
+      const mbid = 'mbid:b1a9c0e9-d987-4042-ae91-78d6a3267d69';
+      const recording = 'https://musicbrainz.org/recording/b1a9c0e9-d987-4042-ae91-78d6a3267d69';
+      expect(getResourceTarget({ uri: mbid, refs: [recording] }, mbid).uri).toBe(recording);
+      const open_in = [{ client: 'web', url: 'https://www.imdb.com/title/tt0111161/' }];
+      expect(getResourceTarget({ uri: 'imdb:tt0111161', refs: [], open_in }, 'imdb:tt0111161').uri).toBe(
+        'https://www.imdb.com/title/tt0111161/',
+      );
+    });
+
+    it('keeps a Pubky object on its own address, unless the link as written is a web link', () => {
+      const open_in = [{ client: 'app', url: 'https://app.example/deck/1' }];
+      const deck = { uri: 'pubky://someone/pub/app.example/decks/1', refs: [SHARE], open_in };
+      expect(getResourceTarget(deck, deck.uri)).toEqual({ uri: deck.uri, spellings: [SHARE] });
+      expect(getResourceTarget(deck, SHARE)).toEqual({ uri: SHARE, spellings: [deck.uri] });
+    });
+
+    it('reads the card’s link first within MAX_LINK_SPELLINGS', () => {
+      const refs = Array.from({ length: MAX_LINK_SPELLINGS + 5 }, (_, index) => `${MEMPOOL}?s=${index}`);
+      const { spellings } = getResourceTarget({ uri: BLOCK, refs }, MEMPOOL);
+      expect(spellings).toHaveLength(MAX_LINK_SPELLINGS);
+      expect(spellings[0]).toBe(BLOCK);
+    });
   });
 
   it('acts on the link as written without a card', () => {
     expect(getResourceTarget(null, SHARE)).toEqual({ uri: SHARE, spellings: [] });
     expect(getResourceTarget(undefined, SHARE)).toEqual({ uri: SHARE, spellings: [] });
+    // An identifier as written acts on its page, as with a card.
+    expect(getResourceTarget(null, 'isbn:9780140328721')).toEqual({
+      uri: 'https://openlibrary.org/isbn/9780140328721',
+      spellings: ['isbn:9780140328721'],
+    });
+    expect(getResourceTarget(null, 'urn:x-test:1')).toEqual({ uri: 'urn:x-test:1', spellings: [] });
+  });
+
+  it('writes a link without its tracking parameters, the link as written read along', () => {
+    const tracked = `${TIDAL}?utm_source=share&u=1`;
+    expect(getResourceTarget({ uri: TIDAL, refs: [] }, tracked)).toEqual({
+      uri: `${TIDAL}?u=1`,
+      spellings: [TIDAL, tracked],
+    });
+    const spotify = 'https://open.spotify.com/track/6LgJvl0Xdtc73RJ1mmpotq';
+    expect(getResourceTarget(null, `${spotify}?si=4f1e2d3c`)).toEqual({
+      uri: spotify,
+      spellings: [`${spotify}?si=4f1e2d3c`],
+    });
   });
 
   it('reads at most MAX_LINK_SPELLINGS other spellings', () => {

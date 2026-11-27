@@ -27,8 +27,8 @@ interface ResourceInstanceCardProps {
  * (its own name, dates and lifecycle) and stays a row of its own.
  *
  * The card is the item itself, on the post card's surface, closed by a post's footer as every
- * resource card is (`ResourceActions`): its tags, actions and counts are on the card's link with
- * the links people wrote for it read along (`getResourceTarget`), which for an occurrence is the
+ * resource card is (`ResourceActions`): its tags, actions and counts are on the card's link to act on
+ * with the links people wrote for it read along (`getResourceTarget`), which for an occurrence is the
  * calendar people tagged. The tags on the row's other links join its own, as on a feed's card (`card`);
  * its title opens the resource's page.
  */
@@ -36,7 +36,8 @@ export function ResourceInstanceCard({ card, 'data-testid': testId }: ResourceIn
   const { ref, isVisible } = useViewportObserver({ rootMargin: '0px' });
   // The first web link people wrote for it, as a search row's link is
   const written = getResourceSearchRowUri(card);
-  const target = getResourceTarget(card, written);
+  // A search row is no link the viewer had: the card's own, a web link of it for an identifier.
+  const target = getResourceTarget(card, card.uri);
   return (
     <Container overrideDefaults ref={ref} className="@container/grid min-w-0" data-testid={testId}>
       <ResourceSurfaceProvider surface="card">

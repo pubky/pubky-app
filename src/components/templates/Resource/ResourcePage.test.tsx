@@ -280,16 +280,16 @@ describe('ResourcePage', () => {
     expect(screen.getByTestId('resource-details-stub')).toBeInTheDocument();
   });
 
-  it('reads the thread on the card’s canonical link, with the page’s link and the card’s other spellings', () => {
+  it('reads the thread on the page’s link, with the card’s canonical link and its other spellings', () => {
     const share = 'https://youtu.be/dQw4w9WgXcQ';
     mockCard.mockReturnValue({ data: { ...VIDEO, refs: [share] }, isLoading: false, isError: false });
     render(<ResourcePage uri={share} />);
 
-    expect(mocks.repliesUri).toBe(VIDEO.uri);
-    expect(mocks.repliesSpellings).toEqual([share]);
+    expect(mocks.repliesUri).toBe(share);
+    expect(mocks.repliesSpellings).toEqual([VIDEO.uri]);
     const drawer = within(screen.getByTestId('right-drawer')).getByTestId('resource-sidebar-stub');
-    expect(drawer).toHaveAttribute('data-people', VIDEO.uri);
-    expect(drawer).toHaveAttribute('data-spellings', share);
+    expect(drawer).toHaveAttribute('data-people', share);
+    expect(drawer).toHaveAttribute('data-spellings', VIDEO.uri);
   });
 
   it('names the tab after the resource, and gives the route’s title back on leaving', () => {

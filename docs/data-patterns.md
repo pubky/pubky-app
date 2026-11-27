@@ -450,10 +450,19 @@ where the copies can be found (ADR-0014, ADR-0020):
 
 **External resources (web links).** A social v1 Tag `uri`, Bookmark target and CollectionItem `uri` may be any scheme,
 so an external resource card writes them against the link, without a local row (no Dexie table holds web links).
-The link is the card's (`getResourceTarget`): Pinakes' canonical `uri` once it knows the link, else the link as
-written. Nexus keeps every spelling of a link apart, so the link as written and the card's `refs` and `aliases`
-(at most 5) are read along and shown as one; new writes go to the canonical link, and a removal (tag, bookmark,
-collection item) goes to every spelling holding it.
+The link is the one `getResourceTarget` picks, the same whether a Pinakes answered or not: the link as the user
+had it (a post's link, a pasted link), folded the way every writer stores it and without the query parameters
+Pinakes drops as tracking; for an item without one (a search row of an identifier, its page), the identifier's page
+as Pinakes publishes it; for an identifier with no page (`mbid:`, `imdb:`, barcodes, podcast keys), a web link of
+the card (its own, the first one people wrote, its `open_in` page). The tracking parameters and the pages are
+Pinakes' published lists (`data/spellings.json` in pubky/pinakes), built into the app as
+`src/libs/post/linkRules.data.json`: regenerate it with `node scripts/pinakes-link-rules.mjs <commit>
+<spelling_rules>` when Pinakes publishes a new version. The composer drops those parameters from a link once it is
+pasted or a space ends it, as one undoable edit, and from a prefilled text (share target, "Post about this link");
+"Add Post" drops them from the link it adds. An article's body is posted as written. Nexus keeps every spelling of
+a link apart, so the card's `uri`, the link as written and the card's `refs` and `aliases` (at most 5) are read
+along and shown as one; new writes go to the picked link, and a removal (tag, bookmark, collection item) goes to
+every spelling holding it.
 
 - Tag: `TagController.commitCreateResource` / `commitDeleteResource` → `buildTag(viewer, link, label)` →
   `putBlob`, or one DELETE of the viewer's own Nexus `tag_uri` (else the built file, whose id hashes link and
