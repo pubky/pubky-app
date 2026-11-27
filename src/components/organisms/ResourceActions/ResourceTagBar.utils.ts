@@ -1,8 +1,31 @@
 import type { TMergedTag, TOtherLink } from '@/hooks/useOtherLinkTags/useOtherLinkTags.types';
+import { canonicalizeTagLabel, isValidTagLabel } from '@/libs/utils/utils';
 import type { NexusTag } from '@/services/nexus/nexus.types';
 
 /** Tags only on the same thing's other links shown at most, as many as the link's own tag bar asks for. */
 export const MAX_OTHER_TAGS = 20;
+
+/** Suggested tags (a catalogue's labels for the card) shown at most, once the tags are expanded. */
+export const MAX_SUGGESTED_TAGS = 10;
+
+/**
+ * The suggested tags of a card: its catalogue's labels (Pinakes `labels`) as the tags they would be
+ * written as (`canonicalizeTagLabel`), each once, in Pinakes' order, without the labels a chip of the
+ * bar shows (`taken`: its own tags, and the other services' it lists) and any that is no valid tag label.
+ */
+export function getSuggestedTags(labels: readonly string[] | null | undefined, taken: readonly string[]): string[] {
+  const shown = new Set(taken.map(canonicalizeTagLabel));
+  const suggestions: string[] = [];
+  for (const raw of labels ?? []) {
+    if (suggestions.length === MAX_SUGGESTED_TAGS) break;
+    if (typeof raw !== 'string') continue;
+    const label = canonicalizeTagLabel(raw);
+    if (!isValidTagLabel(label) || shown.has(label)) continue;
+    shown.add(label);
+    suggestions.push(label);
+  }
+  return suggestions;
+}
 
 /** Someone in a tag's detail, with the same thing's other links they put the tag on. */
 export interface TTagPerson {

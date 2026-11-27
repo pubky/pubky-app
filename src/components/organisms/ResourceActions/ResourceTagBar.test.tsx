@@ -1,11 +1,11 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest';
 import type { TMergedTag } from '@/hooks/useOtherLinkTags/useOtherLinkTags.types';
 import type { TagWithAvatars } from '@/molecules/TaggedItem/TaggedItem.types';
 import type { NexusTag } from '@/services/nexus/nexus.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
-import { ResourceTagBar } from './ResourceTagBar';
+import { ResourceTagBar, SUGGESTION_PRESS_GUARD_MS } from './ResourceTagBar';
 import { MAX_OTHER_TAGS } from './ResourceTagBar.utils';
 
 const LABEL = 'Tags on this city';
@@ -22,10 +22,12 @@ const mocks = vi.hoisted(() => ({
     onClose?: () => void;
   }[],
   tags: [] as NexusTag[],
+  isLoading: false,
   addTag: vi.fn(),
   toggleTag: vi.fn(),
   onAddingChange: vi.fn(),
   enrichedInputs: [] as unknown[][],
+  rowButton: vi.fn(),
 }));
 
 vi.mock('@/hooks/useRequireAuth/useRequireAuth', () => ({
@@ -71,6 +73,15 @@ vi.mock('@/molecules/TaggedList/TaggedList', () => ({
             {tag.label}
             {tag.taggers_count}
           </button>
+          {/* A row's other controls, as its tag search link */}
+          <a
+            href={`/search?tags=${tag.label}`}
+            aria-label={`Search ${tag.label}`}
+            onClick={(event) => {
+              event.preventDefault();
+              mocks.rowButton(tag.label);
+            }}
+          />
           {renderExpandedTaggers?.(tag)}
         </div>
       ))}
@@ -158,13 +169,13 @@ function TagBar({
   ...other
 }: { isExpanded?: boolean; isAdding?: boolean } & Pick<
   React.ComponentProps<typeof ResourceTagBar>,
-  'otherTags' | 'uri' | 'scope' | 'control' | 'inline'
+  'otherTags' | 'uri' | 'scope' | 'control' | 'inline' | 'suggestedLabels'
 >) {
   return (
     <ResourceTagBar
       resourceTags={{
         tags: mocks.tags,
-        isLoading: false,
+        isLoading: mocks.isLoading,
         isError: false,
         isAtReadLimit: false,
         addTag: mocks.addTag,
@@ -213,6 +224,7 @@ describe('ResourceTagBar', () => {
     mocks.signInRequests = 0;
     mocks.inputProps = [];
     mocks.tags = NEXUS_TAGS;
+    mocks.isLoading = false;
     mocks.addTag.mockResolvedValue({ success: true });
   });
 
@@ -839,6 +851,215 @@ describe('ResourceTagBar', () => {
       const [capital] = secondaryChips();
       expect(capital).toHaveAccessibleName('capital, 0 here, 2 on this date and other services, add it here');
       expect(capital).toHaveAttribute('title', 'On this date');
+    });
+  });
+
+  describe('suggested tags (a catalogue card’s labels)', () => {
+    // A Wikidata card nobody shared (Pinakes search row: `refs: []`, `labels` from the catalogue)
+    const LABELS = ['science-fiction', 'humourist', 'writer'];
+    const suggestedChips = () => screen.queryAllByTestId('resource-suggested-tag');
+
+    it('offers the labels as suggested chips, "tag +" in the look of a tag not here yet, then "+"', () => {
+      mocks.tags = [];
+      render(<TagBar suggestedLabels={LABELS} />);
+
+      expect(chipLabels()).toEqual(LABELS.map((suggestion) => `${suggestion}+`));
+      const [first] = suggestedChips();
+      expect(first).toHaveAttribute('data-variant', 'suggested');
+      expect(first.style.border).toBe('1px dashed var(--tag-edge)');
+      expect(first.style.backgroundColor).toBe('color-mix(in oklab, var(--tag-edge) 12%, transparent)');
+      expect(within(first).queryByTestId('tag-count')).not.toBeInTheDocument();
+      expect(within(first).getByTestId('tag-suggested-mark')).toHaveTextContent('+');
+      expect(first).toHaveAccessibleName('science-fiction, suggested tag, add it here');
+      expect(screen.getByRole('button', { name: 'Add new tag' })).toBeInTheDocument();
+    });
+
+    it('puts them after the people’s tags, in the places the tags leave free', () => {
+      mocks.tags = NEXUS_TAGS.slice(2);
+      render(<TagBar suggestedLabels={LABELS} />);
+
+      expect(chipLabels()).toEqual(['city1', 'science-fiction+', 'humourist+']);
+    });
+
+    it('shows none while the tags fill the budget', () => {
+      mocks.tags = MANY_TAGS;
+      render(<TagBar suggestedLabels={LABELS} />);
+
+      expect(chipLabels()).toEqual(['music1', '80s1', 'rickroll1']);
+      expect(suggestedChips()).toHaveLength(0);
+    });
+
+    it('leaves out a label a chip already shows, here or on another service, and invalid ones', () => {
+      mocks.tags = TWO_TAGS;
+      render(
+        <TagBar
+          isExpanded
+          otherTags={OTHER_TAGS.slice(1, 2)}
+          uri={LINK}
+          suggestedLabels={['Travel', 'capital', 'has space', 'europe', 'europe']}
+        />,
+      );
+
+      expect(suggestedChips().map((chip) => chip.textContent)).toEqual(['europe+']);
+    });
+
+    it('lists every suggestion under the tags once expanded, in a group named only for screen readers', async () => {
+      mocks.tags = NEXUS_TAGS.slice(2);
+      render(<TagBar isExpanded suggestedLabels={LABELS} />);
+
+      const group = await screen.findByRole('group', { name: 'Suggested tags' });
+      expect(
+        within(group)
+          .getAllByRole('button')
+          .map((chip) => chip.textContent),
+      ).toEqual(LABELS.map((suggestion) => `${suggestion}+`));
+      expect(screen.getByTestId('resource-tag-bar')).not.toHaveTextContent('Suggested');
+    });
+
+    it('adds the viewer’s tag on a press, the input’s write; then it is their chip, no longer a suggestion', () => {
+      mocks.tags = [];
+      const { rerender } = render(<TagBar suggestedLabels={LABELS} />);
+
+      fireEvent.click(screen.getByText('humourist'));
+      expect(mocks.addTag).toHaveBeenCalledWith('humourist');
+      expect(mocks.toggleTag).not.toHaveBeenCalled();
+
+      // The write's optimistic state: the viewer's tag on the link
+      mocks.tags = [{ label: 'humourist', taggers: ['viewer'], taggers_count: 1, relationship: true, tag_uri: null }];
+      rerender(<TagBar suggestedLabels={LABELS} />);
+      expect(chipLabels()).toEqual(['humourist1', 'science-fiction+', 'writer+']);
+      expect(screen.getByText('humourist').closest('button')).toHaveAttribute('aria-pressed', 'true');
+      expect(suggestedChips().map((chip) => chip.textContent)).toEqual(['science-fiction+', 'writer+']);
+    });
+
+    describe('a second press right after a suggestion’s', () => {
+      let now: MockInstance<typeof Date.now>;
+      beforeEach(() => {
+        now = vi.spyOn(Date, 'now').mockReturnValue(10_000);
+      });
+      afterEach(() => {
+        now.mockRestore();
+      });
+
+      it('is ignored on the chip that moved there: an own, a secondary or a suggested one', () => {
+        mocks.tags = [];
+        const other = OTHER_TAGS.slice(2);
+        const { rerender } = render(<TagBar otherTags={other} uri={LINK} suggestedLabels={LABELS} />);
+
+        fireEvent.click(screen.getByText('science-fiction'));
+        expect(mocks.addTag).toHaveBeenCalledTimes(1);
+        // The added tag is the viewer's chip in front now; the next chips sit where it was.
+        mocks.tags = [
+          { label: 'science-fiction', taggers: ['viewer'], taggers_count: 1, relationship: true, tag_uri: null },
+        ];
+        rerender(<TagBar otherTags={other} uri={LINK} suggestedLabels={LABELS} />);
+
+        now.mockReturnValue(10_000 + SUGGESTION_PRESS_GUARD_MS - 1);
+        fireEvent.click(screen.getByText('humourist'));
+        fireEvent.click(screen.getByText('europe'));
+        fireEvent.click(screen.getByText('science-fiction'));
+        expect(mocks.addTag).toHaveBeenCalledTimes(1);
+        expect(mocks.toggleTag).not.toHaveBeenCalled();
+
+        now.mockReturnValue(10_000 + SUGGESTION_PRESS_GUARD_MS);
+        fireEvent.click(screen.getByText('humourist'));
+        expect(mocks.addTag).toHaveBeenLastCalledWith('humourist');
+      });
+
+      it('is ignored on the expanded list’s row the added tag pushed there, its other buttons too', async () => {
+        mocks.tags = [];
+        const { rerender } = render(<TagBar isExpanded suggestedLabels={LABELS} />);
+
+        const group = await screen.findByRole('group', { name: 'Suggested tags' });
+        fireEvent.click(within(group).getByText('humourist'));
+        expect(mocks.addTag).toHaveBeenCalledWith('humourist');
+        mocks.tags = [{ label: 'humourist', taggers: ['viewer'], taggers_count: 1, relationship: true, tag_uri: null }];
+        rerender(<TagBar isExpanded suggestedLabels={LABELS} />);
+
+        now.mockReturnValue(10_000 + SUGGESTION_PRESS_GUARD_MS - 1);
+        fireEvent.click(within(await screen.findByTestId('tagged-list')).getByRole('button', { name: 'humourist1' }));
+        // `false`: the default was prevented, by the guard (the link's own handler does not run in the window)
+        expect(fireEvent.click(screen.getByRole('link', { name: 'Search humourist' }))).toBe(false);
+        fireEvent.click(within(screen.getByRole('group', { name: 'Suggested tags' })).getByText('writer'));
+        expect(mocks.toggleTag).not.toHaveBeenCalled();
+        expect(mocks.rowButton).not.toHaveBeenCalled();
+        expect(mocks.addTag).toHaveBeenCalledTimes(1);
+
+        now.mockReturnValue(10_000 + SUGGESTION_PRESS_GUARD_MS);
+        fireEvent.click(within(screen.getByTestId('tagged-list')).getByRole('button', { name: 'humourist1' }));
+        expect(mocks.toggleTag).toHaveBeenCalledWith(expect.objectContaining({ label: 'humourist' }));
+        fireEvent.click(screen.getByRole('link', { name: 'Search humourist' }));
+        expect(mocks.rowButton).toHaveBeenCalledWith('humourist');
+      });
+    });
+
+    it('draws a suggestion like the other services’ chips in one row, after them', () => {
+      mocks.tags = [];
+      render(<TagBar otherTags={OTHER_TAGS.slice(1, 2)} uri={LINK} suggestedLabels={['europe']} />);
+
+      expect(chipLabels()).toEqual(['capital0(2)', 'europe+']);
+      const [secondary] = secondaryChips();
+      const [suggested] = suggestedChips();
+      for (const property of ['border', 'background-color', 'background-image'] as const) {
+        expect(suggested.style.getPropertyValue(property)).toBe(secondary.style.getPropertyValue(property));
+      }
+      expect(suggested.style.backgroundColor).toBe('color-mix(in oklab, var(--tag-edge) 12%, transparent)');
+    });
+
+    it('asks to sign in on a press when signed out, writing nothing', () => {
+      mocks.isSignedIn = false;
+      mocks.tags = [];
+      render(<TagBar suggestedLabels={LABELS} />);
+
+      fireEvent.click(screen.getByText('science-fiction'));
+
+      expect(mocks.addTag).not.toHaveBeenCalled();
+      expect(mocks.signInRequests).toBe(1);
+
+      // Nothing was added, so nothing moved: a second press asks again at once.
+      fireEvent.click(screen.getByText('humourist'));
+      expect(mocks.signInRequests).toBe(2);
+    });
+
+    it('shows none inline (an item’s row) and none without labels', () => {
+      mocks.tags = [];
+      const { unmount } = render(<TagBar inline suggestedLabels={LABELS} />);
+      expect(suggestedChips()).toHaveLength(0);
+      unmount();
+
+      for (const suggestedLabels of [undefined, null, []]) {
+        const view = render(<TagBar isExpanded suggestedLabels={suggestedLabels} />);
+        expect(suggestedChips()).toHaveLength(0);
+        expect(screen.queryByRole('group', { name: 'Suggested tags' })).not.toBeInTheDocument();
+        view.unmount();
+      }
+    });
+
+    it('shows none while the link’s tags are read, so they cannot move under a tap', () => {
+      mocks.tags = [];
+      mocks.isLoading = true;
+      const { rerender } = render(<TagBar suggestedLabels={LABELS} />);
+      expect(suggestedChips()).toHaveLength(0);
+
+      mocks.isLoading = false;
+      rerender(<TagBar suggestedLabels={LABELS} />);
+      expect(suggestedChips()).toHaveLength(3);
+    });
+
+    it('offers a label past the other services’ chips shown, which no chip shows', async () => {
+      mocks.tags = [];
+      const many: TMergedTag[] = Array.from({ length: MAX_OTHER_TAGS + 1 }, (_, index) => ({
+        label: `other-${index}`,
+        taggers: ['e'],
+        count: 1,
+        isComplete: true,
+        sources: [service('Wikidata', ['e'])],
+      }));
+      render(<TagBar isExpanded otherTags={many} uri={LINK} suggestedLabels={[`other-${MAX_OTHER_TAGS}`]} />);
+
+      expect((await screen.findAllByTestId('resource-suggested-tag')).map((chip) => chip.textContent)).toEqual([
+        `other-${MAX_OTHER_TAGS}+`,
+      ]);
     });
   });
 });

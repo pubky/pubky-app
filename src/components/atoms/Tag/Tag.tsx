@@ -8,9 +8,9 @@ import { Typography } from '../Typography/Typography';
 import type { TagProps } from './Tag.types';
 
 /**
- * The secondary look of a tag chip (`variant="secondary"`, also `PostTag`'s): the same tag colour, a
- * faint tint of it for the fill and a dashed edge, with the theme's label colour (a saturated day
- * palette's white label needs the full fill).
+ * The secondary look of a tag chip (`variant="secondary"`, also `PostTag`'s, and its `variant="suggested"`
+ * with a "+" for the count): the same tag colour, a faint tint of it for the fill and a dashed edge, with
+ * the theme's label colour (a saturated day palette's white label needs the full fill).
  */
 export const SECONDARY_TAG_STYLE = {
   backgroundImage: 'none',
@@ -24,6 +24,7 @@ export const Tag = ({
   name,
   count,
   total,
+  suggested = false,
   variant = 'default',
   clicked = false,
   onClick,
@@ -95,6 +96,17 @@ export const Tag = ({
           data-cy={countDataCy || `${dataCy || 'tag'}-count`}
         >
           {count}
+        </Typography>
+      )}
+
+      {suggested && count === undefined && (
+        <Typography
+          size="sm"
+          className="ml-1.5 shrink-0 font-medium text-(--tag-count)"
+          data-testid="tag-suggested-mark"
+          aria-hidden="true"
+        >
+          +
         </Typography>
       )}
 

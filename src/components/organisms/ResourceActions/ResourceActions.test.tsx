@@ -53,6 +53,7 @@ const mocks = vi.hoisted(() => ({
   // The other links read (`useOtherLinkTags`), what they answered, and the group already read.
   otherLinkReads: [] as { links: { uri: string; name: string }[]; options?: { byIdsOnly?: boolean } }[],
   otherReads: [] as { link: { uri: string; name: string }; tags: NexusTag[] }[],
+  otherLoading: false,
   groupArgs: [] as unknown[][],
   group: { data: null as unknown, isLoading: false },
   bookmarkActive: [] as (boolean | undefined)[],
@@ -92,7 +93,7 @@ vi.mock('@/hooks/useResourceTags/useResourceTags', () => ({
 vi.mock('@/hooks/useOtherLinkTags/useOtherLinkTags', () => ({
   useOtherLinkTags: (links: { uri: string; name: string }[], options?: { byIdsOnly?: boolean }) => {
     mocks.otherLinkReads.push({ links, options });
-    return { reads: links.length > 0 ? mocks.otherReads : [], isLoading: false };
+    return { reads: links.length > 0 ? mocks.otherReads : [], isLoading: links.length > 0 && mocks.otherLoading };
   },
 }));
 vi.mock('@/hooks/useEventFeed/useEventFeed', () => ({
@@ -177,6 +178,7 @@ vi.mock('./ResourceTagBar', () => ({
     uri,
     scope,
     control,
+    suggestedLabels,
   }: {
     resourceTags: { tags: NexusTag[]; addTag: (label: string) => unknown };
     label: string;
@@ -188,6 +190,7 @@ vi.mock('./ResourceTagBar', () => ({
     uri?: string;
     scope?: { name: string; uris: readonly string[] };
     control?: React.ReactNode;
+    suggestedLabels?: readonly string[] | null;
   }) => (
     <div
       id={id}
@@ -200,6 +203,7 @@ vi.mock('./ResourceTagBar', () => ({
       data-other-tags={otherTags?.map((other) => other.label).join(',') ?? ''}
       data-uri={uri}
       data-scope={scope ? `${scope.name}: ${scope.uris.join(' ')}` : 'none'}
+      data-suggested={suggestedLabels?.join(',') ?? 'none'}
     >
       {control}
       <button type="button" data-testid="tag-bar-add" onClick={() => onAddingChange(true)} />
@@ -254,6 +258,7 @@ describe('ResourceActions', () => {
     mocks.tagsEnabled = [];
     mocks.tagsOptions = [];
     mocks.otherLinkReads = [];
+    mocks.otherLoading = false;
     mocks.otherReads = [];
     mocks.groupArgs = [];
     mocks.group = { data: null, isLoading: false };
@@ -374,6 +379,56 @@ describe('ResourceActions', () => {
     const zone = screen.getByTestId('resource-actions');
     expect(zone.children).toHaveLength(1);
     expect(zone.firstElementChild).toBe(screen.getByTestId('resource-footer'));
+  });
+
+  it('gives the tag bar a catalogue card’s labels as suggestions, the card’s unless given', () => {
+    // A Wikidata card nobody shared, as Pinakes' search lists it and by-uri opens it: no refs, its labels
+    const catalogueCard: TPinakesResourceDetail = {
+      ...videoFixture,
+      uri: 'https://en.wikipedia.org/wiki/Douglas_Adams',
+      refs: [],
+      also_on: [],
+      group: null,
+      collections: 0,
+      labels: ['science-fiction', 'humourist'],
+    };
+    const { unmount } = render(<ResourceActions uri={catalogueCard.uri} tagsLabel="Tags" card={catalogueCard} />);
+    expect(screen.getByTestId('resource-tag-bar-stub')).toHaveAttribute('data-suggested', 'science-fiction,humourist');
+    unmount();
+
+    // The resource page passes them without its card
+    const { rerender } = render(
+      <ResourceActions uri={catalogueCard.uri} tagsLabel="Tags" labels={['writer']} size="large" />,
+    );
+    expect(screen.getByTestId('resource-tag-bar-stub')).toHaveAttribute('data-suggested', 'writer');
+
+    // None while the page still reads the other links' tags: they would take the suggestions' places
+    rerender(
+      <ResourceActions
+        uri={catalogueCard.uri}
+        tagsLabel="Tags"
+        labels={['writer']}
+        size="large"
+        isOtherTagListLoading
+      />,
+    );
+    expect(screen.getByTestId('resource-tag-bar-stub')).toHaveAttribute('data-suggested', 'none');
+  });
+
+  it('offers a card’s labels only once its other links’ tags are read, as on a card in a feed', () => {
+    const linked: TPinakesResourceDetail = {
+      ...videoFixture,
+      also_on: [{ id: 'deezer-id', uri: 'https://www.deezer.com/artist/27', site: 'Deezer' }],
+      labels: ['writer'],
+    };
+    mocks.otherReads = [{ link: { uri: 'https://www.deezer.com/artist/27', name: 'Deezer' }, tags: [tag('rock')] }];
+    mocks.otherLoading = true;
+    const { rerender } = render(<ResourceActions uri={linked.uri} tagsLabel="Tags" card={linked} />);
+    expect(screen.getByTestId('resource-tag-bar-stub')).toHaveAttribute('data-suggested', 'none');
+
+    mocks.otherLoading = false;
+    rerender(<ResourceActions uri={linked.uri} tagsLabel="Tags" card={linked} />);
+    expect(screen.getByTestId('resource-tag-bar-stub')).toHaveAttribute('data-suggested', 'writer');
   });
 
   describe('a card in a feed: the tags on its other links, as on the resource page', () => {
@@ -1185,6 +1240,11 @@ describe('ResourceActions', () => {
 
     beforeEach(() => {
       mocks.feed = { feed: FEED, isLoading: false };
+    });
+
+    it('offers no suggested tags on a series date, whose tag bar may write on its feed', () => {
+      renderDate({ card: { ...DATE, labels: ['meetup'] } });
+      expect(screen.getByTestId('resource-tag-bar-stub')).toHaveAttribute('data-suggested', 'none');
     });
 
     it('shows no switch for an event with no feed, nor for a card that is no event', () => {

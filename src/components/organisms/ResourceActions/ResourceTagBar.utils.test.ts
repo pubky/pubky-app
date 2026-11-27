@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { TMergedTag } from '@/hooks/useOtherLinkTags/useOtherLinkTags.types';
-import { getTagPeople } from './ResourceTagBar.utils';
+import { getSuggestedTags, getTagPeople, MAX_SUGGESTED_TAGS } from './ResourceTagBar.utils';
 
 const DEEZER = { uri: 'https://www.deezer.com/track/67238735', name: 'Deezer' };
 const TIDAL = { uri: 'https://tidal.com/track/490851477', name: 'TIDAL' };
@@ -61,5 +61,25 @@ describe('getTagPeople', () => {
 
   it('lists a tagger the own read repeats once', () => {
     expect(getTagPeople({ taggers: ['ann', 'ann'], taggers_count: 1 }, DANCE).here).toHaveLength(1);
+  });
+});
+
+describe('getSuggestedTags', () => {
+  it('gives the labels as tags are written, each once, in order, without those already shown', () => {
+    expect(getSuggestedTags(['Science-Fiction', 'writer', 'science-fiction', 'Berlin'], ['berlin'])).toEqual([
+      'science-fiction',
+      'writer',
+    ]);
+  });
+
+  it('drops what is no valid tag label and reads no labels as none', () => {
+    expect(getSuggestedTags(['two words', '', 'a'.repeat(200), 'ok'], [])).toEqual(['ok']);
+    expect(getSuggestedTags(undefined, [])).toEqual([]);
+    expect(getSuggestedTags(null, [])).toEqual([]);
+  });
+
+  it('gives at most MAX_SUGGESTED_TAGS', () => {
+    const labels = Array.from({ length: MAX_SUGGESTED_TAGS + 5 }, (_, index) => `label-${index}`);
+    expect(getSuggestedTags(labels, [])).toHaveLength(MAX_SUGGESTED_TAGS);
   });
 });

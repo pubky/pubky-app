@@ -5,6 +5,11 @@ export interface TagProps {
   count?: number;
   /** A wider count, shown muted after `count` as "(10)" (people across an external resource's services). */
   total?: number;
+  /**
+   * A small "+" in the count's place, when no count is given: `PostTag`'s `variant="suggested"` (a label
+   * offered to add), which lays the secondary look.
+   */
+  suggested?: boolean;
   /** `secondary`: a faint tint of the tag colour and a dashed edge, for a tag that is elsewhere but not here yet. */
   variant?: 'default' | 'secondary';
   clicked?: boolean;

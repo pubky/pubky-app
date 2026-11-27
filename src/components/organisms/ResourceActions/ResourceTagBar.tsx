@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { type MouseEvent, type ReactNode, useRef } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { POST_TAGS_MAX_LENGTH, POST_TAGS_MAX_TOTAL_CHARS, TAG_INPUT_WIDTH_DEFAULT } from '@/config/tags';
 import { useEnrichedTags } from '@/hooks/useEnrichedTags/useEnrichedTags';
@@ -23,7 +23,13 @@ import { WhoTaggedExpandedList } from '@/molecules/WhoTaggedExpandedList/WhoTagg
 import { withResourceViewerListed } from '@/pipes/tag/tag.resource';
 import type { NexusTag } from '@/services/nexus/nexus.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
-import { getTagPeople, MAX_OTHER_TAGS, type TTagPeople, type TTagPerson } from './ResourceTagBar.utils';
+import {
+  getSuggestedTags,
+  getTagPeople,
+  MAX_OTHER_TAGS,
+  type TTagPeople,
+  type TTagPerson,
+} from './ResourceTagBar.utils';
 
 /** The two groups of a tag's detail, for screen readers only. */
 const TAG_PEOPLE_GROUPS = ['Tagged on this link', 'Tagged only on other services'] as const;
@@ -57,6 +63,13 @@ interface ResourceTagBarProps {
   /** Shown first, before the chips and before the expanded input: the scope's switch. */
   control?: ReactNode;
   /**
+   * The labels the card's catalogue gives it (Pinakes `labels`): offered after the people's tags as
+   * suggested tags ("tag +": the look of a tag not here yet, a "+" for its count), without the labels a
+   * chip of the bar shows (its own tags, and the other services' it lists). A press adds the viewer's tag
+   * here as adding one does; it then shows as theirs.
+   */
+  suggestedLabels?: readonly string[] | null;
+  /**
    * The tags at the end of an item's row (a show's episode list): the chips alone (the post's tag
    * budget), right-aligned from `sm` up, with no "+": the item is tagged on its own page.
    */
@@ -65,6 +78,16 @@ interface ResourceTagBarProps {
 
 /** Where a merged tag is besides the link: on the scope's links only, on them too, or not on them. */
 type TScopeHit = 'only' | 'also' | null;
+
+/**
+ * How long after a suggestion's press the bar ignores presses: the added tag moves to the front as the
+ * viewer's (or adds a row once expanded), so a quick second tap would land on whatever moved under the
+ * pointer (a chip, a row's taggers or search button).
+ */
+export const SUGGESTION_PRESS_GUARD_MS = 300;
+
+/** Whether a press at `pressedAt` (ms, `Date.now()`) is less than `SUGGESTION_PRESS_GUARD_MS` ago. */
+const isWithinPressGuard = (pressedAt: number) => Date.now() - pressedAt < SUGGESTION_PRESS_GUARD_MS;
 
 /**
  * The tags people put on an external resource, like a post's tag list: the app's tag chips (label
@@ -82,7 +105,11 @@ type TScopeHit = 'only' | 'also' | null;
  * (hover, or its taggers once expanded) lists each person once, the people who tagged this link
  * first, each with the icons of the links they tagged.
  *
- * Inline (`inline`), at the end of an item's row, it shows the same chips and no "+".
+ * A card a catalogue describes (`suggestedLabels`) offers its labels as suggested tags after those:
+ * in the places the tags leave free, and all of them under the tags once expanded. A press adds the
+ * viewer's tag, the same write as the input's.
+ *
+ * Inline (`inline`), at the end of an item's row, it shows the same chips and no "+" (no suggestions).
  */
 export function ResourceTagBar({
   resourceTags,
@@ -95,6 +122,7 @@ export function ResourceTagBar({
   otherTags = [],
   scope,
   control,
+  suggestedLabels,
   inline = false,
 }: ResourceTagBarProps) {
   const { isAuthenticated, requireAuth } = useRequireAuth();
@@ -102,6 +130,13 @@ export function ResourceTagBar({
   // As on the post: expanding must not pop the phone's keyboard, only "+" focuses the input there.
   const isMobile = useIsMobile();
   const { tags, addTag, toggleTag } = resourceTags;
+  const suggestionPressedAt = useRef(Number.NEGATIVE_INFINITY);
+  // Every press inside the bar, caught before it reaches a chip, a row's buttons or a link.
+  const ignorePressAfterSuggestion = (event: MouseEvent) => {
+    if (!isWithinPressGuard(suggestionPressedAt.current)) return;
+    event.preventDefault();
+    event.stopPropagation();
+  };
   const elsewhere = new Map(otherTags.map((tag) => [tag.label, tag]));
   const ownLabels = new Set(tags.map((tag) => canonicalizeTagLabel(tag.label)));
   const peopleOf = (tag: Pick<TagWithAvatars, 'label' | 'isSecondary'>): TTagPeople | undefined => {
@@ -151,6 +186,15 @@ export function ResourceTagBar({
       })),
   ]);
   const { enrichedTags } = useEnrichedTags(barTags);
+  // The catalogue's labels no chip shows yet; one the viewer adds becomes their chip and leaves here. Not
+  // while the link's tags are read: they would take the suggestions' places and move them under a tap.
+  const suggestions =
+    inline || resourceTags.isLoading
+      ? []
+      : getSuggestedTags(
+          suggestedLabels,
+          barTags.map((tag) => tag.label),
+        );
   const viewerTags = tags.filter((tag) => tag.relationship);
   // An own chip toggles the viewer's tag on this link by its own tag (its own relationship and file, never
   // another link's); a secondary one adds it to this link (it then is an own chip).
@@ -159,6 +203,23 @@ export function ResourceTagBar({
       const own = tag.isSecondary ? undefined : tags.find((tagHere) => tagHere.label === tag.label);
       void (own ? toggleTag(own) : addTag(tag.label));
     });
+  // As "+" does: the viewer's tag here, asking to sign in first when signed out.
+  const renderSuggestion = (suggestion: string) => (
+    <PostTag
+      key={`suggested:${suggestion}`}
+      label={suggestion}
+      variant="suggested"
+      color={generateRandomColor(suggestion)}
+      aria-label={`${suggestion}, suggested tag, add it here`}
+      data-testid="resource-suggested-tag"
+      onClick={() =>
+        requireAuth(() => {
+          suggestionPressedAt.current = Date.now();
+          void addTag(suggestion);
+        })
+      }
+    />
+  );
   const renderPeople = (tag: TagWithAvatars) => {
     const people = peopleOf(tag);
     return people && <TagPeople people={people} uri={uri} taggers={tag.taggers} />;
@@ -173,6 +234,7 @@ export function ResourceTagBar({
         aria-label={label}
         data-testid="resource-tag-bar"
         className="min-w-0 flex-1 gap-2"
+        onClickCapture={ignorePressAfterSuggestion}
       >
         <Container overrideDefaults className="flex w-fit max-w-full flex-col gap-2">
           {control}
@@ -193,15 +255,28 @@ export function ResourceTagBar({
               <TaggedList tags={enrichedTags} onTagToggle={pressTag} renderExpandedTaggers={renderPeople} />
             </Container>
           )}
+          {suggestions.length > 0 && (
+            <Container
+              overrideDefaults
+              role="group"
+              aria-label="Suggested tags"
+              data-testid="resource-suggested-tags"
+              className="flex flex-wrap gap-2"
+            >
+              {suggestions.map(renderSuggestion)}
+            </Container>
+          )}
         </Container>
       </Container>
     );
   }
-  const displayLabels = getDisplayTags(
-    enrichedTags.map((tag) => tag.label),
-    { maxTagLength: POST_TAGS_MAX_LENGTH, maxTotalChars: POST_TAGS_MAX_TOTAL_CHARS },
-  );
+  // The post's budget, the tags first; the suggestions take the places they leave free.
+  const displayLabels = getDisplayTags([...enrichedTags.map((tag) => tag.label), ...suggestions], {
+    maxTagLength: POST_TAGS_MAX_LENGTH,
+    maxTotalChars: POST_TAGS_MAX_TOTAL_CHARS,
+  });
   const visibleTags = enrichedTags.filter((tag) => displayLabels.includes(tag.label));
+  const visibleSuggestions = suggestions.filter((suggestion) => displayLabels.includes(suggestion));
 
   return (
     <Container
@@ -211,6 +286,7 @@ export function ResourceTagBar({
       aria-label={label}
       data-testid="resource-tag-bar"
       className={cn('flex min-w-0 flex-wrap items-center gap-2', inline && 'sm:justify-end')}
+      onClickCapture={ignorePressAfterSuggestion}
     >
       {control}
       {visibleTags.map((tag) => {
@@ -238,6 +314,7 @@ export function ResourceTagBar({
           </PostTagPopoverWrapper>
         );
       })}
+      {visibleSuggestions.map(renderSuggestion)}
       {!inline && (
         <TagInputToggle
           showInput={isAdding}
