@@ -21,11 +21,11 @@ describe('LocksEnabledCard', () => {
   });
 
   it.each([
-    ['Revoke access', 'Revoke Locks server access', /open Pubky Ring, select your pubky, tap locks\.paykit\.app/],
+    ['Revoke access', 'Revoke Locks server access', /open Pubky Ring, select your pubky, tap locks\.pubky\.app/],
     [
       'Disconnect Bitkit',
       'Disconnect Bitkit?',
-      /open Bitkit, go to your profile, tap edit, scroll down, and tap 'Unlink Profile'/,
+      /open Bitkit, go to your profile, tap edit, scroll down, and tap 'Unlink pubky'/,
     ],
   ])('"%s" only explains where to do it, then checks again on OK', (action, title, text) => {
     const { onRecheck } = renderCard();
