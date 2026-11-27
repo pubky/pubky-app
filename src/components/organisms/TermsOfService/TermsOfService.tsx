@@ -209,23 +209,23 @@ const TERMS_SECTIONS: LegalSection[] = [
           This section explains your responsibilities regarding the cryptographic keys that secure your account.
         </LegalParagraph>
         <LegalParagraph>
-          Your Pubky account is secured by cryptographic keys that only you control. During the signup process, you will
-          be provided with recovery options including:
+          Your Pubky account is secured by cryptographic keys that only you control. The Pubky App does not create,
+          store or back up these keys. You create and keep them in Pubky Ring or another application that supports Pubky
+          keys, which provides its own recovery options, such as a recovery phrase or an encrypted backup file, under
+          its own terms.
         </LegalParagraph>
         <LegalParagraph>
-          <strong>Recovery Phrase:</strong> A 12-word phrase that can restore your account.
-          <br />
-          <strong>Encrypted Backup File:</strong> A password-protected .pkarr file.
-          <br />
-          <strong>QR Code:</strong> A scannable backup option.
+          If you created your keys in the Pubky App in a web browser before November 18, 2026, you were given a recovery
+          phrase, an encrypted backup file (.pkarr) and a QR code. The Pubky App no longer accepts them for sign-in. To
+          keep using your account, import them into Pubky Ring.
         </LegalParagraph>
         <LegalParagraph>
           <strong>
             IMPORTANT: We do not store your private keys or recovery phrase. If you lose all means of recovery, your
             account cannot be recovered by Synonym or any third party. You alone are responsible for safeguarding your
             recovery information, keeping your recovery phrase and backup files secure and confidential, not sharing
-            your private keys or recovery phase with any third party, and maintaining backups of your recovery materials
-            listed above.
+            your private keys or recovery phrase with any third party, and maintaining backups of your recovery
+            materials.
           </strong>
         </LegalParagraph>
         <LegalParagraph>
@@ -273,7 +273,7 @@ const TERMS_SECTIONS: LegalSection[] = [
         <LegalParagraph>
           Certain features and verification methods may not be available in all jurisdictions due to legal, regulatory,
           or operational requirements. We reserve the right to restrict access to specific features based on your
-          location.
+          location, or on the app or app store you use.
         </LegalParagraph>
         <LegalParagraph>
           <strong>Commerce features:</strong> Buying, selling, and paid unlocks of digital content (together, “
@@ -672,8 +672,9 @@ const TERMS_SECTIONS: LegalSection[] = [
         content: (
           <>
             <LegalParagraph>
-              The Recovery Phrase rules in these Terms still apply. Do not enter a recovery phrase into Pubky Shop, a
-              Lock Server page, PayPal, or setup except through Pubky Ring or the wallet itself as designed.
+              The rules in the section titled “Cryptographic Keys and Account Recovery” still apply. Do not enter a
+              recovery phrase into Pubky Shop, a Lock Server page, PayPal, or setup except through Pubky Ring or the
+              wallet itself as designed.
             </LegalParagraph>
           </>
         ),
@@ -828,20 +829,20 @@ const TERMS_SECTIONS: LegalSection[] = [
     ),
   },
   {
-    id: 'progressive-web-application',
-    title: 'PUBKY IS A PROGRESSIVE WEB APPLICATION',
+    id: 'pubky-app',
+    title: 'THE PUBKY APP',
     content: (
       <>
         <LegalParagraph italic>
-          This section explains certain requirements and restrictions because the Pubky App is a progressive web
-          application.
+          This section explains certain requirements and restrictions that apply to the Pubky App on the web and on
+          mobile devices.
         </LegalParagraph>
       </>
     ),
     subsections: [
       {
-        id: 'progressive-web-application-requirements',
-        title: 'Progressive Web Application',
+        id: 'web-and-mobile-applications',
+        title: 'Web and mobile applications',
         content: (
           <>
             <LegalParagraph>
@@ -853,6 +854,61 @@ const TERMS_SECTIONS: LegalSection[] = [
               and may automatically electronically upgrade the version of the Pubky App that you are using. You consent
               to such automatic upgrading on your computer or mobile device, and agree that the terms and conditions of
               these Terms will apply to all such upgrades.
+            </LegalParagraph>
+            <LegalParagraph>
+              If you download the Pubky App from the Apple App Store or Google Play, upgrades may be delivered through
+              that store, and the store&apos;s own terms also apply to your download and to the store account you use.
+            </LegalParagraph>
+          </>
+        ),
+      },
+      {
+        id: 'apple-app-store',
+        title: 'Apple App Store',
+        content: (
+          <>
+            <LegalParagraph>
+              If you download the Pubky App from the Apple App Store, the following also applies:
+            </LegalParagraph>
+            <LegalList>
+              <li>
+                These Terms are between you and Synonym only, not Apple. Synonym, not Apple, is solely responsible for
+                the Pubky App and its content.
+              </li>
+              <li>
+                Your licence to use the Pubky App is limited to use on Apple-branded products that you own or control,
+                as permitted by the Usage Rules in the Apple Media Services Terms and Conditions.
+              </li>
+              <li>Apple has no obligation to provide any maintenance or support for the Pubky App.</li>
+              <li>
+                To the maximum extent permitted by Law, Apple has no warranty obligation with respect to the Pubky App.
+                If the Pubky App fails to conform to any applicable warranty, you may notify Apple, and Apple will
+                refund any purchase price you paid for it to Apple.
+              </li>
+              <li>
+                Synonym, not Apple, is responsible for addressing any claims by you or a third party relating to the
+                Pubky App or your possession or use of it, including product liability claims, claims that it fails to
+                conform to any legal or regulatory requirement, claims under consumer protection, privacy or similar
+                laws, and claims that it or your use of it infringes a third party&apos;s intellectual property rights.
+              </li>
+              <li>
+                You represent that you are not located in a country that is subject to a United States Government
+                embargo or that has been designated by the United States Government as a &quot;terrorist
+                supporting&quot; country, and that you are not on any United States Government list of prohibited or
+                restricted parties.
+              </li>
+              <li>
+                You must comply with applicable third-party terms, such as your mobile carrier&apos;s terms, when using
+                the Pubky App.
+              </li>
+              <li>
+                Apple and its subsidiaries are third-party beneficiaries of these Terms. Once you accept these Terms,
+                Apple will have the right to enforce them against you as a third-party beneficiary.
+              </li>
+            </LegalList>
+            <LegalParagraph>
+              Questions, complaints or claims about the Pubky App should be sent to Synonym at the address in the
+              Introduction or at <LegalLink href={EMAIL_URL}>info@synonym.to</LegalLink>.
             </LegalParagraph>
           </>
         ),
@@ -1122,9 +1178,9 @@ const TERMS_SECTIONS: LegalSection[] = [
             Republic (a region of Ukraine);
           </li>
           <li>
-            “<strong>Pubky App</strong>” means the progressive web application software named Pubky as provided by
-            Synonym. Pubky App may display a control that opens Pubky Shop. Use of Pubky Shop is use of the Platform
-            under these Terms;
+            “<strong>Pubky App</strong>” means the software named Pubky as provided by Synonym, as a progressive web
+            application and as mobile applications for iOS and Android. Pubky App may display a control that opens Pubky
+            Shop. Use of Pubky Shop is use of the Platform under these Terms;
           </li>
           <li>
             &quot;<strong>Pubky Shop</strong>&quot; means the Synonym-operated commerce client and related services at
@@ -1216,12 +1272,13 @@ const TERMS_SECTIONS: LegalSection[] = [
               administrators, personal or legal representatives, successors and assigns of you and of Synonym. None of
               the provisions of these Terms, or any of the rights, duties, and obligations contained or incorporated
               herein, are for the benefit of or enforceable by any creditors of you or Synonym or any other persons,
-              except: (i) such as inure to a successor or assign in accordance herewith; and (ii) that the Associates of
+              except: (i) such as inure to a successor or assign in accordance herewith; (ii) that the Associates of
               Synonym are intended third party beneficiaries of the rights and privileges expressly stated to apply to
               the Associates hereunder and shall be entitled to enforce such rights and privileges (including those
               rights and privileges set out in the paragraph titled “Responsibilities, Limitation of Liability and
-              Indemnity”) as if a direct party to these Terms. No consent of any Person is required for any modification
-              or amendment to these Terms.
+              Indemnity”) as if a direct party to these Terms; and (iii) that Apple and its subsidiaries are third-party
+              beneficiaries as provided in the subsection titled “Apple App Store”. No consent of any Person is required
+              for any modification or amendment to these Terms.
             </LegalParagraph>
           </>
         ),
@@ -1305,7 +1362,7 @@ export function TermsOfService() {
           <span className="text-brand">{'Service'}</span>
         </>
       }
-      effectiveDate="October 22, 2026"
+      effectiveDate="November 18, 2026"
       preamble={TERMS_PREAMBLE}
       sections={TERMS_SECTIONS}
     />

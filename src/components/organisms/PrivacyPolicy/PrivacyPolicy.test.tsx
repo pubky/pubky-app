@@ -7,7 +7,7 @@ describe('PrivacyPolicy', () => {
     render(<PrivacyPolicy />);
 
     expect(screen.getByRole('heading', { level: 1, name: 'Privacy Policy' })).toBeInTheDocument();
-    expect(screen.getByText('Effective Date: January 29, 2026')).toBeInTheDocument();
+    expect(screen.getByText('Effective Date: November 18, 2026')).toBeInTheDocument();
   });
 
   it('turns the all-caps lead lines into numbered section headings', () => {
@@ -73,5 +73,20 @@ describe('PrivacyPolicy', () => {
       'https://www.consumer.ftc.gov/articles/0031-protecting-your-childs-privacy-online',
     );
     expect(screen.getByRole('link', { name: 'click here' })).toHaveAttribute('target', '_blank');
+  });
+});
+
+describe('PrivacyPolicy - mobile apps', () => {
+  it('covers the iOS and Android apps and the app stores', () => {
+    const { container } = render(<PrivacyPolicy />);
+    const text = container.textContent ?? '';
+
+    expect(text).toContain(
+      'treats personal information on the Pubky App, as a progressive web application and as mobile applications for iOS and Android,',
+    );
+    expect(text).toContain('The Pubky App does not store your Pubky identity keys; they stay in Pubky Ring.');
+    expect(text).toContain(
+      'With App Stores. Apple and Google distribute the Pubky mobile app. When you download it, they process information about you under their own privacy policies.',
+    );
   });
 });
