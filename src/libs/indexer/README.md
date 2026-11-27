@@ -282,26 +282,73 @@ type, so that route has nothing to say about it, as on the central indexer.
 
 ## Saved index
 
-With `savedIndex: true` each device keeps its index in one file of the user's own storage, through the
-transport's index file methods, so another device, or this one after losing its database, starts warm. A file is
-named by the writer id the store keeps (`readMeta`/`writeMeta`); a store without those keeps no saved index.
+With `savedIndex: true` the index lives also in a folder of the user's own storage that every device of theirs reads
+and writes, through the transport's `indexFiles`, so a new device, or this one after losing its database, starts warm.
+A store without meta values (`readMeta`/`writeMeta`) keeps no saved index: the writer id and what the writer knows of
+the folder are kept there.
 
-The file (`indexFile.ts`, version 2) is gzipped positional JSON: the seed and scope settings, a key table holding
-each public key once, the members with their homeservers, each homeserver's high-water mark, and the members' runs
-of the domain's groups, records with their data and whole hash, so a device that loads it shows the feed with no
-body fetch. A record without data keeps 16 bytes of hash, and version 1 files, pointers only, still load. The file
-is untrusted input: the domain's `reviveData` checks each payload (the social domain wants exactly what `reduce`
-makes), and a refused one, or any without the hook, loads without data for `hydrate` to fetch. A record whose file
-was still to fetch when the file was written is saved without data the same way. Visited users and
-leaf scopes are no members' domain groups, so what the user opened is never written. With `sealer` the gzip bytes are
-sealed before writing and opened after reading; a file that does not open is ignored.
+The folder (`savedIndex.ts`) is `3/<group tag>/` under the index root, the tag the first five hex digits of the
+SHA-256 of the domain's sorted group ids, so a deploy reading other paths (the older tree on) keeps its own:
 
-At start the crawling tab applies the files of the same seed before its first sync: the runs merge in any order,
-the homeservers spare their lookups, the high-water marks let the next sync catch a restore. A file with runs of
-groups this domain does not read was written reading other paths, such as with the older tree on, and is ignored: its
-mark could name an author with no event in this domain's paths, and the restore check would read that as a restore. Files that could not be
-listed or read, such as an account's before its session is restored, are read again after the next scope
-sync. A record without data
-never erases a stored body at the same cursor. Other writers' files older than `writerExpiryMs` are deleted. The
-tab saves after a scope sync that changed something, at most every `saveMinIntervalMs`, and when paused. Over
-`fileBudgetBytes` (200 MB) data goes first, then windowed history, each oldest first and farthest hop first.
+- `hot`, shared: every member with hop and homeserver, each homeserver's epoch and high-water mark, the directory of
+  packs, which writer's delta generations are folded, and the graph of hops 0 and 1 with their activity back to one
+  time, that of their 100th newest dated record. While the whole index fits in 1 MB, `hot` is the whole index.
+- `p/<S>/<b>`, shared: every run of the members whose key hashes to bucket `b` (FNV-1a of the key, modulo `S`), about
+  256 KB each. `S` is a power of two: 4 when the index outgrows `hot`, doubled when the mean pack passes 512 KB, which
+  splits bucket `b` into `b` and `b + S`, halved under 128 KB, and back to none under half of `hot`'s size.
+- `d/<writer>`, one per device, written only by it: the runs of what it synced since its changes were last folded,
+  rewritten whole by each save that found a member's scope changed. A save writes nothing when none did.
+
+Every file is the version 3 format of `indexFile.ts`: gzipped positional JSON with a key table, records with their
+data and whole hash, so a device that loads it shows the feed with no body fetch; a record whose file was still to
+fetch is saved without data and its hash cut to 16 bytes, and `hydrate` fetches it on the device that loads it. A file
+is untrusted input: the domain's `reviveData` checks each payload, and a refused one loads without data.
+
+Each file is a set of valid runs, so any set of files merges into a truthful index, in any order: what a reader serves
+rests on the coverage of the runs it applied, never on the directory, which only says what to fetch. A shared file
+changes only by a fold: take the homeserver's WebDAV lock on the path (`LOCK`, exclusive, at most 60 s, ending on its
+own), read the file, merge it into the local store, write the store's runs back presenting the lock, unlock. A write
+whose lock expired is refused by the homeserver before it lands (412), and a path someone holds refuses every other
+write and lock (423). A fold holds the lock on `hot` from start to end, refreshing it, so the folds of a folder run one
+at a time, and each pack it writes takes its own lock too, in case the lock on `hot` was lost meanwhile. So a fold
+that loses its lock, or a tab that closes between any two requests, leaves each file whole as it was or as written:
+some packs newer than `hot`, a delta older than `hot` says, a reshard's old and new packs side by side. A reader of
+any of those states merges what it finds into a truthful index, and what a lost write held is read again by the next
+sync, since a scope's coverage, not luck, says where each read starts. The lock keeps folds from losing work; it is
+never what keeps an index true. On a homeserver without locks the same fold runs unlocked: two folds at once lose the
+work of the one that wrote first, never truth.
+
+A save, after a scope sync or when the tab is paused, writes the delta: per member scope what lies above the head
+this writer last knew the shared files hold, its base, or the whole scope where the base is unknown, gapped or under
+an older epoch. Right after a scope sync, whose members are whole, it folds instead when the delta passes 48 KB, its
+oldest change is a day old, the folder has no `hot` yet, or a version 2 file was found: it takes in `hot`, every other
+writer's delta and the version 2 files, writes each pack their changed authors fall in, then `hot`, then deletes what
+nothing needs any more (packs of another `S`, the version 2 files it folded, another writer's delta it folded once
+that writer has not written it for `writerExpiryMs`). Its new base is the store's heads once all of it was taken in;
+another writer rebases when it reads `hot` saying its latest generation is folded. A fold that meets a lock, loses
+its lock, or finds a shared file it cannot read writes the delta instead, never overwriting a file it cannot read.
+Only the members' domain groups are written, so what the user opened on demand never is. Over `fileBudgetBytes`
+(200 MB) each pack is trimmed to its share, data first, then windowed history, each oldest first and farthest hop
+first; the graph is never trimmed.
+
+At start the crawling tab reads `hot` and lists `d/` at once, then fetches the deltas: three requests for a feed at
+any size with one other device. It applies them in one commit and reports it, so the view rebuilds from `hot` before
+the packs arrive; then it fetches the packs whose directory entry is newer than what this store applied, four at a
+time, each reported as it lands. The first scope sync waits for the packs. Without `hot` it reads the version 2 files,
+one per writer at the folder's root, which earlier releases wrote and still write while they run; those never see the
+new layout, whose names they do not read. Runs merge with what the store has, a record without data never erases a
+stored body at the same cursor, and each dated record goes into its homeserver's clock as if it had been read, so the
+window of the next sync is placed from the start.
+
+Each file carries every homeserver's epoch as its writer knew it: the restores of that homeserver it had seen. Loading
+or folding, per homeserver the newest epoch wins: runs written under an older one predate a restore and are left out,
+and a store behind a file's epoch drops what it holds of that homeserver first, so a fold after a restore purges the
+old log from the shared files. The high-water marks still let the next sync catch a restore nobody saw yet. Files
+that could not be read, such as an account's before its session is restored, are read again after the next scope
+sync.
+
+With `sealer` each file's gzip bytes are sealed before writing and opened after reading, under the file's path. A
+file that does not open is ignored, and a fold that meets one stops rather than overwrite it. `createIndexSealer(key)`
+(`indexSealer.ts`) seals with AES-256-GCM under a key per path derived with HKDF-SHA-256, so a homeserver cannot swap
+two files, at 28 bytes per file; names stay as they are, since they hold no author key. Every device of the user needs
+the same key.

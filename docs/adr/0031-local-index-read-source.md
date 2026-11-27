@@ -112,11 +112,16 @@ limit`) and has no way to say short but not ended, so a page cut short by time w
   from Nexus (`files/by_ids`): without Nexus the media path answers, but the card has no row to show it from.
 - **Mutes.** The account's muted users go to `setExcluded` from a Dexie live query on the local muted stream, where a
   mute, its rollback and the homeserver poll all land.
-- **Saved index.** On for accounts: the index keeps a file per device under `/priv/app.pubky/v1/index/`, inside
-  `SOCIAL_V1_APP_CAPABILITIES`, so another device starts warm. The file is not encrypted yet. The SDK can deliver
-  path-scoped content keys (`EncryptionKeys.deriveCryptoKeyForPath`) for scopes granted with the `e` action in a
-  signed approval; sealing the file means requesting `e` on that path in every grant, keeping the keys for the
-  session, and passing a sealer to the indexer.
+- **Saved index.** On for accounts: the devices of an account share one folder under `/priv/app.pubky/v1/index/`,
+  inside `SOCIAL_V1_APP_CAPABILITIES`, so another device starts warm: a `hot` file with the first screen (the whole
+  index while it fits in 1 MB), packs of about 256 KB by author hash past that, and one small delta per device
+  (library README). Shared files change only under the homeserver's WebDAV lock (`HomeserverService.lockOwned`, SDK
+  `storage.lock`), which staging and production list in `/info` as `webdav-locks`; every file is a set of valid runs,
+  so a lost lock or a closed tab loses work, never truth. The previous release's file per device is still read and is
+  folded in and deleted by the first write in the new layout. The files are not encrypted: the library seals them with
+  `createIndexSealer` when given a key, and the app gives none. The SDK can deliver path-scoped content keys
+  (`EncryptionKeys.deriveCryptoKeyForPath`) for scopes granted with the `e` action in a signed approval; sealing means
+  requesting `e` on that path in every grant, keeping the key for the session, and passing the sealer to the indexer.
 - **Freshness stamp.** Local answers carry `asOf`, when the last scope sync ended. They still get no response start
   stamp: the tag guards read a stamp as proof that the snapshot holds every event before it, and `asOf` is not that,
   since a homeserver that failed or backed off during the sync, and anything loaded on demand, can be older.
