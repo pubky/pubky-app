@@ -3,21 +3,39 @@ import { isPubkyIdentifier } from '@/libs/utils/utils';
 export const ROOT_ROUTES = '/';
 
 export enum ONBOARDING_ROUTES {
-  BACKUP = '/onboarding/backup',
   INSTALL = '/onboarding/install',
   /** Step 1 when Pubky Passport is available: "Manage your own keys" vs "Continue with Google". */
   JOIN = '/onboarding/join',
   PROFILE = '/onboarding/profile',
-  PUBKY = '/onboarding/pubky',
   SCAN = '/onboarding/scan',
   HUMAN = '/onboarding/human',
   TAGS = '/onboarding/tags',
   FOLLOW = '/onboarding/follow',
 }
 
+/** Keychain app picked on the Install step to create and authorize the new pubky. */
+export type OnboardingKeychain = 'ring' | 'bitkit';
+
+/**
+ * Builds the sign-up scan URL for the keychain picked on the Install step. Pubky Ring is the
+ * default and keeps the bare `/onboarding/scan`; Bitkit adds `?keychain=bitkit`.
+ */
+export function getOnboardingScanRoute(keychain: OnboardingKeychain): string {
+  if (keychain === 'ring') return ONBOARDING_ROUTES.SCAN;
+  const params = new URLSearchParams({ keychain });
+  return `${ONBOARDING_ROUTES.SCAN}?${params.toString()}`;
+}
+
+/** Reads the `keychain` search param of the scan step; anything but `bitkit` means Pubky Ring. */
+export function parseOnboardingKeychain(value: string | null): OnboardingKeychain {
+  return value === 'bitkit' ? 'bitkit' : 'ring';
+}
+
 export enum AUTH_ROUTES {
   SIGN_IN = '/sign-in',
   LOGOUT = '/logout',
+  /** The social v1 migration gate: progress, outcome and the signed-out explanation (ADR-0026). */
+  MIGRATION = '/migration',
 }
 
 export enum APP_ROUTES {
@@ -139,19 +157,39 @@ export const UNAUTHENTICATED_ROUTES = {
     AUTH_ROUTES.SIGN_IN,
     ONBOARDING_ROUTES.INSTALL,
     ONBOARDING_ROUTES.SCAN,
-    ONBOARDING_ROUTES.PUBKY,
-    ONBOARDING_ROUTES.BACKUP,
     ONBOARDING_ROUTES.HUMAN,
     ONBOARDING_ROUTES.JOIN,
     ...EXPLORE_ROUTES,
     AUTH_ROUTES.LOGOUT,
+    // The signed-out explanation of the migration gate, after its forced logout.
+    AUTH_ROUTES.MIGRATION,
     COPYRIGHT_ROUTES.COPYRIGHT,
   ],
   redirectTo: ROOT_ROUTES,
 };
 
+/**
+ * An account held behind the social v1 migration gate reaches only the gate, logout and the
+ * legal pages; `RouteGuardProvider` sends every other route there, the public ones included.
+ */
+export const NEEDS_SOCIAL_MIGRATION_ROUTES = {
+  allowedRoutes: [AUTH_ROUTES.MIGRATION, AUTH_ROUTES.LOGOUT, ...Object.values(LEGAL_ROUTES)],
+  redirectTo: AUTH_ROUTES.MIGRATION,
+};
+
+/**
+ * Where a signed-out tab may stay while the gate's sign-out explanation is still owed (its tab-scoped notice is
+ * pending, ADR-0026 amendment of 2026-11-13): the gate's own routes and sign-in, the way out of the explanation.
+ * `RouteGuardProvider` sends the tab back to `/migration` from every other route, the public ones included. The
+ * legal pages are listed to mirror the gate's set; like `/copyright`, they render outside the guard (`AppShell`).
+ */
+export const SOCIAL_MIGRATION_SIGNED_OUT_ROUTES: string[] = [
+  ...NEEDS_SOCIAL_MIGRATION_ROUTES.allowedRoutes,
+  AUTH_ROUTES.SIGN_IN,
+];
+
 export const NEEDS_PROFILE_CREATION_ROUTES = {
-  allowedRoutes: [ONBOARDING_ROUTES.PROFILE, ONBOARDING_ROUTES.BACKUP],
+  allowedRoutes: [ONBOARDING_ROUTES.PROFILE],
   redirectTo: ONBOARDING_ROUTES.PROFILE,
 };
 

@@ -1,7 +1,8 @@
 import { defineConfig } from 'cypress';
 import { config } from 'dotenv';
 
-import { appendFileSync, existsSync, readdirSync, rename, rm, unlink } from 'fs';
+import { appendFileSync, readdirSync } from 'fs';
+import { startLockServerWrites } from './plugins/lock-server';
 import { createNexusTasks } from './plugins/nexus';
 import { createSeedTasks } from './plugins/seed';
 import { defaultMs } from './support/slow-down';
@@ -43,7 +44,7 @@ export default defineConfig({
 
     // Plugins
 
-    setupNodeEvents(on, cypressConfig) {
+    async setupNodeEvents(on, cypressConfig) {
       on('before:browser:launch', (browser, launchOptions) => {
         if (browser.family === 'firefox') {
           // Firefox to treat localhost as secure context (needed for win.navigator.clipboard)
@@ -63,70 +64,6 @@ export default defineConfig({
       });
 
       on('task', {
-        // task to delete a folder
-        deleteFolder(folderName) {
-          console.log('deleting folder %s', folderName);
-
-          return new Promise((resolve, _reject) => {
-            rm(folderName, { maxRetries: 10, recursive: true, force: true }, (err) => {
-              if (err) {
-                console.error(err);
-              }
-              resolve(null);
-            });
-          });
-        },
-
-        // task to delete a file
-        deleteFile(filePath) {
-          console.log('deleting file %s', filePath);
-
-          return new Promise((resolve, reject) => {
-            unlink(filePath, (err) => {
-              if (err) {
-                console.error(err);
-                return reject(err);
-              }
-              resolve(null);
-            });
-          });
-        },
-
-        // Task to rename a file. Polls for the source path first because browser
-        // downloads (e.g. recovery.pkarr) can land after the click that triggers them.
-        renameFile({ fromPath, toPath }) {
-          const timeoutMs = 10_000;
-          const pollMs = 100;
-          console.log('renaming file from %s to %s', fromPath, toPath);
-
-          return new Promise((resolve, reject) => {
-            const startedAt = Date.now();
-
-            const attempt = () => {
-              if (existsSync(fromPath)) {
-                rename(fromPath, toPath, (err) => {
-                  if (err) {
-                    console.error(err);
-                    return reject(err);
-                  }
-                  resolve(null);
-                });
-                return;
-              }
-
-              if (Date.now() - startedAt >= timeoutMs) {
-                const err = new Error(`Timed out waiting for file to exist before rename: ${fromPath}`);
-                console.error(err);
-                return reject(err);
-              }
-
-              setTimeout(attempt, pollMs);
-            };
-
-            attempt();
-          });
-        },
-
         checkFileExistsWithSuffix({ folder, suffix }) {
           const files = readdirSync(folder);
           const matchedFile = files.find((file) => file.endsWith(suffix));
@@ -145,18 +82,20 @@ export default defineConfig({
       });
 
       // Seed supporting users and activity through the homeserver API (see plugins/seed.ts)
-      on(
-        'task',
-        createSeedTasks({
-          homeserverAdminUrl: String(cypressConfig.env['homeserverAdminUrl']),
-          homeserverAdminPassword: String(cypressConfig.env['homeserverAdminPassword']),
-          homeserverPublicKey: String(cypressConfig.env['homeserverPublicKey']),
-          nexusUrl: String(cypressConfig.env['nexusUrl']),
-        }),
-      );
+      const seedTasks = createSeedTasks({
+        homeserverAdminUrl: String(cypressConfig.env['homeserverAdminUrl']),
+        homeserverAdminPassword: String(cypressConfig.env['homeserverAdminPassword']),
+        homeserverPublicKey: String(cypressConfig.env['homeserverPublicKey']),
+        nexusUrl: String(cypressConfig.env['nexusUrl']),
+      });
+      on('task', seedTasks);
 
       // Wait for a phase's seeds to be indexed, all at once (see plugins/nexus.ts)
       on('task', createNexusTasks(String(cypressConfig.env['nexusUrl'])));
+
+      // The stubbed Lock Server's homeserver writes, for locks.cy.ts (see plugins/lock-server.ts)
+      cypressConfig.expose['lockServerWritesUrl'] = await startLockServerWrites(seedTasks.seedLockServerWrite);
+      return cypressConfig;
     },
     experimentalModifyObstructiveThirdPartyCode: true,
     // Chrome's native network path (Cypress 16) instruments the service worker script on the

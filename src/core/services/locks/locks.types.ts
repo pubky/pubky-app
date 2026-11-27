@@ -43,6 +43,21 @@ export type TGetPaykitSetupUrlParams = {
   state: string;
 };
 
+/** Params to build the Paykit `/setup/reconnect` URL: the flow for a creator the Paykit Server already holds. */
+export type TGeneratePaykitReconnectUrlParams = TGeneratePaykitSetupUrlParams & {
+  /** The creator's pubky; `/setup/reconnect` requires it and parses only the `pubky<z32>` form. */
+  creator: string;
+};
+
+/** Params to ask whether the Paykit Server already holds a creator. */
+export type TLookupPaykitCreatorHeldParams = {
+  /** The creator's pubky, with or without the `pubky` prefix. */
+  creator: string;
+};
+
+/** The same-origin probe's answer: `true` when the Paykit Server holds the creator. */
+export const paykitCreatorHeldResponseSchema = z.object({ held: z.boolean() });
+
 /**
  * Whether the creator's Paykit payout account is set up, as the Lock Server reports it. `unavailable`
  * means Paykit could not answer, which says nothing about the setup.
@@ -119,7 +134,7 @@ export type TRegisterGuardedResourceResult = {
 
 /** Params to bundle uploaded resources into one content lock. At least one resource is required. */
 export type TCreateContentLockParams = {
-  /** Entry-point resource: the JSON file holding the `PubkyAppPost` object. Always present. */
+  /** Entry-point resource: the locked post, a v1 `Post` (`GuardedPostBuilder.toPrimary`). Always present. */
   primaryResource: TGuardedResource;
   /** The remaining resources; each descriptor as returned by `registerGuardedResource`. */
   secondaryResources?: TGuardedResource[];
@@ -150,7 +165,7 @@ export enum VerifierType {
   PAYMENT = 'paykit-payment',
 }
 
-/** Primary for Lock. The entry-point PubkyAppPost; carries its own `path`. */
+/** Primary for Lock. The entry-point post; carries its own `path`. */
 interface LockPostResource {
   path: string;
   hash: string;
@@ -212,7 +227,7 @@ export interface LockFile {
 
 /**
  * The locked post's kind, saved in the announcement as `content_kind` so the card and the unlock dialog can
- * show what is locked before anyone unlocks it (#2433). These are the pubky-app-specs v1.0.0-rc.1 kind names. They are
+ * show what is locked before anyone unlocks it (#2433). These are the pubky-social-specs 1.x kind names. They are
  * stored in published posts, so the list is its own and is never derived from the app's internal post kinds:
  * renaming an internal kind must not change what a lock saves. `toLockContentKind` maps one to the other.
  */
@@ -227,7 +242,7 @@ export function isLockContentKind(kind: string | undefined): kind is TLockConten
 
 /**
  * Creator-authored teaser content stored (stringified) in a lock post's `content`
- * field. FE-owned — pubky-app-specs does not manage it yet, so we validate it at
+ * field. FE-owned — pubky-social-specs does not manage it, so we validate it at
  * runtime here (Zod).
  * - `lock_title`: title of the locked content (shown in the lock card).
  * - `teaser_description`: preview/announcement text shown above the lock card.
@@ -244,10 +259,13 @@ export const lockPostContentSchema = z.object({
 
 export type LockPostContent = z.infer<typeof lockPostContentSchema>;
 
-/** Serialized `PubkyAppPost.kind`. Invalid → reject the whole post, no fallback. */
+/** A post kind in the local vocabulary (`POST_KINDS`). Invalid → reject the whole post, no fallback. */
 const postKindSchema = z.enum(POST_KINDS);
 
-/** The guarded primary — a `PubkyAppPost` — read back after unlock. Lenient: unknown fields ignored. */
+/**
+ * A guarded primary in the 0.x post shape, read back after unlock (a v1 primary decodes in
+ * `GuardedContentParser.parsePost`). Lenient: unknown fields ignored.
+ */
 export const guardedPostSchema = z.object({
   content: z.string().catch(''),
   kind: postKindSchema,
@@ -257,7 +275,7 @@ export const guardedPostSchema = z.object({
 export type GuardedPost = z.infer<typeof guardedPostSchema>;
 
 /**
- * The reader's own `post.json` written on unlock. Not a `PubkyAppPost`: each attachment carries its
+ * The reader's own `post.json` written on unlock. Not a post object: each attachment carries its
  * `content_type` inline so the replicated copy renders without the creator's lock file — the lock can
  * be revoked, and this file lives entirely in the reader's `/priv`.
  */
@@ -284,6 +302,11 @@ export const replicatedPostSchema = z.object({
    * composite id, and failing the whole schema would lose the reader's unlocked content instead.
    */
   announcement: z.string().startsWith('pubky://').optional().catch(undefined),
+  /**
+   * Unlock time in ms, set only on a marker copied from `/priv/social/unlocked/` (#3206): the copy's
+   * write time is not the unlock time. Every other marker's unlock time is its homeserver write time.
+   */
+  unlocked_at: z.number().int().nonnegative().optional().catch(undefined),
 });
 
 export type ReplicatedPost = z.infer<typeof replicatedPostSchema>;
@@ -297,7 +320,7 @@ export const purchaseFileSchema = z.object({ bundle_id: z.string().min(1) });
 export interface TUnlockedListItem {
   lockId: string;
   post: ReplicatedPost;
-  /** Homeserver write time of the marker — the unlock time, and the list's sort key. */
+  /** The marker's unlock time (`unlocked_at`, else its homeserver write time), and the list's sort key. */
   unlockedAt: number;
   /** From the marker's `announcement` URI. Absent when it has none, or the URI is unparseable. */
   announcementPostId?: string;
@@ -305,7 +328,10 @@ export interface TUnlockedListItem {
 
 /** One guarded attachment read back after unlock — raw bytes + its content type (for a Blob). */
 export interface TUnlockedAttachment {
-  /** Guarded path tail (`/priv/app.locks/content/<uuid>` → `<uuid>`); reused as the filename when replicated. */
+  /**
+   * Guarded path tail (`/priv/app.locks/content/<uuid>` → `<uuid>`, or `<uuid>.svg` for an SVG); reused as
+   * the filename when replicated, so the reader's copy of an SVG is stored as `image/svg+xml` too.
+   */
   id: string;
   contentType: string;
   bytes: Uint8Array;

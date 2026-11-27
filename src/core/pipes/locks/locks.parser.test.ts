@@ -1,5 +1,7 @@
+import { encodeContent, encodeObject } from 'pubky-social-specs';
+import { fakeOwner } from 'pubky-social-specs/testing';
 import { describe, expect, it } from 'vitest';
-import type { GuardedPost } from '@/services/locks/locks.types';
+import type { GuardedPost, ReplicatedPost } from '@/services/locks/locks.types';
 import { MOCK_LOCK_AUTHOR_PUBKY, mockLockFile } from '@/test-utils/locks';
 import { GuardedContentParser, LockContentParser, LockFileParser, LockProofBundler } from './locks.parser';
 
@@ -154,28 +156,55 @@ describe('GuardedContentParser', () => {
     const BUNDLE_A = 'A'.repeat(26);
     const BUNDLE_B = 'B'.repeat(26);
 
-    it('builds one purchase URL per bundle id, beside the replica, not inside it', () => {
+    it("builds one purchase URL per bundle id in the app's namespace, beside the replica, not inside it", () => {
       expect(GuardedContentParser.purchaseUrl('reader123', 'lock1', BUNDLE_A)).toBe(
-        `pubky://reader123/priv/social/purchases/lock1/${BUNDLE_A}.json`,
+        `pubky://reader123/priv/app.pubky/v1/locks/purchases/lock1/${BUNDLE_A}.json`,
       );
       expect(GuardedContentParser.purchaseLockRootUrl('reader123', 'lock1')).toBe(
+        'pubky://reader123/priv/app.pubky/v1/locks/purchases/lock1/',
+      );
+      expect(GuardedContentParser.purchasesRootUrl('reader123')).toBe(
+        'pubky://reader123/priv/app.pubky/v1/locks/purchases/',
+      );
+    });
+
+    it('reads the files of builds before #3206 under the social root', () => {
+      expect(GuardedContentParser.socialPurchaseLockRootUrl('reader123', 'lock1')).toBe(
         'pubky://reader123/priv/social/purchases/lock1/',
       );
+      expect(GuardedContentParser.socialPurchasesRootUrl('reader123')).toBe('pubky://reader123/priv/social/purchases/');
       expect(GuardedContentParser.legacyPurchaseUrl('reader123', 'lock1')).toBe(
         'pubky://reader123/priv/social/purchases/lock1.json',
       );
     });
 
-    it('lists the purchased lock ids from the purchases root, in both layouts, once each', () => {
+    it('lists the purchased lock ids from either purchases root, in both layouts, once each', () => {
       expect(
         GuardedContentParser.purchasedLockIds([
           'pubky://reader1/priv/social/purchases/lock1.json',
           `pubky://reader1/priv/social/purchases/lock1/${BUNDLE_A}.json`,
-          `pubky://reader1/priv/social/purchases/lock2/${BUNDLE_A}.json`,
+          `pubky://reader1/priv/app.pubky/v1/locks/purchases/lock2/${BUNDLE_A}.json`,
           `pubky://reader1/priv/social/purchases/lock2/${BUNDLE_B}.json`,
           'pubky://reader1/priv/social/purchases/lock3.json',
+          `pubky://reader1/priv/app.pubky/v1/locks/purchases/lock4/${BUNDLE_B}.json`,
         ]),
-      ).toEqual(['lock1', 'lock2', 'lock3']);
+      ).toEqual(['lock1', 'lock2', 'lock3', 'lock4']);
+    });
+
+    it('sorts the purchase files by layout and leaves out a name in neither', () => {
+      expect(
+        GuardedContentParser.purchaseFiles([
+          'pubky://reader1/priv/social/purchases/lock1.json',
+          `pubky://reader1/priv/social/purchases/lock2/${BUNDLE_A}.json`,
+          'pubky://reader1/priv/social/purchases/lock2/extra.json',
+          'pubky://reader1/priv/social/unlocked/lock3/post.json',
+        ]),
+      ).toEqual({ bundles: [{ lockId: 'lock2', bundleId: BUNDLE_A }], legacyLockIds: ['lock1'] });
+    });
+
+    it('tells a bundle id from other names', () => {
+      expect(GuardedContentParser.isBundleId(BUNDLE_A)).toBe(true);
+      expect(GuardedContentParser.isBundleId('bundle-1')).toBe(false);
     });
 
     it.each([
@@ -279,7 +308,7 @@ describe('GuardedContentParser', () => {
   describe('unlockedUrl', () => {
     it('builds the reader-owned copy path for one unlocked file', () => {
       expect(GuardedContentParser.unlockedUrl('readerpubky', 'LOCK1', 'img1')).toBe(
-        'pubky://readerpubky/priv/social/unlocked/LOCK1/img1',
+        'pubky://readerpubky/priv/app.pubky/v1/locks/unlocked/LOCK1/img1',
       );
     });
   });
@@ -287,19 +316,59 @@ describe('GuardedContentParser', () => {
   describe('unlockedPostUrl', () => {
     it('builds the reader-owned post.json marker path', () => {
       expect(GuardedContentParser.unlockedPostUrl('readerpubky', 'LOCK1')).toBe(
+        'pubky://readerpubky/priv/app.pubky/v1/locks/unlocked/LOCK1/post.json',
+      );
+    });
+
+    it('builds the marker path of builds before #3206', () => {
+      expect(GuardedContentParser.socialUnlockedPostUrl('readerpubky', 'LOCK1')).toBe(
         'pubky://readerpubky/priv/social/unlocked/LOCK1/post.json',
       );
     });
   });
 
+  describe('replicaRoot', () => {
+    const withAttachment = (path: string): ReplicatedPost => ({
+      content: 'x',
+      kind: 'image',
+      attachments: [{ url: `pubky://readerpubky${path}`, content_type: 'image/png' }],
+    });
+
+    it.each([
+      ['the app namespace', '/priv/app.pubky/v1/locks/unlocked/LOCK1/img1', 'app'],
+      ['the social root of builds before #3206', '/priv/social/unlocked/LOCK1/img1', 'social'],
+      ['neither root', '/priv/app.locks/content/img1', null],
+    ])('names %s', (_label, path, root) => {
+      expect(GuardedContentParser.replicaRoot(withAttachment(path))).toBe(root);
+    });
+
+    it('is null without attachments', () => {
+      expect(GuardedContentParser.replicaRoot({ content: 'x', kind: 'short', attachments: null })).toBeNull();
+    });
+  });
+
   describe('unlockedRootUrl', () => {
     it('builds the directory the unlocked list enumerates', () => {
-      expect(GuardedContentParser.unlockedRootUrl('readerpubky')).toBe('pubky://readerpubky/priv/social/unlocked/');
+      expect(GuardedContentParser.unlockedRootUrl('readerpubky')).toBe(
+        'pubky://readerpubky/priv/app.pubky/v1/locks/unlocked/',
+      );
+      expect(GuardedContentParser.socialUnlockedRootUrl('readerpubky')).toBe(
+        'pubky://readerpubky/priv/social/unlocked/',
+      );
     });
   });
 
   describe('completedLockIds', () => {
-    const url = (tail: string) => `pubky://readerpubky/priv/social/unlocked/${tail}`;
+    const url = (tail: string) => `pubky://readerpubky/priv/app.pubky/v1/locks/unlocked/${tail}`;
+
+    it('reads a listing of the social root of builds before #3206 too', () => {
+      expect(
+        GuardedContentParser.completedLockIds([
+          'pubky://readerpubky/priv/social/unlocked/OLD/post.json',
+          'pubky://readerpubky/priv/social/unlocked/OLD/img1',
+        ]),
+      ).toEqual(['OLD']);
+    });
 
     it('counts a lock once, from its post.json, ignoring the attachments beside it', () => {
       const files = [url('LOCK1/img1'), url('LOCK1/post.json'), url('LOCK1/img2')];
@@ -352,7 +421,11 @@ describe('GuardedContentParser', () => {
         content: 'secret',
         kind: 'image',
         attachments: [
-          { url: 'pubky://readerpubky/priv/social/unlocked/LOCK1/img1', content_type: 'image/png', slot: 0 },
+          {
+            url: 'pubky://readerpubky/priv/app.pubky/v1/locks/unlocked/LOCK1/img1',
+            content_type: 'image/png',
+            slot: 0,
+          },
         ],
         announcement: ANNOUNCEMENT_URI,
       });
@@ -447,12 +520,116 @@ describe('GuardedContentParser', () => {
     it('returns null for non-JSON bytes', () => {
       expect(GuardedContentParser.parseReplicatedPost(new TextEncoder().encode('nope'))).toBeNull();
     });
+
+    it('reads the unlock time a copied marker carries, and drops one that is not a time', () => {
+      expect(
+        GuardedContentParser.parseReplicatedPost(encode({ content: 'b', kind: 'short', unlocked_at: 1700 }))
+          ?.unlocked_at,
+      ).toBe(1700);
+      const parsed = GuardedContentParser.parseReplicatedPost(
+        encode({ content: 'b', kind: 'short', unlocked_at: 'x' }),
+      );
+      expect(parsed?.content).toBe('b');
+      expect(parsed?.unlocked_at).toBeUndefined();
+    });
+  });
+
+  describe('toCopiedReplica', () => {
+    const SOCIAL = 'pubky://reader/priv/social/unlocked/LOCK1/';
+    const NEW = 'pubky://reader/priv/app.pubky/v1/locks/unlocked/LOCK1/';
+    const post: ReplicatedPost = {
+      content: 'secret',
+      kind: 'image',
+      attachments: [
+        { url: `${SOCIAL}img1`, content_type: 'image/png', slot: 0 },
+        { url: `${SOCIAL}img2`, content_type: 'image/png', slot: 2 },
+      ],
+      announcement: 'pubky://author/pub/social/v1/posts/P1',
+    };
+
+    it("moves each attachment of this lock to the same name under the new root, and keeps the source's unlock time", () => {
+      expect(GuardedContentParser.toCopiedReplica(post, 'reader', 'LOCK1', 1700)).toEqual({
+        post: {
+          ...post,
+          attachments: [
+            { url: `${NEW}img1`, content_type: 'image/png', slot: 0 },
+            { url: `${NEW}img2`, content_type: 'image/png', slot: 2 },
+          ],
+          unlocked_at: 1700,
+        },
+        files: [
+          { from: `${SOCIAL}img1`, to: `${NEW}img1` },
+          { from: `${SOCIAL}img2`, to: `${NEW}img2` },
+        ],
+      });
+    });
+
+    it.each([
+      ['another lock', 'pubky://reader/priv/social/unlocked/LOCK2/img1'],
+      ['another reader', 'pubky://other/priv/social/unlocked/LOCK1/img1'],
+      ['a nested name', `${SOCIAL}a/img1`],
+      ['the name of the marker, which would land at the marker path', `${SOCIAL}post.json`],
+    ])('keeps an attachment of %s as it is and copies nothing for it', (_label, url) => {
+      const copy = GuardedContentParser.toCopiedReplica(
+        { ...post, attachments: [{ url, content_type: 'image/png' }] },
+        'reader',
+        'LOCK1',
+        1700,
+      );
+
+      expect(copy.post.attachments).toEqual([{ url, content_type: 'image/png' }]);
+      expect(copy.files).toEqual([]);
+    });
+
+    it('keeps a text-only replica text-only', () => {
+      const copy = GuardedContentParser.toCopiedReplica({ ...post, attachments: null }, 'reader', 'LOCK1', 0);
+
+      expect(copy).toEqual({ post: { ...post, attachments: null, unlocked_at: 0 }, files: [] });
+    });
   });
 
   describe('parsePost', () => {
     const encode = (value: unknown) => new TextEncoder().encode(JSON.stringify(value));
 
-    it('parses guarded PubkyAppPost bytes into the reader post shape', () => {
+    it('parses a v1 guarded post into the reader post shape, in the local vocabulary', () => {
+      const bytes = encodeObject(
+        { kind: 'post', root: 'private' },
+        {
+          content: 'secret body',
+          kind: 'note',
+          parent: null,
+          embed: null,
+          attachments: [{ uri: `pubky://${fakeOwner(2)}/priv/app.locks/content/a`, name: 'a.png', alt: null }],
+          lock: null,
+        },
+      );
+      expect(GuardedContentParser.parsePost(bytes)).toEqual({
+        content: 'secret body',
+        kind: 'short',
+        attachments: [`pubky://${fakeOwner(2)}/priv/app.locks/content/a`],
+      });
+    });
+
+    it('reads a v1 guarded post without attachments as having none', () => {
+      const bytes = encodeObject(
+        { kind: 'post', root: 'private' },
+        {
+          content: encodeContent({ title: 'T', body: 'x', cover_image: null }),
+          kind: 'article',
+          parent: null,
+          embed: null,
+          attachments: [],
+          lock: null,
+        },
+      );
+      expect(GuardedContentParser.parsePost(bytes)).toEqual({
+        content: encodeContent({ title: 'T', body: 'x', cover_image: null }),
+        kind: 'long',
+        attachments: null,
+      });
+    });
+
+    it('parses guarded 0.x post bytes, written before the social v1 port, into the reader post shape', () => {
       const bytes = encode({
         content: 'secret body',
         kind: 'short',

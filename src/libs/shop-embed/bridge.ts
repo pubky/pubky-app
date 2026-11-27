@@ -47,6 +47,8 @@ export function getShopSessionSnapshot(state: AuthState): ShopSessionSnapshot {
   if (!state.hasHydrated || state.isRestoringSession || state.isLoggingOut) status = 'restoring';
   else if (state.restoreStatus === 'temporary-error' || state.restoreStatus === 'reauth-required')
     status = state.restoreStatus;
+  // An account behind the migration gate is not usable yet; the gate ends in `ready` or a logout.
+  else if (state.restoreStatus === 'social-migration') status = 'restoring';
   else if (!state.sessionReference) status = 'signed-out';
   else if (state.needsAccountSync) status = 'restoring';
   else if (state.restoreStatus === 'ready' && state.session && state.sessionReference && state.currentUserPubky)

@@ -58,8 +58,10 @@ function whenAborted(signal: AbortSignal): Promise<void> {
 }
 
 /**
- * Holds the tab's one homeserver event stream and shares it between the channels registered with it (mute list,
- * notification `last_read`), subscribing once to the union of their paths.
+ * Holds the tab's one homeserver event stream and shares it between the channels registered with it, subscribing
+ * once to the union of their paths. On `dev` the channels were the mute list and the notification `last_read`; on
+ * the social v1 tree both files are private and no channel registers, so the hub opens no request and the two
+ * files are polled instead (`MuteListSyncCoordinator`, `NotificationLastReadPollCoordinator`; ADR-0014, ADR-0029).
  *
  * The homeserver speaks HTTP/1.1, where the browser allows six connections per host across all tabs, and these
  * long-lived streams sit in the pool that CORS preflights wait in. A stream per channel let three visible tabs
@@ -78,7 +80,7 @@ function whenAborted(signal: AbortSignal): Promise<void> {
  *   routes (or on first pathname); moving between allowed routes keeps the existing stream to avoid churn.
  * - A channel that registers, unregisters or changes readiness reconnects the stream with the new path set.
  *
- * No polling fallback.
+ * No polling fallback of its own: a channel that cannot stream is replaced by a polling coordinator, not degraded.
  */
 export class HomeserverEventStreamCoordinator {
   private static instance: HomeserverEventStreamCoordinator | null = null;

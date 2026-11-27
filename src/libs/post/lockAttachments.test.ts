@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { LOCK_ATTACHMENT_MAX_FILES, LOCK_ATTACHMENT_MAX_SIZE } from '@/config/posts';
-import { areLockAttachmentsWithinLimit, hasSvgAttachment } from './lockAttachments';
+import { areLockAttachmentsWithinLimit } from './lockAttachments';
 
 const fileOfSize = (size: number) => {
   const file = new File(['x'], 'image.png', { type: 'image/png' });
@@ -36,19 +36,5 @@ describe('areLockAttachmentsWithinLimit', () => {
 
   it('rejects the set when only one file is too large', () => {
     expect(areLockAttachmentsWithinLimit([fileOfSize(1), fileOfSize(LOCK_ATTACHMENT_MAX_SIZE + 1)])).toBe(false);
-  });
-});
-
-describe('hasSvgAttachment', () => {
-  const png = new File(['x'], 'image.png', { type: 'image/png' });
-  const svg = new File(['<svg />'], 'image.svg', { type: 'image/svg+xml' });
-
-  it('finds an SVG among other files', () => {
-    expect(hasSvgAttachment([png, svg])).toBe(true);
-  });
-
-  it('finds none in files of other types, or in no files', () => {
-    expect(hasSvgAttachment([png])).toBe(false);
-    expect(hasSvgAttachment([])).toBe(false);
   });
 });

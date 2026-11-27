@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { PubkyAppFeedReach } from 'pubky-app-specs';
 import { useForm, type UseFormReturn } from 'react-hook-form';
 import { APP_ROUTES } from '@/app/routes';
 import { TAGGED_AS_FILTER_KEY } from '@/config/feed';
@@ -90,13 +89,16 @@ export function useCustomFeedForm(params: UseCustomFeedFormParams): UseCustomFee
         const { reach: formReach, content: formContent, ...rest } = data;
         const changes = {
           ...rest,
-          reach: formReach === TAGGED_AS_FILTER_KEY ? PubkyAppFeedReach.Wot : formReach,
+          reach: formReach === TAGGED_AS_FILTER_KEY ? 'wot' : formReach,
           content: formContent === CUSTOM_FEED_CONTENT_ALL ? null : formContent,
         };
 
         try {
           if (mode === 'create') {
             const createdFeed = await FeedController.commitCreate(changes);
+            // The account changed while the write waited for the sync lock: nothing was created, and
+            // the viewer is gone, so there is nothing to announce or open.
+            if (!createdFeed) return;
 
             toast({
               title: 'Feed created',
@@ -112,6 +114,7 @@ export function useCustomFeedForm(params: UseCustomFeedFormParams): UseCustomFee
             feedId: feed.id,
             changes,
           });
+          if (!updatedFeed) return;
 
           toast({
             title: 'Feed updated',
@@ -149,9 +152,11 @@ export function useCustomFeedForm(params: UseCustomFeedFormParams): UseCustomFee
       if (!(await waitForAuth())) return false;
       const currentFeedHref = `${APP_ROUTES.FEED}/${feed.id}`;
 
-      await FeedController.commitDelete({
+      const deleted = await FeedController.commitDelete({
         feedId: feed.id,
       });
+      // false: the account changed while the delete waited for the sync lock; nothing to announce.
+      if (!deleted) return false;
       toast({
         title: 'Feed deleted',
       });

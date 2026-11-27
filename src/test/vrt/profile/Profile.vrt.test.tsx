@@ -20,6 +20,7 @@ import { ProfileFollowingPage } from '@/templates/Profile/Following/ProfileFollo
 import { ProfileFriendsPage } from '@/templates/Profile/Friends/ProfileFriendsPage';
 import { ProfileTaggedPage } from '@/templates/Profile/Tagged/ProfileTaggedPage';
 import { ProfileCollectionsPage } from '@/templates/Profile/Collections/ProfileCollectionsPage';
+import { ProfileOverviewPage } from '@/templates/Profile/Profile/ProfileOverviewPage';
 
 const routeState = vi.hoisted(() => ({
   pathname: '/profile',
@@ -41,6 +42,23 @@ function withEmptyCollections() {
 
   afterEach(() => {
     feedState.emptyCollections = false;
+  });
+}
+
+// #3205: a 100-character title with no spaces has nowhere to break.
+const longLinkState = vi.hoisted(() => ({
+  enabled: false,
+  title: 'ABCD'.repeat(25),
+}));
+
+/** Registers describe-scoped hooks that replace every profile's links with one long-titled link. */
+function withLongLinkTitle() {
+  beforeEach(() => {
+    longLinkState.enabled = true;
+  });
+
+  afterEach(() => {
+    longLinkState.enabled = false;
   });
 }
 
@@ -279,6 +297,7 @@ vi.mock('@/stores/localFiles/localFiles.store', () => ({
   useLocalFilesStore: createZustandLikeHook({
     profile: null,
     posts: {} as Record<string, never>,
+    articleCovers: {} as Record<string, never>,
     collections: {} as Record<string, never>,
   }),
 }));
@@ -650,11 +669,12 @@ vi.mock('@/hooks/useUserProfile/useUserProfile', async () => {
   return {
     useUserProfile: (userId: string) => {
       if (!userId) return EMPTY;
-      const cached = cache.get(userId);
+      const cacheKey = `${longLinkState.enabled}:${userId}`;
+      const cached = cache.get(cacheKey);
       if (cached) return cached;
       const details = f.profiles[userId];
       if (!details) {
-        cache.set(userId, EMPTY);
+        cache.set(cacheKey, EMPTY);
         return EMPTY;
       }
       const result = {
@@ -666,11 +686,13 @@ vi.mock('@/hooks/useUserProfile/useUserProfile', async () => {
           status: details.status ?? '',
           avatarUrl: undefined,
           link: `/profile/${details.id}`,
-          links: details.links,
+          links: longLinkState.enabled
+            ? [{ title: longLinkState.title, url: `https://example.com/${details.id}` }]
+            : details.links,
         },
         isLoading: false as const,
       };
-      cache.set(userId, result);
+      cache.set(cacheKey, result);
       return result;
     },
   };
@@ -761,6 +783,7 @@ vi.mock('@/hooks/useProfileConnections/useProfileConnections', async () => {
       return {
         connections,
         count: connections.length,
+        retainedCount: 0,
         isLoading: false,
         isLoadingMore: false,
         error: null as string | null,
@@ -957,6 +980,24 @@ describe('Own profile — posts — visual regression', () => {
     expect(nameStyle.marginBottom).toBe('-9px');
     expect(name.scrollWidth).toBeGreaterThan(name.clientWidth);
     expect(name.getBoundingClientRect().right).toBeLessThan(statusEmoji.getBoundingClientRect().left);
+  });
+});
+
+describe('Own profile — long link title — visual regression', () => {
+  withLongLinkTitle();
+
+  it('wraps the title in the sidebar at desktop viewport', async () => {
+    const screen = await renderOwnProfileTab('/profile/posts', <ProfilePostsPage />, VRT_VIEWPORT_DESKTOP);
+    await expect.element(screen.getByRole('feed').first()).toBeVisible();
+    await expect.element(screen.getByText(/The round-trip used to be the whole conversation/)).toBeVisible();
+    await expect.element(screen.getByRole('link', { name: longLinkState.title })).toBeVisible();
+    await matchVrtFrameScreenshot('own-profile-long-link-title-desktop');
+  });
+
+  it('wraps the title on the profile tab at mobile viewport', async () => {
+    const screen = await renderOwnProfileTab('/profile/profile', <ProfileOverviewPage />, VRT_VIEWPORT_MOBILE);
+    await expect.element(screen.getByRole('link', { name: longLinkState.title })).toBeVisible();
+    await matchVrtFrameScreenshot('own-profile-long-link-title-mobile');
   });
 });
 

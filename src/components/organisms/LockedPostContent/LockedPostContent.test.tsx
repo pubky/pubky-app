@@ -6,7 +6,6 @@ import { useLockFile } from '@/hooks/useLockFile/useLockFile';
 import type { UsePurchasedLocksResult } from '@/hooks/usePurchasedLocks/usePurchasedLocks.types';
 import type { PurchaseResumeStatus } from '@/hooks/usePurchaseResume/usePurchaseResume.types';
 import type { PaidUnlockAvailability } from '@/libs/region/paidUnlockAvailability';
-import { PostPreviewNestingProvider } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import type {
   LockFile,
   LockPostContent,
@@ -16,6 +15,7 @@ import type {
 } from '@/services/locks/locks.types';
 import { stubUnlockSlideGeometry } from '@/test-utils/locks';
 import { asOpaque } from '@/test-utils/type-assertions';
+import { type FocusedLock, FocusedLockProvider } from './FocusedLockContext';
 import { LockedPostContent } from './LockedPostContent';
 
 const { toastMock, payDialogProps } = vi.hoisted(() => ({ toastMock: vi.fn(), payDialogProps: vi.fn() }));
@@ -173,16 +173,8 @@ vi.mock('@/stores/auth/auth.store', () => ({
   useAuthStore: (selector: (s: typeof authState) => unknown) => selector(authState),
 }));
 vi.mock('../PostArticle/PostArticle', () => ({
-  PostArticle: ({
-    content,
-    variant,
-    pendingAttachments,
-  }: {
-    content: string;
-    variant?: 'preview' | 'full';
-    pendingAttachments?: unknown[];
-  }) => (
-    <div data-testid="post-article" data-variant={variant ?? 'preview'} data-pending={pendingAttachments?.length ?? 0}>
+  PostArticle: ({ content, pendingAttachments }: { content: string; pendingAttachments?: unknown[] }) => (
+    <div data-testid="post-article" data-pending={pendingAttachments?.length ?? 0}>
       {content}
     </div>
   ),
@@ -616,76 +608,93 @@ describe('LockedPostContent', () => {
     expect(screen.getByTestId('post-body')).not.toHaveTextContent(article);
   });
 
-  it('renders an unlocked article in full on the post page, and as a preview elsewhere', async () => {
-    mockLockData({ lockFile: asOpaque<LockFile>({ creator: 'pubkybob' }) });
-    const article = JSON.stringify({ title: 'My Essay', body: 'the body' });
-    vi.mocked(LocksController.fetchReplicatedContent).mockResolvedValue({
-      post: { content: article, kind: 'long', attachments: null },
-      attachments: [],
-    });
-
-    const { unmount } = render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
-    expect(await screen.findByTestId('post-article')).toHaveAttribute('data-variant', 'preview');
-    // A preview reads only the cover, so the body media is read on the post page alone (#2686).
-    expect(LocksController.fetchReplicatedContent).toHaveBeenLastCalledWith(expect.objectContaining({ preview: true }));
-    unmount();
-
-    pathname.value = '/post/pubkycreator/POST1';
-    render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
-    expect(await screen.findByTestId('post-article')).toHaveAttribute('data-variant', 'full');
-    expect(LocksController.fetchReplicatedContent).toHaveBeenLastCalledWith(
-      expect.objectContaining({ preview: false }),
-    );
-  });
-
-  it('keeps reading a preview while the feed stays mounted under the post modal', async () => {
-    // The intercepted post modal hides the feed without unmounting it, and the route then names this post.
+  it('reads its own lock as a preview, on a post page too: an article loads its cover alone (#2686)', async () => {
+    // With no page state for it (an embed, a thread parent, the feed under the post modal) the card
+    // never reads a full article, even when the route names its post.
     mockLockData({ lockFile: asOpaque<LockFile>({ creator: 'pubkybob' }) });
     vi.mocked(LocksController.fetchReplicatedContent).mockResolvedValue({
       post: { content: JSON.stringify({ title: 'My Essay', body: 'the body' }), kind: 'long', attachments: null },
       attachments: [],
     });
-    const { rerender } = render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
-    await screen.findByTestId('post-article');
-
     pathname.value = '/post/pubkycreator/POST1';
-    rerender(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
 
-    expect(await screen.findByTestId('post-article')).toHaveAttribute('data-variant', 'full');
+    render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+
+    expect(await screen.findByTestId('post-article')).toHaveTextContent('My Essay');
     expect(LocksController.fetchReplicatedContent).toHaveBeenCalledOnce();
     expect(LocksController.fetchReplicatedContent).toHaveBeenCalledWith(expect.objectContaining({ preview: true }));
   });
 
-  it('keeps the focused post compact inside a preview, as the reply and repost dialogs render it', async () => {
-    mockLockData({ lockFile: asOpaque<LockFile>({ creator: 'pubkybob' }) });
-    vi.mocked(LocksController.fetchReplicatedContent).mockResolvedValue({
-      post: { content: JSON.stringify({ title: 'My Essay', body: 'the body' }), kind: 'long', attachments: null },
-      attachments: [],
+  describe('the post a post page shows, whose lock the page reads (#2659)', () => {
+    const pageLock = (overrides: Partial<FocusedLock['unlocked']> = {}): FocusedLock => ({
+      postId: 'pubkycreator:POST1',
+      lock: LOCK_URL,
+      lockFile: {
+        lockFile: asOpaque<LockFile>({ creator: 'pubkybob' }),
+        price: { amount: '1000', asset: 'BTC' },
+        isLoading: false,
+      },
+      unlocked: {
+        unlockedPost: null,
+        applyUnlockedContent: vi.fn(),
+        media: [],
+        pendingAttachments: [],
+        hasCompleteContent: false,
+        isOwnLock: false,
+        isResolvingOwn: false,
+        isResolvingReplica: false,
+        ...overrides,
+      },
     });
-    pathname.value = '/post/pubkycreator/POST1';
 
-    render(
-      <PostPreviewNestingProvider>
-        <LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />
-      </PostPreviewNestingProvider>,
-    );
+    it("renders the page's state and reads nothing itself", async () => {
+      mockLockData();
 
-    expect(await screen.findByTestId('post-article')).toHaveAttribute('data-variant', 'preview');
-  });
+      render(
+        <FocusedLockProvider
+          value={pageLock({ unlockedPost: { content: 'read by the page', kind: 'short', attachments: null } })}
+        >
+          <LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />
+        </FocusedLockProvider>,
+      );
 
-  it('keeps an embed or thread parent a preview on someone else post page', async () => {
-    // The post page also renders embeds and parents through the same component; only the post the
-    // route names may open in full.
-    mockLockData({ lockFile: asOpaque<LockFile>({ creator: 'pubkybob' }) });
-    vi.mocked(LocksController.fetchReplicatedContent).mockResolvedValue({
-      post: { content: JSON.stringify({ title: 'My Essay', body: 'the body' }), kind: 'long', attachments: null },
-      attachments: [],
+      expect(await screen.findByText('read by the page')).toBeInTheDocument();
+      expect(useLockFile).toHaveBeenCalledWith(null);
+      expect(LocksController.fetchReplicatedContent).not.toHaveBeenCalled();
+      expect(LocksController.getUnlockedPost).not.toHaveBeenCalled();
     });
-    pathname.value = '/post/pubkycreator/OTHERPOST';
 
-    render(<LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />);
+    it('hands a just-paid unlock to the page, so it outlives this card', async () => {
+      mockLockData();
+      const value = pageLock();
 
-    expect(await screen.findByTestId('post-article')).toHaveAttribute('data-variant', 'preview');
+      render(
+        <FocusedLockProvider value={value}>
+          <LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:POST1" />
+        </FocusedLockProvider>,
+      );
+      fireEvent.click(await liveUnlock());
+      await waitFor(() => expect(payMocks.params?.open).toBe(true));
+      const content = { post: { content: 'paid body', kind: 'short' as const, attachments: null }, attachments: [] };
+      act(() => payMocks.params?.onCompleted(content));
+
+      expect(value.unlocked.applyUnlockedContent).toHaveBeenCalledWith(content);
+    });
+
+    it('reads its own lock for any other post on that page', async () => {
+      mockLockData({ lockFile: asOpaque<LockFile>({ creator: 'pubkybob' }) });
+
+      render(
+        <FocusedLockProvider value={pageLock()}>
+          <LockedPostContent content="{}" lock={LOCK_URL} postId="pubkycreator:REPLY1" />
+        </FocusedLockProvider>,
+      );
+
+      await waitFor(() =>
+        expect(LocksController.fetchReplicatedContent).toHaveBeenCalledWith(expect.objectContaining({ preview: true })),
+      );
+      expect(useLockFile).toHaveBeenCalledWith(LOCK_URL);
+    });
   });
 
   it('collapses the unlocked media to one row in the feed, and shows it all on the post page (#2868)', async () => {

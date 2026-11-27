@@ -29,7 +29,7 @@ export const VRT_ROOT_TESTID = 'vrt-root';
  *
  * Playwright leaves the cursor in the centre of the body by default. On a
  * small mobile viewport that can land on an action button, so the
- * screenshot captures the `:hover` state (e.g. `bg-brand/30` instead of
+ * screenshot captures the `:hover` state (e.g. `bg-brand/32` instead of
  * `bg-brand/16`). `page.unhover()` is not enough — it moves the cursor to
  * the body, which can still sit over a centre-screen button.
  *
@@ -89,9 +89,36 @@ export async function matchVrtFrameScreenshot(name: string, options?: Screenshot
   await withCaptureScale(() => expect(page.elementLocator(document.documentElement)).toMatchScreenshot(name, options));
 }
 
+interface VrtElementCaptureOptions extends ScreenshotMatcherOptions {
+  /**
+   * Element to hold in `:hover` for the capture. The capture scale moves the
+   * iframe out from under a pointer placed before it, so the hover is applied
+   * inside the scaled frame and confirmed before the screenshot.
+   */
+  hover?: Locator;
+}
+
+const HOVER_READY_TIMEOUT_MS = 5_000;
+
 /** Element-level counterpart of `matchVrtFrameScreenshot` (e.g. RepostHeader crops), at the same capture scale. */
-export async function matchVrtElementScreenshot(locator: Locator, name: string, options?: ScreenshotMatcherOptions) {
-  await withCaptureScale(() => expect(locator).toMatchScreenshot(name, options));
+export async function matchVrtElementScreenshot(
+  locator: Locator,
+  name: string,
+  { hover, ...options }: VrtElementCaptureOptions = {},
+) {
+  await withCaptureScale(async () => {
+    if (hover) {
+      await hover.hover({ timeout: HOVER_READY_TIMEOUT_MS });
+      const target = hover.element();
+      await vi.waitFor(
+        () => {
+          if (!target.matches(':hover')) throw new Error(`VRT hover target lost :hover before capture (${name})`);
+        },
+        { timeout: HOVER_READY_TIMEOUT_MS },
+      );
+    }
+    await expect(locator).toMatchScreenshot(name, options);
+  });
 }
 
 /**

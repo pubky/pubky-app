@@ -114,9 +114,11 @@ const selectLocalFiles = (posts: LocalFilesStore['posts']) =>
     selector({
       profile: null,
       posts,
+      articleCovers: {},
       collections: {},
       setProfile: vi.fn(),
       setPostAttachments: vi.fn(),
+      setArticleCover: vi.fn(),
       setCollectionCover: vi.fn(),
       reset: vi.fn(),
     }),
@@ -195,8 +197,12 @@ describe('PostListMediaThumbnail', () => {
 
     const video = await screen.findByTestId('video');
     expect(video).toHaveAttribute('src', 'https://cdn.example.com/pk:test:video/main');
-    expect(mockGetFileUrl).toHaveBeenCalledWith({ fileId: 'pk:test:video', variant: FileVariant.MAIN });
-    expect(mockGetFileUrl).not.toHaveBeenCalledWith({ fileId: 'pk:test:video', variant: FileVariant.FEED });
+    expect(mockGetFileUrl).toHaveBeenCalledWith(
+      expect.objectContaining({ fileId: 'pk:test:video', variant: FileVariant.MAIN }),
+    );
+    expect(mockGetFileUrl).not.toHaveBeenCalledWith(
+      expect.objectContaining({ fileId: 'pk:test:video', variant: FileVariant.FEED }),
+    );
   });
 
   it('renders nothing when no image or video preview is available', async () => {

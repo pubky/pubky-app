@@ -7,8 +7,10 @@ import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
 import { useInfiniteScroll } from '@/hooks/useInfiniteScroll/useInfiniteScroll';
 import { useProfileConnections } from '@/hooks/useProfileConnections/useProfileConnections';
 import { CONNECTION_TYPE } from '@/hooks/useProfileConnections/useProfileConnections.types';
+import { getConnectionsHeadingCount } from '@/hooks/useProfileConnections/useProfileConnections.utils';
 import { FollowingEmpty } from '@/molecules/FollowingEmpty/FollowingEmpty';
 import { useProfileContext } from '@/providers/ProfileProvider/ProfileProvider';
+import { useProfileStatsContext } from '@/providers/ProfileStatsProvider/ProfileStatsProvider';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { FullUserListItemSkeleton } from '../FullUserListItemSkeleton/FullUserListItemSkeleton';
 import { UserListItem } from '../UserListItem/UserListItem';
@@ -28,11 +30,19 @@ export function ProfileFollowing() {
   // Get the current logged-in user's pubky
   const currentUserPubky = useAuthStore((state) => state.currentUserPubky);
 
-  const { connections, count, isLoading, isLoadingMore, hasMore, loadMore } = useProfileConnections(
-    CONNECTION_TYPE.FOLLOWING,
-    pubky ?? undefined,
-  );
+  const { connections, count, retainedCount, isLoading, isLoadingMore, error, hasMore, loadMore } =
+    useProfileConnections(CONNECTION_TYPE.FOLLOWING, pubky ?? undefined);
   const { toggleFollow, isUserLoading } = useFollowUser();
+  // The list is paginated, so its length is only what has loaded so far. The total comes from the
+  // counts the profile layout already reads.
+  const stats = useProfileStatsContext();
+  const totalCount = getConnectionsHeadingCount({
+    total: stats?.following ?? 0,
+    loaded: count,
+    retained: retainedCount,
+    hasMore,
+    failed: error !== null,
+  });
 
   // Handle infinite scroll
   const { sentinelRef } = useInfiniteScroll({
@@ -70,7 +80,7 @@ export function ProfileFollowing() {
   return (
     <Container className="gap-4">
       <Heading level={5} size="lg" className="leading-normal font-light text-muted-foreground lg:hidden">
-        Following {count > 0 && `(${count})`}
+        Following {totalCount > 0 && `(${totalCount})`}
       </Heading>
       <Container
         data-cy="profile-connections-list"

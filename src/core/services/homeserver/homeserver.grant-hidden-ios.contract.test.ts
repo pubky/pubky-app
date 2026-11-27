@@ -5,11 +5,6 @@ import { APP_CAPABILITIES } from '@/config/auth';
 import { getDefaultHttpRelay } from '@/config/network';
 import { HomeserverService } from './homeserver';
 
-vi.mock('pubky-app-specs', () => ({
-  default: vi.fn(),
-  userUriBuilder: (key: string) => `pubky://${key}/pub/pubky.app/profile.json`,
-}));
-
 const IPHONE_UA =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1';
 
@@ -26,7 +21,7 @@ const setVisibility = (next: 'visible' | 'hidden') => {
 };
 
 /**
- * The SDK 0.16.2 listener ACKs an approval (`DELETE {relay}/{channel}`) and only queues it once that request
+ * The SDK 0.18.0 listener ACKs an approval (`DELETE {relay}/{channel}`) and only queues it once that request
  * settles. When the page hides in between, the relay may already have dropped the approval while nothing is
  * queued yet, so the flow must stay live until it delivers that approval. Exercised with the real SDK.
  */

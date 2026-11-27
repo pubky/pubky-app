@@ -44,8 +44,11 @@ data dependency (store/hook/fetch/router) so the pixels are deterministic.
 Captures are dark by default. Pass `theme: 'light'` to capture the light
 theme (the harness sets the `.dark` or `.light` class on `<html>` per render,
 exactly as next-themes does, so `dark:` and `light:` utilities apply). Light coverage is deliberately limited to a few core
-signed-in surfaces — Home feed, Hot and the own-profile posts tab, desktop + mobile,
-named `<surface>-light-<viewport>` — not a duplicate of every dark baseline.
+signed-in surfaces — Home feed, Hot and the own-profile posts tab, plus two screens the social v1 migration added (the
+`/settings/edit` migration note and the database version-conflict screen), desktop + mobile,
+named `<surface>-light-<viewport>` — not a duplicate of every dark baseline. A surface `ThemeProvider` forces dark (a
+signed-out route, or no one signed in) gets no light capture: it would show a theme no one sees. That is why the
+`/migration` states are captured dark only.
 
 ## Capture dimensions
 
@@ -84,12 +87,16 @@ to genuinely-changed surfaces. The trade-off is that a visual change under 0.1%
 of pixels won't be flagged — still pin every deterministic source below so real
 diffs stand out:
 
-The comparator also has a per-pixel `threshold` (pixelmatch default `0.1`)
-below which a colour change is not counted at all. Very low-contrast content —
-e.g. the dark-gray empty-state illustrations on the near-black background —
-falls entirely under it, so VRT does not guard that artwork, and `--update`
-will not rewrite a baseline whose only change is in such content. To refresh
-those baselines, delete the PNGs first so they are regenerated from scratch.
+The comparator also has a per-pixel `threshold`, set to `0.05` (the pixelmatch
+default is `0.1`). A pixel counts as mismatched only when its YIQ colour delta
+exceeds `35215 × threshold²` (about 88), and anti-aliased pixels are never
+counted. At `0.1` (about 352) a page background changing from `#eeeef6` to
+`#ffffff` (delta about 134) passed across 98% of the page; at `0.05` it fails,
+while a uniform grey shift of up to about 13 levels still passes. Content
+fainter than that — e.g. very low-contrast artwork on the near-black
+background — is still not guarded, and `--update` will not rewrite a baseline
+whose only change is in such content. To refresh those baselines, delete the
+PNGs first so they are regenerated from scratch.
 
 - **Async data** — mock the hook/controller to a fixed value. An unmocked fetch
   resolves differently per run/region. This is the #1 cause of flakiness.
@@ -212,7 +219,7 @@ unchanged.
 Playwright's default pointer position can land on interactive elements inside a
 small mobile viewport, especially when the browser window is larger than the
 VRT viewport. The screenshot then captures the `:hover` state instead of the
-resting state (e.g. `bg-brand/30` instead of `bg-brand/16`), producing a brighter
+resting state (e.g. `bg-brand/32` instead of `bg-brand/16`), producing a brighter
 button on some browser/OS pairs but not others. This looks like a random colour
 shift but is actually cursor position.
 
@@ -228,6 +235,13 @@ click-outside would collapse QuickReply, and a focused composer would lose
 `:focus-within`. The baseline is always free of accidental `:hover`. If a test
 moves the cursor by clicking, use `matchVrtFrameScreenshot()` (or call the helper
 again) before the final screenshot.
+
+To capture a `:hover` state, pass the target to the capture instead of hovering
+first: `matchVrtElementScreenshot(crop, name, { hover: target })`. The capture
+scale moves the iframe, so a pointer placed before it no longer sits over the
+target and the next hit test drops `:hover` (Chromium always, WebKit sometimes).
+The helper hovers inside the scaled frame and waits for the target to match
+`:hover` before the screenshot.
 
 Expanded QuickReply tests click the textarea again after the expand motion so
 the field stays focused. Product CSS then hides the prompt

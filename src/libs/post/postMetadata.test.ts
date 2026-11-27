@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Logger } from '@/libs/logger/logger';
-import { fetchWithValidation, resolveMentionSegmentsForMetadata, resolveMentionsForMetadata } from './postMetadata';
+import {
+  fetchUserAndPostForMetadata,
+  fetchWithValidation,
+  resolveMentionSegmentsForMetadata,
+  resolveMentionsForMetadata,
+} from './postMetadata';
 
 describe('fetchWithValidation', () => {
   afterEach(() => {
@@ -13,7 +18,7 @@ describe('fetchWithValidation', () => {
   it('bounds the Nexus fetch with a timeout signal (crawlers abandon slow link previews)', async () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse({ id: 'u1' }));
 
-    await fetchWithValidation('https://nexus.test/v0/user/u1', 'fetchUserDetails');
+    await fetchWithValidation('https://nexus.test/v1/user/u1', 'fetchUserDetails');
 
     const init = fetchSpy.mock.calls[0][1];
     expect(init?.signal).toBeInstanceOf(AbortSignal);
@@ -23,25 +28,67 @@ describe('fetchWithValidation', () => {
   it('returns the parsed body on success', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse({ id: 'u1' }));
 
-    expect(await fetchWithValidation('https://nexus.test/v0/user/u1', 'fetchUserDetails')).toEqual({ id: 'u1' });
+    expect(await fetchWithValidation('https://nexus.test/v1/user/u1', 'fetchUserDetails')).toEqual({ id: 'u1' });
   });
 
   it('returns null on 404 so callers can fall back in a single guard', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('Not Found', { status: 404 }));
 
-    expect(await fetchWithValidation('https://nexus.test/v0/user/u1', 'fetchUserDetails')).toBeNull();
+    expect(await fetchWithValidation('https://nexus.test/v1/user/u1', 'fetchUserDetails')).toBeNull();
   });
 
   it('throws a typed error on other non-ok statuses', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('boom', { status: 502 }));
 
-    await expect(fetchWithValidation('https://nexus.test/v0/user/u1', 'fetchUserDetails')).rejects.toThrow();
+    await expect(fetchWithValidation('https://nexus.test/v1/user/u1', 'fetchUserDetails')).rejects.toThrow();
   });
 
   it('propagates a timeout abort as a rejection (so the OG fallback engages instead of hanging)', async () => {
     vi.spyOn(globalThis, 'fetch').mockRejectedValue(new DOMException('The operation was aborted', 'TimeoutError'));
 
-    await expect(fetchWithValidation('https://nexus.test/v0/user/u1', 'fetchUserDetails')).rejects.toThrow();
+    await expect(fetchWithValidation('https://nexus.test/v1/user/u1', 'fetchUserDetails')).rejects.toThrow();
+  });
+});
+
+describe('fetchUserAndPostForMetadata', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const jsonResponse = (body: unknown) =>
+    new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
+
+  it.each([
+    ['article', 'long'],
+    ['note', 'short'],
+    ['unknown', 'unknown'],
+  ])(
+    'returns the /v1 post kind %s as the local kind %s, which the OG renderers compare against',
+    async (wire, local) => {
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) =>
+        String(url).endsWith('/details') && String(url).includes('/post/')
+          ? jsonResponse({ id: 'p1', author: 'u1', kind: wire, content: '', indexed_at: 1, uri: '', attachments: [] })
+          : jsonResponse({ id: 'u1', name: 'User', bio: '', image: null, links: null, status: null, indexed_at: 1 }),
+      );
+
+      const result = await fetchUserAndPostForMetadata('u1', 'p1');
+
+      expect(result?.post.kind).toBe(local);
+      expect(vi.mocked(fetch).mock.calls.map(([url]) => new URL(String(url)).pathname)).toEqual([
+        '/v1/user/u1/details',
+        '/v1/post/u1/p1/details',
+      ]);
+    },
+  );
+
+  it('returns null when the post is missing', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) =>
+      String(url).includes('/post/')
+        ? new Response('', { status: 404 })
+        : jsonResponse({ id: 'u1', name: 'User', bio: '', image: null, links: null, status: null, indexed_at: 1 }),
+    );
+
+    expect(await fetchUserAndPostForMetadata('u1', 'p1')).toBeNull();
   });
 });
 
@@ -80,8 +127,8 @@ describe('resolveMentionsForMetadata', () => {
 
     expect(text).toBe('@Alice met @Bob, then @Alice left');
     expect(fetchSpy.mock.calls.map(([url]) => url)).toEqual([
-      `https://nexus.staging.pubky.app/v0/user/${PUBKY_A}/details`,
-      `https://nexus.staging.pubky.app/v0/user/${PUBKY_B}/details`,
+      `https://nexus.staging.pubky.app/v1/user/${PUBKY_A}/details`,
+      `https://nexus.staging.pubky.app/v1/user/${PUBKY_B}/details`,
     ]);
     const init = fetchSpy.mock.calls[0][1];
     expect(init?.signal).toBeInstanceOf(AbortSignal);

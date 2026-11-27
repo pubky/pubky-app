@@ -64,7 +64,8 @@ export class NotificationController {
    * Marks all notifications as read by persisting the lastRead timestamp on the homeserver
    * and resetting the local unread count.
    *
-   * Requires a restored session, since the write must target the session's own `/pub/*` path.
+   * Requires a restored session, since the write targets the session's own private
+   * `/priv/app.pubky/v1/last_read.json` (`LastReadNormalizer.buildUrl`).
    * Only updates the local store after the write succeeds, so a failed write never clears the
    * badge while the server still reports unread notifications.
    */
@@ -112,10 +113,9 @@ export class NotificationController {
     while (true) {
       const isCurrent = captureViewerSession();
       if (!NotificationController.isSameAccountSession(pubky)) return;
-      const {
-        meta: { url },
-      } = LastReadNormalizer.to(pubky);
-      const remoteLastRead = await NotificationApplication.fetchLastReadFromHomeserver(url);
+      const remoteLastRead = await NotificationApplication.fetchLastReadFromHomeserver(
+        LastReadNormalizer.buildUrl(pubky),
+      );
       if (remoteLastRead === null) return;
       if (!isCurrent()) {
         if (NotificationController.isSameAccountSession(pubky)) continue;

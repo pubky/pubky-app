@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_TAG_LIGHT_PALETTE } from '@/config/theme';
+import { contrastRatio } from '@/test-utils/color-contrast';
 import { getTagDayPalette, getTagPaletteStyle } from './tagPalette';
 import { generateRandomColor } from './utils';
 
@@ -7,19 +8,6 @@ const WHITE_LABEL = 'var(--color-white)';
 const DARK_LABEL = 'var(--foreground)';
 /** Light theme `--foreground` */
 const DARK_LABEL_HEX = '#303034';
-
-function luminance(hex: string): number {
-  const [r, g, b] = [1, 3, 5].map((offset) => {
-    const channel = parseInt(hex.slice(offset, offset + 2), 16) / 255;
-    return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
-  });
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-}
-
-function contrast(a: string, b: string): number {
-  const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x);
-  return (light + 0.05) / (dark + 0.05);
-}
 
 /** Every colour `generateRandomColor` can produce: six channel patterns times 256 values */
 function allGeneratorColours(): string[] {
@@ -39,7 +27,7 @@ describe('getTagDayPalette (saturated)', () => {
     for (const colour of allGeneratorColours()) {
       const { background, label } = getTagDayPalette(colour, 'saturated');
       const labelHex = label === WHITE_LABEL ? '#ffffff' : DARK_LABEL_HEX;
-      expect(contrast(background, labelHex), colour).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(background, labelHex), colour).toBeGreaterThanOrEqual(4.5);
     }
   });
 
@@ -80,14 +68,14 @@ describe('getTagDayPalette (saturated)', () => {
 
   it('keeps the bright band accent visible against a white card', () => {
     for (const colour of ['#FFAE00', '#FFFF00', '#C8FF00']) {
-      expect(contrast(getTagDayPalette(colour, 'saturated').accent, '#ffffff'), colour).toBeGreaterThanOrEqual(3);
+      expect(contrastRatio(getTagDayPalette(colour, 'saturated').accent, '#ffffff'), colour).toBeGreaterThanOrEqual(3);
     }
   });
 
   it('gives every chip an edge distinct from its fill, so the hover glow and border show', () => {
     for (const colour of allGeneratorColours()) {
       const { background, accent } = getTagDayPalette(colour, 'saturated');
-      expect(contrast(accent, background), colour).toBeGreaterThanOrEqual(1.5);
+      expect(contrastRatio(accent, background), colour).toBeGreaterThanOrEqual(1.5);
     }
   });
 
@@ -127,7 +115,7 @@ describe('getTagDayPalette (pastel)', () => {
     for (const colour of allGeneratorColours()) {
       const { background, label } = getTagDayPalette(colour, 'pastel');
       expect(label, colour).toBe(DARK_LABEL);
-      expect(contrast(background, DARK_LABEL_HEX), colour).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(background, DARK_LABEL_HEX), colour).toBeGreaterThanOrEqual(4.5);
     }
   });
 

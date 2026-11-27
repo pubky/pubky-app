@@ -50,7 +50,7 @@ const createIntersectionEntry = (target: Element, isIntersecting: boolean): Inte
 });
 
 // Mock molecules
-vi.mock('@/molecules/Header/Header', () => {
+vi.mock('@/molecules/Header/HeaderPublicContent', () => {
   return {
     HeaderSocialLinks: () => <div data-testid="header-social-links">Social Links</div>,
   };

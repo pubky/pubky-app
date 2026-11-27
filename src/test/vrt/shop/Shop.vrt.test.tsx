@@ -27,6 +27,8 @@ const shopColumnDocument = vi.hoisted(
     </style></head><body style="margin:0;background:transparent;color:white;font:16px sans-serif"><main>${content}</main></body></html>`,
 );
 
+const PHONE_VIEWPORT_360 = { width: 360, height: 800 };
+
 const SHOP_CHROME_IMAGE_URLS = [
   '/pubky-logo.svg',
   '/images/synonym-white-logo.svg',
@@ -149,6 +151,7 @@ vi.mock('@/stores/localFiles/localFiles.store', () => ({
   useLocalFilesStore: createZustandLikeHook({
     profile: null,
     posts: {} as Record<string, never>,
+    articleCovers: {} as Record<string, never>,
     collections: {} as Record<string, never>,
   }),
 }));
@@ -333,7 +336,11 @@ function expectShopViewport(root: HTMLElement | SVGElement, content: HTMLElement
   expect(document.elementFromPoint(window.innerWidth - 4, middle)).toBe(content);
   // Headless browsers hide scrollbars, so the hit tests above cannot see a reserved gutter.
   if (CSS.supports('scrollbar-gutter', 'stable')) expect(appScrollbarGutter()).toBe('auto');
-  if (!desktop) expect(footer.getBoundingClientRect().bottom).toBeCloseTo(window.innerHeight, 0);
+  if (!desktop) {
+    expect(footer.getBoundingClientRect().bottom).toBeCloseTo(window.innerHeight, 0);
+    const lastAction = footer.querySelector('[aria-label="Profile"], [aria-label="Join Pubky"]')!;
+    expect(lastAction.getBoundingClientRect().right).toBeLessThanOrEqual(window.innerWidth);
+  }
   expect(shell.getBoundingClientRect().bottom).toBeCloseTo(window.innerHeight, 0);
   expect(document.documentElement.scrollHeight).toBeLessThanOrEqual(window.innerHeight + 1);
   expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
@@ -368,6 +375,9 @@ describe('embedded Shop shell — visual regression', () => {
     await matchVrtFrameScreenshot('shop-mobile');
   });
   it.each([
+    { name: 'signed-in 360px phone', viewport: PHONE_VIEWPORT_360, signedIn: true },
+    { name: 'guest 360px phone', viewport: PHONE_VIEWPORT_360, signedIn: false },
+    { name: '375px phone', viewport: { width: 375, height: 812 }, signedIn: true },
     { name: 'portrait', viewport: VRT_VIEWPORT_MOBILE, signedIn: true },
     { name: 'landscape', viewport: { width: 844, height: 390 }, signedIn: true },
     { name: 'guest portrait', viewport: VRT_VIEWPORT_MOBILE, signedIn: false },
@@ -383,7 +393,7 @@ describe('embedded Shop shell — visual regression', () => {
     const root = screen.getByTestId(VRT_ROOT_TESTID).element();
     const frame = screen.getByTitle('Pubky Shop').element() as HTMLIFrameElement;
     await withUnclippedDocument(root, async () => {
-      frame.srcdoc = `<!doctype html><html><body style="margin:0;min-width:375px">
+      frame.srcdoc = `<!doctype html><html><body style="margin:0">
         <main style="box-sizing:border-box;padding:24px">
           <h1>Long marketplace listing</h1>
           <div style="height:2400px">Listing details</div>
@@ -473,6 +483,15 @@ describe('embedded Shop shell — visual regression', () => {
     await expect.element(screen.getByRole('heading', { name: 'Shop unavailable' })).toBeVisible();
     await matchVrtFrameScreenshot('shop-unavailable-mobile');
   });
+  it('fits the unavailable Shop at 360px and restores the App minimum after leaving', async () => {
+    const screen = await renderShop(PHONE_VIEWPORT_360, { unavailable: true });
+    await expect.element(screen.getByRole('heading', { name: 'Shop unavailable' })).toBeVisible();
+    expect(getComputedStyle(document.body).minWidth).toBe('0px');
+    expect(document.body.getBoundingClientRect().width).toBe(window.innerWidth);
+    expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
+    await screen.unmount();
+    expect(document.body.getBoundingClientRect().width).toBe(375);
+  });
   it('renders the Enable Shop dialog in the desktop App shell', async () => {
     await renderShop(VRT_VIEWPORT_DESKTOP, { upgradeOpen: true });
     await expect.element(page.getByRole('dialog', { name: 'Enable Shop' })).toBeVisible();
@@ -483,7 +502,7 @@ describe('embedded Shop shell — visual regression', () => {
     await expect
       .element(page.getByRole('button', { name: 'Continue with Bitkit', includeHidden: true }))
       .not.toBeVisible();
-    await expect.element(page.getByRole('button', { name: 'Use Passport or recovery key' })).toBeVisible();
+    await expect.element(page.getByRole('button', { name: 'Use Passport' })).toBeVisible();
     await expect.element(page.getByRole('button', { name: 'Cancel', exact: true })).toBeVisible();
     await matchVrtFrameScreenshot('shop-enable-desktop');
   });
@@ -504,7 +523,7 @@ describe('embedded Shop shell — visual regression', () => {
         await expect.element(page.getByRole('button', { name: 'Continue with Pubky Ring' })).toBeVisible();
         await expect.element(page.getByRole('button', { name: 'Continue with Bitkit' })).toBeVisible();
         await expect.element(page.getByTestId('session-upgrade-qr')).not.toBeVisible();
-        await expect.element(page.getByRole('button', { name: 'Use Passport or recovery key' })).toBeVisible();
+        await expect.element(page.getByRole('button', { name: 'Use Passport' })).toBeVisible();
         await expect.element(page.getByRole('button', { name: 'Cancel', exact: true })).toBeVisible();
         await matchVrtFrameScreenshot('shop-enable-mobile');
       } finally {

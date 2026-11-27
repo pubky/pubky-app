@@ -2,15 +2,17 @@ import {
   editProfileAndVerify,
   addLinks,
   addProfileTags,
+  chooseAvatar,
   getProfileTaggedSection,
   openEditProfile,
   openProfileTab,
   showProfileHeader,
   showProfileTaggedSection,
 } from '../support/profile';
+import { userIdFromPubky } from '../support/common';
+import { avatarRoute, avatarServed, expectImageServed, imagesFrom } from '../support/media';
 import { slowCypressDown } from 'cypress-slow-down';
-import { BackupType, HasBackedUp } from '../support/types/enums';
-import { backupDownloadFilePath } from '../support/auth';
+import { HasBackedUp } from '../support/types/enums';
 import { searchForProfileByName, searchForProfileByPubky } from '../support/contacts';
 import { goToProfilePageFromHeader } from '../support/header';
 import { itMobile } from '../support/mobile';
@@ -20,24 +22,37 @@ import { seedUserViaApi } from '../support/seed';
 describe('profile', () => {
   before(() => {
     slowCypressDown();
-    cy.deleteDownloadsFolder();
   });
 
   const profileName = 'Edit Me';
 
   beforeEach(() => {
-    cy.onboardAsNewUser(profileName, 'This bio is editable', [BackupType.EncryptedFile]);
+    cy.onboardAsNewUser(profileName, 'This bio is editable');
   });
 
   itMobile('editing should retain any changes made to own profile', () => {
-    // todo: add test profile picture upload
-
     // navigate to edit profile page
     goToProfilePageFromHeader();
+    showProfileHeader();
+    cy.get('[data-cy="profile-copy-pubkey-btn"]').filter(':visible').should('have.length', 1).click();
+    cy.saveCopiedPubkyToAlias('ownPubky');
     openEditProfile();
 
-    // edit username and bio and verify changes are persisted
+    // choose an avatar, edit username and bio, and verify changes are persisted
+    chooseAvatar();
+    cy.intercept('PUT', '**/pub/social/v1/files/*').as('avatarStored');
     editProfileAndVerify({ name: 'Edited Name', bio: 'This bio has been edited.' });
+    cy.wait('@avatarStored').its('response.statusCode').should('eq', 201);
+
+    // The avatar is a v1 file, which Nexus serves on the avatar route once it has indexed the profile naming it
+    cy.get('@ownPubky').then((pubky) => {
+      const userId = userIdFromPubky(String(pubky));
+      const route = avatarRoute(userId);
+      waitForNexus(avatarServed(userId));
+      cy.reload();
+      // The header's own avatar and the page's are the same image
+      expectImageServed(() => cy.get('img').filter(imagesFrom(route)).first(), route);
+    });
 
     // re-open edit page and add two new links to the profile
     openEditProfile();
@@ -128,8 +143,8 @@ describe('profile', () => {
     const profileToTagPubkyName = `${Cypress._.random(100_000)}-Tag Me`;
     cy.signOut(HasBackedUp.Yes);
     cy.onboardAsNewUser(profileToTagPubkyName, 'This profile is destined to be tagged');
-    cy.signOut(HasBackedUp.No);
-    cy.signInWithEncryptedFile(backupDownloadFilePath(profileName));
+    cy.signOut(HasBackedUp.Yes);
+    cy.signInWithPubkyRing(profileName);
 
     // navigate to the profile to tag
     searchForProfileByName(profileToTagPubkyName);
@@ -174,12 +189,12 @@ describe('profile', () => {
     const profileToFollowName = `${Cypress._.random(100_000)}-Follow Me`;
     cy.signOut(HasBackedUp.Yes);
     cy.onboardAsNewUser(profileToFollowName, 'This profile is never actually followed');
-    cy.signOut(HasBackedUp.No);
-    cy.signInWithEncryptedFile(backupDownloadFilePath(profileName));
+    cy.signOut(HasBackedUp.Yes);
+    cy.signInWithPubkyRing(profileName);
 
     searchForProfileByName(profileToFollowName);
 
-    cy.intercept('PUT', '**/pub/pubky.app/follows/**', { statusCode: 507 }).as('followFailed');
+    cy.intercept('PUT', '**/pub/social/v1/follows/**', { statusCode: 507 }).as('followFailed');
     cy.get('[data-cy="profile-follow-toggle-btn"]').filter(':visible').should('have.text', 'Follow').click();
     cy.wait('@followFailed');
 

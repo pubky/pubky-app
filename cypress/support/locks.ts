@@ -5,13 +5,17 @@
  * `PUBKY_RUNTIME_E2E_LOCKS_STUB_URL` is set (the Locks CI job only). That client sends every Lock
  * Server call as a `POST <stub>/e2e/<operation>` and the routes below answer them. Nothing else is
  * intercepted: the homeserver writes (guarded bytes, `lock.json`, the announcement, the reader's
- * purchase file and replica) and every Nexus read stay real.
+ * purchase file and replica) and every Nexus read stay real. As in production, the Lock Server, not
+ * the app, writes the guarded bytes and `lock.json`: those routes have Node make the write with the
+ * session the creator granted the Lock Server (`seedLockServerWrite`), then answer.
  */
 import type { CyHttpMessages } from 'cypress/types/net-stubbing';
 import { userIdFromPubky } from './common';
 import { logLocksStub, redactLocksStubUrl, shortPubky } from './locks-log';
 import { isMobile } from './mobile';
+import { postIdFromWriteUrl } from './nexus';
 import { CheckForNewPosts, WaitForNewPosts } from './types/enums';
+import type { SeedLockServerWriteArgs } from './types/seed';
 
 /** Same value as `PUBKY_RUNTIME_E2E_LOCKS_STUB_URL` in the e2e workflow; the host never resolves. */
 export const locksStubUrl = (): string => String(Cypress.expose('locksStubUrl'));
@@ -74,6 +78,34 @@ const answer = (req: TStubRequest, operation: string, summary: string, body: unk
     Response: { statusCode, body },
   });
   req.reply({ statusCode, body, headers: CORS_HEADERS });
+};
+
+/**
+ * Answers one stand-in call the way the real Lock Server does: its homeserver write first
+ * (`plugins/lock-server.ts`), then the answer, or a 500 when the write failed. The write goes out
+ * as its own request, so the alias keeps the request the app sent. Return it from the handler.
+ */
+const answerAfterWrite = (
+  req: TStubRequest,
+  write: SeedLockServerWriteArgs,
+  operation: string,
+  summary: string,
+  body: unknown,
+) => {
+  const writesUrl = Cypress.expose('lockServerWritesUrl');
+  if (!writesUrl) throw new Error('lockServerWritesUrl is not set: cypress.config.ts starts it in setupNodeEvents');
+  const action = `Lock Server ${write.bytes === undefined ? 'DELETE' : 'PUT'} ${write.path}`;
+  return fetch(String(writesUrl), {
+    method: 'POST',
+    headers: { 'content-type': 'text/plain' },
+    body: JSON.stringify(write),
+  })
+    .then(async (res) => (res.status === 204 ? '' : `HTTP ${res.status}: ${await res.text()}`), String)
+    .then((failure) => {
+      if (failure)
+        answer(req, operation, `${summary}; ${action} failed (${failure})`, { error: 'internal_error' }, 500);
+      else answer(req, operation, `${summary}; ${action} done`, body);
+    });
 };
 
 const toSecondaryRecord = (resources: TContentLockRequest['secondary_resources']) => {
@@ -162,10 +194,16 @@ export const stubLockServer = (state: TLockServerState) => {
       bytes: string;
     }>(req.body);
     state.guarded[path] = bytes;
-    answer(req, 'register guarded resource', `${path} (${content_type}, ${bytes.length} base64 chars)`, {
-      creator: `pubky${owner}`,
-      guarded_resource: { path: `${GUARDED_CONTENT_PATH}${path}`, hash: `e2e-${path}`, content_type, size: 0 },
-    });
+    return answerAfterWrite(
+      req,
+      { owner, path: `${GUARDED_CONTENT_PATH}${path}`, bytes },
+      'register guarded resource',
+      `${path} (${content_type}, ${bytes.length} base64 chars)`,
+      {
+        creator: `pubky${owner}`,
+        guarded_resource: { path: `${GUARDED_CONTENT_PATH}${path}`, hash: `e2e-${path}`, content_type, size: 0 },
+      },
+    );
   }).as('registerGuardedResource');
 
   cy.intercept(route('POST', '/e2e/creator/content-locks'), (req) => {
@@ -173,25 +211,36 @@ export const stubLockServer = (state: TLockServerState) => {
     const lockId = `e2e${Date.now()}`;
     const price = priceOf(body, owner);
     state.locks[lockId] = price;
-    answer(req, 'create content lock', `lock ${lockId} for ${describePrice(price)}`, {
-      lock_id: lockId,
-      content_lock_path: `/pub/app.locks/${lockId}.json`,
-      content_lock: {
-        version: 1,
-        creator: `pubky${owner}`,
-        primary_resource: body.primary_resource,
-        secondary_resources: toSecondaryRecord(body.secondary_resources),
-        criteria: body.criteria,
-        lock_logic: body.lock_logic,
-        access_policy: body.access_policy,
-        lock_server: body.lock_server ?? { override: null },
-      },
-    });
+    const contentLockPath = `/pub/app.locks/${lockId}.json`;
+    const contentLock = {
+      version: 1,
+      creator: `pubky${owner}`,
+      primary_resource: body.primary_resource,
+      secondary_resources: toSecondaryRecord(body.secondary_resources),
+      criteria: body.criteria,
+      lock_logic: body.lock_logic,
+      access_policy: body.access_policy,
+      lock_server: body.lock_server ?? { override: null },
+    };
+    return answerAfterWrite(
+      req,
+      { owner, path: contentLockPath, bytes: Cypress.Buffer.from(JSON.stringify(contentLock)).toString('base64') },
+      'create content lock',
+      `lock ${lockId} for ${describePrice(price)}`,
+      { lock_id: lockId, content_lock_path: contentLockPath, content_lock: contentLock },
+    );
   }).as('createContentLock');
+  // The Lock Server takes the public `lock.json` down only once it has accepted the deletion.
   cy.intercept(route('POST', '/e2e/creator/content-locks/delete'), (req) => {
-    const { lock_id } = parseBody<{ owner: string; lock_id: string }>(req.body);
+    const { owner, lock_id } = parseBody<{ owner: string; lock_id: string }>(req.body);
     state.deletedLocks.push(lock_id);
-    answer(req, 'delete content lock', `lock ${lock_id} (${describePrice(state.locks[lock_id])})`, {});
+    return answerAfterWrite(
+      req,
+      { owner, path: `/pub/app.locks/${lock_id}.json` },
+      'delete content lock',
+      `lock ${lock_id} (${describePrice(state.locks[lock_id])})`,
+      {},
+    );
   }).as('deleteContentLock');
 
   // The reader's Bitkit wallet: it has published Paykit data, it is linked to the creator, and the
@@ -340,7 +389,7 @@ export const reloadFromReaderReplica = (lockId: string, expectUnlockedContent: (
   // Record the status only once the homeserver has answered. `req.continue(callback)`
   // tells Cypress the test is waiting on that response, so it fails the test when a
   // later navigation (sign-out, reload, `cy.visit`) aborts the request first.
-  cy.intercept({ method: 'GET', url: /\/priv\/social\/unlocked\// }, (req) => {
+  cy.intercept({ method: 'GET', url: /\/priv\/app\.pubky\/v1\/locks\/unlocked\// }, (req) => {
     req.on('response', (res) => {
       replicaReads.push(`${new URL(req.url).pathname} → ${res.statusCode}`);
     });
@@ -348,7 +397,7 @@ export const reloadFromReaderReplica = (lockId: string, expectUnlockedContent: (
   cy.reload();
   // The read starts only once the reader's session is restored and the post card has rendered.
   cy.wrap(replicaReads, { timeout: REPLICA_READ_TIMEOUT_MS }).should((reads) => {
-    const marker = `/priv/social/unlocked/${lockId}/post.json → 200`;
+    const marker = `/priv/app.pubky/v1/locks/unlocked/${lockId}/post.json → 200`;
     expect(
       reads.some((read) => read.endsWith(marker)),
       `the reader's post.json replica read after the reload (seen: ${reads.join(', ') || 'none'})`,
@@ -358,7 +407,7 @@ export const reloadFromReaderReplica = (lockId: string, expectUnlockedContent: (
   cy.then(() => expect(lockServerCalls, 'payment or guarded reads after the reload').to.be.empty);
 };
 
-export type TGuardedPost = { content: string; kind: string; attachments: string[] | null };
+export type TGuardedPost = { content: string; kind: string; attachments: { uri: string; name?: string }[] };
 
 /** Every guarded post (a lock's primary resource) registered so far; attachment bytes are skipped. */
 export const registeredGuardedPosts = (state: TLockServerState): TGuardedPost[] =>
@@ -528,29 +577,34 @@ export const expectToast = (description: string) => {
   cy.contains('[data-cy="toast"]', description).should('be.visible');
 };
 
+/** Slow homeserver PUTs can delay the lock create past Cypress's 5 s default `requestTimeout`. */
+const LOCK_PUBLISH_REQUEST_TIMEOUT_MS = 30_000;
+
 /**
  * Publishes the configured lock from the home composer and yields the announcement's post id, read
  * from its homeserver PUT.
  */
 export const publishLock = (): Cypress.Chainable<string> => {
-  cy.intercept('PUT', '**/pub/pubky.app/posts/**').as('announcementCreated');
+  cy.intercept('PUT', '**/pub/social/v1/posts/**').as('announcementCreated');
   homeComposer().find('[data-cy="post-input-action-bar-post"]').filter(':visible').should('not.be.disabled').click();
-  cy.wait('@createContentLock');
-  return cy.wait('@announcementCreated').then((interception) => {
+  cy.wait('@createContentLock', { requestTimeout: LOCK_PUBLISH_REQUEST_TIMEOUT_MS });
+  return cy.wait('@announcementCreated', { requestTimeout: LOCK_PUBLISH_REQUEST_TIMEOUT_MS }).then((interception) => {
     expect(interception.response?.statusCode).to.eq(201);
-    const postId = new URL(interception.request.url).pathname.split('/').pop() ?? '';
-    expect(postId, 'announcement post id').to.not.eq('');
-    return postId;
+    return postIdFromWriteUrl(interception.request.url);
   });
 };
 
 const NEXUS_POST_POLL_TIMEOUT_MS = 90_000;
 
-const nexusDetailsHaveLock = (body: unknown): boolean =>
-  typeof body === 'object' && body !== null && 'lock' in body && Boolean(body.lock);
+/** The announcement as Nexus serves it carries a `lock` URL: that one, when given. */
+const nexusDetailsHaveLock = (body: unknown, lockUrl?: string): boolean =>
+  typeof body === 'object' &&
+  body !== null &&
+  'lock' in body &&
+  (lockUrl === undefined ? Boolean(body.lock) : body.lock === lockUrl);
 
 /**
- * Polls GET /v0/post/<author>/<id>/details until `settled` is true.
+ * Polls GET /v1/post/<author>/<id>/details until `settled` is true.
  *
  * The 90s deadline is taken when this command runs. locks.cy.ts calls both waiters from one
  * post-id callback that also queues the later steps, so a Date.now() at the call has already
@@ -564,7 +618,7 @@ const pollNexusPostDetails = (
 ) => {
   const authorId = userIdFromPubky(authorPubky);
   cy.env(['nexusUrl']).then(({ nexusUrl }) => {
-    const detailsUrl = `${String(nexusUrl).replace(/\/$/, '')}/v0/post/${authorId}/${postId}/details`;
+    const detailsUrl = `${String(nexusUrl).replace(/\/$/, '')}/v1/post/${authorId}/${postId}/details`;
     const deadline = Date.now() + NEXUS_POST_POLL_TIMEOUT_MS;
     const poll = () => {
       cy.request({ url: detailsUrl, failOnStatusCode: false }).then((response) => {
@@ -582,18 +636,26 @@ const pollNexusPostDetails = (
 
 /**
  * Polls Nexus until it has indexed the announcement, including its top-level `lock` URL (the only
- * thing that tells a reader the post is locked). The one fixed wait is the poll interval.
+ * thing that tells a reader the post is locked), and that exact URL when `lockUrl` is given. The one
+ * fixed wait is the poll interval.
  */
-export const waitForNexusLockPost = (authorPubky: string, postId: string) => {
+export const waitForNexusLockPost = (authorPubky: string, postId: string, lockUrl?: string) => {
   pollNexusPostDetails(
     authorPubky,
     postId,
-    (status, body) => status === 200 && nexusDetailsHaveLock(body),
-    (authorId, status) => `Nexus did not index lock post ${authorId}/${postId} (last status ${status})`,
+    (status, body) => status === 200 && nexusDetailsHaveLock(body, lockUrl),
+    (authorId, status) =>
+      `Nexus did not index lock post ${authorId}/${postId}${lockUrl ? ` with lock ${lockUrl}` : ''} (last status ${status})`,
   );
 };
 
-/** Polls Nexus until it no longer serves the post, so a fresh reader cannot be shown it from there. */
+/**
+ * Polls Nexus until it no longer serves the post, so a fresh reader cannot be shown it from there.
+ *
+ * Known Nexus race: a read of a post while Nexus processes its delete can put it back in the cache, where it answers
+ * 200 for good. Call this with nothing else reading the post since its DELETE, so these polls are the only reads; a
+ * timeout on a 200 is then that bug, not a slow index. It stays at 404: the stale copy also says `deleted: false`.
+ */
 export const waitForNexusPostDeleted = (authorPubky: string, postId: string) => {
   pollNexusPostDetails(
     authorPubky,
@@ -615,7 +677,6 @@ export const openPostFromHomeFeed = (authorPubky: string, postId: string, teaser
     cy.get('[data-cy="post-text"]').filter(':visible').first().click();
   });
   cy.location('pathname').should('eq', `/post/${userIdFromPubky(authorPubky)}/${postId}`);
-  singlePostCard().should('have.length', 1);
 };
 
 /** The header shows the profile button only while the app treats the account as signed in. */

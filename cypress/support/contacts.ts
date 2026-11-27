@@ -1,7 +1,9 @@
 import { userIdFromPubky } from './common';
 import { getSearchInput } from './header';
+import { followGone, waitForNexus } from './nexus';
 import { clickFollowButton } from './profile';
 import { CheckForNewPosts, PostType, WaitForNewPosts } from './types/enums';
+import type { SeededUser } from './types/seed';
 
 /**
  * Follow a user from the post menu on one of their posts in the feed.
@@ -53,9 +55,22 @@ export const searchAndFollowProfile = (pubky: string, profileName: string, inter
 
   // for waiting for data to index
   if (interceptAlias) {
-    cy.intercept('GET', '**/v0/stream/users/ids*').as(interceptAlias);
+    cy.intercept('GET', '**/v1/stream/users/ids*').as(interceptAlias);
   }
 
   // follow profile
   clickFollowButton();
+};
+
+// Runs `unfollow` (any UI path that unfollows `followee`), checks the homeserver took the delete,
+// then waits until Nexus no longer lists `follower` among the followee's followers.
+export const unfollowAndWaitForNexus = (
+  follower: Pick<SeededUser, 'id' | 'name'>,
+  followee: Pick<SeededUser, 'id' | 'name'>,
+  unfollow: () => void,
+) => {
+  cy.intercept('DELETE', `**/pub/social/v1/follows/${followee.id}.json`).as('followDeleted');
+  unfollow();
+  cy.wait('@followDeleted').its('response.statusCode').should('eq', 204);
+  waitForNexus(followGone(follower, followee));
 };

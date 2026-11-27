@@ -7,10 +7,6 @@ import { isRetryable } from '@/libs/error/error.utils';
 import grantAuth015 from './grant-auth-0.15.fixture.json';
 import { HomeserverService } from './homeserver';
 
-vi.mock('pubky-app-specs', () => ({
-  default: vi.fn(),
-  userUriBuilder: (key: string) => `pubky://${key}/pub/pubky.app/profile.json`,
-}));
 const reference = {
   kind: 'grant' as const,
   sessionStoreId: 'missing-contract-record',
@@ -322,7 +318,7 @@ describe('SDK upgrade grant compatibility', () => {
           tx.oncomplete = () => resolve();
           tx.onerror = tx.onabort = () => reject(tx.error);
         });
-        // SDK 0.17 keeps refresh transport details secret-safe and omits an HTTP status.
+        // Since SDK 0.17 a refresh that got no answer is reported secret-safe, without an HTTP status.
         const restore = sdk.browserSessionStore.restore(record.id);
         await expect(restore).rejects.toMatchObject({
           name: 'CredentialRefreshError',

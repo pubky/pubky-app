@@ -8,7 +8,8 @@ import { ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
 import { resolveUserDisplayName } from '@/libs/utils/utils';
-import type { NexusPostDetails, NexusUserDetails } from '@/services/nexus/nexus.types';
+import { toLocalPostKindFromNexus } from '@/pipes/post/post.kind';
+import type { NexusPostDetails, NexusPostDetailsWire, NexusUserDetails } from '@/services/nexus/nexus.types';
 import { postApi } from '@/services/nexus/post/post.api';
 import { userApi } from '@/services/nexus/user/user.api';
 import { formatMentionLabel, type MentionSegment, splitMentions, truncateSegmentsByGraphemes } from './postMentions';
@@ -41,7 +42,9 @@ export async function fetchWithValidation<T>(url: string, operation: string): Pr
 /**
  * Concurrently fetches user and post details for use in `generateMetadata`.
  * Returns `null` when either resource is missing so callers can fall back to
- * empty metadata in a single guard.
+ * empty metadata in a single guard. The post kind comes back in the local
+ * vocabulary (`long` for an article), as the Nexus services return it, so the
+ * OG renderers compare against the same names as the app.
  */
 export async function fetchUserAndPostForMetadata(
   userId: string,
@@ -49,11 +52,14 @@ export async function fetchUserAndPostForMetadata(
 ): Promise<{ user: NexusUserDetails; post: NexusPostDetails } | null> {
   const [user, post] = await Promise.all([
     fetchWithValidation<NexusUserDetails>(userApi.details({ user_id: userId }), 'fetchUserDetails'),
-    fetchWithValidation<NexusPostDetails>(postApi.details({ author_id: userId, post_id: postId }), 'fetchPostDetails'),
+    fetchWithValidation<NexusPostDetailsWire>(
+      postApi.details({ author_id: userId, post_id: postId }),
+      'fetchPostDetails',
+    ),
   ]);
 
   if (!user || !post) return null;
-  return { user, post };
+  return { user, post: { ...post, kind: toLocalPostKindFromNexus(post.kind) } };
 }
 
 /**

@@ -199,7 +199,7 @@ describe('Logout', () => {
     expect(mocks.mockLogout).toHaveBeenCalledOnce();
   });
   it('signs a guest out without a backup prompt when the stored key has no account (#2955)', async () => {
-    // The onboarding key step stores a generated pubky with no session and nothing to restore.
+    // A stored key whose pubky has no session and nothing to restore (left by the former in-browser key step).
     const key = Keypair.random();
     mocks.onboardingState.secretKey = Buffer.from(key.secret()).toString('hex');
     mocks.authState.currentUserPubky = key.publicKey.z32();
@@ -231,7 +231,7 @@ describe('Logout', () => {
     },
   );
   it('keeps the backup prompt when the stored key has a sign-up attempt but no session yet (#2955)', () => {
-    // AuthController.signUp records the attempt before signing the created account in; that key may own an account.
+    // The former in-browser sign-up recorded the attempt before signing the created account in; that key may own an account.
     const key = Keypair.random();
     const pubky = key.publicKey.z32();
     mocks.onboardingState.secretKey = Buffer.from(key.secret()).toString('hex');

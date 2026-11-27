@@ -1,5 +1,5 @@
 import type { Session as LocksSdkSession } from '@synonymdev/locks-sdk';
-import { postUriBuilder } from 'pubky-app-specs';
+import { buildUri } from 'pubky-social-specs';
 import { LocksApplication } from '@/application/locks/locks';
 import type {
   TCreateLockContentParams,
@@ -16,11 +16,14 @@ import type {
   TStartPaymentParams,
   TStartPaymentResult,
 } from '@/application/locks/locks.types';
+import { LOCKS_READER_COPY_CAPABILITIES } from '@/config/auth';
 import { captureViewerSession } from '@/controllers/tag/tag-cache.utils';
+import { hasCapabilities } from '@/libs/auth/capabilities';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { isAppError, isAuthError } from '@/libs/error/error.utils';
+import { hasCopiedLocksReaderFiles, markLocksReaderFilesCopied } from '@/libs/locks/reader-files-copied';
 import { sleep, stripPubkyPrefix } from '@/libs/utils/utils';
 import { parseCompositeId } from '@/models/models.utils';
 import { LockContentParser, LockFileParser } from '@/pipes/locks/locks.parser';
@@ -61,6 +64,9 @@ export class LocksController {
   /** Setup checks can overlap across dialogs and publishing; only the latest may clear shared readiness. */
   private static paykitSetupGeneration = 0;
 
+  /** The session whose account is being deleted: no reader file copy starts for it. */
+  private static readerFileCopyStopped: (() => boolean) | null = null;
+
   /** An awaited Locks operation belongs to both its app account and its original Locks session. */
   private static captureSessionOwner(): () => boolean {
     const { generation, currentUserPubky } = useAuthStore.getState();
@@ -89,6 +95,39 @@ export class LocksController {
   /** Builds the Paykit `/setup` URL to load in the payout-account iframe's src. */
   static getPaykitSetupUrl({ state }: TGetPaykitSetupUrlParams): string {
     return LocksApplication.generatePaykitSetupUrl({ returnTo: window.location.origin, state });
+  }
+
+  /**
+   * Builds the Paykit `/setup/reconnect` URL for the signed-in creator, to load in the payout-account
+   * iframe's src when Paykit already holds them.
+   */
+  static getPaykitReconnectUrl({ state }: TGetPaykitSetupUrlParams): string {
+    return LocksApplication.generatePaykitReconnectUrl({
+      returnTo: window.location.origin,
+      state,
+      creator: this.requireCreatorPubky('LocksController.getPaykitReconnectUrl'),
+    });
+  }
+
+  /**
+   * Whether the Paykit Server already holds the signed-in creator. Throws when Paykit cannot answer,
+   * which says nothing about the creator.
+   */
+  static async fetchPaykitCreatorHeld(): Promise<boolean> {
+    return LocksApplication.fetchPaykitCreatorHeld({
+      creator: this.requireCreatorPubky('LocksController.fetchPaykitCreatorHeld'),
+    });
+  }
+
+  private static requireCreatorPubky(operation: string): string {
+    const creator = useLocksAuthStore.getState().selectLocksCreatorPubky();
+    if (!creator) {
+      throw Err.auth(AuthErrorCode.UNAUTHORIZED, 'No Locks creator to look up Paykit for', {
+        service: ErrorService.Locks,
+        operation,
+      });
+    }
+    return creator;
   }
 
   /**
@@ -163,6 +202,8 @@ export class LocksController {
     if (current.generation === generation && current.currentUserPubky === currentUserPubky) {
       this.clearLocalSession(persist);
     }
+    // Not in clearLocalSession: a Lock Server sign-out during an account deletion must not resume the copy.
+    this.readerFileCopyStopped = null;
   }
 
   /**
@@ -416,14 +457,17 @@ export class LocksController {
     const { pubky: authorId, id: rawPostId } = parseCompositeId(postId);
     return LocksApplication.replicateUnlockedContent({
       ...params,
-      announcementUri: postUriBuilder(authorId, rawPostId),
+      announcementUri: buildUri(authorId, 'post', rawPostId),
       isCurrent: captureViewerSession(),
     });
   }
 
   /** Loads already-unlocked content from the reader's `/priv`, or null if this lock isn't unlocked yet. */
   static fetchReplicatedContent(params: TFetchReplicatedContentParams): Promise<TUnlockedContent | null> {
-    return LocksApplication.fetchReplicatedContent({ ...params, isCurrent: captureViewerSession() });
+    const isCurrent = captureViewerSession();
+    const socialFilesCopied = hasCopiedLocksReaderFiles(params.readerPubky);
+    if (!socialFilesCopied) this.startReaderFileCopy(params.readerPubky, isCurrent);
+    return LocksApplication.fetchReplicatedContent({ ...params, isCurrent, socialFilesCopied });
   }
 
   /** Loads the media bytes for one already-listed unlocked post. */
@@ -431,9 +475,43 @@ export class LocksController {
     return LocksApplication.fetchReplicatedAttachments(params);
   }
 
-  /** Lists the reader's unlocked content (newest first) from their own `/priv/social/unlocked/`. */
+  /** Lists the reader's unlocked content (newest first) from their own `/priv/app.pubky/v1/locks/unlocked/`. */
   static fetchUnlockedList(params: TFetchUnlockedListParams): Promise<TUnlockedListItem[]> {
-    return LocksApplication.fetchUnlockedList({ ...params, isCurrent: captureViewerSession() });
+    const isCurrent = captureViewerSession();
+    const socialFilesCopied = hasCopiedLocksReaderFiles(params.readerPubky);
+    if (!socialFilesCopied) this.startReaderFileCopy(params.readerPubky, isCurrent);
+    return LocksApplication.fetchUnlockedList({ ...params, isCurrent, socialFilesCopied });
+  }
+
+  /**
+   * Copies the reader files of builds before #3206 in the background and records the copy in this browser. Started
+   * by the two replica reads, not at sign-in, so an account that sees no locked post sends no request for it. Only
+   * when the grant reads the old root and writes the new one: a listing the grant refuses would fail on every page
+   * load with a lock.
+   */
+  private static startReaderFileCopy(readerPubky: string, isCurrent: () => boolean): void {
+    if (this.readerFileCopyStopped?.()) return;
+    const { session } = useAuthStore.getState();
+    if (!session || !hasCapabilities(session.info.capabilities, LOCKS_READER_COPY_CAPABILITIES)) return;
+    // A run stops before its next write once a deletion starts, so the deletion waits for one write at most.
+    const runIsCurrent = () => isCurrent() && !this.readerFileCopyStopped?.();
+    void LocksApplication.copySocialReaderFiles({ readerPubky, isCurrent: runIsCurrent }).then((copied) => {
+      if (copied && isCurrent()) markLocksReaderFilesCopied(readerPubky);
+    });
+  }
+
+  /**
+   * Account deletion lists the account's files once, so a copy write after that list would survive it. Waits for
+   * the copy runs of this page to end and starts no new one until the session changes.
+   */
+  static async stopReaderFileCopy(): Promise<void> {
+    this.readerFileCopyStopped = captureViewerSession();
+    await LocksApplication.settleSocialCopyRuns();
+  }
+
+  /** After a deletion that failed: the account and its files stay. */
+  static resumeReaderFileCopy(): void {
+    this.readerFileCopyStopped = null;
   }
 
   /** Creator reads their own locked content directly from the guarded original (owner == signed-in). */

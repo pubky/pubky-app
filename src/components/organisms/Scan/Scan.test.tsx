@@ -1,21 +1,25 @@
 import React from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ONBOARDING_ROUTES } from '@/app/routes';
-import { getPubkyProtocolLink } from '@/config/externalLinks';
 import { useMobileAuth } from '@/hooks/useMobileAuth/useMobileAuth';
+import { toast } from '@/molecules/Toaster/toast';
 import { asOpaque } from '@/test-utils/type-assertions';
-import { ScanContent, ScanFooter, ScanHeader, ScanNavigation } from './Scan';
+import { ScanContent, ScanHeader, ScanNavigation } from './Scan';
 
 // Mock Next.js router
 const mockPush = vi.fn();
 const mockReplace = vi.fn();
+const { searchParams } = vi.hoisted(() => ({ searchParams: { value: new URLSearchParams() } }));
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
     replace: mockReplace,
   }),
+  useSearchParams: () => searchParams.value,
 }));
+
+const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148';
 
 // Mock Next.js Image
 vi.mock('next/image', () => ({
@@ -38,6 +42,8 @@ vi.mock('qrcode.react', () => ({
   ),
 }));
 
+const imageSources = () => screen.getAllByRole('img').map((image) => image.getAttribute('src'));
+
 // Mock dependencies
 const { onboardingState } = vi.hoisted(() => ({
   onboardingState: { inviteCode: 'A9KM-7MJP-ERM9' },
@@ -50,10 +56,11 @@ vi.mock('@/stores/onboarding/onboarding.store', () => ({
 }));
 
 // Mock useMobileAuth hook - use vi.hoisted so values are available in vi.mock
-const { mockFetchUrl, mockCopyAuthUrl, mockOnAuthorizeClick } = vi.hoisted(() => ({
+const { mockFetchUrl, mockCopyAuthUrl, mockOnAuthorizeClick, mockOnAuthorizeBitkitClick } = vi.hoisted(() => ({
   mockFetchUrl: vi.fn(),
   mockCopyAuthUrl: vi.fn().mockResolvedValue(undefined),
   mockOnAuthorizeClick: vi.fn(),
+  mockOnAuthorizeBitkitClick: vi.fn(),
 }));
 vi.mock('@/hooks/useMobileAuth/useMobileAuth', () => ({
   useMobileAuth: vi.fn(() => ({
@@ -90,16 +97,6 @@ vi.mock('@/molecules/ButtonsNavigation/ButtonsNavigation', () => {
             Continue
           </button>
         )}
-      </div>
-    ),
-  };
-});
-
-vi.mock('@/molecules/Content/Content', () => {
-  return {
-    ContentCard: ({ children, layout }: { children: React.ReactNode; layout?: string }) => (
-      <div data-testid="content-card" data-layout={layout}>
-        {children}
       </div>
     ),
   };
@@ -165,22 +162,6 @@ vi.mock('@/atoms/Container/Container', () => {
   };
 });
 
-vi.mock('@/atoms/FooterLinks/FooterLinks', () => {
-  return {
-    FooterLinks: ({ children }: { children: React.ReactNode }) => <div data-testid="footer-links">{children}</div>,
-  };
-});
-
-vi.mock('@/atoms/Link/Link', () => {
-  return {
-    Link: ({ children, href, target }: { children: React.ReactNode; href: string; target?: string }) => (
-      <a data-testid="link" href={href} target={target}>
-        {children}
-      </a>
-    ),
-  };
-});
-
 vi.mock('@/atoms/PageHeader/PageHeader', () => {
   return {
     PageHeader: ({ children }: { children: React.ReactNode }) => <div data-testid="page-header">{children}</div>,
@@ -227,6 +208,7 @@ describe('ScanContent', () => {
     vi.clearAllMocks();
     mockCopyToClipboard.mockClear();
     onboardingState.inviteCode = 'A9KM-7MJP-ERM9';
+    searchParams.value = new URLSearchParams();
     window.location.href = '';
     clipboardMock.writeText.mockClear();
     vi.mocked(useMobileAuth).mockReturnValue({
@@ -237,9 +219,13 @@ describe('ScanContent', () => {
       copyAuthUrl: mockCopyAuthUrl,
       isOpeningRing: false,
       isOpeningBitkit: false,
-      onAuthorizeBitkitClick: vi.fn(),
+      onAuthorizeBitkitClick: mockOnAuthorizeBitkitClick,
       onAuthorizeClick: mockOnAuthorizeClick,
     });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   afterAll(() => {
@@ -275,23 +261,87 @@ describe('ScanContent', () => {
     expect(screen.getByAltText('Pubky Ring phone scanning a QR code')).toHaveAttribute('src', '/images/scan.webp');
   });
 
-  it('offers Pubky Ring for the pending signup request without promising an unsupported Bitkit handoff', async () => {
+  it('hands the pending signup request to Pubky Ring by default', async () => {
     await act(async () => {
       render(<ScanContent />);
     });
 
     // Wait for the component to finish loading
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Continue with Pubky Ring' })).toBeEnabled();
+      expect(screen.getByRole('button', { name: 'Authorize & configure' })).toBeEnabled();
     });
 
-    expect(screen.queryByRole('button', { name: /Bitkit/ })).not.toBeInTheDocument();
     expect(useMobileAuth).toHaveBeenCalledWith({ type: 'signup', inviteCode: 'A9KM-7MJP-ERM9' });
+    expect(imageSources()).toEqual(expect.arrayContaining(['/images/ring-logo.svg', '/images/logo-pubky-ring.svg']));
+    expect(screen.queryByAltText('Bitkit')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'Open Pubky Ring',
+      'Tap ‘Add pubky’',
+      'Choose ‘Signup QR’',
+      'Scan this QR',
+      'Authorize in the app',
+    ]);
+  });
 
-    const images = screen.getAllByTestId('next-image');
-    const logoImage = images.find((img) => img.getAttribute('src') === '/images/logo-pubky-ring.svg');
+  it('hands the signup request to Bitkit when it was picked on the Install step', async () => {
+    searchParams.value = new URLSearchParams({ keychain: 'bitkit' });
 
-    expect(logoImage).toBeInTheDocument();
+    await act(async () => {
+      render(<ScanContent />);
+    });
+
+    expect(useMobileAuth).toHaveBeenCalledWith({ type: 'signup', inviteCode: 'A9KM-7MJP-ERM9' });
+    expect(screen.getByAltText('Bitkit phone scanning a QR code')).toBeInTheDocument();
+    expect(imageSources()).toEqual(expect.arrayContaining(['/images/bitkit-qr-logo.svg', '/images/bitkit-logo.svg']));
+    expect(imageSources()).not.toContain('/images/ring-logo.svg');
+    expect(imageSources()).not.toContain('/images/logo-pubky-ring.svg');
+    expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+      'Open Bitkit',
+      'Tap ‘Scan’ icon',
+      'Scan this QR',
+      'Authorize in Bitkit',
+    ]);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Authorize & configure' }));
+
+    expect(mockOnAuthorizeBitkitClick).toHaveBeenCalledTimes(1);
+    expect(mockOnAuthorizeClick).not.toHaveBeenCalled();
+  });
+
+  it('shows the Bitkit opening state while Bitkit launches', () => {
+    searchParams.value = new URLSearchParams({ keychain: 'bitkit' });
+    vi.mocked(useMobileAuth).mockReturnValue({
+      url: 'mock-auth-url',
+      isLoading: false,
+      isExpired: false,
+      fetchUrl: mockFetchUrl,
+      copyAuthUrl: mockCopyAuthUrl,
+      isOpeningRing: false,
+      isOpeningBitkit: true,
+      onAuthorizeBitkitClick: mockOnAuthorizeBitkitClick,
+      onAuthorizeClick: mockOnAuthorizeClick,
+    });
+
+    render(<ScanContent />);
+
+    expect(screen.getByRole('button', { name: 'Opening Bitkit...' })).toBeDisabled();
+  });
+
+  it('keeps Pubky Ring on iOS even when Bitkit is requested', async () => {
+    vi.stubGlobal('navigator', { userAgent: IPHONE, platform: 'iPhone', maxTouchPoints: 5 });
+    searchParams.value = new URLSearchParams({ keychain: 'bitkit' });
+
+    await act(async () => {
+      render(<ScanContent />);
+    });
+
+    expect(imageSources()).toEqual(expect.arrayContaining(['/images/ring-logo.svg', '/images/logo-pubky-ring.svg']));
+    expect(screen.queryByAltText('Bitkit')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Authorize & configure' }));
+
+    expect(mockOnAuthorizeClick).toHaveBeenCalledTimes(1);
+    expect(mockOnAuthorizeBitkitClick).not.toHaveBeenCalled();
   });
 
   it('calls mobile authorize handler when the mobile authorize button is tapped', async () => {
@@ -300,10 +350,10 @@ describe('ScanContent', () => {
     });
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Continue with Pubky Ring' })).not.toBeDisabled();
+      expect(screen.getByRole('button', { name: 'Authorize & configure' })).not.toBeDisabled();
     });
 
-    const authorizeButton = screen.getByRole('button', { name: 'Continue with Pubky Ring' });
+    const authorizeButton = screen.getByRole('button', { name: 'Authorize & configure' });
 
     await act(async () => {
       fireEvent.click(authorizeButton);
@@ -316,7 +366,7 @@ describe('ScanContent', () => {
   it.each([
     { isLoading: true, isOpeningRing: false, url: '', label: 'Generating...' },
     { isLoading: false, isOpeningRing: true, url: 'mock-auth-url', label: 'Opening Pubky Ring...' },
-    { isLoading: false, isOpeningRing: false, url: '', label: 'Continue with Pubky Ring' },
+    { isLoading: false, isOpeningRing: false, url: '', label: 'Authorize & configure' },
   ])('prevents signup handoff while $label is unavailable', ({ isLoading, isOpeningRing, url, label }) => {
     vi.mocked(useMobileAuth).mockReturnValue({
       url,
@@ -326,7 +376,7 @@ describe('ScanContent', () => {
       copyAuthUrl: mockCopyAuthUrl,
       isOpeningRing,
       isOpeningBitkit: false,
-      onAuthorizeBitkitClick: vi.fn(),
+      onAuthorizeBitkitClick: mockOnAuthorizeBitkitClick,
       onAuthorizeClick: mockOnAuthorizeClick,
     });
 
@@ -347,7 +397,7 @@ describe('ScanContent', () => {
       copyAuthUrl: mockCopyAuthUrl,
       isOpeningRing: false,
       isOpeningBitkit: false,
-      onAuthorizeBitkitClick: vi.fn(),
+      onAuthorizeBitkitClick: mockOnAuthorizeBitkitClick,
       onAuthorizeClick: mockOnAuthorizeClick,
     });
 
@@ -372,7 +422,7 @@ describe('ScanContent', () => {
       copyAuthUrl: mockCopyAuthUrl,
       isOpeningRing: false,
       isOpeningBitkit: false,
-      onAuthorizeBitkitClick: vi.fn(),
+      onAuthorizeBitkitClick: mockOnAuthorizeBitkitClick,
       onAuthorizeClick: mockOnAuthorizeClick,
     });
 
@@ -385,6 +435,48 @@ describe('ScanContent', () => {
     });
 
     expect(mockFetchUrl).toHaveBeenCalledTimes(1);
+  });
+
+  it('copies the sign-up auth link when the desktop QR is clicked', async () => {
+    render(<ScanContent />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Copy authentication link' }));
+    });
+
+    expect(mockCopyAuthUrl).toHaveBeenCalledTimes(1);
+    expect(toast).toHaveBeenCalledWith({ variant: 'info', title: 'Authentication link copied' });
+    expect(mockFetchUrl).not.toHaveBeenCalled();
+  });
+
+  it('shows an error toast when copying the sign-up auth link fails', async () => {
+    mockCopyAuthUrl.mockRejectedValueOnce(new Error('clipboard denied'));
+    render(<ScanContent />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Copy authentication link' }));
+    });
+
+    expect(toast).toHaveBeenCalledWith({ variant: 'error', description: 'Could not copy to clipboard' });
+    expect(toast).not.toHaveBeenCalledWith(expect.objectContaining({ title: 'Authentication link copied' }));
+  });
+
+  it('disables the desktop QR copy while the auth link is generating', () => {
+    vi.mocked(useMobileAuth).mockReturnValue({
+      url: '',
+      isLoading: true,
+      isExpired: false,
+      fetchUrl: mockFetchUrl,
+      copyAuthUrl: mockCopyAuthUrl,
+      isOpeningRing: false,
+      isOpeningBitkit: false,
+      onAuthorizeBitkitClick: mockOnAuthorizeBitkitClick,
+      onAuthorizeClick: mockOnAuthorizeClick,
+    });
+
+    render(<ScanContent />);
+
+    expect(screen.getByRole('button', { name: 'Copy authentication link' })).toBeDisabled();
   });
 
   it('redirects to human onboarding when invite code is missing', async () => {
@@ -402,45 +494,21 @@ describe('ScanContent', () => {
   });
 });
 
-describe('ScanFooter', () => {
-  it('renders footer with links', () => {
-    render(<ScanFooter />);
-
-    const links = screen.getAllByRole('link');
-    expect(links.length).toBeGreaterThanOrEqual(1);
-  });
-
-  it('renders links', () => {
-    render(<ScanFooter />);
-
-    const links = screen.getAllByRole('link');
-    expect(links.length).toBeGreaterThanOrEqual(1);
-
-    const pubkyLink = screen.getByRole('link', { name: 'Pubky' });
-    expect(pubkyLink).toHaveAttribute('href', getPubkyProtocolLink());
-    expect(pubkyLink).toHaveAttribute('target', '_blank');
-  });
-});
-
 describe('ScanHeader', () => {
   it('renders mobile header with mobile subtitle', () => {
-    render(<ScanHeader isMobile={true} />);
+    render(<ScanHeader isMobile={true} keychainName="Pubky Ring" />);
 
-    expect(screen.getByTestId('page-title')).toBeInTheDocument();
-    expect(screen.getByRole('heading')).toBeInTheDocument();
+    expect(screen.getByRole('heading')).toHaveTextContent('Authorize with keychain.');
     expect(screen.getByTestId('page-subtitle')).toHaveTextContent(
-      'Tap the button to open Pubky Ring, and authorize with your pubky.',
+      'Tap below to open Pubky Ring and automatically configure your pubky.',
     );
   });
 
   it('renders desktop header with desktop subtitle', () => {
-    render(<ScanHeader isMobile={false} />);
+    render(<ScanHeader isMobile={false} keychainName="Bitkit" />);
 
-    expect(screen.getByTestId('page-title')).toBeInTheDocument();
-    expect(screen.getByRole('heading')).toBeInTheDocument();
-    expect(screen.getByTestId('page-subtitle')).toHaveTextContent(
-      "Open Pubky Ring, tap 'add pubky', and scan this QR.",
-    );
+    expect(screen.getByRole('heading')).toHaveTextContent('Scan QR with keychain.');
+    expect(screen.getByTestId('page-subtitle')).toHaveTextContent('Use Bitkit and follow the instructions below.');
   });
 });
 

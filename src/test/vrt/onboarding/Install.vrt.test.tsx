@@ -42,6 +42,13 @@ vi.mock('next/navigation', () => {
   };
 });
 
+// The Bitkit store badges show only in production (staging's Bitkit sign-up opens the regtest
+// build, which no store carries). Pin production so the capture matches the Figma card.
+vi.mock('@/config/network', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/config/network')>()),
+  getDeployEnv: () => 'production',
+}));
+
 // Toast is only fired from the invite-code verification effect (never hit in the
 // default snapshot); stub it so no real toast timers run.
 vi.mock('@/molecules/Toaster/toast');

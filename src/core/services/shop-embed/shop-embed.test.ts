@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { AUTH_CLEANUP_CHANGED_EVENT } from '@/libs/auth/persistence';
 import { NetworkErrorCode, ServerErrorCode, TimeoutErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { Logger } from '@/libs/logger/logger';
@@ -118,8 +119,11 @@ describe('App-owned Shop logout cleanup', () => {
       });
     }
 
+    const observed = vi.fn(() => localStorage.getItem(pendingKey));
+    window.addEventListener(AUTH_CLEANUP_CHANGED_EVENT, observed, { once: true });
     await ShopEmbedService.cleanupSignedOut('logout', 'logout');
 
+    expect(observed).toHaveReturnedWith(null);
     expect((await indexedDB.databases()).filter((db) => names.includes(db.name!))).toEqual([]);
     expect(localStorage.getItem(serviceKey)).toBeNull();
     expect(localStorage.getItem(pendingKey)).toBeNull();

@@ -1,19 +1,19 @@
-import { PubkyAppFeedLayout, PubkyAppFeedReach, PubkyAppFeedSort, PubkyAppPostKind } from 'pubky-app-specs';
+import type { KnownFeedLayout, KnownFeedReach, KnownFeedSort, KnownPostKind } from 'pubky-social-specs';
 
 export interface FeedModelSchema {
   id: string;
   name: string;
   /**
    * Lucide icon name in kebab-case.
-   * Optional because feeds created before pubky-app-specs 0.7 have no icon.
+   * Optional because 0.x feeds created before the 0.7 spec added icons have none.
    */
   icon?: string;
   tags: string[];
   domain_tags: string[];
-  reach: PubkyAppFeedReach;
-  sort: PubkyAppFeedSort;
-  content: PubkyAppPostKind | null;
-  layout: PubkyAppFeedLayout;
+  reach: KnownFeedReach;
+  sort: KnownFeedSort;
+  content: KnownPostKind | null;
+  layout: KnownFeedLayout;
   created_at: number;
   updated_at: number;
 }

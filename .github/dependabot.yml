@@ -64,7 +64,6 @@ updates:
         applies-to: version-updates
         patterns:
           - '@synonymdev/*'
-          - pubky-app-specs
       production-minor-patch:
         applies-to: version-updates
         dependency-type: production

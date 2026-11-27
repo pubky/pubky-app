@@ -121,8 +121,8 @@ the npm SDK records no source commit, and Paykit compiles its own copy of `locks
 
 Why these versions:
 
-1. The Pubky clients (the app, both servers and the `examples/js-sdk` helpers use `pubky` `0.16.2`)
-   need the homeserver write-lock API. Homeserver v0.11 fails with `acquire Pubky write lock`.
+1. The Pubky clients (both servers and the `examples/js-sdk` helpers use `pubky` `0.16.2`; the app pins
+   `@synonymdev/pubky` `0.18.0`, which this recipe has not been re-run with) need the homeserver write-lock API. Homeserver v0.11 fails with `acquire Pubky write lock`.
    v0.15.0 is the version this recipe has run with. Homeserver v0.16.2 matches the clients' version,
    and Paykit's README names it as the minimum for shared-state recovery with GCS storage, which the
    local file-storage testnet does not use. Moving the testnet to v0.16.2 is to confirm.
@@ -507,8 +507,9 @@ docker logs --since 5m pubky-locks-paykit-demo-locks-server-1 2>&1 | grep 'compl
 Notes:
 
 1. A completed purchase is never paid again; to pay again, use a new lock. The app stores each purchase id in
-   the reader's homeserver at `/priv/social/purchases/<lock_id>/<bundle_id>.json` (older purchases:
-   `/priv/social/purchases/<lock_id>.json`) and reuses a saved id that can still pay (#2831). After a failed
+   the reader's homeserver at `/priv/app.pubky/v1/locks/purchases/<lock_id>/<bundle_id>.json` (builds before #3206:
+   `/priv/social/purchases/`, copied in the background the first time the reader opens a locked post or the Unlocked
+   screen) and reuses a saved id that can still pay (#2831). After a failed
    or expired purchase, Try again saves a new id for the same lock.
 2. Since rc9, Lock Server creates the invoice in the background. It retries for up to 10 minutes. If Paykit is down
    longer, the task fails with `invoice admission deadline exceeded`, and the reader presses Try again in the app.

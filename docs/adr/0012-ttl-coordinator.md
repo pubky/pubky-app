@@ -193,7 +193,7 @@ Local-first `getOrFetch*` methods often short-circuit when data already exists l
 
 These methods should fetch **views** (not partial fragments):
 
-- **Post view**: `NexusPost` (details + counts + relationships + tags + bookmark)
+- **Post view**: `NexusPost` (details + counts + relationships + tags; its `bookmark` field is an optional 0.x ghost that `/v1` never serves and the app never reads, ADR-0028)
 - **User view**: `NexusUser` (details + counts + relationship + tags)
 
 Implementation note: `forceFetch*` should reuse the same per-domain batch endpoints used by the coordinator tick (e.g. call `postsByIds` / `usersByIds` with a single ID), so there is only one refresh implementation path.

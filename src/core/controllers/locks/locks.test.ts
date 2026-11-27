@@ -1,9 +1,11 @@
 import type { Session as LocksSdkSession } from '@synonymdev/locks-sdk';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LocksApplication } from '@/application/locks/locks';
+import { LOCKS_READER_FILES_COPY_VERSION } from '@/config/locks';
 import { AuthErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
+import { hasCopiedLocksReaderFiles, locksReaderFilesCopiedKey } from '@/libs/locks/reader-files-copied';
 import type { TUnlockedContent } from '@/services/locks/locks.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 import { useLocksAuthStore } from '@/stores/locksAuth/locksAuth.store';
@@ -20,6 +22,8 @@ const mocks = vi.hoisted(() => ({
   signout: vi.fn(),
   setLockServiceConfig: vi.fn(),
   fetchPaykitSetupStatus: vi.fn(),
+  generatePaykitReconnectUrl: vi.fn(),
+  fetchPaykitCreatorHeld: vi.fn(),
   createLockContent: vi.fn(),
   deleteLockContent: vi.fn(),
   fetchLockFile: vi.fn(),
@@ -34,6 +38,8 @@ const mocks = vi.hoisted(() => ({
   replicateUnlockedContent: vi.fn(),
   fetchReplicatedContent: vi.fn(),
   fetchUnlockedList: vi.fn(),
+  copySocialReaderFiles: vi.fn(),
+  settleSocialCopyRuns: vi.fn(),
   fetchOwnContent: vi.fn(),
 }));
 
@@ -46,6 +52,8 @@ vi.mock('@/application/locks/locks', () => ({
     signout: mocks.signout,
     setLockServiceConfig: mocks.setLockServiceConfig,
     fetchPaykitSetupStatus: mocks.fetchPaykitSetupStatus,
+    generatePaykitReconnectUrl: mocks.generatePaykitReconnectUrl,
+    fetchPaykitCreatorHeld: mocks.fetchPaykitCreatorHeld,
     createLockContent: mocks.createLockContent,
     deleteLockContent: mocks.deleteLockContent,
     fetchLockFile: mocks.fetchLockFile,
@@ -60,6 +68,8 @@ vi.mock('@/application/locks/locks', () => ({
     replicateUnlockedContent: mocks.replicateUnlockedContent,
     fetchReplicatedContent: mocks.fetchReplicatedContent,
     fetchUnlockedList: mocks.fetchUnlockedList,
+    copySocialReaderFiles: mocks.copySocialReaderFiles,
+    settleSocialCopyRuns: mocks.settleSocialCopyRuns,
     fetchOwnContent: mocks.fetchOwnContent,
   },
 }));
@@ -519,6 +529,43 @@ describe('LocksController (auth)', () => {
     });
   });
 
+  describe('Paykit reconnect for the signed-in creator', () => {
+    it('builds the reconnect URL for the stored creator on the app origin', () => {
+      useLocksAuthStore
+        .getState()
+        .init({ session: fakeSession, secret: 'secret-abc', creatorPubky: MOCK_LOCK_AUTHOR_PUBKY });
+      mocks.generatePaykitReconnectUrl.mockReturnValue('https://paykit.server/setup/reconnect?x=1');
+
+      expect(LocksController.getPaykitReconnectUrl({ state: 'STATE' })).toBe(
+        'https://paykit.server/setup/reconnect?x=1',
+      );
+      expect(mocks.generatePaykitReconnectUrl).toHaveBeenCalledWith({
+        returnTo: window.location.origin,
+        state: 'STATE',
+        creator: MOCK_LOCK_AUTHOR_PUBKY,
+      });
+    });
+
+    it('asks whether Paykit holds the stored creator', async () => {
+      useLocksAuthStore
+        .getState()
+        .init({ session: fakeSession, secret: 'secret-abc', creatorPubky: MOCK_LOCK_AUTHOR_PUBKY });
+      mocks.fetchPaykitCreatorHeld.mockResolvedValue(true);
+
+      await expect(LocksController.fetchPaykitCreatorHeld()).resolves.toBe(true);
+      expect(mocks.fetchPaykitCreatorHeld).toHaveBeenCalledWith({ creator: MOCK_LOCK_AUTHOR_PUBKY });
+    });
+
+    it('refuses both without a creator, rather than probing for nobody', async () => {
+      useLocksAuthStore.setState(locksAuthInitialState);
+
+      expect(() => LocksController.getPaykitReconnectUrl({ state: 'STATE' })).toThrow('No Locks creator');
+      await expect(LocksController.fetchPaykitCreatorHeld()).rejects.toThrow('No Locks creator');
+      expect(mocks.generatePaykitReconnectUrl).not.toHaveBeenCalled();
+      expect(mocks.fetchPaykitCreatorHeld).not.toHaveBeenCalled();
+    });
+  });
+
   describe('fetchPaykitSetupStatus', () => {
     beforeEach(() => {
       useLocksAuthStore
@@ -698,7 +745,7 @@ describe('LocksController (content)', () => {
     mocks.createLockContent.mockResolvedValue(lock);
     const params = {
       attachments: [],
-      buildPost: () => ({ contentType: 'application/json', bytes: new Uint8Array() }),
+      post: { content: 'locked body', kind: 'short' },
       lockConfig: { amount: '1000', asset: 'BTC' as const },
     };
 
@@ -718,7 +765,7 @@ describe('LocksController (content)', () => {
       await expect(
         LocksController.createLockContent({
           attachments: [],
-          buildPost: () => ({ contentType: 'application/json', bytes: new Uint8Array() }),
+          post: { content: 'locked body', kind: 'short' },
           lockConfig: { amount: '1000', asset: 'BTC' as const },
         }),
       ).rejects.toBe(rejected);
@@ -851,7 +898,11 @@ describe('LocksController.fetchReplicatedContent', () => {
     mocks.fetchReplicatedContent.mockResolvedValue(content);
 
     await expect(LocksController.fetchReplicatedContent(params)).resolves.toEqual(content);
-    expect(mocks.fetchReplicatedContent).toHaveBeenCalledWith({ ...params, isCurrent: expect.any(Function) });
+    expect(mocks.fetchReplicatedContent).toHaveBeenCalledWith({
+      ...params,
+      isCurrent: expect.any(Function),
+      socialFilesCopied: false,
+    });
   });
 });
 
@@ -866,14 +917,14 @@ describe('LocksController.replicateUnlockedContent', () => {
       lockUrl: VALID_LOCK_URL,
       readerPubky: 'pubkyreader',
       content,
-      postId: 'pubkyauthor:POST1',
+      postId: `${MOCK_LOCK_AUTHOR_PUBKY}:0035V9A20WSE4`,
     });
 
     expect(mocks.replicateUnlockedContent).toHaveBeenCalledWith({
       lockUrl: VALID_LOCK_URL,
       readerPubky: 'pubkyreader',
       content,
-      announcementUri: 'pubky://pubkyauthor/pub/pubky.app/posts/POST1',
+      announcementUri: `pubky://${MOCK_LOCK_AUTHOR_PUBKY}/pub/social/v1/posts/0035V9A20WSE4`,
       isCurrent: expect.any(Function),
     });
   });
@@ -886,7 +937,177 @@ describe('LocksController.fetchUnlockedList', () => {
     mocks.fetchUnlockedList.mockResolvedValue(items);
 
     await expect(LocksController.fetchUnlockedList(params)).resolves.toEqual(items);
-    expect(mocks.fetchUnlockedList).toHaveBeenCalledWith({ ...params, isCurrent: expect.any(Function) });
+    expect(mocks.fetchUnlockedList).toHaveBeenCalledWith({
+      ...params,
+      isCurrent: expect.any(Function),
+      socialFilesCopied: false,
+    });
+  });
+});
+
+describe('LocksController reader file copy (#3206)', () => {
+  const READER = 'pubkyreader';
+  const COPY_GRANT = ['/priv/social/:rw', '/priv/app.pubky/v1/:rw'];
+  const signIn = (capabilities: string[]) =>
+    useAuthStore.setState({ currentUserPubky: READER, session: asOpaque({ info: { capabilities } }) });
+  const reads = [
+    [
+      'a replica read',
+      () => LocksController.fetchReplicatedContent({ lockUrl: VALID_LOCK_URL, readerPubky: READER }),
+      mocks.fetchReplicatedContent,
+    ],
+    ['the Unlocked screen', () => LocksController.fetchUnlockedList({ readerPubky: READER }), mocks.fetchUnlockedList],
+  ] as const;
+  const record = (v: number) => localStorage.setItem(locksReaderFilesCopiedKey(READER), JSON.stringify({ v }));
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.fetchReplicatedContent.mockResolvedValue(null);
+    mocks.fetchUnlockedList.mockResolvedValue([]);
+    mocks.copySocialReaderFiles.mockResolvedValue(true);
+  });
+
+  afterEach(() => {
+    useAuthStore.setState({ session: null });
+    localStorage.removeItem(locksReaderFilesCopiedKey(READER));
+    LocksController.resumeReaderFileCopy();
+  });
+
+  it('starts no copy while the account is being deleted, until the session changes', async () => {
+    signIn(COPY_GRANT);
+    mocks.settleSocialCopyRuns.mockResolvedValue(undefined);
+
+    await LocksController.stopReaderFileCopy();
+    await LocksController.fetchUnlockedList({ readerPubky: READER });
+
+    expect(mocks.settleSocialCopyRuns).toHaveBeenCalledOnce();
+    expect(mocks.copySocialReaderFiles).not.toHaveBeenCalled();
+
+    signIn(COPY_GRANT);
+    await LocksController.fetchUnlockedList({ readerPubky: READER });
+
+    expect(mocks.copySocialReaderFiles).toHaveBeenCalledOnce();
+  });
+
+  it('stops a run already going once the account deletion starts', async () => {
+    signIn(COPY_GRANT);
+    mocks.settleSocialCopyRuns.mockResolvedValue(undefined);
+    await LocksController.fetchUnlockedList({ readerPubky: READER });
+    const [{ isCurrent }] = mocks.copySocialReaderFiles.mock.calls[0];
+
+    expect(isCurrent()).toBe(true);
+    await LocksController.stopReaderFileCopy();
+    expect(isCurrent()).toBe(false);
+  });
+
+  it('forgets the deleted session at logout, so the next sign-in on the page copies again', async () => {
+    signIn(COPY_GRANT);
+    mocks.settleSocialCopyRuns.mockResolvedValue(undefined);
+
+    await LocksController.stopReaderFileCopy();
+    await LocksController.logout(false);
+    await LocksController.fetchUnlockedList({ readerPubky: READER });
+
+    expect(mocks.copySocialReaderFiles).toHaveBeenCalledOnce();
+  });
+
+  it('starts the copy again after a deletion that failed', async () => {
+    signIn(COPY_GRANT);
+    mocks.settleSocialCopyRuns.mockResolvedValue(undefined);
+
+    await LocksController.stopReaderFileCopy();
+    LocksController.resumeReaderFileCopy();
+    await LocksController.fetchUnlockedList({ readerPubky: READER });
+
+    expect(mocks.copySocialReaderFiles).toHaveBeenCalledOnce();
+  });
+
+  it.each(reads)('starts it on %s without waiting for it, and reads both roots', async (_label, read, appRead) => {
+    signIn(COPY_GRANT);
+    mocks.copySocialReaderFiles.mockReturnValue(new Promise(() => {}));
+
+    await read();
+
+    expect(mocks.copySocialReaderFiles).toHaveBeenCalledExactlyOnceWith({
+      readerPubky: READER,
+      isCurrent: expect.any(Function),
+    });
+    expect(appRead).toHaveBeenCalledWith(expect.objectContaining({ socialFilesCopied: false }));
+  });
+
+  it.each(reads)('does not start it on %s when the grant cannot read /priv/social/', async (_label, read) => {
+    signIn(['/priv/app.pubky/v1/:rw']);
+
+    await read();
+
+    expect(mocks.copySocialReaderFiles).not.toHaveBeenCalled();
+  });
+
+  it.each(reads)(
+    'starts no copy on %s once this browser recorded it, and reads the new root only',
+    async (_label, read, appRead) => {
+      signIn(COPY_GRANT);
+      record(LOCKS_READER_FILES_COPY_VERSION);
+
+      await read();
+
+      expect(mocks.copySocialReaderFiles).not.toHaveBeenCalled();
+      expect(appRead).toHaveBeenCalledWith(expect.objectContaining({ socialFilesCopied: true }));
+    },
+  );
+
+  // A grant reduced after the copy does not bring back the reads of /priv/social/.
+  it('reads the record before the grant', async () => {
+    signIn(['/priv/app.pubky/v1/:rw']);
+    record(LOCKS_READER_FILES_COPY_VERSION);
+
+    await LocksController.fetchUnlockedList({ readerPubky: READER });
+
+    expect(mocks.copySocialReaderFiles).not.toHaveBeenCalled();
+    expect(mocks.fetchUnlockedList).toHaveBeenCalledWith(expect.objectContaining({ socialFilesCopied: true }));
+  });
+
+  it('starts it again when the record is from an older version', async () => {
+    signIn(COPY_GRANT);
+    record(LOCKS_READER_FILES_COPY_VERSION - 1);
+
+    await LocksController.fetchUnlockedList({ readerPubky: READER });
+
+    expect(mocks.copySocialReaderFiles).toHaveBeenCalledOnce();
+  });
+
+  it('records a run that left nothing to copy, so the next read starts none', async () => {
+    signIn(COPY_GRANT);
+
+    await LocksController.fetchUnlockedList({ readerPubky: READER });
+    await vi.waitFor(() => expect(hasCopiedLocksReaderFiles(READER)).toBe(true));
+    await LocksController.fetchUnlockedList({ readerPubky: READER });
+
+    expect(mocks.copySocialReaderFiles).toHaveBeenCalledOnce();
+    expect(mocks.fetchUnlockedList).toHaveBeenLastCalledWith(expect.objectContaining({ socialFilesCopied: true }));
+  });
+
+  it('records nothing after a run that did not finish', async () => {
+    signIn(COPY_GRANT);
+    mocks.copySocialReaderFiles.mockResolvedValue(false);
+
+    await LocksController.fetchUnlockedList({ readerPubky: READER });
+    await mocks.copySocialReaderFiles.mock.results[0].value;
+
+    expect(hasCopiedLocksReaderFiles(READER)).toBe(false);
+  });
+
+  it('records nothing when the session ended before the run finished', async () => {
+    signIn(COPY_GRANT);
+    let finish = (_copied: boolean) => {};
+    mocks.copySocialReaderFiles.mockReturnValue(new Promise<boolean>((resolve) => (finish = resolve)));
+
+    await LocksController.fetchUnlockedList({ readerPubky: READER });
+    useAuthStore.setState({ session: null });
+    finish(true);
+    await mocks.copySocialReaderFiles.mock.results[0].value;
+
+    expect(hasCopiedLocksReaderFiles(READER)).toBe(false);
   });
 });
 
@@ -978,7 +1199,7 @@ describe('LocksController cache writes are scoped to the viewer (#2797)', () => 
           lockUrl: VALID_LOCK_URL,
           readerPubky: 'pubkyreader',
           content: { post: { content: 's', kind: 'short', attachments: null }, attachments: [] },
-          postId: 'pubkyauthor:POST1',
+          postId: `${MOCK_LOCK_AUTHOR_PUBKY}:0035V9A20WSE4`,
         }),
       mocks.replicateUnlockedContent,
     ],

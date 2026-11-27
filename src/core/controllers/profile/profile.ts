@@ -1,4 +1,5 @@
 import { ProfileApplication } from '@/application/profile/profile';
+import { LocksController } from '@/controllers/locks/locks';
 import type {
   TCommitSetDetailsParams,
   TCommitUpdateDetailsParams,
@@ -8,7 +9,6 @@ import type {
 import { Identity } from '@/libs/identity/identity';
 import type { Pubky } from '@/models/models.types';
 import { UserNormalizer } from '@/pipes/user/user.normalizer';
-import { useAuthStore } from '@/stores/auth/auth.store';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 
 // Operations related with the profile.json file in the homeserver
@@ -22,7 +22,7 @@ export class ProfileController {
    * @param pubky - The public key of the user
    */
   static async commitCreate({ profile, image, pubky }: TCommitSetDetailsParams) {
-    const { user, meta } = UserNormalizer.to(
+    const user = UserNormalizer.to(
       {
         name: profile.name,
         bio: profile.bio ?? '',
@@ -33,7 +33,7 @@ export class ProfileController {
       pubky,
     );
 
-    await ProfileApplication.commitCreate({ profile: user, url: meta.url, pubky });
+    await ProfileApplication.commitCreate({ profile: user, pubky });
   }
 
   /**
@@ -60,15 +60,6 @@ export class ProfileController {
   }
 
   /**
-   * Generates a new pair of secret key and mnemonic and sets them in the onboarding and auth stores.
-   */
-  static generateSecrets() {
-    const secrets = Identity.generateSecrets();
-    useOnboardingStore.getState().setSecrets(secrets);
-    useAuthStore.getState().setCurrentUserPubky(Identity.z32FromSecret(secrets.secretKey));
-  }
-
-  /**
    * Creates a recovery file for the keypair
    * @param passphrase - The passphrase to use to create the recovery file
    */
@@ -84,7 +75,13 @@ export class ProfileController {
    * @param setProgress - The function to set the progress
    */
   static async commitDelete({ pubky, setProgress }: TDeleteAccountInput) {
-    await ProfileApplication.commitDelete({ pubky, setProgress });
+    await LocksController.stopReaderFileCopy();
+    try {
+      await ProfileApplication.commitDelete({ pubky, setProgress });
+    } catch (error) {
+      LocksController.resumeReaderFileCopy();
+      throw error;
+    }
     useOnboardingStore.getState().clearExperienceCompleted(pubky);
   }
 

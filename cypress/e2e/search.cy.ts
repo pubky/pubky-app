@@ -1,4 +1,4 @@
-import { backupDownloadFilePath, userIdFromPubky } from '../support/common';
+import { userIdFromPubky } from '../support/common';
 import { slowCypressDown } from 'cypress-slow-down';
 import 'cypress-slow-down/commands';
 import { addTagsToCollectionHero, createCollection, findCollectionCardInSection } from '../support/collections';
@@ -12,7 +12,7 @@ import {
 } from '../support/header';
 import { createQuickPost, waitForFeedToLoad } from '../support/posts';
 import { addProfileTags, openProfileTab } from '../support/profile';
-import { BackupType, CheckForNewPosts, HasBackedUp } from '../support/types/enums';
+import { CheckForNewPosts, HasBackedUp } from '../support/types/enums';
 
 const username = 'Mr Search';
 // second author, whose posts share a word with one of Mr Search's posts
@@ -55,15 +55,14 @@ const filterProfilePosts = (query: string) => {
 describe('search', () => {
   before(() => {
     slowCypressDown();
-    cy.deleteDownloadsFolder();
 
     // created first so they are indexed before Mr Search's posts
-    cy.onboardAsNewUser(otherPoster.username, '', undefined, otherPoster.pubkyAlias);
+    cy.onboardAsNewUser(otherPoster.username, '', otherPoster.pubkyAlias);
     createQuickPost(otherPostWithSharedWord);
     createQuickPost(otherPostWithoutSharedWord);
-    cy.signOut(HasBackedUp.No);
+    cy.signOut(HasBackedUp.Yes);
 
-    cy.onboardAsNewUser(username, 'I like to search', [BackupType.EncryptedFile]);
+    cy.onboardAsNewUser(username, 'I like to search');
 
     // create the posts searched for by the tests below
     createQuickPost(postTag1, [tag1]);
@@ -79,7 +78,7 @@ describe('search', () => {
     // sign in if not already
     cy.location('pathname').then((currentPath) => {
       if (currentPath !== '/home') {
-        cy.signInWithEncryptedFile(backupDownloadFilePath(username));
+        cy.signInWithPubkyRing(username);
         waitForFeedToLoad();
       }
     });
