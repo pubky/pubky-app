@@ -89,7 +89,7 @@ export async function matchVrtFrameScreenshot(name: string, options?: Screenshot
   await withCaptureScale(() => expect(page.elementLocator(document.documentElement)).toMatchScreenshot(name, options));
 }
 
-export interface VrtElementCaptureOptions extends ScreenshotMatcherOptions {
+interface VrtElementCaptureOptions extends ScreenshotMatcherOptions {
   /**
    * Element to hold in `:hover` for the capture. The capture scale moves the
    * iframe out from under a pointer placed before it, so the hover is applied
@@ -108,7 +108,7 @@ export async function matchVrtElementScreenshot(
 ) {
   await withCaptureScale(async () => {
     if (hover) {
-      await hover.hover();
+      await hover.hover({ timeout: HOVER_READY_TIMEOUT_MS });
       const target = hover.element();
       await vi.waitFor(
         () => {
