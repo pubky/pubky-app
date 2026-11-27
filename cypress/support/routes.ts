@@ -1,17 +1,6 @@
 // The list `recordRoutes` is filling, if a test is recording. One recording at a time: a later call
-// points this at its own array, and listeners already attached to the document follow it.
+// points this at its own array, and wrappers already installed follow it.
 let recordedRoutes: string[] | null = null;
-
-// History methods this module installed. A new document has new methods, so it is wrapped again.
-const wrappedHistoryMethods = new WeakSet<object>();
-
-// Documents whose navigation and popstate listeners are already attached.
-const documentsListening = new WeakSet<Document>();
-
-// TypeScript's DOM types do not include the Navigation API yet.
-type CurrentEntryNavigation = {
-  addEventListener(type: 'currententrychange', listener: () => void): void;
-};
 
 const recordUrl = (url: string) => {
   if (!recordedRoutes || url.length === 0 || url === 'about:blank') return;
@@ -19,15 +8,15 @@ const recordUrl = (url: string) => {
   recordedRoutes.push(url);
 };
 
-// The application iframe keeps one window object for the whole spec, while each load replaces the
-// document and its history methods. Remembering the window therefore skipped every later document,
-// and the signup walk was recorded as nothing. Wrap whatever `pushState` / `replaceState` are
-// installed now, including Next's own patch, which calls the previous function for its own
-// navigations. `window:before:load` runs before the app's scripts, so that patch captures this
-// wrapper. Recording must not throw: a throw rejects the navigation.
-const ensureHistoryWrapped = (win: Window) => {
-  if (!win.history) return;
-
+// Cypress reports `url:changed` only from its own history wrapper and skips installing it when a new
+// document's load begins before the previous document's unload — a race the service worker makes
+// intermittent — and the Navigation API's `currententrychange` recorded nothing in Chrome under
+// Cypress. So wrap `pushState` / `replaceState` directly. The application iframe keeps one window
+// object for the whole spec, while each load replaces the document and its history methods, so the
+// wrap happens here, on every document, before the app's scripts run: Next's own patch installs
+// after this hook, captures this wrapper, and its client-side routes are recorded too. `popstate`
+// covers back and forward. Recording must not throw: a throw rejects the navigation.
+Cypress.on('window:before:load', (win: Window) => {
   const record = () => {
     try {
       recordUrl(win.location.href);
@@ -36,31 +25,18 @@ const ensureHistoryWrapped = (win: Window) => {
     }
   };
 
-  const doc = win.document;
-  if (doc && !documentsListening.has(doc)) {
-    documentsListening.add(doc);
-    const navigation: CurrentEntryNavigation | undefined = Reflect.get(win, 'navigation');
-    if (navigation) navigation.addEventListener('currententrychange', record);
-    win.addEventListener('popstate', record);
-  }
-
   for (const method of ['pushState', 'replaceState'] as const) {
-    const current = win.history[method];
-    if (typeof current !== 'function' || wrappedHistoryMethods.has(current)) continue;
-    const wrapped = function (this: History, ...args: Parameters<History['pushState']>) {
-      const result = current.apply(this, args);
+    const original = win.history[method];
+    win.history[method] = function (this: History, ...args: Parameters<History['pushState']>) {
+      const result = original.apply(this, args);
       record();
       return result;
     };
-    wrappedHistoryMethods.add(wrapped);
-    win.history[method] = wrapped;
   }
-};
+  win.addEventListener('popstate', record);
 
-// Before the app's scripts, on every document, so a load that happens before `recordRoutes` is
-// still wrapped when a test starts recording.
-Cypress.on('window:before:load', (win: Window) => {
-  ensureHistoryWrapped(win);
+  // A full load (a `cy.visit`, a reload) calls no history method: record where it lands.
+  record();
 });
 
 // A visit in the next test must not append to the previous test's list.
@@ -69,26 +45,14 @@ Cypress.on('test:before:run', () => {
 });
 
 /**
- * Appends every URL the document reaches from here on to `visited`. A full load (a reload, a
- * `cy.visit`) drops the document's listeners, so the next document is instrumented from its load
- * and that load's URL is recorded.
+ * Appends every URL the document reaches from here on to `visited`.
  *
- * The sink is assigned when the command queue reaches this call. Callers such as
- * `signInWithPubkyRing` invoke `recordRoutes` while they are still queueing the sign-in, and the
- * history wrapper is already installed, so assigning the sink here would record that sign-in page
- * into a list the test only starts watching from this point.
+ * The sink is assigned when the command queue reaches this call, not when the caller runs: callers
+ * such as `signInWithPubkyRing` invoke `recordRoutes` while they are still queueing the sign-in, so
+ * assigning here would record pages the test only starts watching later (its own `/sign-in` visit).
  */
 export const recordRoutes = (visited: string[]) => {
   cy.then(() => {
     recordedRoutes = visited;
-    // Recording starts with this command, so a reload queued after `recordRoutes` is included.
-    // Commands queued before it have already run, and their page loads are not.
-    cy.on('window:load', (win: Window) => {
-      ensureHistoryWrapped(win);
-      recordUrl(win.location.href);
-    });
-  });
-  cy.window({ log: false }).then((win) => {
-    ensureHistoryWrapped(win);
   });
 };
