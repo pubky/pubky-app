@@ -5,20 +5,23 @@ import { MuteFilter } from '@/application/stream/posts/muting/mute-filter';
 import { Container } from '@/atoms/Container/Container';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { CONTENT_AREA_STACK_CLASS } from '@/config/layoutClasses';
-import { NEXUS_STREAM_MAX_LIMIT } from '@/config/nexus';
+import { hasLocalIndexSource, hasNexusSource, NEXUS_STREAM_MAX_LIMIT } from '@/config/nexus';
 import { COLLECTION_ITEMS_MAX_COUNT } from '@/config/posts';
 import { useApplyPendingFeedInsert } from '@/hooks/useApplyPendingFeedInsert/useApplyPendingFeedInsert';
 import { useCollectionStreamMembership } from '@/hooks/useCollectionStreamMembership/useCollectionStreamMembership';
 import type { FeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
+import { selectFirstSyncPending, useLocalIndexStatus } from '@/hooks/useLocalIndexStatus/useLocalIndexStatus';
 import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import { usePullToRefresh } from '@/hooks/usePullToRefresh/usePullToRefresh';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
 import { cn } from '@/libs/utils/utils';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
+import { LocalIndexFeedEmpty } from '@/molecules/LocalIndexFeedEmpty/LocalIndexFeedEmpty';
 import { PullToRefreshIndicator } from '@/molecules/PullToRefreshIndicator/PullToRefreshIndicator';
 import { TimelineLoading } from '@/molecules/Timeline/TimelineLoading';
 import type { TagsLayout } from '@/organisms/PostMain/PostMain.types';
 import { PostMainLayoutProvider } from '@/organisms/PostMain/PostMainLayoutContext';
+import { useAuthStore } from '@/stores/auth/auth.store';
 import { buildFeedKey } from '@/stores/feedOptimistic/feedOptimistic.types';
 import { TimelineCardsPosts } from '../../Posts/CardsPosts/CardsPosts';
 import { TimelinePosts } from '../../Posts/Posts';
@@ -40,6 +43,13 @@ type TimelineFeedVisualHiddenItemsNotice = Extract<
   TimelineFeedProps,
   { variant: typeof TIMELINE_FEED_VARIANT.COLLECTION }
 >['visualHiddenItemsNotice'];
+
+/** Feeds over a network, which a visitor's local index does not have. */
+const NETWORK_FEED_VARIANTS: ReadonlySet<TimelineFeedProps['variant']> = new Set([
+  TIMELINE_FEED_VARIANT.HOME,
+  TIMELINE_FEED_VARIANT.HOT,
+  TIMELINE_FEED_VARIANT.SEARCH,
+]);
 
 // A spec-max collection needs ceil(100 / 50) = 2 eager pages after the
 // initial load; +1 round of headroom for a trailing empty/filtered page.
@@ -80,7 +90,8 @@ interface TimelineFeedWithStreamProps {
  * TimelineFeedWithStream
  *
  * Guard component that shows a loading state until the streamId is resolved,
- * then delegates to TimelineFeedContent.
+ * then delegates to TimelineFeedContent. With the local index as the only source,
+ * a visitor gets a prompt to join instead of a network feed nothing can answer.
  */
 export function TimelineFeedWithStream({
   streamId,
@@ -96,6 +107,12 @@ export function TimelineFeedWithStream({
   visualHiddenItemsNotice,
   membershipPostIds,
 }: TimelineFeedWithStreamProps) {
+  const isVisitor = useAuthStore((state) => state.currentUserPubky === null);
+
+  if (isVisitor && NETWORK_FEED_VARIANTS.has(variant) && hasLocalIndexSource() && !hasNexusSource()) {
+    return <LocalIndexFeedEmpty reason="signed-out" />;
+  }
+
   if (!streamId) {
     return <TimelineLoading />;
   }
@@ -218,6 +235,19 @@ function TimelineFeedContent({
     hydrationCapped: eagerLoadExhausted,
   });
 
+  // While the local index reads the network for the first time, an empty Home says so. Once it is done, a Home still
+  // empty loads again; one showing posts keeps its place and gets the rest through its new-posts head.
+  const isHomeFeed = variant === TIMELINE_FEED_VARIANT.HOME;
+  const firstSyncPending = useLocalIndexStatus(selectFirstSyncPending);
+  const firstSyncPendingRef = useRef(firstSyncPending);
+  useEffect(() => {
+    const wasPending = firstSyncPendingRef.current;
+    firstSyncPendingRef.current = firstSyncPending;
+    if (isHomeFeed && wasPending && !firstSyncPending && rawPostIds.length === 0) void refresh();
+  }, [isHomeFeed, firstSyncPending, rawPostIds.length, refresh]);
+  const resolvedEmptyState =
+    emptyState ?? (isHomeFeed && firstSyncPending ? <LocalIndexFeedEmpty reason="first-sync" /> : undefined);
+
   const orderedPostIds = [...new Set(rawPostIds)];
   // Membership supplies the complete local list. Muting remains a display filter,
   // so unmuting restores members without treating a mute as an explicit removal.
@@ -339,7 +369,7 @@ function TimelineFeedContent({
               hasMore={hasMore}
               loadMore={loadMore}
               showEndMessage={showEndMessage}
-              emptyState={emptyState}
+              emptyState={resolvedEmptyState}
               trailingSlot={trailingSlot}
             />
           ) : isVisualActive ? (
@@ -350,7 +380,7 @@ function TimelineFeedContent({
               error={error}
               hasMore={hasMore}
               loadMore={loadMore}
-              emptyState={emptyState}
+              emptyState={resolvedEmptyState}
               trailingSlot={trailingSlot}
               hiddenItemsNotice={visualHiddenItemsNotice}
               showEndMessage={showEndMessage}
@@ -364,7 +394,7 @@ function TimelineFeedContent({
               error={error}
               hasMore={hasMore}
               loadMore={loadMore}
-              emptyState={emptyState}
+              emptyState={resolvedEmptyState}
               trailingSlot={trailingSlot}
               showEndMessage={showEndMessage}
             />

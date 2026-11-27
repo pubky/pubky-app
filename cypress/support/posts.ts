@@ -487,6 +487,9 @@ export const waitForFeedToLoad = () => {
       assert(false, "Timeline still shows either no posts, 'No posts found' or 'Loading...' after 10 seconds");
 
     cy.get('body').then(($body) => {
+      // A Home the local index answers says so while its first sync runs, outside the timeline container
+      if ($body.find('[data-cy="local-index-first-sync"]').length > 0) return;
+
       const $feed = $body.find('[data-cy="timeline-container"]');
       if ($feed.length === 0) {
         firstCheck ? cy.wait(200) : cy.wait(1000);

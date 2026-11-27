@@ -50,6 +50,18 @@ describe('extractUserIdFromAvatarUrl', () => {
     });
   });
 
+  describe('same-origin local media paths', () => {
+    it('extracts userId from the local avatar path, with or without a version', () => {
+      expect(extractUserIdFromAvatarUrl(`/_pubky/avatar/${VALID_USER_ID}`)).toBe(VALID_USER_ID);
+      expect(extractUserIdFromAvatarUrl(`/_pubky/avatar/${VALID_USER_ID}?v=1700000000000`)).toBe(VALID_USER_ID);
+    });
+
+    it('returns null for a local file path or a malformed userId', () => {
+      expect(extractUserIdFromAvatarUrl(`/_pubky/file/${VALID_USER_ID}/abc.png`)).toBeNull();
+      expect(extractUserIdFromAvatarUrl('/_pubky/avatar/short')).toBeNull();
+    });
+  });
+
   describe('null/undefined/empty input', () => {
     it('returns null for undefined input', () => {
       expect(extractUserIdFromAvatarUrl(undefined)).toBeNull();

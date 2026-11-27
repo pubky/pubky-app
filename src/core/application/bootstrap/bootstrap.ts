@@ -4,6 +4,7 @@ import { FeedApplication } from '@/application/feed/feed';
 import { FileApplication } from '@/application/file/file';
 import { MuteApplication } from '@/application/mute/mute';
 import { NotificationApplication } from '@/application/notification/notification';
+import { hasLocalIndexSource } from '@/config/nexus';
 import { TtlCoordinator } from '@/coordinators/ttl/ttl';
 import { parseJsonBytesOrUndefined } from '@/libs/http/response.utils';
 import { Logger } from '@/libs/logger/logger';
@@ -61,7 +62,9 @@ export class BootstrapApplication {
       return { unread: 0, lastRead: userLastRead, lastPolledTimestamp: undefined };
     onProgress?.('bootstrapFetched'); // Step 3 complete (60%)
 
-    if (!bootstrapData.indexed) {
+    // With the local source the local index answers the bootstrap, and `indexed: false` means it is still syncing:
+    // there is no Nexus to tell and nothing to retry, the cached streams rebuild on its changes.
+    if (!bootstrapData.indexed && !hasLocalIndexSource()) {
       // Tell Nexus this user exists (best-effort, never rejects; see NexusBootstrapService.ingest).
       void NexusBootstrapService.ingest(pubky);
 

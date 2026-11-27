@@ -1,0 +1,387 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { db } from '@/database/franky/franky';
+import { type BrowserCoordination, createBrowserCoordination } from '@/libs/indexer/browserCoordination';
+import { createIdbStore } from '@/libs/indexer/idbStore';
+import { legacySocialTree } from '@/libs/indexer/social/legacy/legacyTree';
+import { createSocialIndexer, type SocialChange } from '@/libs/indexer/social/socialIndexer';
+import { resetRuntimeConfigForTests } from '@/libs/runtime-config/runtime-config';
+import type { Pubky } from '@/models/models.types';
+import { UserStreamTypes } from '@/models/stream/user/userStream.types';
+import { HomeserverService } from '@/services/homeserver/homeserver';
+import { postStreamDirtyRegistry } from '@/services/local/stream/posts/postStreamDirtyRegistry';
+import { LocalStreamUsersService } from '@/services/local/stream/users/users';
+import { asOpaque } from '@/test-utils/type-assertions';
+import { IndexerService } from './indexer';
+import { serveLocalMedia } from './indexer.media';
+
+const fakes = vi.hoisted(() => ({
+  indexers: [] as Array<{
+    start: ReturnType<typeof vi.fn>;
+    stop: ReturnType<typeof vi.fn>;
+    refresh: ReturnType<typeof vi.fn>;
+    setExcluded: ReturnType<typeof vi.fn>;
+    change: (change: SocialChange) => void;
+    report: (status: { state: string }) => void;
+  }>,
+  writeListeners: new Set<(path: string) => void>(),
+  stores: [] as Array<{ name: string; close: ReturnType<typeof vi.fn>; destroy: ReturnType<typeof vi.fn> }>,
+}));
+
+vi.mock('@/libs/indexer/idbStore', () => ({
+  createIdbStore: vi.fn((name: string) => {
+    const store = { name, close: vi.fn(), destroy: vi.fn().mockResolvedValue(undefined) };
+    fakes.stores.push(store);
+    return store;
+  }),
+}));
+vi.mock('@/libs/indexer/social/socialIndexer', () => ({
+  createSocialIndexer: vi.fn(() => {
+    const listeners = new Set<(change: SocialChange) => void>();
+    const statusListeners = new Set<(status: { state: string }) => void>();
+    const indexer = {
+      start: vi.fn(),
+      stop: vi.fn(),
+      pause: vi.fn(),
+      resume: vi.fn(),
+      refresh: vi.fn().mockResolvedValue(undefined),
+      setExcluded: vi.fn(),
+      ready: () => Promise.resolve(),
+      whenSynced: () => Promise.resolve(),
+      onChange: (listener: (change: SocialChange) => void) => {
+        listeners.add(listener);
+        return () => listeners.delete(listener);
+      },
+      change: (change: SocialChange) => {
+        for (const listener of listeners) listener(change);
+      },
+      status: () => ({ state: 'idle' }),
+      onStatus: (listener: (status: { state: string }) => void) => {
+        statusListeners.add(listener);
+        return () => statusListeners.delete(listener);
+      },
+      report: (status: { state: string }) => {
+        for (const listener of statusListeners) listener(status);
+      },
+    };
+    fakes.indexers.push(indexer);
+    return indexer;
+  }),
+}));
+vi.mock('@/libs/indexer/browserCoordination', () => ({
+  browserApis: () => null,
+  createBrowserCoordination: vi.fn(() => null),
+}));
+vi.mock('./indexer.transport', () => ({ createIndexerTransport: vi.fn(() => ({})) }));
+vi.mock('./indexer.media', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./indexer.media')>()),
+  serveLocalMedia: vi.fn(() => () => {}),
+}));
+vi.mock('@/services/homeserver/homeserver', () => ({
+  HomeserverService: {
+    subscribeOwnedWrites: vi.fn((listener: (path: string) => void) => {
+      fakes.writeListeners.add(listener);
+      return () => fakes.writeListeners.delete(listener);
+    }),
+  },
+}));
+
+const write = (path: string) => {
+  for (const listener of fakes.writeListeners) listener(path);
+};
+
+const WINDOW_ENV = 'PUBKY_RUNTIME_INDEXER_WINDOW_MS';
+const LEGACY_TREE_ENV = 'PUBKY_RUNTIME_INDEXER_LEGACY_TREE';
+
+/** Starts `owner`'s index with the older social tree setting given. */
+function startWithLegacyTree(owner: Pubky | null, value: string) {
+  process.env[LEGACY_TREE_ENV] = value;
+  resetRuntimeConfigForTests();
+  try {
+    IndexerService.start(owner);
+  } finally {
+    delete process.env[LEGACY_TREE_ENV];
+    resetRuntimeConfigForTests();
+  }
+}
+
+/** The media sources the last start handed the service worker bridge. */
+const mediaSources = () => vi.mocked(serveLocalMedia).mock.calls.at(-1)?.[0];
+
+const ALICE = 'alice-pubky' as Pubky;
+const BOB = 'bob-pubky' as Pubky;
+
+describe('IndexerService', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    fakes.indexers.length = 0;
+    fakes.stores.length = 0;
+    fakes.writeListeners.clear();
+  });
+
+  afterEach(() => {
+    IndexerService.stop();
+  });
+
+  it('runs one index per tab, in a database named by the account, seeded with it', () => {
+    IndexerService.start(ALICE);
+    IndexerService.start(ALICE);
+
+    expect(createSocialIndexer).toHaveBeenCalledOnce();
+    expect(createIdbStore).toHaveBeenCalledWith(`pubky-index-${ALICE}`);
+    expect(createSocialIndexer).toHaveBeenCalledWith(expect.objectContaining({ options: { savedIndex: true } }));
+    expect(createBrowserCoordination).toHaveBeenCalledWith(null, `pubky-index-${ALICE}`);
+    expect(fakes.indexers[0].start).toHaveBeenCalledExactlyOnceWith(ALICE);
+    expect(IndexerService.current()).toBe(fakes.indexers[0]);
+  });
+
+  it('marks when the account’s index starts, is ready and settles its first sync, for the e2e phase log', async () => {
+    performance.clearMarks();
+    IndexerService.start(ALICE);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(performance.getEntriesByName('pubky:local index started', 'mark')).toHaveLength(1);
+    expect(performance.getEntriesByName('pubky:local index ready', 'mark')).toHaveLength(1);
+    expect(performance.getEntriesByName('pubky:local index first sync', 'mark')).toHaveLength(1);
+  });
+
+  it('runs a visitor’s index in its own database, with no tab coordination and no write refresh', () => {
+    IndexerService.start(null);
+    IndexerService.start(null);
+
+    expect(createSocialIndexer).toHaveBeenCalledOnce();
+    expect(createIdbStore).toHaveBeenCalledWith('pubky-index-visitor');
+    expect(createSocialIndexer).toHaveBeenCalledWith(expect.objectContaining({ options: { savedIndex: false } }));
+    expect(createBrowserCoordination).not.toHaveBeenCalled();
+    expect(HomeserverService.subscribeOwnedWrites).not.toHaveBeenCalled();
+    expect(fakes.indexers[0].start).toHaveBeenCalledExactlyOnceWith(null);
+    expect(IndexerService.current()).toBe(fakes.indexers[0]);
+  });
+
+  it('hands the index the configured window of recent activity, in days', () => {
+    process.env[WINDOW_ENV] = String(6 * 60 * 60 * 1000);
+    resetRuntimeConfigForTests();
+    try {
+      IndexerService.start(ALICE);
+    } finally {
+      delete process.env[WINDOW_ENV];
+      resetRuntimeConfigForTests();
+    }
+
+    expect(createSocialIndexer).toHaveBeenCalledWith(
+      expect.objectContaining({ options: { savedIndex: true, crawler: { windowDays: 0.25 } } }),
+    );
+  });
+
+  it('reads neither the older social tree nor its media unless set', () => {
+    IndexerService.start(ALICE);
+
+    expect(vi.mocked(createSocialIndexer).mock.calls[0][0]).not.toHaveProperty('legacyTree');
+    expect(mediaSources()).not.toHaveProperty('readLegacyFile');
+  });
+
+  it.each([ALICE, null])('hands the index the older social tree and its media when set, for %s', (owner) => {
+    startWithLegacyTree(owner, 'true');
+
+    expect(createSocialIndexer).toHaveBeenCalledWith(expect.objectContaining({ legacyTree: legacySocialTree }));
+    expect(mediaSources()?.readLegacyFile).toBeTypeOf('function');
+  });
+
+  it('keeps the older social tree out when set to false', () => {
+    startWithLegacyTree(ALICE, 'false');
+
+    expect(vi.mocked(createSocialIndexer).mock.calls[0][0]).not.toHaveProperty('legacyTree');
+  });
+
+  it('stops the visitor’s index and deletes its database when an account starts', () => {
+    IndexerService.start(null);
+    IndexerService.start(ALICE);
+
+    expect(fakes.indexers[0].stop).toHaveBeenCalledOnce();
+    const visitorStores = fakes.stores.filter((store) => store.name === 'pubky-index-visitor');
+    expect(visitorStores.some((store) => store.destroy.mock.calls.length === 1)).toBe(true);
+    expect(fakes.indexers[1].start).toHaveBeenCalledExactlyOnceWith(ALICE);
+  });
+
+  it('keeps the account’s database when a visitor’s index follows it', () => {
+    IndexerService.start(ALICE);
+    IndexerService.start(null);
+
+    expect(fakes.indexers[0].stop).toHaveBeenCalledOnce();
+    expect(fakes.stores.every((store) => store.destroy.mock.calls.length === 0)).toBe(true);
+    expect(fakes.indexers[1].start).toHaveBeenCalledExactlyOnceWith(null);
+  });
+
+  it('refreshes the account after each of its public writes, until it stops', () => {
+    IndexerService.start(ALICE);
+
+    write('/pub/social/v1/posts/0033');
+    write('/priv/app.pubky/v1/settings.json');
+    IndexerService.stop();
+    write('/pub/social/v1/posts/0034');
+
+    expect(HomeserverService.subscribeOwnedWrites).toHaveBeenCalledOnce();
+    expect(fakes.indexers[0].refresh).toHaveBeenCalledExactlyOnceWith([ALICE]);
+  });
+
+  describe('post stream invalidation', () => {
+    const ALL = 'timeline:all:all';
+    const FOLLOWING = 'timeline:following:all';
+    const FRIENDS = 'timeline:friends:all';
+    const change = (...kinds: SocialChange['kinds']): SocialChange => ({
+      authors: [BOB],
+      membersChanged: false,
+      kinds,
+    });
+
+    beforeEach(() => {
+      postStreamDirtyRegistry.reset();
+      IndexerService.start(ALICE);
+    });
+
+    afterEach(() => {
+      postStreamDirtyRegistry.reset();
+    });
+
+    it('marks every cached post stream dirty when posts or tags change, until it stops', () => {
+      expect(postStreamDirtyRegistry.isDirty(ALL)).toBe(false);
+
+      fakes.indexers[0].change(change('activity'));
+      expect(postStreamDirtyRegistry.isDirty(ALL)).toBe(true);
+      expect(postStreamDirtyRegistry.isDirty(FOLLOWING)).toBe(true);
+
+      postStreamDirtyRegistry.markReconciled(ALL);
+      IndexerService.stop();
+      fakes.indexers[0].change(change('activity'));
+      expect(postStreamDirtyRegistry.isDirty(ALL)).toBe(false);
+    });
+
+    it('marks only the streams that follow the graph when only follows change', () => {
+      fakes.indexers[0].change(change('graph'));
+
+      expect(postStreamDirtyRegistry.isDirty(FOLLOWING)).toBe(true);
+      expect(postStreamDirtyRegistry.isDirty(FRIENDS)).toBe(true);
+      expect(postStreamDirtyRegistry.isDirty(ALL)).toBe(false);
+    });
+
+    it('marks no post stream when only a profile changes', () => {
+      fakes.indexers[0].change(change('profile'));
+
+      expect(postStreamDirtyRegistry.isDirty(ALL)).toBe(false);
+      expect(postStreamDirtyRegistry.isDirty(FOLLOWING)).toBe(false);
+    });
+  });
+
+  it('stops the previous account’s index before starting another', () => {
+    IndexerService.start(ALICE);
+    IndexerService.start(BOB);
+
+    expect(fakes.indexers[0].stop).toHaveBeenCalledOnce();
+    expect(fakes.stores[0].close).toHaveBeenCalledOnce();
+    expect(fakes.indexers[1].start).toHaveBeenCalledExactlyOnceWith(BOB);
+    expect(IndexerService.current()).toBe(fakes.indexers[1]);
+  });
+
+  it('keeps the account’s muted users out of the index, following each change of them', async () => {
+    await db.initialize();
+    await LocalStreamUsersService.upsert({ streamId: UserStreamTypes.MUTED, stream: [BOB] });
+    IndexerService.start(ALICE);
+
+    await vi.waitFor(() => expect(fakes.indexers[0].setExcluded).toHaveBeenLastCalledWith([BOB]));
+    await LocalStreamUsersService.upsert({ streamId: UserStreamTypes.MUTED, stream: [] });
+    await vi.waitFor(() => expect(fakes.indexers[0].setExcluded).toHaveBeenLastCalledWith([]));
+  });
+
+  it('excludes no one from a visitor’s index', async () => {
+    await db.initialize();
+    await LocalStreamUsersService.upsert({ streamId: UserStreamTypes.MUTED, stream: [BOB] });
+    IndexerService.start(null);
+    await LocalStreamUsersService.findById(UserStreamTypes.MUTED);
+
+    expect(fakes.indexers[0].setExcluded).not.toHaveBeenCalled();
+  });
+
+  it('closes the tab coordination after the index stops', () => {
+    const close = vi.fn();
+    vi.mocked(createBrowserCoordination).mockReturnValueOnce(asOpaque<BrowserCoordination>({ close }));
+    IndexerService.start(ALICE);
+    expect(close).not.toHaveBeenCalled();
+
+    IndexerService.stop();
+
+    expect(close).toHaveBeenCalledOnce();
+    expect(fakes.indexers[0].stop.mock.invocationCallOrder[0]).toBeLessThan(close.mock.invocationCallOrder[0]);
+  });
+
+  it('reports the running index’s status, the same object until it changes, and none once it stops', () => {
+    const listener = vi.fn();
+    const unsubscribe = IndexerService.subscribeStatus(listener);
+    expect(IndexerService.status()).toBeNull();
+
+    IndexerService.start(ALICE);
+    expect(IndexerService.status()).toEqual({ state: 'idle' });
+    expect(IndexerService.status()).toBe(IndexerService.status());
+
+    const syncing = { state: 'syncing' };
+    fakes.indexers[0].report(syncing);
+    expect(IndexerService.status()).toBe(syncing);
+
+    IndexerService.stop();
+    expect(IndexerService.status()).toBeNull();
+    fakes.indexers[0].report({ state: 'idle' });
+    expect(IndexerService.status()).toBeNull();
+    expect(listener).toHaveBeenCalledTimes(3);
+    unsubscribe();
+  });
+
+  it('syncs the running index’s scope on refresh, and does nothing without one', async () => {
+    await IndexerService.refresh();
+    IndexerService.start(ALICE);
+
+    await IndexerService.refresh();
+
+    expect(fakes.indexers[0].refresh).toHaveBeenCalledExactlyOnceWith();
+  });
+
+  it('keeps the database on stop and runs nothing afterwards', () => {
+    IndexerService.start(ALICE);
+    IndexerService.stop();
+
+    expect(fakes.indexers[0].stop).toHaveBeenCalledOnce();
+    expect(fakes.stores[0].destroy).not.toHaveBeenCalled();
+    expect(IndexerService.current()).toBeNull();
+  });
+
+  it('stops the running index and deletes its database on clear', async () => {
+    IndexerService.start(ALICE);
+
+    await IndexerService.clear(ALICE);
+
+    expect(fakes.indexers[0].stop).toHaveBeenCalledOnce();
+    expect(fakes.stores.at(-1)).toMatchObject({ name: `pubky-index-${ALICE}` });
+    expect(fakes.stores.at(-1)?.destroy).toHaveBeenCalledOnce();
+    expect(IndexerService.current()).toBeNull();
+  });
+
+  it('deletes the media cache of the service worker with the database', async () => {
+    const deleteCache = vi.fn().mockResolvedValue(true);
+    Object.defineProperty(globalThis, 'caches', { configurable: true, value: { delete: deleteCache } });
+    try {
+      await IndexerService.clear(ALICE);
+    } finally {
+      Reflect.deleteProperty(globalThis, 'caches');
+    }
+
+    expect(deleteCache).toHaveBeenCalledExactlyOnceWith('pubky-local-media');
+  });
+
+  it('deletes another account’s database without touching the running index', async () => {
+    IndexerService.start(ALICE);
+
+    await IndexerService.clear(BOB);
+
+    expect(fakes.indexers[0].stop).not.toHaveBeenCalled();
+    expect(fakes.stores.at(-1)).toMatchObject({ name: `pubky-index-${BOB}` });
+    expect(IndexerService.current()).toBe(fakes.indexers[0]);
+  });
+});

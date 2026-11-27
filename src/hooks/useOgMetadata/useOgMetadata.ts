@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { HAS_APP_SERVER } from '@/libs/static-export/appServer';
 
 export interface OgMetadata {
   url: string;
@@ -41,7 +42,8 @@ export function useOgMetadata(url: string | null) {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    if (!url) {
+    // Link previews are fetched by the app server (sites send no CORS headers); without one there is none.
+    if (!url || !HAS_APP_SERVER) {
       setMetadata(null);
       setIsLoading(false);
       return;

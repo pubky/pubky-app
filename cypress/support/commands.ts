@@ -216,7 +216,9 @@ Cypress.Commands.add(
         expect(asked || landed, `asked to continue or on ${landingPath}`).to.equal(true);
       });
       cy.document().then((doc) => {
-        if (doc.querySelector(CONFIRM_CONTINUE_BUTTON)) cy.get(CONFIRM_CONTINUE_BUTTON).click();
+        if (!doc.querySelector(CONFIRM_CONTINUE_BUTTON)) return;
+        beforeContinue?.();
+        cy.get(CONFIRM_CONTINUE_BUTTON).click();
       });
     } else {
       // Whichever shows first is final here too: the screen would wait for a click that never comes

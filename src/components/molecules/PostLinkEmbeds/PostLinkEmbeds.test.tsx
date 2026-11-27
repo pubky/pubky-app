@@ -126,9 +126,26 @@ vi.mock('@/molecules/PostPreviewCard/PostPreviewCard', () => ({
   ),
 }));
 
+const thirdPartyEmbeds = vi.hoisted(() => ({ enabled: true }));
+
+vi.mock('@/libs/runtime-config/runtime-config', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/libs/runtime-config/runtime-config')>()),
+  getThirdPartyEmbeds: () => thirdPartyEmbeds.enabled,
+}));
+
 describe('PostLinkEmbeds', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    thirdPartyEmbeds.enabled = true;
+  });
+
+  describe('with third-party embeds off', () => {
+    it('renders no embed for a YouTube link', () => {
+      thirdPartyEmbeds.enabled = false;
+      render(<PostLinkEmbeds content="Check out this video: https://www.youtube.com/watch?v=dQw4w9WgXcQ" />);
+
+      expect(screen.queryByTestId('YouTube video player')).toBeNull();
+    });
   });
 
   describe('YouTube URL parsing', () => {

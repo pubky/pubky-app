@@ -8,7 +8,9 @@ import {
   EMAIL_PATTERN,
   EMAIL_REDACTED,
   HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION,
+  HOMESERVER_INDEX_READ_OPERATIONS,
   LOCKS_UNLOCK_POLL_CALL_SITES,
+  NEXUS_LOCAL_INDEX_OPERATION,
   NEXUS_POST_TAGS_PATH_PATTERN,
   PHONE_PATTERN,
   PHONE_REDACTED,
@@ -64,6 +66,9 @@ function matchesEndpointPath(error: AppError, pattern: RegExp): boolean {
 }
 
 const LOCKS_UNLOCK_POLL_CALL_SITE_SET: ReadonlySet<unknown> = new Set(Object.values(LOCKS_UNLOCK_POLL_CALL_SITES));
+const HOMESERVER_INDEX_READ_OPERATION_SET: ReadonlySet<unknown> = new Set(
+  Object.values(HOMESERVER_INDEX_READ_OPERATIONS),
+);
 
 /**
  * Expected-error drop rules (ADR-0015 §5.1 Challenge 3).
@@ -164,6 +169,30 @@ const APP_ERROR_DROP_RULES: AppErrorDropRule[] = [
       error.service === ErrorService.Homeserver &&
       error.operation === HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION &&
       (error.category === ErrorCategory.Server || error.category === ErrorCategory.Network),
+  },
+  {
+    name: 'homeserver-index-reads',
+    reason:
+      'The local index reads the public event streams and files of every homeserver in the signed-in user’s scope, ' +
+      'most of them run by other people. Their outages, throttling, missing records and malformed keys are routine ' +
+      'for the crawl, which backs off per homeserver by itself, so one dead homeserver would otherwise report on ' +
+      'every sync. The persistent case that is ours, the signed-in user’s own homeserver, stays visible through ' +
+      'the app’s own reads and writes; only these anonymous reads are matched, every other Homeserver operation ' +
+      'stays reportable.',
+    matches: (error) =>
+      error.service === ErrorService.Homeserver && HOMESERVER_INDEX_READ_OPERATION_SET.has(error.operation),
+  },
+  {
+    name: 'local-index-misses',
+    reason:
+      'A Nexus read answered by the local index (PUBKY_RUNTIME_INDEXER_SOURCES) misses by design: a post or user ' +
+      'outside the crawled scope is a 404, and a global search or ranking cannot be served from it (422). Both are ' +
+      'outcomes the callers render inline, not failures. A malformed read (400) and an index that throws stay ' +
+      'reportable under the same operation.',
+    matches: (error) =>
+      error.service === ErrorService.Nexus &&
+      error.operation === NEXUS_LOCAL_INDEX_OPERATION &&
+      (error.code === ClientErrorCode.NOT_FOUND || error.code === ClientErrorCode.UNPROCESSABLE),
   },
 ];
 

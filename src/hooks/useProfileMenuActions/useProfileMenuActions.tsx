@@ -10,6 +10,7 @@ import { useMuteUser } from '@/hooks/useMuteUser/useMuteUser';
 import { useShareUrl } from '@/hooks/useShareUrl/useShareUrl';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { isAppError } from '@/libs/error/error.utils';
+import { getShareOrigin } from '@/libs/static-export/appServer';
 import { truncateString, withPubkyPrefix } from '@/libs/utils/utils';
 import { toast } from '@/molecules/Toaster/toast';
 import { PROFILE_MENU_ACTION_IDS } from './useProfileMenuActions.constants';
@@ -43,7 +44,7 @@ export function useProfileMenuActions(userId: string, active = true): UseProfile
   const rawUsername = profile?.name || userId;
   const username = truncateString(rawUsername, 15);
   const isLoading = isProfileLoading || isFollowingLoading;
-  const profileUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}${PROFILE_ROUTES.PROFILE}/${userId}`;
+  const profileUrl = `${getShareOrigin()}${PROFILE_ROUTES.PROFILE}/${userId}`;
   const menuItems: ProfileMenuActionItem[] = [];
 
   // Follow/Unfollow

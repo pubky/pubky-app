@@ -7,11 +7,11 @@ import { resolvePostCoverPreloadUrls } from '@/libs/post/postCoverPreload';
 import { POST_COVER_DESKTOP_MEDIA, POST_COVER_MOBILE_MEDIA } from '@/libs/post/postCoverVariant';
 import { fetchUserAndPostForMetadata, resolveMentionsForMetadata } from '@/libs/post/postMetadata';
 import { deriveTextPreview, isMentionResolvablePreview } from '@/libs/post/postPreview';
+import { placeholderParams } from '@/libs/static-export/placeholderParams';
 import { truncateByGraphemes } from '@/libs/utils/truncate';
 import { resolveDisplayName } from '@/libs/utils/utils';
-import { buildCompositeId } from '@/models/models.utils';
 import { Metadata } from '@/molecules/Metadata/Metadata';
-import { SinglePostPage } from '@/templates/Post/SinglePost/SinglePostPage';
+import { SinglePostRoute } from './SinglePostRoute';
 
 /** Grapheme cap for the `<meta>` description. */
 const DESCRIPTION_MAX_GRAPHEMES = 200;
@@ -22,6 +22,8 @@ export interface PostPageProps {
     postId: string;
   }>;
 }
+
+export const generateStaticParams = placeholderParams('userId', 'postId');
 
 export async function generateMetadata({ params }: PostPageProps): Promise<NextMetadata> {
   try {
@@ -119,10 +121,6 @@ export default async function PostPage({ params }: PostPageProps) {
     permanentRedirect(getCollectionRoute(ids.userId, ids.postId));
   }
 
-  // Malformed ids never reach Nexus; render with them as-is so the client-side
-  // guard in SinglePostPage handles the not-found state as before.
-  const compositeId = buildCompositeId({ pubky: userId, id: postId });
-
   return (
     <>
       {coverPreload && (
@@ -143,7 +141,7 @@ export default async function PostPage({ params }: PostPageProps) {
           />
         </>
       )}
-      <SinglePostPage postId={compositeId} />
+      <SinglePostRoute />
     </>
   );
 }

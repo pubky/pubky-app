@@ -12,6 +12,7 @@ import { Link } from '@/atoms/Link/Link';
 import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '@/atoms/Tooltip/Tooltip';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { HAS_APP_SERVER } from '@/libs/static-export/appServer';
 import { handleFeedNavClick } from '@/libs/utils/feedScrollTop';
 import { cn } from '@/libs/utils/utils';
 import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
@@ -62,7 +63,8 @@ const getNavigationItems = (): NavigationItemConfig[] => [
     label: 'Hot',
     dataCy: 'header-hot-btn',
   },
-  { href: APP_ROUTES.SHOP, icon: Store, label: 'Shop', dataCy: 'header-shop-btn' },
+  // The Shop is proxied by the app server.
+  ...(HAS_APP_SERVER ? [{ href: APP_ROUTES.SHOP, icon: Store, label: 'Shop', dataCy: 'header-shop-btn' }] : []),
   {
     href: APP_ROUTES.COLLECTIONS,
     icon: Library,

@@ -1,8 +1,19 @@
-import { getCdnUrl, getNexusUrl, getStreamCacheMaxAgeMs } from '@/libs/runtime-config/runtime-config';
+import {
+  getCdnUrl,
+  getIndexerSources,
+  getNexusUrl,
+  getStreamCacheMaxAgeMs,
+} from '@/libs/runtime-config/runtime-config';
 
 // Runtime-configurable: read via getters at call time (PUBKY_RUNTIME_*, staging defaults in
 // dev/test). See @/libs/runtime-config.
-export { getCdnUrl, getNexusUrl, getStreamCacheMaxAgeMs };
+export { getCdnUrl, getIndexerSources, getNexusUrl, getStreamCacheMaxAgeMs };
+
+/** Whether Nexus itself answers reads, alone or after the local index (`PUBKY_RUNTIME_INDEXER_SOURCES`). */
+export const hasNexusSource = (): boolean => getIndexerSources().includes('nexus');
+
+/** Whether the index this browser builds from homeservers answers reads, alone or before Nexus. */
+export const hasLocalIndexSource = (): boolean => getIndexerSources().includes('local');
 
 /**
  * The path Nexus serves v1 files under, in place of the `/static` the CDN runtime value ends in:
@@ -20,8 +31,14 @@ export const NEXUS_V1_STATIC_PATH = '/v1/static';
 export const NEXUS_API_VERSION = 'v1';
 export type NexusApiVersion = typeof NEXUS_API_VERSION | 'v0';
 
-/** The base of the v1 file routes, derived from the CDN runtime value: it has no env var of its own. */
-export const getV1CdnUrl = (): string => `${getCdnUrl().replace(/(?:\/static)?\/?$/, '')}${NEXUS_V1_STATIC_PATH}`;
+/**
+ * The base of the v1 file routes, derived from the CDN runtime value: it has no env var of its own. `undefined`
+ * like the CDN value, only when the indexer sources leave Nexus out.
+ */
+export const getV1CdnUrl = (): string | undefined => {
+  const cdnUrl = getCdnUrl();
+  return cdnUrl === undefined ? undefined : `${cdnUrl.replace(/(?:\/static)?\/?$/, '')}${NEXUS_V1_STATIC_PATH}`;
+};
 
 export const NEXUS_NOTIFICATIONS_LIMIT = 30;
 export const NEXUS_POSTS_PER_PAGE = 10; // Number of posts to fetch per page in streams

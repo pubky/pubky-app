@@ -5,6 +5,7 @@ import { UsersRound } from 'lucide-react';
 import { APP_ROUTES, getUserProfileUrl } from '@/app/routes';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useFollowUser } from '@/hooks/useFollowUser/useFollowUser';
+import { useLocalScopeHint } from '@/hooks/useLocalScopeHint/useLocalScopeHint';
 import { useUserStream } from '@/hooks/useUserStream/useUserStream';
 import type { Pubky } from '@/models/models.types';
 import { UserStreamTypes } from '@/models/stream/user/userStream.types';
@@ -33,6 +34,7 @@ export function ActiveUsers() {
     includeRelationships: true,
   });
   const { toggleFollow, isUserLoading } = useFollowUser();
+  const scopeHint = useLocalScopeHint();
   const handleUserClick = (pubky: Pubky) => {
     router.push(getUserProfileUrl(pubky, currentUserPubky));
   };
@@ -42,6 +44,7 @@ export function ActiveUsers() {
   return (
     <SidebarSection
       title={'Active users'}
+      hint={scopeHint}
       footerIcon={UsersRound}
       footerText={'See all'}
       onFooterClick={handleSeeAll}

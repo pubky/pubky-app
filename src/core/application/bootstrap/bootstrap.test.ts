@@ -14,7 +14,7 @@ import { httpStatusCodeToError } from '@/libs/error/error.http';
 import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
-import { getTtlRetryDelayMs } from '@/libs/runtime-config/runtime-config';
+import { getTtlRetryDelayMs, resetRuntimeConfigForTests } from '@/libs/runtime-config/runtime-config';
 import { buildHotTagsId } from '@/models/hot/hot.helper';
 import type { Pubky } from '@/models/models.types';
 import { type FlatNotification, NotificationType } from '@/models/notification/notification.types';
@@ -1105,6 +1105,34 @@ describe('BootstrapApplication', () => {
       expect(loggerWarnSpy).not.toHaveBeenCalled();
       expect(upsertTtlSpy).not.toHaveBeenCalled();
       expect(mockSubscribeUser).not.toHaveBeenCalled();
+    });
+
+    it('neither tells Nexus nor retries when the local index answers during its first sync', async () => {
+      process.env.PUBKY_RUNTIME_INDEXER_SOURCES = 'local,nexus';
+      resetRuntimeConfigForTests();
+      try {
+        const bootstrapData = emptyBootstrap();
+        bootstrapData.indexed = false;
+        const mocks = setupMocks({ bootstrapData });
+        const ingestSpy = vi.spyOn(NexusBootstrapService, 'ingest').mockResolvedValue(undefined);
+        const upsertTtlSpy = vi.spyOn(LocalUserService, 'upsertTtlWithDelay').mockResolvedValue(undefined);
+        const mockSubscribeUser = vi.fn();
+        vi.spyOn(TtlCoordinator, 'getInstance').mockReturnValue(
+          asOpaque<TtlCoordinator>({
+            retryUserIndexing: mockSubscribeUser,
+          }),
+        );
+
+        await BootstrapApplication.initialize(getBootstrapParams(TEST_PUBKY));
+
+        expect(ingestSpy).not.toHaveBeenCalled();
+        expect(upsertTtlSpy).not.toHaveBeenCalled();
+        expect(mockSubscribeUser).not.toHaveBeenCalled();
+        expect(mocks.persistPosts).toHaveBeenCalled();
+      } finally {
+        delete process.env.PUBKY_RUNTIME_INDEXER_SOURCES;
+        resetRuntimeConfigForTests();
+      }
     });
   });
 });

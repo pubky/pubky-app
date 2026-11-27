@@ -1,6 +1,6 @@
-import { createRef, type ReactNode, useEffect } from 'react';
+import { cloneElement, createRef, type ReactNode, useEffect } from 'react';
 import { act, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { NEXUS_STREAM_MAX_LIMIT } from '@/config/nexus';
 import { TtlController } from '@/controllers/ttl/ttl';
@@ -9,15 +9,21 @@ import { useMutedUsers } from '@/hooks/useMutedUsers/useMutedUsers';
 import type { UsePullToRefreshOptions, UsePullToRefreshResult } from '@/hooks/usePullToRefresh/usePullToRefresh.types';
 import { useStreamPagination } from '@/hooks/useStreamPagination/useStreamPagination';
 import { useUnreadPosts } from '@/hooks/useUnreadPosts/useUnreadPosts';
+import type { RuntimeStatus } from '@/libs/indexer/runtime.types';
+import { resetRuntimeConfigForTests } from '@/libs/runtime-config/runtime-config';
+import type { Pubky } from '@/models/models.types';
 import {
   buildAuthorCollectionsStreamId,
   buildCollectionItemsStreamId,
   type PostStreamId,
   PostStreamTypes,
 } from '@/models/stream/post/postStream.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { authInitialState } from '@/stores/auth/auth.types';
 import { useFeedOptimisticStore } from '@/stores/feedOptimistic/feedOptimistic.store';
 import { buildFeedKey } from '@/stores/feedOptimistic/feedOptimistic.types';
 import { LAYOUT } from '@/stores/home/home.types';
+import { asOpaque } from '@/test-utils/type-assertions';
 import { useTimelineFeedContext } from '../TimelineFeed/TimelineFeedContext';
 import { TimelineFeedWithStream } from './TimelineFeedContent';
 
@@ -27,6 +33,11 @@ const mockUsePullToRefresh = vi.hoisted(() =>
     pullDistance: 0,
   })),
 );
+const mockIndexStatus = vi.hoisted(() => ({ current: null as RuntimeStatus | null }));
+vi.mock('@/hooks/useLocalIndexStatus/useLocalIndexStatus', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/hooks/useLocalIndexStatus/useLocalIndexStatus')>()),
+  useLocalIndexStatus: <T,>(select: (status: RuntimeStatus | null) => T): T => select(mockIndexStatus.current),
+}));
 vi.mock('@/hooks/useStreamPagination/useStreamPagination', () => ({
   useStreamPagination: vi.fn(),
 }));
@@ -1340,5 +1351,93 @@ describe('Visual layout variants', () => {
     );
 
     expect(screen.getByTestId('visual-timeline-posts')).toHaveAttribute('data-show-unavailable-posts', 'false');
+  });
+
+  describe('under the local index', () => {
+    const pendingStatus = (firstSyncPending: boolean): RuntimeStatus => ({
+      state: firstSyncPending ? 'syncing' : 'idle',
+      seed: 'viewer-pubky',
+      lastSyncAt: null,
+      lastError: null,
+      stats: {
+        usersPerHop: [1],
+        homeserversSeen: 1,
+        homeserversFailed: 0,
+        lookups: 1,
+        streamRequests: 1,
+        bodyRequests: 0,
+        events: 0,
+      },
+      firstSyncPending,
+      bodiesPending: false,
+      bodiesFailing: [],
+      asOf: null,
+    });
+    const setSources = (sources: string) => {
+      process.env.PUBKY_RUNTIME_INDEXER_SOURCES = sources;
+      resetRuntimeConfigForTests();
+    };
+    const home = (
+      <TimelineFeedWithStream
+        streamId={PostStreamTypes.TIMELINE_ALL_ALL}
+        variant={TIMELINE_FEED_VARIANT.HOME}
+        tagsLayout="inline"
+      />
+    );
+
+    afterEach(() => {
+      delete process.env.PUBKY_RUNTIME_INDEXER_SOURCES;
+      resetRuntimeConfigForTests();
+      mockIndexStatus.current = null;
+      useAuthStore.setState({ ...authInitialState });
+    });
+
+    it('prompts a visitor to join instead of a network feed when it is the only source', () => {
+      setSources('local');
+
+      render(home);
+
+      expect(screen.getByRole('heading', { name: 'Sign in to see your feed' })).toBeInTheDocument();
+      expect(mockUseStreamPagination).not.toHaveBeenCalled();
+    });
+
+    it('keeps the network feed for a visitor when Nexus is a source too', () => {
+      setSources('local,nexus');
+
+      render(home);
+
+      expect(screen.getByTestId('timeline-posts')).toBeInTheDocument();
+    });
+
+    it('says the network is loading on an empty Home during the first sync, and loads it again once done', () => {
+      setSources('local');
+      useAuthStore.setState({ currentUserPubky: asOpaque<Pubky>('viewer-pubky') });
+      mockUseStreamPagination.mockReturnValue({ ...defaultPaginationResult, postIds: [], hasMore: false });
+      mockIndexStatus.current = pendingStatus(true);
+
+      const { rerender } = render(home);
+      expect(screen.getByRole('heading', { name: 'Loading your network' })).toBeInTheDocument();
+      expect(mockRefresh).not.toHaveBeenCalled();
+
+      mockIndexStatus.current = pendingStatus(false);
+      // A new element, or React keeps the first render and never reads the changed status.
+      rerender(cloneElement(home));
+
+      expect(screen.queryByRole('heading', { name: 'Loading your network' })).not.toBeInTheDocument();
+      expect(mockRefresh).toHaveBeenCalledOnce();
+    });
+
+    it('keeps the place of a Home already showing posts when the first sync ends', () => {
+      setSources('local');
+      useAuthStore.setState({ currentUserPubky: asOpaque<Pubky>('viewer-pubky') });
+      mockIndexStatus.current = pendingStatus(true);
+
+      const { rerender } = render(home);
+      mockIndexStatus.current = pendingStatus(false);
+      // A new element, or React keeps the first render and never reads the changed status.
+      rerender(cloneElement(home));
+
+      expect(mockRefresh).not.toHaveBeenCalled();
+    });
   });
 });

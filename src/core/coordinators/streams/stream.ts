@@ -1,6 +1,7 @@
 import { APP_ROUTES, POST_ROUTES } from '@/app/routes';
 import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
 import { FeedController } from '@/controllers/feed/feed';
+import { IndexerController } from '@/controllers/indexer/indexer';
 import { FORCE_FETCH_NEW_POSTS, SKIP_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import { Coordinator } from '@/coordinators/base/coordinator';
@@ -73,6 +74,9 @@ export class StreamCoordinator extends Coordinator<StreamCoordinatorConfig, Stre
    */
   private homeStoreUnsubscribe!: (() => void) | null;
   private authHydrationUnsubscribe!: (() => void) | null;
+  private localIndexUnsubscribe!: (() => void) | null;
+  /** Assigned in setupListeners too, for the reason above. */
+  private localIndexFirstSyncPending!: boolean;
 
   private constructor() {
     super({
@@ -424,6 +428,14 @@ export class StreamCoordinator extends Coordinator<StreamCoordinatorConfig, Stre
   protected setupListeners(): void {
     // Call parent to setup base listeners (auth, visibility)
     super.setupListeners();
+    // A feed showing what the sign-in bootstrap saw gets the rest of the network as soon as the local index's first
+    // sync ends, not a poll interval later.
+    this.localIndexFirstSyncPending = this.isLocalIndexFirstSyncPending();
+    this.localIndexUnsubscribe = IndexerController.subscribeLocalIndexStatus(() => {
+      const wasPending = this.localIndexFirstSyncPending;
+      this.localIndexFirstSyncPending = this.isLocalIndexFirstSyncPending();
+      if (wasPending && !this.localIndexFirstSyncPending && this.getState().intervalId) void this.poll();
+    });
     this.authHydrationUnsubscribe = useAuthStore.subscribe((state, prevState) => {
       if (this.getState().currentRoute === APP_ROUTES.HOME && state.hasHydrated !== prevState.hasHydrated) {
         this.evaluateAndStartPolling();
@@ -474,6 +486,15 @@ export class StreamCoordinator extends Coordinator<StreamCoordinatorConfig, Stre
       this.authHydrationUnsubscribe();
       this.authHydrationUnsubscribe = null;
     }
+    if (this.localIndexUnsubscribe) {
+      this.localIndexUnsubscribe();
+      this.localIndexUnsubscribe = null;
+    }
+  }
+
+  private isLocalIndexFirstSyncPending(): boolean {
+    const status = IndexerController.getLocalIndexStatus();
+    return status !== null && status.seed !== null && status.firstSyncPending;
   }
 
   /**

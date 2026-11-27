@@ -1,8 +1,11 @@
 import './globals.css';
+import { Suspense } from 'react';
+import { connection } from 'next/server';
 import type { Viewport } from 'next';
 import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import { COLORS } from '@/config/theme';
 import { TOOLTIP_DELAY_MS } from '@/config/ui';
+import { Env } from '@/libs/env/env';
 import { RootContainer } from '@/molecules/ContainerRoot/ContainerRoot';
 import { Metadata } from '@/molecules/Metadata/Metadata';
 import { StructuredData } from '@/molecules/StructuredData/StructuredData';
@@ -30,11 +33,12 @@ export function generateMetadata() {
   });
 }
 
-// Force dynamic rendering since RootContainer serializes runtime config per-request
-// (PUBKY_RUNTIME_* env vars must be read at request time, not baked in at build time)
-export const dynamic = 'force-dynamic';
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // RootContainer serializes the runtime config into the HTML, so a server renders every request
+  // (PUBKY_RUNTIME_* is read at request time). The static export bakes the build's config instead.
+  if (!Env.NEXT_PUBLIC_STATIC_EXPORT) await connection();
+  const appShell = <AppShell>{children}</AppShell>;
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <RootContainer>
       {/*
@@ -60,7 +64,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <PwaManager />
             <Toaster />
             <ErrorBoundaryProvider>
-              <AppShell>{children}</AppShell>
+              {/*
+                useSearchParams() (RouteGuardProvider and others) has to sit under a Suspense boundary
+                when a page is prerendered, as every page of the static export is. A server render
+                gets none: there it would stream the app as a late hidden segment, swapped in after
+                the first paint, instead of in the first flush.
+              */}
+              {Env.NEXT_PUBLIC_STATIC_EXPORT ? <Suspense>{appShell}</Suspense> : appShell}
             </ErrorBoundaryProvider>
           </GlobalErrorHandlerProvider>
         </ServiceWorkerRegistrationProvider>

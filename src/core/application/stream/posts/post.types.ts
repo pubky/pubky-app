@@ -9,6 +9,13 @@ export interface TGetOrFetchStreamHeadParams {
   isCurrent: () => boolean;
 }
 
+export interface TFetchOriginalPostsParams {
+  isCurrent?: () => boolean;
+  repostedUris: string[];
+  /** Optional viewer ID for relationship data. Null/undefined for unauthenticated views. */
+  viewerId?: Pubky | null;
+}
+
 export interface TFetchStreamParams {
   isCurrent?: () => boolean;
   streamId: PostStreamId;

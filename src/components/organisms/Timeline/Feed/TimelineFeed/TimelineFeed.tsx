@@ -1,6 +1,7 @@
 'use client';
 
-import { useParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
+import { matchSingleCollectionRoute } from '@/app/routes';
 import { TIMELINE_FEED_VARIANT } from '@/config/feed';
 import { useCustomStreamId } from '@/hooks/useCustomStreamId/useCustomStreamId';
 import { useFeedLayoutResolution } from '@/hooks/useFeedLayoutResolution/useFeedLayoutResolution';
@@ -231,11 +232,11 @@ function CollectionTimelineFeed({
     { variant: typeof TIMELINE_FEED_VARIANT.COLLECTION }
   >['visualHiddenItemsNotice'];
 }) {
-  // The single-collection route owns these params (`/collections/[userId]/[postId]`).
-  // Reading them here mirrors how `ProfileTimelineFeed` resolves its stream from context.
-  const params = useParams<{ userId: string; postId: string }>();
-  const userId = params?.userId;
-  const postId = params?.postId;
+  // The single-collection route owns these ids (`/collections/[userId]/[postId]`). They are read
+  // from the URL path, never `useParams`, which reports the static export's placeholder.
+  const route = matchSingleCollectionRoute(usePathname() ?? '');
+  const userId = route?.userId;
+  const postId = route?.postId;
   const streamId = userId && postId ? buildCollectionItemsStreamId(userId, postId) : undefined;
   const collectionId = userId && postId ? buildCompositeId({ pubky: userId, id: postId }) : undefined;
   const layoutResolution = useFeedLayoutResolution(TIMELINE_FEED_VARIANT.COLLECTION, requestedLayout ?? LAYOUT.CARDS);

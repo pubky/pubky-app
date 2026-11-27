@@ -3,7 +3,9 @@
 import { Ellipsis, MessageCircle, Repeat, Tag } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
+import { HintTooltip } from '@/atoms/HintTooltip/HintTooltip';
 import { Typography } from '@/atoms/Typography/Typography';
+import { useLocalScopeHint, withLocalScopeHint } from '@/hooks/useLocalScopeHint/useLocalScopeHint';
 import { usePostCounts } from '@/hooks/usePostCounts/usePostCounts';
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
@@ -26,6 +28,8 @@ export function PostActionsBar({
   const { postCounts, isLoading: isCountsLoading } = usePostCounts(postId);
   const { postDetails } = usePostDetails(postId);
   const { requireAuth } = useRequireAuth();
+  // The local index counts the tags, replies and reposts the user's network reaches
+  const scopeHint = useLocalScopeHint();
   const buttonClassName = postActionsButtonVariants({
     variant,
   });
@@ -48,21 +52,21 @@ export function PostActionsBar({
       icon: Tag,
       count: tagCount,
       onClick: () => onTagClick?.(),
-      ariaLabel: `Tag post (${tagCount})`,
+      ariaLabel: withLocalScopeHint(`Tag post (${tagCount})`, scopeHint),
     },
     {
       id: 'reply',
       icon: MessageCircle,
       count: postCounts.replies,
       onClick: () => requireAuth(() => onReplyClick?.()),
-      ariaLabel: `Reply to post (${postCounts.replies})`,
+      ariaLabel: withLocalScopeHint(`Reply to post (${postCounts.replies})`, scopeHint),
     },
     {
       id: 'repost',
       icon: Repeat,
       count: postCounts.reposts,
       onClick: () => requireAuth(() => onRepostClick?.()),
-      ariaLabel: `Repost (${postCounts.reposts})`,
+      ariaLabel: withLocalScopeHint(`Repost (${postCounts.reposts})`, scopeHint),
     },
   ];
   const moreButton = (
@@ -85,9 +89,11 @@ export function PostActionsBar({
           >
             <Icon {...iconProps} />
             {count !== undefined && (
-              <Typography as="span" overrideDefaults className={countClassName}>
-                {count}
-              </Typography>
+              <HintTooltip hint={scopeHint}>
+                <Typography as="span" overrideDefaults className={countClassName}>
+                  {count}
+                </Typography>
+              </HintTooltip>
             )}
           </Button>
         ),

@@ -264,6 +264,15 @@ describe('runtime-config resolver', () => {
       expect(() => readServerConfig()).not.toThrow();
     });
 
+    it('strict-parses during the static export build, which bakes the config into its HTML', () => {
+      simulateDeployedEnv();
+      vi.stubEnv('NEXT_PHASE', 'phase-production-build');
+      vi.stubEnv('NEXT_PUBLIC_STATIC_EXPORT', 'true');
+      expect(() => readServerConfig()).toThrow(/Runtime config is incomplete or invalid/);
+      setAllRuntimeEnv();
+      expect(readServerConfig().nexusUrl).toBe('https://nexus.runtime.example.com');
+    });
+
     it('warns once when deployed configuration leaves moderation disabled', () => {
       simulateDeployedEnv();
       setNetworkRuntimeEnv();

@@ -63,7 +63,8 @@ function stopAppCoordinators(): void {
  *
  * Responsibilities:
  * - Initialize coordinators on mount (NotificationCoordinator, StreamCoordinator,
- *   MuteListSyncCoordinator, NotificationLastReadPollCoordinator, TtlCoordinator, HomeserverEventStreamCoordinator)
+ *   MuteListSyncCoordinator, NotificationLastReadPollCoordinator, TtlCoordinator, HomeserverEventStreamCoordinator;
+ *   the local index runs from LocalIndexManager)
  * - Start coordination when the component is mounted, except while the account is held behind
  *   the social v1 migration gate: the stream coordinator keys on the persisted pubky and would
  *   read as the account before its data is migrated (ADR-0026); they start once the gate passes

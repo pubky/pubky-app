@@ -6,6 +6,9 @@ import type { MetadataRoute } from 'next';
  * crawlers may consult before fetching a link preview. Static so it is emitted
  * at build time and served instantly as `text/plain`.
  */
+// Already static; the static export requires it spelled out.
+export const dynamic = 'force-static';
+
 export default function robots(): MetadataRoute.Robots {
   return { rules: { userAgent: '*', allow: '/' } };
 }

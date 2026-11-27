@@ -1,6 +1,7 @@
 import { PHASE_PRODUCTION_BUILD } from 'next/constants';
 import {
   type DeployEnv,
+  type IndexerSource,
   PUBKY_RUNTIME_ENV_NAMES,
   type RuntimeConfig,
   runtimeConfigValueSchema,
@@ -33,9 +34,9 @@ let didWarnModerationDisabled = false;
 
 const REQUIRED_NETWORK_ENV_MESSAGE =
   'Set all required PUBKY_RUNTIME_* network variables: ' +
-  'PUBKY_RUNTIME_NEXUS_URL, PUBKY_RUNTIME_CDN_URL, PUBKY_RUNTIME_HOMESERVER, ' +
-  'PUBKY_RUNTIME_HOMESERVER_URL, PUBKY_RUNTIME_HOMEGATE_URL, PUBKY_RUNTIME_DEFAULT_HTTP_RELAY, ' +
-  'PUBKY_RUNTIME_PKARR_RELAYS, PUBKY_RUNTIME_TESTNET, and PUBKY_RUNTIME_ENV ' +
+  'PUBKY_RUNTIME_NEXUS_URL and PUBKY_RUNTIME_CDN_URL (unless PUBKY_RUNTIME_INDEXER_SOURCES leaves nexus out), ' +
+  'PUBKY_RUNTIME_HOMESERVER, PUBKY_RUNTIME_HOMESERVER_URL, PUBKY_RUNTIME_HOMEGATE_URL, ' +
+  'PUBKY_RUNTIME_DEFAULT_HTTP_RELAY, PUBKY_RUNTIME_PKARR_RELAYS, PUBKY_RUNTIME_TESTNET, and PUBKY_RUNTIME_ENV ' +
   '("production" or "staging"). ' +
   'Optional/defaulted PUBKY_RUNTIME_* values may be set independently.';
 
@@ -56,6 +57,14 @@ function isRuntimeConfigRequired(): boolean {
  */
 function isProductionBuildPhase(): boolean {
   return process.env.NEXT_PHASE === PHASE_PRODUCTION_BUILD;
+}
+
+/**
+ * The static export (the offline bundle) has no server: its build bakes the config into the HTML,
+ * so that build must parse strictly instead of filling gaps with staging defaults.
+ */
+function isConfigBakedAtBuild(): boolean {
+  return process.env.NEXT_PUBLIC_STATIC_EXPORT === 'true';
 }
 
 /** Collect the raw `PUBKY_RUNTIME_*` string values keyed by config field name. */
@@ -79,7 +88,7 @@ function parseLenientConfig(): RuntimeConfig {
 export function readServerConfig(): RuntimeConfig {
   // Deployed/required mode: strict parse — ALL required network values must be set and valid.
   // Partial deploy config fails loudly instead of silently resolving to staging defaults.
-  if (isRuntimeConfigRequired() && !isProductionBuildPhase()) {
+  if (isRuntimeConfigRequired() && (!isProductionBuildPhase() || isConfigBakedAtBuild())) {
     const result = runtimeEnvInputSchema.safeParse(readRuntimeEnvInput());
     if (!result.success) {
       throw new Error(`Runtime config is incomplete or invalid. ${REQUIRED_NETWORK_ENV_MESSAGE}`, {
@@ -141,7 +150,7 @@ export function escapeForInlineScript(json: string): string {
 
 /**
  * Build the inline script body that publishes the resolved config to the browser.
- * Called from the dynamic root layout at request time (server only).
+ * Called from the root layout at request time, or once at build time for the static export (server only).
  */
 export function serializeRuntimeConfig(): string {
   const config = getRuntimeConfig();
@@ -158,8 +167,10 @@ export function resetRuntimeConfigForTests(): void {
 }
 
 // Lazy getters: read the resolved config at call time (never captured at module load).
-export const getNexusUrl = (): string => getRuntimeConfig().nexusUrl;
-export const getCdnUrl = (): string => getRuntimeConfig().cdnUrl;
+/** `undefined` only when the indexer sources leave Nexus out. */
+export const getNexusUrl = (): string | undefined => getRuntimeConfig().nexusUrl;
+/** `undefined` only when the indexer sources leave Nexus out. */
+export const getCdnUrl = (): string | undefined => getRuntimeConfig().cdnUrl;
 export const getHomeserver = (): string => getRuntimeConfig().homeserver;
 export const getHomeserverUrl = (): string => getRuntimeConfig().homeserverUrl;
 export const getHomegateUrl = (): string => getRuntimeConfig().homegateUrl;
@@ -204,6 +215,15 @@ export const getTtlUserMaxBatchSize = (): number => getRuntimeConfig().ttlUserMa
 export const getTtlRetryDelayMs = (): number => getRuntimeConfig().ttlRetryDelayMs;
 /** Indexing protection after a local profile write, independent of the normal refresh TTL. */
 export const getProfileLocalEditTtlMs = (): number => getRuntimeConfig().profileLocalEditTtlMs;
+/** Where Nexus reads are answered, in the order they are asked. */
+export const getIndexerSources = (): readonly IndexerSource[] => getRuntimeConfig().indexerSources;
+/** The local index's window of recent activity, `undefined` for the index's own default. */
+export const getIndexerWindowMs = (): number | undefined => getRuntimeConfig().indexerWindowMs;
+/** Whether a post's first link may render as a third-party embed or link preview (`PUBKY_RUNTIME_THIRD_PARTY_EMBEDS`). */
+export const getThirdPartyEmbeds = (): boolean => getRuntimeConfig().thirdPartyEmbeds;
+
+/** Whether the local index also reads the tree accounts wrote before social v1; off unless set. */
+export const getIndexerLegacyTree = (): boolean => getRuntimeConfig().indexerLegacyTree === true;
 export const getModerationId = (): string | undefined => getRuntimeConfig().moderationId;
 export const getModeratedTags = (): string[] => getRuntimeConfig().moderatedTags;
 export const getExchangeRateApi = (): string => getRuntimeConfig().exchangeRateApi;

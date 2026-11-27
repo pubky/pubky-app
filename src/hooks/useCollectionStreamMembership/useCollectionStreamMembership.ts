@@ -11,8 +11,8 @@ import { Logger } from '@/libs/logger/logger';
 import { sortPostIdsByMembership } from '@/libs/post/collectionItemOrder';
 import { getTtlRetryDelayMs } from '@/libs/runtime-config/runtime-config';
 import { isPostDeleted } from '@/libs/utils/utils';
-import { CompositeIdDomain, type Pubky } from '@/models/models.types';
-import { buildCompositeIdFromPubkyUri, parseCompositeId } from '@/models/models.utils';
+import type { Pubky } from '@/models/models.types';
+import { parseCompositeId } from '@/models/models.utils';
 import type { PostStreamId } from '@/models/stream/post/postStream.types';
 import { useAuthStore } from '@/stores/auth/auth.store';
 
@@ -117,39 +117,24 @@ async function refreshEnvelope(collectionId: string, viewerId: Pubky | null) {
   }
 }
 
-// Stream hydration writes member details before authors and repost originals.
-// Wait for those card dependencies too, or mounting a cold card starts singleton
-// requests while the stream is still hydrating the same dependencies in batches.
+// Stream hydration writes member details before their authors. Wait for the authors too, or mounting a cold card
+// starts singleton requests while the stream is still hydrating them in batches. A repost's original is not waited
+// for: its card reads it and shows its loading state, as in any feed.
 async function getCachedCardIds(postIds: string[]) {
   const [details, relationships] = await Promise.all([
     PostController.getDetailsByIds({ compositeIds: postIds }),
     PostController.getRelationshipsByIds({ compositeIds: postIds }),
   ]);
   if (details.every((detail) => detail === undefined)) return [];
-  const originalIds = relationships.map((relationship) =>
-    relationship?.reposted
-      ? buildCompositeIdFromPubkyUri({ uri: relationship.reposted, domain: CompositeIdDomain.POSTS })
-      : null,
-  );
-  const uniqueOriginalIds = [...new Set(originalIds.filter((id) => id !== null))];
-  const [originals, authors] = await Promise.all([
-    PostController.getDetailsByIds({ compositeIds: uniqueOriginalIds }),
-    UserController.getManyDetails({
-      userIds: [...new Set([...postIds, ...uniqueOriginalIds].map((id) => parseCompositeId(id).pubky))],
-    }),
-  ]);
-  const cachedOriginals = new Set(uniqueOriginalIds.filter((_id, index) => originals[index] !== undefined));
-  return postIds.filter((id, index) => {
-    const originalId = originalIds[index];
-    return (
+  const authors = await UserController.getManyDetails({
+    userIds: [...new Set(postIds.map((id) => parseCompositeId(id).pubky))],
+  });
+  return postIds.filter(
+    (id, index) =>
       details[index] !== undefined &&
       (isPostDeleted(details[index]) ||
-        (relationships[index] !== undefined &&
-          authors.has(parseCompositeId(id).pubky) &&
-          (originalId === null ||
-            (cachedOriginals.has(originalId) && authors.has(parseCompositeId(originalId).pubky)))))
-    );
-  });
+        (relationships[index] !== undefined && authors.has(parseCompositeId(id).pubky))),
+  );
 }
 
 /**

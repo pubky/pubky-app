@@ -13,12 +13,15 @@ vi.mock('@/providers/ThemeProvider/ThemeProvider', () => ({
   ThemeProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
+const indexerSources = vi.hoisted(() => ({ current: ['nexus'] as Array<'nexus' | 'local'> }));
+
 // Distinct origins per field: the test config points the CDN and the API at the same host,
 // which would let a component that read the wrong getter (or only one of them) pass.
 vi.mock('@/libs/runtime-config/runtime-config', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/libs/runtime-config/runtime-config')>()),
   getCdnUrl: () => 'https://cdn.example.com/static',
   getNexusUrl: () => 'https://api.example.com',
+  getIndexerSources: () => indexerSources.current,
 }));
 
 describe('RootContainer', () => {
@@ -41,6 +44,25 @@ describe('RootContainer', () => {
       ['https://cdn.example.com', null],
       ['https://api.example.com', 'anonymous'],
     ]);
+  });
+
+  it('skips both hints when the local index is the only source', () => {
+    indexerSources.current = ['local'];
+    try {
+      render(
+        <RootContainer>
+          <div data-testid="child" />
+        </RootContainer>,
+      );
+    } finally {
+      indexerSources.current = ['nexus'];
+    }
+
+    const hints = Array.from(document.querySelectorAll('link[rel="preconnect"]')).map((hint) =>
+      hint.getAttribute('href'),
+    );
+
+    expect(hints).toEqual([]);
   });
 
   it('keeps the raw runtime-config script first in <body>', () => {

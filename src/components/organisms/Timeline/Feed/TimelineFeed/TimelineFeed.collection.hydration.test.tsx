@@ -26,6 +26,9 @@ vi.mock('next/navigation', () => ({
 
 const AUTHOR = 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy' as Pubky;
 
+/** Longer than the 10 s the waits below allow, so a slow runner fails on a wait, never on the test's own timeout. */
+const WAITS = { timeout: 15_000 };
+
 describe('collection batch hydration', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -63,7 +66,8 @@ describe('collection batch hydration', () => {
     await waitFor(() => expect(view.container.querySelectorAll('[data-cy="post-card"]')).toHaveLength(50));
     view.unmount();
   });
-  it('keeps cold repost cards behind author and original-post batch hydration', async () => {
+  /** Ten cold reposts in a collection, rendered with their own hydration resolved up to the authors. */
+  async function renderColdReposts() {
     postStreamQueue.clear();
     useAuthStore.setState({ currentUserPubky: AUTHOR });
     stubMemoryHomeserver(AUTHOR);
@@ -87,7 +91,7 @@ describe('collection batch hydration', () => {
     });
     route.userId = AUTHOR;
     route.postId = parseCompositeId(collectionId).id;
-    // Member rows and their repost dependencies are initially absent from the cache.
+    // Member rows and their originals are initially absent from the cache.
     useAuthStore.setState({ currentUserPubky: AUTHOR });
     const stream = Promise.withResolvers<{ post_keys: string[]; last_post_score: null }>();
     const batch = Promise.withResolvers<Awaited<ReturnType<typeof NexusPostStreamService.fetchByIds>>>();
@@ -99,47 +103,88 @@ describe('collection batch hydration', () => {
       </TooltipProvider>,
     );
     await waitFor(() => expect(streamSpy).toHaveBeenCalledTimes(1));
-    const originals = ids.map((id, i) => `00000001${String(i).padStart(4, '0')}0`);
+    const originals = ids.map((_id, i) => `00000001${String(i).padStart(4, '0')}0`);
     const expectedOriginalIds = originals.map((id) => `${AUTHOR}:${id}`);
+    // The page's batch and every original read (the batch behind the page and each card's own) answer separately.
     const originalResponses = Promise.withResolvers<Awaited<ReturnType<typeof NexusPostStreamService.fetchByIds>>>();
     byIdsSpy.mockImplementation((p) =>
-      p.post_ids.some((id) => memberIds.includes(id)) ? batch.promise : originalResponses.promise,
+      p.post_ids.some((id) => memberIds.includes(id))
+        ? batch.promise
+        : originalResponses.promise.then((posts) =>
+            posts.filter((post) => p.post_ids.includes(`${AUTHOR}:${post.details.id}`)),
+          ),
     );
     await act(async () => stream.resolve({ post_keys: memberIds, last_post_score: null }));
     await waitFor(() => expect(byIdsSpy.mock.calls.some(([p]) => p.post_ids.length === 10)).toBe(true));
-    await act(async () =>
-      batch.resolve(
-        ids.map((id, i) => ({
-          details: {
-            id,
-            author: AUTHOR,
-            content: '',
-            kind: 'short',
-            uri: buildUri(AUTHOR, 'post', id),
-            indexed_at: 1,
-            attachments: null,
-          },
-          counts: { replies: 0, tags: 0, unique_tags: 0, reposts: 0 },
-          tags: [],
-          bookmark: null,
-          relationships: { replied: null, reposted: buildUri(AUTHOR, 'post', originals[i]), mentioned: [] },
-        })),
-      ),
-    );
+    const nexusPost = (
+      id: string,
+      content: string,
+      reposted: string | null,
+    ): Awaited<ReturnType<typeof NexusPostStreamService.fetchByIds>>[number] => ({
+      details: {
+        id,
+        author: AUTHOR,
+        content,
+        kind: 'short',
+        uri: buildUri(AUTHOR, 'post', id),
+        indexed_at: 1,
+        attachments: null,
+      },
+      counts: { replies: 0, tags: 0, unique_tags: 0, reposts: 0 },
+      tags: [],
+      bookmark: null,
+      relationships: { replied: null, reposted, mentioned: [] },
+    });
+    await act(async () => batch.resolve(ids.map((id, i) => nexusPost(id, '', buildUri(AUTHOR, 'post', originals[i])))));
     await waitFor(() => expect(userBatchSpy).toHaveBeenCalled());
     await act(async () => new Promise((resolve) => setTimeout(resolve, 25)));
-    expect(byIdsSpy.mock.calls.filter(([p]) => p.post_ids.length === 1)).toHaveLength(0);
+    // The authors belong to the page: its cards wait for them.
     expect(view.container.querySelectorAll('[data-cy="post-card"]')).toHaveLength(0);
     await act(async () => users.resolve([]));
+    const cards = () => [...view.container.querySelectorAll('[data-cy="post-card"]')];
+    // The originals do not: the cards mount before they answer.
+    await waitFor(() => expect(cards()).toHaveLength(10));
     await waitFor(() =>
       expect(byIdsSpy).toHaveBeenCalledWith(expect.objectContaining({ post_ids: expectedOriginalIds })),
     );
-    expect(byIdsSpy.mock.calls.filter(([p]) => p.post_ids.length === 1)).toHaveLength(0);
-    expect(view.container.querySelectorAll('[data-cy="post-card"]')).toHaveLength(0);
+    for (const card of cards()) {
+      expect(card.querySelector('[data-slot="skeleton"]')).not.toBeNull();
+      expect(card.textContent).not.toContain('Post not found.');
+    }
+    const originalPosts = originals.map((id, i) => nexusPost(id, `original ${i}`, null));
+    return { view, cards, originalResponses, originalPosts };
+  }
+
+  it('mounts cold repost cards before their originals, each showing its original once it arrives', WAITS, async () => {
+    const { view, cards, originalResponses, originalPosts } = await renderColdReposts();
+    const mounted = cards();
+
+    await act(async () => originalResponses.resolve(originalPosts));
+
+    // The batch behind the page and each card's own read persist these posts side by side.
+    await waitFor(
+      () => {
+        originalPosts.forEach((_post, i) => expect(view.container.textContent).toContain(`original ${i}`));
+      },
+      { timeout: 10_000 },
+    );
+    // The same cards, filled in place.
+    expect(cards()).toEqual(mounted);
+    expect(view.container.textContent).not.toContain('Post not found.');
     view.unmount();
-    await act(async () => {
-      users.resolve([]);
-      originalResponses.resolve([]);
-    });
+  });
+
+  it('ends a repost card on not found when the source has no original', WAITS, async () => {
+    const { view, cards, originalResponses } = await renderColdReposts();
+
+    await act(async () => originalResponses.resolve([]));
+
+    await waitFor(
+      () => {
+        for (const card of cards()) expect(card.textContent).toContain('Post not found.');
+      },
+      { timeout: 10_000 },
+    );
+    view.unmount();
   });
 });

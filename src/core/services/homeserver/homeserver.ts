@@ -1,6 +1,7 @@
-import { Address, Client, Pubky, PublicKey, resolvePubky, Session } from '@synonymdev/pubky';
+import { Address, Client, Pubky, PublicKey, resolvePubky, Session, type StorageLock } from '@synonymdev/pubky';
 import type { MigrationLock, MigrationReport, ProgressEvent } from 'pubky-social-migrator';
 import { getAuthClientId } from '@/config/auth';
+import { INDEXER_READ_TIMEOUT_MS } from '@/config/indexer';
 import {
   getHomeserver,
   getHomeserverUrl,
@@ -24,7 +25,10 @@ import { ErrorCategory, ErrorService } from '@/libs/error/error.types';
 import { hasHttpStatus, toAppError } from '@/libs/error/error.utils';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
 import { Logger } from '@/libs/logger/logger';
-import { HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION } from '@/libs/observability/sentry.constants';
+import {
+  HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION,
+  HOMESERVER_INDEX_READ_OPERATIONS,
+} from '@/libs/observability/sentry.constants';
 import { sleep } from '@/libs/utils/utils';
 import type {
   TGenerateAuthUrlResult,
@@ -37,11 +41,13 @@ import { type GrantFlowRequest, GrantFlowService } from './grant-flow';
 import type {
   StoragePath,
   THomeserverBytesResult,
+  THomeserverEventPageParams,
   THomeserverFetchParams,
   THomeserverListAllParams,
   THomeserverListParams,
   THomeserverPublicKeyParams,
   THomeserverRequestParams,
+  THomeserverStreamEvent,
   THomeserverUserEvent,
   THomeserverUserEventStreamParams,
   TOwnedSessionPath,
@@ -49,7 +55,9 @@ import type {
 } from './homeserver.types';
 import {
   assertOk,
+  buildEventStreamPageUrl,
   buildUserEventStreamUrl,
+  createStreamEventDecoder,
   createUserEventStreamDecoder,
   extractPubkyZ32,
   getOwnedResponse,
@@ -78,12 +86,62 @@ function closedUserEventStream(): ReadableStream<THomeserverUserEvent> {
   });
 }
 
+/**
+ * The body's bytes, refused with `tooLarge()` once they would pass `maxBytes`: up front when `Content-Length` says so,
+ * else while reading. The count runs either way, since a compressed body decodes to more than its stated length.
+ */
+async function readBodyAtMost(response: Response, maxBytes: number, tooLarge: () => Error): Promise<Uint8Array> {
+  const stated = Number(response.headers.get('content-length') ?? Number.NaN);
+  if (stated > maxBytes) {
+    void response.body?.cancel().catch(() => undefined);
+    throw tooLarge();
+  }
+  if (response.body === null) return new Uint8Array(0);
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      void reader.cancel().catch(() => undefined);
+      throw tooLarge();
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
+}
+
 export class HomeserverService {
   private constructor() {}
 
   private static pubkySdk: Pubky | null = null;
 
   private static sessionFailureListeners = new Set<(failure: ActiveSessionFailure) => void>();
+
+  private static ownedWriteListeners = new Set<(path: string) => void>();
+
+  /**
+   * Hears every owned storage write that landed: the path written or deleted, once its PUT or DELETE succeeded.
+   * The local index refreshes the account from it, so the app's own writes show up in its answers.
+   */
+  static subscribeOwnedWrites(listener: (path: string) => void): () => void {
+    this.ownedWriteListeners.add(listener);
+    return () => {
+      this.ownedWriteListeners.delete(listener);
+    };
+  }
+
+  private static notifyOwnedWrite(path: string): void {
+    for (const listener of this.ownedWriteListeners) listener(path);
+  }
 
   static subscribeSessionFailures(listener: (failure: ActiveSessionFailure) => void): () => void {
     this.sessionFailureListeners.add(listener);
@@ -621,6 +679,7 @@ export class HomeserverService {
               { beforeAttempt, ...retryOptions },
             ),
           ).catch((error) => handleError({ error, additionalContext: { url, method } }));
+          this.notifyOwnedWrite(path);
           return undefined as T;
         }
         case HttpMethod.DELETE: {
@@ -632,6 +691,7 @@ export class HomeserverService {
               { beforeAttempt, ...retryOptions },
             ),
           ).catch((error) => handleError({ error, additionalContext: { url, method } }));
+          this.notifyOwnedWrite(path);
           return undefined as T;
         }
       }
@@ -702,10 +762,11 @@ export class HomeserverService {
             { beforeAttempt, ...retryOptions },
           ),
         );
-        return;
       } catch (error) {
         return handleError({ error, additionalContext: { url, method: HttpMethod.PUT } });
       }
+      this.notifyOwnedWrite(path);
+      return;
     }
 
     if (!isHttpUrl(url) || extractPubkyZ32(url) !== null) {
@@ -726,6 +787,97 @@ export class HomeserverService {
       retryOptions,
     );
     await assertOk({ response, url, operation: 'putBlob' });
+  }
+
+  /** The session path of an owned `url`; anything else is refused before a request. */
+  private static ownedPathOf(url: string, operation: string): TOwnedSessionPath {
+    const owned = this.resolveOwnedSessionPath(url);
+    if (owned) return owned;
+    throw Err.auth(AuthErrorCode.UNAUTHORIZED, 'Locking storage requires a session for the resource owner.', {
+      service: ErrorService.Homeserver,
+      operation,
+      context: { url },
+    });
+  }
+
+  /**
+   * Takes the homeserver's exclusive write lock on an owned file (WebDAV `LOCK`): while it lives, only writes
+   * presenting it land on the path, and it ends on its own after the lifetime granted (at most 60 s). `locked` while
+   * another client holds the path (423), `unsupported` on a homeserver without locks (405). Expected outcomes, so
+   * neither is reported as an error.
+   */
+  static async lockOwned(url: string, seconds: number): Promise<StorageLock | 'locked' | 'unsupported'> {
+    const { session, path } = this.ownedPathOf(url, 'lockOwned');
+    try {
+      return await this.withActiveSession(session, () => session.storage.lock(path, seconds));
+    } catch (error) {
+      const status = extractStatusCode(error);
+      if (status === HttpStatusCode.LOCKED) return 'locked';
+      if (status === HttpStatusCode.METHOD_NOT_ALLOWED) return 'unsupported';
+      return handleError({ error, additionalContext: { url, operation: 'lockOwned' } });
+    }
+  }
+
+  /**
+   * Writes an owned file under a lock this client holds. `false` when the lock expired or was released (412): the
+   * homeserver refused the write and nothing landed.
+   */
+  static async putBytesLocked(url: string, lock: StorageLock, bytes: Uint8Array): Promise<boolean> {
+    const { session, path } = this.ownedPathOf(url, 'putBytesLocked');
+    try {
+      await retryHomeserverWrite(HttpMethod.PUT, () =>
+        this.withActiveSession(session, () => session.storage.putBytesLocked(lock, bytes.slice())),
+      );
+    } catch (error) {
+      if (extractStatusCode(error) === HttpStatusCode.PRECONDITION_FAILED) return false;
+      return handleError({ error, additionalContext: { url, method: HttpMethod.PUT, operation: 'putBytesLocked' } });
+    }
+    this.notifyOwnedWrite(path);
+    return true;
+  }
+
+  /**
+   * Deletes an owned file under a lock this client holds; a missing file counts as deleted. `false` when the lock is
+   * gone, as `putBytesLocked`.
+   */
+  static async deleteLocked(url: string, lock: StorageLock): Promise<boolean> {
+    const { session, path } = this.ownedPathOf(url, 'deleteLocked');
+    try {
+      await retryHomeserverWrite(HttpMethod.DELETE, () =>
+        this.withActiveSession(session, () => session.storage.deleteLocked(lock)),
+      );
+    } catch (error) {
+      const status = extractStatusCode(error);
+      if (status === HttpStatusCode.PRECONDITION_FAILED) return false;
+      if (status !== HttpStatusCode.NOT_FOUND) {
+        return handleError({ error, additionalContext: { url, method: HttpMethod.DELETE, operation: 'deleteLocked' } });
+      }
+    }
+    this.notifyOwnedWrite(path);
+    return true;
+  }
+
+  /** Restarts the lifetime of a lock this client holds. `false` once the lock is gone (412). */
+  static async refreshLock(url: string, lock: StorageLock, seconds: number): Promise<boolean> {
+    const { session } = this.ownedPathOf(url, 'refreshLock');
+    try {
+      await this.withActiveSession(session, () => session.storage.refreshLock(lock, seconds));
+      return true;
+    } catch (error) {
+      if (extractStatusCode(error) === HttpStatusCode.PRECONDITION_FAILED) return false;
+      return handleError({ error, additionalContext: { url, operation: 'refreshLock' } });
+    }
+  }
+
+  /** Releases a lock this client holds; one that is gone already (409) counts as released. */
+  static async unlockOwned(url: string, lock: StorageLock): Promise<void> {
+    const { session } = this.ownedPathOf(url, 'unlockOwned');
+    try {
+      await this.withActiveSession(session, () => session.storage.unlock(lock));
+    } catch (error) {
+      if (extractStatusCode(error) === HttpStatusCode.CONFLICT) return;
+      handleError({ error, additionalContext: { url, operation: 'unlockOwned' } });
+    }
   }
 
   /**
@@ -1149,6 +1301,112 @@ export class HomeserverService {
         error,
         additionalContext: { paths, operation: HOMESERVER_EVENT_STREAM_SUBSCRIBE_OPERATION },
       });
+    }
+  }
+
+  /**
+   * The homeserver a user publishes to, from their PKARR record, for the local index. `null` when the record proves
+   * there is none; a failed lookup or a malformed key rejects. Anonymous like every index read.
+   */
+  static async resolveIndexedUserHomeserver(userZ32: string): Promise<string | null> {
+    try {
+      const homeserver = await this.getPubkySdk().getHomeserverOf(PublicKey.from(userZ32));
+      return homeserver ? homeserver.z32() : null;
+    } catch (error) {
+      return handleError({
+        error,
+        additionalContext: { operation: HOMESERVER_INDEX_READ_OPERATIONS.resolveHomeserver },
+      });
+    }
+  }
+
+  /**
+   * One page of a homeserver's public event stream for up to 50 users, each read after its own cursor, for the local
+   * index. Sent anonymously through `client.fetch` for the reason `subscribeUserEventStream` gives: the SDK's
+   * `subscribe()` takes no `AbortSignal` and has no timeout. The page is not live, so the body ends; a homeserver
+   * that holds it past `INDEXER_READ_TIMEOUT_MS` is aborted. A 429 rejects with its `retry-after`.
+   */
+  static async readPublicEventPage({ signal, ...page }: THomeserverEventPageParams): Promise<THomeserverStreamEvent[]> {
+    const operation = HOMESERVER_INDEX_READ_OPERATIONS.readEvents;
+    const url = buildEventStreamPageUrl(page);
+    return await this.withReadDeadline(signal, INDEXER_READ_TIMEOUT_MS, async (deadline) => {
+      try {
+        const response = await this.getPubkySdk().client.fetch(url, {
+          method: HttpMethod.GET,
+          credentials: 'omit',
+          signal: deadline,
+        });
+        if (!response.ok) {
+          throw httpResponseToError(response, ErrorService.Homeserver, operation, USER_EVENT_STREAM_ENDPOINT);
+        }
+        // An event cut off before its closing blank line is dropped, as SSE specifies.
+        return createStreamEventDecoder().push(new Uint8Array(await response.arrayBuffer()));
+      } catch (error) {
+        return handleError({ error, additionalContext: { operation, url: USER_EVENT_STREAM_ENDPOINT } });
+      }
+    });
+  }
+
+  /**
+   * The bytes of a public file, for the local index and its media; `null` on a 404. Always anonymous, the signed-in
+   * user's own files included, and aborted after `timeoutMs`. A file over `maxBytes` is refused with a
+   * `PAYLOAD_TOO_LARGE` error without reading its body when the response states its length, else as soon as the bytes
+   * read pass the limit, so a large file never sits in memory whole.
+   */
+  static async getPublicFileBytes({
+    url,
+    maxBytes,
+    timeoutMs,
+    signal,
+  }: {
+    url: string;
+    maxBytes: number;
+    timeoutMs: number;
+    signal?: AbortSignal;
+  }): Promise<Uint8Array | null> {
+    const operation = HOMESERVER_INDEX_READ_OPERATIONS.readFile;
+    const tooLarge = () =>
+      Err.client(ClientErrorCode.PAYLOAD_TOO_LARGE, `The file is larger than ${maxBytes} bytes`, {
+        service: ErrorService.Homeserver,
+        operation,
+        context: { url, maxBytes },
+      });
+    return await this.withReadDeadline(signal, timeoutMs, async (deadline) => {
+      try {
+        const response = await this.getPubkySdk().client.fetch(resolvePubky(url), {
+          method: HttpMethod.GET,
+          credentials: 'omit',
+          signal: deadline,
+        });
+        if (response.status === HttpStatusCode.NOT_FOUND) return null;
+        if (!response.ok) throw httpResponseToError(response, ErrorService.Homeserver, operation, url);
+        return await readBodyAtMost(response, maxBytes, tooLarge);
+      } catch (error) {
+        return handleError({ error, additionalContext: { operation, url } });
+      }
+    });
+  }
+
+  /** Runs `read` with a signal that aborts with the caller's or after `timeoutMs`. */
+  private static async withReadDeadline<T>(
+    signal: AbortSignal | undefined,
+    timeoutMs: number,
+    read: (deadline: AbortSignal) => Promise<T>,
+  ): Promise<T> {
+    // By hand: older Safari has no `AbortSignal.any`.
+    const controller = new AbortController();
+    const forward = () => controller.abort(signal?.reason);
+    if (signal?.aborted) forward();
+    else signal?.addEventListener('abort', forward, { once: true });
+    const timer = setTimeout(
+      () => controller.abort(new DOMException('The index read timed out', 'TimeoutError')),
+      timeoutMs,
+    );
+    try {
+      return await read(controller.signal);
+    } finally {
+      clearTimeout(timer);
+      signal?.removeEventListener('abort', forward);
     }
   }
 

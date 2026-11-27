@@ -60,7 +60,12 @@ function navigationContext(url: string, overrides: Partial<{ mode: RequestMode; 
 
 describe('src/sw.ts', () => {
   const listeners = new Map<string, WorkerListener[]>();
-  const cacheStore = { put: vi.fn(), keys: vi.fn().mockResolvedValue([]), delete: vi.fn() };
+  const cacheStore = {
+    put: vi.fn(),
+    keys: vi.fn().mockResolvedValue([]),
+    delete: vi.fn(),
+    match: vi.fn().mockResolvedValue(undefined),
+  };
   const caches = { open: vi.fn().mockResolvedValue(cacheStore), delete: vi.fn().mockResolvedValue(true) };
 
   beforeEach(async () => {
@@ -104,6 +109,8 @@ describe('src/sw.ts', () => {
     expect(route.matcher(navigationContext('https://pubky.app/home', { mode: 'cors' }))).toBe(false);
     expect(route.matcher(navigationContext('https://nexus.pubky.app/v1/stream', { sameOrigin: false }))).toBe(false);
     expect(route.matcher(navigationContext('https://pubky.app/api/feedback'))).toBe(false);
+    // Local media is answered by the worker's own fetch listener.
+    expect(route.matcher(navigationContext('https://pubky.app/_pubky/file/alice/abc.pdf'))).toBe(false);
     for (const path of [
       '/shop-embed',
       '/shop-embed/marketplace',
@@ -368,12 +375,36 @@ describe('src/sw.ts', () => {
     }
   });
 
+  it('answers a same-origin GET under the local media prefix, from its cache when it holds the file', async () => {
+    const [onFetch] = listeners.get('fetch') ?? [];
+    const respondWith = vi.fn();
+    const url = `${window.location.origin}/_pubky/avatar/alice?v=3`;
+    cacheStore.match.mockClear();
+    cacheStore.match.mockResolvedValueOnce(
+      new Response('cached avatar', { headers: { 'Content-Type': 'image/webp' } }),
+    );
+
+    onFetch({ request: new Request(url), clientId: 'tab-home', respondWith });
+    const response: Response = await respondWith.mock.calls[0][0];
+
+    // The body is checked in `localMedia.test.ts`, which runs in Node: here a body passes from Node's Response through
+    // jsdom's Blob, another realm, and reads back as "[object Blob]".
+    expect(caches.open).toHaveBeenCalledWith('pubky-local-media');
+    expect(cacheStore.match).toHaveBeenCalledTimes(1);
+    expect(cacheStore.match).toHaveBeenCalledWith(url);
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toBe('image/webp');
+    expect(response.headers.get('accept-ranges')).toBe('bytes');
+  });
+
   it('leaves every other request to Serwist', () => {
     const [onFetch] = listeners.get('fetch') ?? [];
     const respondWith = vi.fn();
 
     onFetch({ request: new Request('https://pubky.app/share', { method: 'GET' }), respondWith });
     onFetch({ request: new Request('https://pubky.app/home', { method: 'POST' }), respondWith });
+    onFetch({ request: new Request('https://elsewhere.example/_pubky/avatar/alice'), respondWith });
+    onFetch({ request: new Request(`${window.location.origin}/_pubky/avatar/alice`, { method: 'POST' }), respondWith });
 
     expect(respondWith).not.toHaveBeenCalled();
   });

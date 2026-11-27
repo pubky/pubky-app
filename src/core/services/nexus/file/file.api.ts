@@ -1,4 +1,5 @@
-import type { NexusApiVersion } from '@/config/nexus';
+import { hasNexusSource, type NexusApiVersion } from '@/config/nexus';
+import { buildLocalAvatarPath, buildLocalFilePath } from '@/libs/pwa/localMedia';
 import type { Pubky } from '@/models/models.types';
 import type { TFileBody, TFileParams } from '@/services/nexus/file/file.types';
 import { buildCdnUrl, buildNexusUrl, buildV1CdnUrl, encodePathSegment } from '@/services/nexus/nexus.utils';
@@ -21,7 +22,8 @@ const STATIC_PREFIX = 'files';
  * would render as generic file cards for every viewer (D10). A v1 address in the body is not an error:
  * `/v0/files/by_ids` skips it with a server-side warning and answers 200 with the rest (Nexus contract,
  * verified live on the carrier). The callers still never send one: `FileApplication.fetchFiles` and
- * `fetchFilesForPosts` drop every v1 address first, since Nexus has nothing to say about it.
+ * `fetchFilesForPosts` drop every v1 address first, since Nexus has nothing to say about it. The local index answers
+ * the same route from the File records it reads when the deploy reads the older tree, and with nothing otherwise.
  *
  * Sunset: remove this call, with `NexusFileService.fetchFiles` and `FileApplication.fetchFiles*`, when `/v0`
  * gets a removal date or every author has migrated (ADR-0027, _Nexus API version_). The compliance
@@ -39,13 +41,19 @@ export function buildFileBodyUrl(fileUris: Pubky[]) {
   return body;
 }
 
+/**
+ * Media URLs. Without the nexus source there is no CDN: both builders return same-origin paths the service worker
+ * answers from the owner's homeserver (`src/libs/pwa/localMedia.ts`), resizing image variants itself as Nexus does.
+ */
 export const filesApi = {
   getAvatarUrl: (pubky: Pubky, version?: string | number) => {
+    if (!hasNexusSource()) return buildLocalAvatarPath(pubky, version);
     const encodedPubky = encodePathSegment(pubky);
     const url = buildCdnUrl(`avatar/${encodedPubky}`);
     return version ? `${url}?v=${version}` : url;
   },
   getFileUrl: ({ pubky, file_id, variant }: TFileParams) => {
+    if (!hasNexusSource()) return buildLocalFilePath(pubky, file_id, variant);
     const encodedPubky = encodePathSegment(pubky);
     const encodedFileId = encodePathSegment(file_id);
     const path = `${STATIC_PREFIX}/${encodedPubky}/${encodedFileId}/${variant}`;

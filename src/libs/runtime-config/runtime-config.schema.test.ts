@@ -104,6 +104,79 @@ describe('runtimeEnvInputSchema', () => {
     expect(runtimeEnvInputSchema.parse(VALID_ENV_INPUT).e2eLocksStubUrl).toBeUndefined();
   });
 
+  it('defaults the indexer sources to nexus alone', () => {
+    expect(runtimeEnvInputSchema.parse(VALID_ENV_INPUT).indexerSources).toEqual(['nexus']);
+    expect(runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, indexerSources: ' ' }).indexerSources).toEqual(['nexus']);
+  });
+
+  it.each([
+    ['nexus', ['nexus']],
+    ['local', ['local']],
+    ['local,nexus', ['local', 'nexus']],
+    [' local , nexus ', ['local', 'nexus']],
+  ])('parses the indexer sources %j', (value, expected) => {
+    expect(runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, indexerSources: value }).indexerSources).toEqual(expected);
+  });
+
+  it.each(['nexus,local', 'local,local', 'remote', 'local,'])('rejects the indexer sources %j', (value) => {
+    expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, indexerSources: value })).toThrow();
+  });
+
+  it('leaves the local index window to the index unless set', () => {
+    expect(runtimeEnvInputSchema.parse(VALID_ENV_INPUT).indexerWindowMs).toBeUndefined();
+    expect(runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, indexerWindowMs: '120000' }).indexerWindowMs).toBe(
+      120_000,
+    );
+  });
+
+  it.each(['0', '-5', '1.5', 'week'])('rejects the local index window %j', (value) => {
+    expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, indexerWindowMs: value })).toThrow();
+  });
+
+  it('keeps the older social tree out of the local index unless set', () => {
+    expect(runtimeEnvInputSchema.parse(VALID_ENV_INPUT).indexerLegacyTree).toBeUndefined();
+    expect(runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, indexerLegacyTree: 'true' }).indexerLegacyTree).toBe(true);
+    expect(runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, indexerLegacyTree: 'false' }).indexerLegacyTree).toBe(
+      false,
+    );
+  });
+
+  it.each(['yes', '1', 'on'])('rejects the older social tree setting %j', (value) => {
+    expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, indexerLegacyTree: value })).toThrow();
+  });
+
+  it('requires the Nexus URL only while nexus is an indexer source', () => {
+    const { nexusUrl: _nexusUrl, ...withoutNexus } = VALID_ENV_INPUT;
+
+    expect(runtimeEnvInputSchema.parse({ ...withoutNexus, indexerSources: 'local' }).nexusUrl).toBeUndefined();
+    for (const indexerSources of [undefined, 'nexus', 'local,nexus']) {
+      const result = runtimeEnvInputSchema.safeParse({ ...withoutNexus, indexerSources });
+      expect(result.success).toBe(false);
+      expect(result.error?.issues).toEqual([expect.objectContaining({ path: ['nexusUrl'] })]);
+    }
+  });
+
+  it('requires the CDN URL only while nexus is an indexer source', () => {
+    const { cdnUrl: _cdnUrl, ...withoutCdn } = VALID_ENV_INPUT;
+
+    expect(runtimeEnvInputSchema.parse({ ...withoutCdn, indexerSources: 'local' }).cdnUrl).toBeUndefined();
+    for (const indexerSources of [undefined, 'nexus', 'local,nexus']) {
+      const result = runtimeEnvInputSchema.safeParse({ ...withoutCdn, indexerSources });
+      expect(result.success).toBe(false);
+      expect(result.error?.issues).toEqual([expect.objectContaining({ path: ['cdnUrl'] })]);
+    }
+  });
+
+  it('runs with the local index alone and neither Nexus nor CDN URL', () => {
+    const { nexusUrl: _nexusUrl, cdnUrl: _cdnUrl, ...withoutNexus } = VALID_ENV_INPUT;
+
+    const parsed = runtimeEnvInputSchema.parse({ ...withoutNexus, indexerSources: 'local' });
+
+    expect(parsed).toMatchObject({ indexerSources: ['local'] });
+    expect(parsed.nexusUrl).toBeUndefined();
+    expect(parsed.cdnUrl).toBeUndefined();
+  });
+
   it('throws on malformed PKARR_RELAYS JSON', () => {
     expect(() => runtimeEnvInputSchema.parse({ ...VALID_ENV_INPUT, pkarrRelays: 'not-json' })).toThrow();
   });

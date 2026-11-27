@@ -1,6 +1,26 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
+import { resetRuntimeConfigForTests } from '@/libs/runtime-config/runtime-config';
+import type { Pubky } from '@/models/models.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { authInitialState } from '@/stores/auth/auth.types';
 import { PostActionsBar } from './PostActionsBar';
+
+const VIEWER = 'viewer-pubky' as Pubky;
+
+/** Runs the app on the local index for a signed-in viewer, as counts are then of their network. */
+function runLocalIndexForViewer() {
+  process.env.PUBKY_RUNTIME_INDEXER_SOURCES = 'local';
+  resetRuntimeConfigForTests();
+  useAuthStore.setState({ currentUserPubky: VIEWER });
+}
+
+function runNexus() {
+  delete process.env.PUBKY_RUNTIME_INDEXER_SOURCES;
+  resetRuntimeConfigForTests();
+  useAuthStore.setState({ ...authInitialState });
+}
 
 // Mock hooks
 const mockUsePostCounts = vi.fn();
@@ -264,5 +284,24 @@ describe('PostActionsBar', () => {
       'hover:bg-black/70',
     );
     expect(screen.getAllByTestId('typography')[0]).toHaveClass('text-white/80');
+  });
+
+  describe('with the local index', () => {
+    afterEach(runNexus);
+
+    it('says the tag, reply and repost counts are of the viewer network', () => {
+      runLocalIndexForViewer();
+      mockUsePostCounts.mockReturnValue({ postCounts: { unique_tags: 2, replies: 8, reposts: 3 }, isLoading: false });
+      render(
+        <TooltipProvider>
+          <PostActionsBar postId="author:original" />
+        </TooltipProvider>,
+      );
+
+      expect(screen.getByRole('button', { name: 'Tag post (2), in your network' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Reply to post (8), in your network' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Repost (3), in your network' })).toBeInTheDocument();
+      expect(screen.getByText('8')).toBeInTheDocument();
+    });
   });
 });

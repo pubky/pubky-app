@@ -7,10 +7,9 @@ import { useCustomFeed } from './useCustomFeed';
 
 // --- Hoisted mocks ---
 
-const { mockUseLiveQuery, mockUsePathname, mockUseParams } = vi.hoisted(() => ({
+const { mockUseLiveQuery, mockUsePathname } = vi.hoisted(() => ({
   mockUseLiveQuery: vi.fn(),
   mockUsePathname: vi.fn(),
-  mockUseParams: vi.fn(),
 }));
 
 // Mock dexie-react-hooks – database connections must be mocked per testing guidelines.
@@ -21,7 +20,6 @@ vi.mock('dexie-react-hooks', () => ({
 // Mock next/navigation hooks
 vi.mock('next/navigation', () => ({
   usePathname: () => mockUsePathname(),
-  useParams: () => mockUseParams(),
 }));
 
 // Mock FeedController and Logger
@@ -60,7 +58,6 @@ describe('useCustomFeed', () => {
     vi.clearAllMocks();
     // Default: on a feed route with a valid id
     mockUsePathname.mockReturnValue('/feed/feed-abc123');
-    mockUseParams.mockReturnValue({ id: 'feed-abc123' });
   });
 
   it('returns the custom feed when on a feed route with a valid id', () => {
@@ -81,8 +78,8 @@ describe('useCustomFeed', () => {
     expect(result.current).toBeUndefined();
   });
 
-  it('returns undefined when id param is missing', () => {
-    mockUseParams.mockReturnValue({});
+  it('returns undefined when the id segment is missing', () => {
+    mockUsePathname.mockReturnValue('/feed');
     mockUseLiveQuery.mockReturnValue(undefined);
 
     const { result } = renderHook(() => useCustomFeed());
@@ -110,7 +107,6 @@ describe('useCustomFeed', () => {
 
   it('passes activeFeedId as undefined when pathname does not start with /feed and nothing was latched', () => {
     mockUsePathname.mockReturnValue('/settings');
-    mockUseParams.mockReturnValue({});
     mockUseLiveQuery.mockReturnValue(undefined);
 
     renderHook(() => useCustomFeed());
@@ -126,9 +122,8 @@ describe('useCustomFeed', () => {
     const { rerender } = renderHook(() => useCustomFeed());
     expect(mockUseLiveQuery.mock.calls[0][1]).toEqual(['feed-abc123']);
 
-    // Simulate intercepted navigation: URL becomes /post/..., useParams loses id
+    // Simulate intercepted navigation: URL becomes /post/..., the path holds no feed id
     mockUsePathname.mockReturnValue('/post/user/post1');
-    mockUseParams.mockReturnValue({});
     rerender();
 
     // Latched id should still drive the query, so feed state isn't reset
@@ -196,7 +191,7 @@ describe('useCustomFeed', () => {
   });
 
   it('query function returns undefined when id is missing', async () => {
-    mockUseParams.mockReturnValue({});
+    mockUsePathname.mockReturnValue('/feed');
 
     let queryResult: unknown = 'not-set';
     mockUseLiveQuery.mockImplementation((queryFn: () => Promise<unknown>) => {

@@ -6,6 +6,12 @@ import CollectionPage, { generateMetadata } from './page';
 // Mocks
 // ---------------------------------------------------------------------------
 
+const mockPathname = vi.hoisted(() => ({ current: '/' }));
+
+vi.mock('next/navigation', () => ({
+  usePathname: () => mockPathname.current,
+}));
+
 vi.mock('@/templates/Collection/Collection', () => ({
   Collection: (p: { postId: string }) => <div data-testid="collection-template" data-post-id={p.postId} />,
 }));
@@ -22,14 +28,10 @@ const POST_ID = '0034BBBDFK83G';
 // ---------------------------------------------------------------------------
 
 describe('CollectionPage (route)', () => {
-  it('builds the composite id from params and forwards it to the Collection template', async () => {
-    const result = await CollectionPage({
-      params: Promise.resolve({ userId: AUTHOR_PUBKY, postId: POST_ID }),
-    });
+  it('builds the composite id from the URL path and forwards it to the Collection template', () => {
+    mockPathname.current = `/collections/${AUTHOR_PUBKY}/${POST_ID}`;
 
-    expect(result.props.postId).toBe(`${AUTHOR_PUBKY}:${POST_ID}`);
-
-    render(result);
+    render(<CollectionPage />);
 
     expect(screen.getByTestId('collection-template')).toHaveAttribute('data-post-id', `${AUTHOR_PUBKY}:${POST_ID}`);
   });

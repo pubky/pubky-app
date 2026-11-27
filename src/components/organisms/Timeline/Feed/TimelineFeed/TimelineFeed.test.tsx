@@ -36,15 +36,14 @@ const mockUsePullToRefresh = vi.hoisted(() =>
 
 // Route params default to empty; the Collection variant tests override this to
 // simulate the `/collections/[userId]/[postId]` route.
-const mockUseParams = vi.hoisted(() => vi.fn((): Record<string, string> => ({ id: '' })));
+const mockUsePathname = vi.hoisted(() => vi.fn(() => '/'));
 
 // Mock next/navigation for useSearchParams used by useSearchStreamId
 vi.mock('next/navigation', () => ({
   useSearchParams: () => ({
     get: () => null,
   }),
-  usePathname: () => '/',
-  useParams: mockUseParams,
+  usePathname: mockUsePathname,
   useRouter: () => ({
     push: vi.fn(),
   }),
@@ -789,12 +788,12 @@ describe('TimelineFeed', () => {
     const collectionPost = 'collection-post';
 
     beforeEach(() => {
-      mockUseParams.mockReturnValue({ userId: collectionAuthor, postId: collectionPost });
+      mockUsePathname.mockReturnValue(`/collections/${collectionAuthor}/${collectionPost}`);
     });
 
     afterEach(() => {
       // Restore the hoisted defaults so overrides don't leak into other variants.
-      mockUseParams.mockImplementation(() => ({ id: '' }));
+      mockUsePathname.mockImplementation(() => '/');
       mockUsePostDetails.mockImplementation(() => ({ postDetails: undefined, isLoading: false }));
     });
 

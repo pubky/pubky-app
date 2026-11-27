@@ -1,9 +1,29 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { PROFILE_PAGE_TYPES } from '@/app/profile/types';
+import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import type { ProfileStats } from '@/hooks/useProfileStats/useProfileStats.types';
+import { resetRuntimeConfigForTests } from '@/libs/runtime-config/runtime-config';
+import type { Pubky } from '@/models/models.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { authInitialState } from '@/stores/auth/auth.types';
 import { getDefaultItems, ProfilePageFilterBar } from './ProfilePageFilterBar';
+
+const VIEWER = 'viewer-pubky' as Pubky;
+
+/** Runs the app on the local index for a signed-in viewer, as counts are then of their network. */
+function runLocalIndexForViewer() {
+  process.env.PUBKY_RUNTIME_INDEXER_SOURCES = 'local';
+  resetRuntimeConfigForTests();
+  useAuthStore.setState({ currentUserPubky: VIEWER });
+}
+
+function runNexus() {
+  delete process.env.PUBKY_RUNTIME_INDEXER_SOURCES;
+  resetRuntimeConfigForTests();
+  useAuthStore.setState({ ...authInitialState });
+}
 
 const mockStats: ProfileStats = {
   notifications: 2,
@@ -251,5 +271,31 @@ describe('ProfilePageFilterBar', () => {
 
       expect(screen.queryByText('Unlocked')).not.toBeInTheDocument();
     });
+  });
+
+  describe('with the local index', () => {
+    afterEach(runNexus);
+
+    it('says the follower, friend and tagged counts are of the viewer network, and the exact ones nothing', () => {
+      runLocalIndexForViewer();
+      render(
+        <TooltipProvider>
+          <ProfilePageFilterBar activePage={PROFILE_PAGE_TYPES.POSTS} onPageChangeAction={() => {}} stats={mockStats} />
+        </TooltipProvider>,
+      );
+
+      expect(screen.getByRole('button', { name: 'Followers 115, in your network' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Friends 10, in your network' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Tagged 5, in your network' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^Following/ })).not.toHaveAttribute('aria-label');
+    });
+  });
+
+  it('marks no count with Nexus', () => {
+    render(
+      <ProfilePageFilterBar activePage={PROFILE_PAGE_TYPES.POSTS} onPageChangeAction={() => {}} stats={mockStats} />,
+    );
+
+    expect(screen.getByRole('button', { name: /^Followers/ })).not.toHaveAttribute('aria-label');
   });
 });

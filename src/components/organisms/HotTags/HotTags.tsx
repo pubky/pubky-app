@@ -7,6 +7,7 @@ import { Container } from '@/atoms/Container/Container';
 import { Tag } from '@/atoms/Tag/Tag';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useHotTags } from '@/hooks/useHotTags/useHotTags';
+import { useLocalScopeHint } from '@/hooks/useLocalScopeHint/useLocalScopeHint';
 import { SidebarSection } from '@/molecules/SidebarSection/SidebarSection';
 import { MAX_TAGS } from './HotTags.constants';
 import { HotTagsSkeleton } from './HotTags.skeleton';
@@ -24,6 +25,7 @@ import type { HotTagsProps } from './HotTags.types';
 export function HotTags({ className }: HotTagsProps) {
   const router = useRouter();
   const { tags, isLoading } = useHotTags();
+  const scopeHint = useLocalScopeHint();
   const displayTags = tags.slice(0, MAX_TAGS);
   const handleTagClick = (tagName: string) => {
     router.push(`${APP_ROUTES.SEARCH}?tags=${encodeURIComponent(tagName)}`);
@@ -34,6 +36,7 @@ export function HotTags({ className }: HotTagsProps) {
   return (
     <SidebarSection
       title={'Hot tags'}
+      hint={scopeHint}
       footerIcon={TagIcon}
       footerText={'Explore all'}
       onFooterClick={handleSeeAll}

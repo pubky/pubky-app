@@ -1,9 +1,11 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getTagDayPalette } from '@/libs/utils/tagPalette';
 import { generateRandomColor, hexToRgba } from '@/libs/utils/utils';
 import { useAppearanceStore } from '@/stores/appearance/appearance.store';
 import { appearanceInitialState } from '@/stores/appearance/appearance.types';
+import { TooltipProvider } from '../Tooltip/Tooltip';
 import { Tag } from './Tag';
 
 describe('Tag', () => {
@@ -167,5 +169,22 @@ describe('Tag', () => {
 
     // Should still have border
     expect(tag.style.border).toBe('1px solid var(--tag-edge)');
+  });
+
+  it('puts the count hint in a tooltip on the count, without changing the count', async () => {
+    const user = userEvent.setup();
+    render(
+      <TooltipProvider delayDuration={0}>
+        <Tag name="bitcoin" count={3} countHint="In your network" />
+      </TooltipProvider>,
+    );
+
+    const count = screen.getByTestId('tag-count');
+    expect(count).toHaveTextContent('3');
+    await user.hover(count);
+
+    await waitFor(() => {
+      expect(screen.getByRole('tooltip')).toHaveTextContent('In your network');
+    });
   });
 });

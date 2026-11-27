@@ -1,4 +1,5 @@
 import {
+  hasNexusSource,
   NEXUS_MENTION_LOOKUP_LIMIT,
   NEXUS_MENTION_LOOKUP_TIMEOUT_MS,
   NEXUS_SERVER_FETCH_TIMEOUT_MS,
@@ -24,8 +25,13 @@ import { formatMentionLabel, type MentionSegment, splitMentions, truncateSegment
  *
  * Exported so sibling server-only helpers (e.g. the OG image data layer in
  * `@/libs/og/ogData`) share a single Nexus fetch + error-mapping path.
+ *
+ * Without the nexus source there is no server-side index to ask (the local
+ * index lives in a signed-in browser): it answers `null` without a request,
+ * so every caller renders its generic fallback.
  */
 export async function fetchWithValidation<T>(url: string, operation: string): Promise<T | null> {
+  if (!hasNexusSource()) return null;
   const res = await fetch(url, {
     next: { revalidate: 3600 },
     signal: AbortSignal.timeout(NEXUS_SERVER_FETCH_TIMEOUT_MS),
@@ -76,6 +82,8 @@ export async function fetchUserAndPostForMetadata(
 type MentionLookup = { name: string | null; failure?: string };
 
 async function fetchMentionedUserName(pubky: string): Promise<MentionLookup> {
+  // No Nexus to ask: the mention renders as the shortened key, which is no failure.
+  if (!hasNexusSource()) return { name: null };
   const url = userApi.details({ user_id: pubky });
   try {
     const res = await fetch(url, {

@@ -15,9 +15,11 @@ import {
 } from 'lucide-react';
 import { Button } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
+import { HintTooltip } from '@/atoms/HintTooltip/HintTooltip';
 import { Tooltip, TooltipContent, TooltipPortal, TooltipTrigger } from '@/atoms/Tooltip/Tooltip';
 import { Typography } from '@/atoms/Typography/Typography';
 import { FOLLOW_ACTIONS } from '@/hooks/useFollowUser/useFollowUser.types';
+import { localScopeHintSuffix, useLocalScopeHint } from '@/hooks/useLocalScopeHint/useLocalScopeHint';
 import { useTtlSubscription } from '@/hooks/useTtlSubscription/useTtlSubscription';
 import { parseStatus } from '@/libs/status/status';
 import { cn, formatPublicKey } from '@/libs/utils/utils';
@@ -74,6 +76,8 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
   const parsedStatus = parseStatus(status || '', emoji);
   const displayEmoji = parsedStatus.emoji;
   const followersLabel = stats ? `${compactNumber.format(stats.followers)} FOLLOWERS` : null;
+  // The local index sees followers only from the user's network
+  const scopeHint = useLocalScopeHint();
   const getLoadingFollowText = () => {
     if (followLoadingAction === FOLLOW_ACTIONS.UNFOLLOW) {
       return 'Unfollowing...';
@@ -183,13 +187,16 @@ export function ProfilePageHeader({ profile, actions, isOwnProfile = true, userI
             {isOwnProfile && stats && (
               <Container overrideDefaults className="flex min-w-0 items-center gap-1">
                 <UsersRound className="size-4 shrink-0 text-muted-foreground" />
-                <Typography
-                  as="span"
-                  overrideDefaults
-                  className="truncate text-xs leading-4 font-medium tracking-widest text-muted-foreground uppercase"
-                >
-                  {followersLabel}
-                </Typography>
+                <HintTooltip hint={scopeHint}>
+                  <Typography
+                    as="span"
+                    overrideDefaults
+                    className="truncate text-xs leading-4 font-medium tracking-widest text-muted-foreground uppercase"
+                  >
+                    {followersLabel}
+                    {scopeHint && <span className="sr-only">{localScopeHintSuffix(scopeHint)}</span>}
+                  </Typography>
+                </HintTooltip>
               </Container>
             )}
           </Container>

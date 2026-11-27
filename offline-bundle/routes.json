@@ -1,0 +1,10 @@
+{
+  "port": 8473,
+  "placeholder": "_",
+  "dynamic": ["/post/*/*", "/collections/*/*", "/profile/*", "/feed/*", "/invite/*"],
+  "redirects": [
+    ["/profile/*/posts", "/profile/*"],
+    ["/privacy", "/privacy-policy"]
+  ],
+  "notFound": ["/api/", "/_pubky/", "/shop-embed/"]
+}

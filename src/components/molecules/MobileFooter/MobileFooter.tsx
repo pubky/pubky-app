@@ -12,6 +12,7 @@ import { FileController } from '@/controllers/file/file';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useKeyboardVisible } from '@/hooks/useKeyboardVisible/useKeyboardVisible';
 import { usePublicRoute } from '@/hooks/usePublicRoute/usePublicRoute';
+import { HAS_APP_SERVER } from '@/libs/static-export/appServer';
 import { handleFeedNavClick } from '@/libs/utils/feedScrollTop';
 import { cn } from '@/libs/utils/utils';
 import { AvatarWithFallback } from '@/organisms/AvatarWithFallback/AvatarWithFallback';
@@ -65,7 +66,8 @@ export function MobileFooter({ className }: MobileFooterProps) {
       icon: Flame,
       label: 'Hot',
     },
-    { href: APP_ROUTES.SHOP, icon: Store, label: 'Shop' },
+    // The Shop is proxied by the app server.
+    ...(HAS_APP_SERVER ? [{ href: APP_ROUTES.SHOP, icon: Store, label: 'Shop' }] : []),
     {
       href: APP_ROUTES.COLLECTIONS,
       activePrefix: APP_ROUTES.COLLECTIONS,

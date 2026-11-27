@@ -1,5 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getCdnUrl, getNexusUrl, getV1CdnUrl, NEXUS_FILES_BY_IDS_MAX_URIS } from '@/config/nexus';
+import { resetRuntimeConfigForTests } from '@/libs/runtime-config/runtime-config';
 import { queryNexus } from '@/services/nexus/nexus.utils';
 import { NexusFileService } from './file';
 import { buildFileBodyUrl, filesApi } from './file.api';
@@ -102,6 +103,41 @@ describe('File API', () => {
       const result = filesApi.getFileUrl(params);
       expect(result).toBe(`${getCdnUrl()}/files/${encodedPubky}/${encodedFileId}/main`);
     });
+  });
+
+  describe('without the nexus source', () => {
+    const SOURCES_ENV = 'PUBKY_RUNTIME_INDEXER_SOURCES';
+    const HASH_NAME = '7BKXG1FPF2D680NCPW5D82BAGM.png';
+
+    beforeEach(() => {
+      process.env[SOURCES_ENV] = 'local';
+      resetRuntimeConfigForTests();
+    });
+
+    afterEach(() => {
+      delete process.env[SOURCES_ENV];
+      resetRuntimeConfigForTests();
+    });
+
+    it('builds a same-origin avatar path carrying the version', () => {
+      expect(filesApi.getAvatarUrl(pubky)).toBe(`/_pubky/avatar/${encodedPubky}`);
+      expect(filesApi.getAvatarUrl(pubky, 12345)).toBe(`/_pubky/avatar/${encodedPubky}?v=12345`);
+    });
+
+    it('builds the original file path for the main variant', () => {
+      expect(filesApi.getFileUrl({ pubky, file_id: HASH_NAME, variant: FileVariant.MAIN })).toBe(
+        `/_pubky/file/${encodedPubky}/${HASH_NAME}`,
+      );
+    });
+
+    it.each([FileVariant.SMALL, FileVariant.FEED, FileVariant.LARGE])(
+      'names the %s variant for the service worker to resize',
+      (variant) => {
+        expect(filesApi.getFileUrl({ pubky, file_id: HASH_NAME, variant })).toBe(
+          `/_pubky/file/${encodedPubky}/${HASH_NAME}?variant=${variant}`,
+        );
+      },
+    );
   });
 
   describe('filesApi.getFiles', () => {

@@ -1,6 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { APP_ROUTES, POST_ROUTES } from '@/app/routes';
 import { FeedController } from '@/controllers/feed/feed';
+import { IndexerController } from '@/controllers/indexer/indexer';
 import { SKIP_FETCH_NEW_POSTS } from '@/controllers/stream/posts/post.constants';
 import { StreamPostsController } from '@/controllers/stream/posts/posts';
 import type { PollingServiceConfig } from '@/coordinators/base/coordinators.types';
@@ -22,6 +23,7 @@ import {
 } from '@/stores/home/home.types';
 import { mockSession } from '@/test-utils/pubky';
 import { mockHomeStore } from '@/test-utils/stores';
+import { asOpaque } from '@/test-utils/type-assertions';
 
 // =============================================================================
 // Test Helpers
@@ -980,6 +982,63 @@ describe('StreamCoordinator', () => {
 
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalled();
       expect(getOrFetchStreamSliceSpy).toHaveBeenCalledWith(expect.objectContaining({ streamId: 'timeline:all:all' }));
+    });
+  });
+
+  describe('Local index first sync', () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    function localIndexStatus(firstSyncPending: boolean) {
+      return asOpaque<NonNullable<ReturnType<typeof IndexerController.getLocalIndexStatus>>>({
+        seed: 'user123',
+        firstSyncPending,
+      });
+    }
+
+    function stubLocalIndex() {
+      let status = localIndexStatus(true);
+      let listener: () => void = () => undefined;
+      vi.spyOn(IndexerController, 'getLocalIndexStatus').mockImplementation(() => status);
+      vi.spyOn(IndexerController, 'subscribeLocalIndexStatus').mockImplementation((next) => {
+        listener = next;
+        return () => undefined;
+      });
+      return {
+        finish: () => {
+          status = localIndexStatus(false);
+          listener();
+        },
+      };
+    }
+
+    it('polls the stream at once when the first sync ends, not an interval later', async () => {
+      const index = stubLocalIndex();
+      const { getOrFetchStreamSliceSpy, coordinator } = setupIntegrationTest();
+      coordinator.configure({ pollOnStart: false, intervalMs: 60_000 } as Partial<CoordinatorConfigWithBase>);
+      await coordinator.setRoute(APP_ROUTES.HOME);
+      await coordinator.start();
+      await flushPromises();
+      expect(getOrFetchStreamSliceSpy).not.toHaveBeenCalled();
+
+      index.finish();
+      await flushPromises();
+
+      expect(getOrFetchStreamSliceSpy).toHaveBeenCalledOnce();
+    });
+
+    it('does not poll when the first sync ends on a route that does not poll', async () => {
+      const index = stubLocalIndex();
+      const { getOrFetchStreamSliceSpy, coordinator } = setupIntegrationTest();
+      coordinator.configure({ pollOnStart: false, intervalMs: 60_000 } as Partial<CoordinatorConfigWithBase>);
+      await coordinator.setRoute(APP_ROUTES.SETTINGS);
+      await coordinator.start();
+
+      index.finish();
+      await flushPromises();
+
+      expect(getOrFetchStreamSliceSpy).not.toHaveBeenCalled();
     });
   });
 

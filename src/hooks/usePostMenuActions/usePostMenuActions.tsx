@@ -36,6 +36,7 @@ import { useShareUrl } from '@/hooks/useShareUrl/useShareUrl';
 import { useUserProfile } from '@/hooks/useUserProfile/useUserProfile';
 import { isAppError } from '@/libs/error/error.utils';
 import { isArticleContent } from '@/libs/post/articleContent';
+import { getReportMailto, getShareOrigin, HAS_APP_SERVER } from '@/libs/static-export/appServer';
 import { stripPubkyPrefix, truncateString, withPubkyPrefix } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import { parseCompositeId } from '@/models/models.utils';
@@ -81,7 +82,7 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
   // be useless to the user, so we hide "Copy text" for them just like articles.
   const isCollection = postDetails?.kind === 'collection';
   const isLoading = isPostLoading || isAuthorLoading || isFollowingLoading || isMutedUsersLoading;
-  const postUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}${POST_ROUTES.POST}/${parsedId.pubky}/${parsedId.id}`;
+  const postUrl = `${getShareOrigin()}${POST_ROUTES.POST}/${parsedId.pubky}/${parsedId.id}`;
   const menuItems: PostMenuActionItem[] = [];
   if (!isOwnPost) {
     menuItems.push({
@@ -152,7 +153,10 @@ export function usePostMenuActions(postId: string, options: UsePostMenuActionsOp
       id: POST_MENU_ACTION_IDS.REPORT,
       label: 'Report post',
       icon: Flag,
-      onClick: () => requireAuth(onReportClick),
+      // Reports go through the app server; without one they go to the support address by email.
+      onClick: HAS_APP_SERVER
+        ? () => requireAuth(onReportClick)
+        : () => window.location.assign(getReportMailto(postUrl)),
       variant: POST_MENU_ACTION_VARIANTS.DEFAULT,
     });
   }

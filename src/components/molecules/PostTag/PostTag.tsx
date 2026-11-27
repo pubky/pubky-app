@@ -3,6 +3,7 @@
 import { X } from 'lucide-react';
 import { Tag } from '@/atoms/Tag/Tag';
 import { Toggle } from '@/atoms/Toggle/Toggle';
+import { useLocalScopeHint, withLocalScopeHint } from '@/hooks/useLocalScopeHint/useLocalScopeHint';
 import { useTagDayPalette } from '@/hooks/useTagDayPalette/useTagDayPalette';
 import { getTagPaletteStyle } from '@/libs/utils/tagPalette';
 import { cn, generateRandomColor } from '@/libs/utils/utils';
@@ -29,6 +30,8 @@ export function PostTag({
   const tagColor = color || generateRandomColor(label);
   const backgroundGradient = `linear-gradient(90deg, ${TAG_OVERLAY} 0%, ${TAG_OVERLAY} 100%), linear-gradient(90deg, ${tagColor} 0%, ${tagColor} 100%)`;
   const day = useTagDayPalette(tagColor);
+  // The local index counts the taggers the user's network reaches
+  const scopeHint = useLocalScopeHint();
   const paletteStyle = getTagPaletteStyle({
     nightFill: backgroundGradient,
     nightEdge: tagColor,
@@ -70,12 +73,13 @@ export function PostTag({
         backgroundImage: 'var(--tag-fill)',
         boxShadow: selected ? 'inset 0 0 0 1px var(--tag-edge)' : undefined,
       }}
-      aria-label={count !== undefined ? `${label} tag (${count} posts)` : `${label} tag`}
+      aria-label={count !== undefined ? withLocalScopeHint(`${label} tag (${count} posts)`, scopeHint) : `${label} tag`}
     >
       <Tag
         name={label}
         count={count}
         countDataCy="post-tag-count"
+        countHint={scopeHint}
         className="px-0"
         style={{ backgroundColor: 'transparent', border: 'none', boxShadow: 'none' }}
       />

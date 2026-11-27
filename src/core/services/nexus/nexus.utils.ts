@@ -1,8 +1,32 @@
-import { getCdnUrl, getNexusUrl, getV1CdnUrl, NEXUS_API_VERSION } from '@/config/nexus';
-import { httpResponseToError, safeFetch } from '@/libs/error/error.http';
+import {
+  INDEXER_HINT_BACKFILL_PAGES,
+  INDEXER_PAGE_BACKFILL_AUTHORS,
+  INDEXER_PAGE_BACKFILL_MAX_ROUNDS,
+} from '@/config/indexer';
+import {
+  getCdnUrl,
+  getNexusUrl,
+  getV1CdnUrl,
+  hasLocalIndexSource,
+  hasNexusSource,
+  NEXUS_API_VERSION,
+} from '@/config/nexus';
+import type { AppError } from '@/libs/error/error';
+import { ClientErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
+import { Err } from '@/libs/error/error.factories';
+import { httpResponseToError, httpStatusCodeToError, safeFetch } from '@/libs/error/error.http';
 import { ErrorService } from '@/libs/error/error.types';
-import { HttpMethod, JSON_HEADERS } from '@/libs/http/http.types';
+import { toAppError } from '@/libs/error/error.utils';
+import { HttpMethod, HttpStatusCode, JSON_HEADERS } from '@/libs/http/http.types';
 import { parseResponseOrThrow } from '@/libs/http/response.utils';
+import type { NexusRequest, NexusResponse } from '@/libs/indexer/social/nexusRouter';
+import { InvalidQueryError, UnavailableQueryError } from '@/libs/indexer/social/queries/queries.errors';
+import type { MoreHint } from '@/libs/indexer/social/queries/queries.types';
+import { SOCIAL_ACTIVITY } from '@/libs/indexer/social/social.domain';
+import type { BackfillOutcome, SocialIndexer } from '@/libs/indexer/social/socialIndexer';
+import { Logger } from '@/libs/logger/logger';
+import { NEXUS_LOCAL_INDEX_OPERATION } from '@/libs/observability/sentry.constants';
+import { IndexerService } from '@/services/indexer/indexer';
 import { nexusQueryClient, nexusRetryPolicy } from './nexus.query-client';
 import type {
   TBuildNexusUrlOptions,
@@ -15,19 +39,35 @@ import type {
 const FETCH_NEXUS_OPERATION = 'fetchNexus';
 
 /**
+ * The origin of Nexus URLs when a deploy without the nexus source leaves the Nexus URL unset. The local index routes on
+ * the path alone, and `.invalid` never resolves: a URL that reached the network fails there, where a relative path
+ * would have hit this app.
+ */
+const UNSET_NEXUS_ORIGIN = 'https://nexus.invalid';
+
+/**
  * Builds a Nexus API URL: `{nexus}/{version}/{endpoint}`, with `endpoint` spelled without a version.
  * Every call uses `NEXUS_API_VERSION`; the one documented `/v0` call passes its version explicitly.
  */
 export function buildNexusUrl(endpoint: string, { version = NEXUS_API_VERSION }: TBuildNexusUrlOptions = {}): string {
-  return `${getNexusUrl()}/${version}/${endpoint}`;
+  return `${getNexusUrl() ?? UNSET_NEXUS_ORIGIN}/${version}/${endpoint}`;
+}
+
+/** The CDN bases exist whenever Nexus is a source; a media URL without one would point at the app's own origin. */
+function requireCdnBase(base: string | undefined, operation: string): string {
+  if (base !== undefined) return base;
+  throw Err.validation(ValidationErrorCode.MISSING_FIELD, 'No CDN URL is configured without the nexus source', {
+    service: ErrorService.Nexus,
+    operation,
+  });
 }
 
 export function buildCdnUrl(endpoint: string): string {
-  return `${getCdnUrl()}/${endpoint}`;
+  return `${requireCdnBase(getCdnUrl(), 'buildCdnUrl')}/${endpoint}`;
 }
 
 export function buildV1CdnUrl(endpoint: string): string {
-  return `${getV1CdnUrl()}/${endpoint}`;
+  return `${requireCdnBase(getV1CdnUrl(), 'buildV1CdnUrl')}/${endpoint}`;
 }
 
 /**
@@ -97,6 +137,14 @@ export function createFetchOptions({ method = HttpMethod.GET, body }: TCreateFet
  * @throws {NexusError} When response is not ok or JSON parsing fails
  */
 export async function fetchNexus<T>({ url, method = HttpMethod.GET, body = null }: TFetchNexusParams): Promise<T> {
+  // Without the nexus source `buildNexusUrl` spells a bare path for the local index; fetched, it would hit this app.
+  if (!hasNexusSource()) {
+    throw Err.validation(ValidationErrorCode.MISSING_FIELD, 'Nexus is not an indexer source', {
+      service: ErrorService.Nexus,
+      operation: FETCH_NEXUS_OPERATION,
+      context: { endpoint: url },
+    });
+  }
   const response = await safeFetch(
     url,
     createFetchOptions({ method, body }),
@@ -109,8 +157,12 @@ export async function fetchNexus<T>({ url, method = HttpMethod.GET, body = null 
   return parseResponseOrThrow<T>(response, ErrorService.Nexus, FETCH_NEXUS_OPERATION, url);
 }
 
-/** Like fetchNexus but for endpoints that return no body (e.g. PUT ingest/{id}); throws on non-ok. */
+/**
+ * Like fetchNexus but for endpoints that return no body (e.g. PUT ingest/{id}); throws on non-ok. Without Nexus
+ * among the sources there is nobody to tell: the local index crawls what it needs itself.
+ */
 export async function fetchNexusNoContent({ url, method }: Pick<TFetchNexusParams, 'url' | 'method'>): Promise<void> {
+  if (!hasNexusSource()) return;
   const response = await safeFetch(url, createFetchOptions({ method }), ErrorService.Nexus, FETCH_NEXUS_OPERATION);
   if (!response.ok) {
     throw httpResponseToError(response, ErrorService.Nexus, FETCH_NEXUS_OPERATION, url);
@@ -179,6 +231,228 @@ export function buildNexusQueryKey({
   return ['nexus', url, method, body, ...(notFoundRetries === undefined ? [] : [{ notFoundRetries }])];
 }
 
+type LocalIndexAnswer =
+  | { kind: 'answer'; json: unknown }
+  /** `known` when the index proves the absence: the history that would hold the post or user is loaded. */
+  | { kind: 'not_found'; known: boolean }
+  | { kind: 'unavailable'; reason: string };
+
+const LOCAL_INDEX_METHODS: Partial<Record<HttpMethod, NexusRequest['method']>> = {
+  [HttpMethod.GET]: 'GET',
+  [HttpMethod.POST]: 'POST',
+  [HttpMethod.PUT]: 'PUT',
+};
+
+/** A read about one post or one user, as opposed to a stream, a search or a ranking. */
+const isOneEntityRead = (url: string): boolean =>
+  new RegExp(`/${NEXUS_API_VERSION}/(?:post|user)/`).test(new URL(url, 'http://local.invalid').pathname);
+
+function startHintLoad(indexer: SocialIndexer, hint: MoreHint): Promise<unknown> {
+  switch (hint.kind) {
+    case 'user':
+      return indexer.ensureUser(hint.user);
+    case 'post':
+      return indexer.ensurePost(hint.author, hint.postId);
+    case 'backfill':
+      return indexer.backfill(hint.author, SOCIAL_ACTIVITY, INDEXER_HINT_BACKFILL_PAGES);
+    case 'file':
+      return indexer.ensureFile(hint.author, hint.path);
+  }
+}
+
+/** Runs one hint's load, logging how long the read waited for it. */
+async function timedLoad<T>(hint: MoreHint, load: () => Promise<T>): Promise<T> {
+  const startedAt = Date.now();
+  try {
+    return await load();
+  } finally {
+    Logger.debug('Local index loaded on demand', { hint, ms: Date.now() - startedAt });
+  }
+}
+
+/**
+ * The hints worth one load before asking again. A user, post or file record the answer lacks is always loaded: the app
+ * reads one post or user through `by_ids` and a profile's posts through its author stream, and each answers without
+ * it rather than with a 404, as file details do. Older history only for a 404 the index cannot vouch for or a read about one post or user; a
+ * stream page gets it from `extendStreamPage`.
+ */
+function hintsToLoad(more: readonly MoreHint[], url: string, unproven: boolean): MoreHint[] {
+  const extendsHistory = unproven || isOneEntityRead(url);
+  return more.filter((hint) => hint.kind !== 'backfill' || extendsHistory);
+}
+
+/** The page size of a post stream page older history can extend, `null` for any other read. */
+function extendablePageLimit(url: string): number | null {
+  const parsed = new URL(url, 'http://local.invalid');
+  // A page bounded by `end` (a head poll) asks for posts newer than a score: it is never a scroll, so never forced.
+  if (!parsed.pathname.endsWith(`/${NEXUS_API_VERSION}/stream/posts/keys`) || parsed.searchParams.has('end'))
+    return null;
+  const limit = Number(parsed.searchParams.get('limit'));
+  return Number.isInteger(limit) && limit > 0 ? limit : null;
+}
+
+const pageKeysOf = (response: NexusResponse): readonly unknown[] | null => {
+  if (response.status !== 200) return null;
+  const keys = (response.json as { post_keys?: unknown } | null)?.post_keys;
+  return Array.isArray(keys) ? keys : null;
+};
+
+/**
+ * The authors a short page loads older history for, at most `INDEXER_PAGE_BACKFILL_AUTHORS` and none in `done`:
+ * those whose loaded history starts latest, whose gap the page reached first. An author with no known start goes
+ * first.
+ */
+function authorsToExtend(indexer: SocialIndexer, more: readonly MoreHint[], done: ReadonlySet<string>): string[] {
+  const authors = [
+    ...new Set(more.flatMap((hint) => (hint.kind === 'backfill' && !done.has(hint.author) ? [hint.author] : []))),
+  ];
+  const view = indexer.view();
+  const startOf = (author: string) => view.historyOf(author).sinceMs ?? Number.POSITIVE_INFINITY;
+  return authors
+    .map((author) => ({ author, since: startOf(author) }))
+    .sort((a, b) => (a.since === b.since ? 0 : a.since > b.since ? -1 : 1))
+    .slice(0, INDEXER_PAGE_BACKFILL_AUTHORS)
+    .map(({ author }) => author);
+}
+
+/**
+ * One step of an author's older history, forced past the index's rate limit: the scroll asks for it once per page,
+ * and a step skipped there would serve a short page, which ends the feed. `null` when it failed.
+ */
+async function stepBack(indexer: SocialIndexer, author: string): Promise<BackfillOutcome | null> {
+  const hint: MoreHint = { kind: 'backfill', author };
+  try {
+    return await timedLoad(hint, () =>
+      indexer.backfill(author, SOCIAL_ACTIVITY, INDEXER_HINT_BACKFILL_PAGES, { force: true }),
+    );
+  } catch {
+    return null;
+  }
+}
+
+/** Whether an author may give a page more after this step: it ran, read something and did not reach the start. */
+const hasMoreAfter = (outcome: BackfillOutcome | null): boolean =>
+  outcome !== null && outcome.status === 'ran' && !outcome.complete && outcome.events > 0;
+
+/**
+ * Loads older history into a stream page that came back short while its answer names authors whose history older
+ * posts could come from, one step per author and round, and asks again after each round. The app reads a short page
+ * as the end of the feed, so the page waits for the steps, shown as the feed's loading-more state. An author leaves
+ * the extension once a step says their history is complete, or a step of theirs was skipped, failed or read nothing;
+ * the page is served as it is once no named author is left or after `INDEXER_PAGE_BACKFILL_MAX_ROUNDS` rounds. A full
+ * page is served as it came, so a feed's first page waits for nothing it does not show.
+ */
+async function extendStreamPage(
+  indexer: SocialIndexer,
+  request: NexusRequest,
+  first: NexusResponse,
+  limit: number,
+): Promise<NexusResponse> {
+  const done = new Set<string>();
+  let response = first;
+  for (let round = 0; round < INDEXER_PAGE_BACKFILL_MAX_ROUNDS; round += 1) {
+    const keys = pageKeysOf(response);
+    if (keys === null || keys.length >= limit) return response;
+    const authors = authorsToExtend(indexer, response.more ?? [], done);
+    if (authors.length === 0) return response;
+    const outcomes = await Promise.all(authors.map((author) => stepBack(indexer, author)));
+    outcomes.forEach((outcome, i) => {
+      if (!hasMoreAfter(outcome)) done.add(authors[i]);
+    });
+    if (!outcomes.some((outcome) => outcome !== null && outcome.events > 0)) return response;
+    response = await indexer.request(request);
+  }
+  return response;
+}
+
+/**
+ * Answers a Nexus read from the local index. When the answer names what could be loaded to improve it
+ * (`hintsToLoad`), that is loaded once and the read asked once more; a short post stream page then gets older
+ * history until it is full or proven to end (`extendStreamPage`). A route the index cannot serve (global search
+ * and rankings, and for a signed-out visitor's index every feed, ranking and search over a scope it does not have)
+ * is `unavailable`.
+ */
+async function askLocalIndex({
+  url,
+  method = HttpMethod.GET,
+  body = null,
+}: TQueryNexusParams): Promise<LocalIndexAnswer> {
+  const indexer = IndexerService.current();
+  const routedMethod = LOCAL_INDEX_METHODS[method];
+  if (!indexer) return { kind: 'unavailable', reason: 'no local index runs here' };
+  if (!routedMethod) return { kind: 'unavailable', reason: `${method} is not a read` };
+  const request: NexusRequest = { url, method: routedMethod, body: body ?? undefined };
+  try {
+    let response = await indexer.request(request);
+    const unproven = response.status === 404 && response.coverage.kind !== 'exact';
+    const hints = hintsToLoad(response.more ?? [], url, unproven);
+    if (hints.length > 0) {
+      // A hint that fails to load leaves the second answer as it was.
+      await Promise.allSettled(hints.map((hint) => timedLoad(hint, () => startHintLoad(indexer, hint))));
+      response = await indexer.request(request);
+    }
+    const pageLimit = method === HttpMethod.GET ? extendablePageLimit(url) : null;
+    if (pageLimit !== null) response = await extendStreamPage(indexer, request, response, pageLimit);
+    if (response.status === 200) return { kind: 'answer', json: response.json };
+    return { kind: 'not_found', known: response.coverage.kind === 'exact' };
+  } catch (error) {
+    if (error instanceof UnavailableQueryError) return { kind: 'unavailable', reason: error.message };
+    const context = { endpoint: url, statusCode: HttpStatusCode.BAD_REQUEST };
+    if (error instanceof InvalidQueryError) {
+      throw Err.client(ClientErrorCode.BAD_REQUEST, error.message, {
+        service: ErrorService.Nexus,
+        operation: NEXUS_LOCAL_INDEX_OPERATION,
+        context,
+      });
+    }
+    throw toAppError(error, ErrorService.Nexus, NEXUS_LOCAL_INDEX_OPERATION, { context: { endpoint: url } });
+  }
+}
+
+/**
+ * The error a miss of the local index raises: a 404 is the one a Nexus 404 raises, so not-found handling applies
+ * unchanged, and a read the index cannot serve is a 422, which no retry policy repeats. Both are expected outcomes
+ * and stay out of Sentry (`local-index-misses`).
+ */
+function localIndexMissError(miss: Exclude<LocalIndexAnswer, { kind: 'answer' }>, url: string): AppError {
+  if (miss.kind === 'not_found') {
+    return httpStatusCodeToError(
+      HttpStatusCode.NOT_FOUND,
+      'Not found in the local index',
+      ErrorService.Nexus,
+      NEXUS_LOCAL_INDEX_OPERATION,
+      url,
+    );
+  }
+  return Err.client(ClientErrorCode.UNPROCESSABLE, `The local index cannot answer this read: ${miss.reason}`, {
+    service: ErrorService.Nexus,
+    operation: NEXUS_LOCAL_INDEX_OPERATION,
+    context: { endpoint: url, statusCode: HttpStatusCode.UNPROCESSABLE_ENTITY },
+  });
+}
+
+/**
+ * Answers a Nexus read from the configured sources (`PUBKY_RUNTIME_INDEXER_SOURCES`), in order:
+ * - `nexus`: Nexus, through {@link queryRemoteNexus}.
+ * - `local`: the local index alone. Its answer has no transport cache, retries or start stamp: it is read from the
+ *   index's current view, which reflects homeserver state as of its last sync, not as of this call, so it carries
+ *   no proof of freshness for the tag guards (`getNexusResponseStartedAt` reads `undefined`). The answer's `asOf`
+ *   is no such proof either: it is when the last scope sync ended, while a homeserver that failed or backed off in
+ *   it, and anything loaded on demand, can be older.
+ * - `local,nexus`: the local index, then Nexus for a read the index cannot serve or a 404 it cannot vouch for.
+ *
+ * Body must be a string (typically JSON.stringify'd) to ensure proper cache key serialization.
+ */
+export async function queryNexus<T>(params: TQueryNexusParams): Promise<T> {
+  if (!hasLocalIndexSource()) return await queryRemoteNexus<T>(params);
+  const local = await askLocalIndex(params);
+  // The index answers in Nexus's response shape.
+  if (local.kind === 'answer') return local.json as T;
+  const nexusMayKnow = local.kind === 'unavailable' || !local.known;
+  if (nexusMayKnow && hasNexusSource()) return await queryRemoteNexus<T>(params);
+  throw localIndexMissError(local, params.url);
+}
+
 /**
  * Queries Nexus API with automatic retry logic via TanStack Query.
  * Body must be a string (typically JSON.stringify'd) to ensure proper cache key serialization.
@@ -192,7 +466,7 @@ export function buildNexusQueryKey({
  * @returns Parsed response data
  * @throws {NexusError} When response is not ok after all retries
  */
-export async function queryNexus<T>({
+async function queryRemoteNexus<T>({
   url,
   method = HttpMethod.GET,
   body = null,

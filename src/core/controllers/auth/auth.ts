@@ -3,6 +3,7 @@ import { validateCapabilities } from '@synonymdev/pubky';
 import type { PersistStorage } from 'zustand/middleware';
 import { AuthApplication } from '@/application/auth/auth';
 import { BootstrapApplication, type BootstrapProgressCallback } from '@/application/bootstrap/bootstrap';
+import { IndexerApplication } from '@/application/indexer/indexer';
 import { NotificationApplication } from '@/application/notification/notification';
 import { SettingsApplication } from '@/application/settings/settings';
 import { postStreamQueue } from '@/application/stream/posts/muting/post-stream-queue';
@@ -10,6 +11,7 @@ import { UserApplication } from '@/application/user/user';
 import { APP_CAPABILITIES, LOCKS_CAPABILITIES, SOCIAL_V1_APP_CAPABILITIES } from '@/config/auth';
 import { getModerationId } from '@/config/moderation';
 import { getHomeserverCapabilities } from '@/config/network';
+import { hasLocalIndexSource, hasNexusSource } from '@/config/nexus';
 import type { SessionReadiness } from '@/controllers/auth/auth.types';
 import { LocksController } from '@/controllers/locks/locks';
 import { SocialMigrationController, type SocialMigrationEntry } from '@/controllers/social-migration/social-migration';
@@ -40,6 +42,7 @@ import { Logger } from '@/libs/logger/logger';
 import { clearNotificationLastReadSyncCursorSessionStorage } from '@/libs/notification-last-read-sync/clear-cursor-session-storage';
 import { clearAllQueryClients } from '@/libs/query-client/query-client.factory';
 import { clearThemePreference } from '@/libs/theme/clear-theme-preference';
+import { markPhase } from '@/libs/timing/timing';
 import { sleep } from '@/libs/utils/utils';
 import type { Pubky } from '@/models/models.types';
 import { LastReadNormalizer } from '@/pipes/lastRead/lastRead.normalizer';
@@ -794,6 +797,7 @@ export class AuthController {
         // One write: a session beside a `social-migration` status would read as the account for a tick.
         useAuthStore.setState({ session, restoreStatus: 'restoring', isRestoringSession: true });
         placed = true;
+        markPhase('gate passed');
       }
       await this.prepareAccount(generation);
       if (!this.isCurrentGeneration(generation)) throw createCanceledError();
@@ -805,6 +809,7 @@ export class AuthController {
         previous.needsAccountSync
       )
         await this.bootstrapProfile(session, generation);
+      markPhase('bootstrap done');
       if (this.isCurrentGeneration(generation) && useAuthStore.getState().session === session)
         useAuthStore.getState().setRestoreStatus('ready');
       return true;
@@ -1023,11 +1028,11 @@ export class AuthController {
 
   /**
    * Centralizes all local state cleanup: resets every Zustand store,
-   * IndexedDB, query cache, singletons, in-memory stream pagination queues, persisted localStorage keys,
-   * and the last_read-sync `sessionStorage` cursors.
+   * IndexedDB (the app's database and the account's local index), query cache, singletons, in-memory stream
+   * pagination queues, persisted localStorage keys, and the last_read-sync `sessionStorage` cursors.
    * Used after explicit logout. Failed restoration never clears account data.
    */
-  private static async cleanupLocalState(isCurrent: () => boolean, persist = true) {
+  private static async cleanupLocalState(isCurrent: () => boolean, persist = true, pubky: Pubky | null = null) {
     if (!isCurrent()) return;
     this.cancelModerationFollow();
     // The last_read SSE cursor lives in sessionStorage; clear before the next account might reuse the same tab.
@@ -1066,6 +1071,18 @@ export class AuthController {
       },
     );
     if (!isCurrent()) return;
+    // The local index is the account's data too: its database goes with the app's.
+    if (pubky && hasLocalIndexSource()) {
+      await this.bounded(
+        IndexerApplication.clear(pubky),
+        'clearLocalIndex',
+        LOGOUT_TIMEOUT_MS,
+        ErrorService.Local,
+      ).catch((error) => {
+        if (!isAppError(error)) toAppError(error, ErrorService.Local, 'clearLocalIndex');
+      });
+      if (!isCurrent()) return;
+    }
     // Skip post-migration resync — full cleanup resets all state
     useMigrationStore.getState().reset();
   }
@@ -1282,7 +1299,7 @@ export class AuthController {
               Logger.warn('Local sign-out completed; remote revocation could not be confirmed.');
           })
           .catch(() => {});
-      await this.cleanupLocalState(isCurrent, persisted);
+      await this.cleanupLocalState(isCurrent, persisted, snapshot.currentUserPubky);
       if (!isCurrent()) {
         await this.syncSessionFromStorage();
         throw createCanceledError();
@@ -1297,14 +1314,17 @@ export class AuthController {
 
   /**
    * Initializes the application bootstrap after profile creation.
-   * Waits for Nexus to index the user's profile.json, then bootstraps notifications and data.
+   * Waits for Nexus to index the user's profile.json, then bootstraps notifications and data. Without Nexus
+   * among the sources there is nothing to wait for: the profile write refreshes the local index itself.
    */
   static async bootstrapWithDelay() {
     const authStore = useAuthStore.getState();
     const pubky = authStore.selectCurrentUserPubky();
-    // Wait 5 seconds before bootstrap to let Nexus index the user
-    Logger.info(`Waiting 5 seconds to index ${pubky} profile.json in Nexus before bootstrap...`);
-    await sleep(5000);
+    if (hasNexusSource()) {
+      // Wait 5 seconds before bootstrap to let Nexus index the user
+      Logger.info(`Waiting 5 seconds to index ${pubky} profile.json in Nexus before bootstrap...`);
+      await sleep(5000);
+    }
     await this.hydrateMeImAlive({ pubky });
     authStore.setHasProfile(true);
   }

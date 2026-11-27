@@ -3,10 +3,10 @@ import { getCollectionRoute } from '@/app/routes';
 import { normalizePostIds } from '@/libs/og/routeIds';
 import { parseCollectionContent } from '@/libs/post/collectionContent';
 import { fetchUserAndPostForMetadata } from '@/libs/post/postMetadata';
+import { placeholderParams } from '@/libs/static-export/placeholderParams';
 import { isPostDeleted, resolveDisplayName } from '@/libs/utils/utils';
-import { buildCompositeId } from '@/models/models.utils';
 import { Metadata } from '@/molecules/Metadata/Metadata';
-import { Collection } from '@/templates/Collection/Collection';
+import { CollectionRoute } from './CollectionRoute';
 
 export interface CollectionPageProps {
   params: Promise<{
@@ -14,6 +14,8 @@ export interface CollectionPageProps {
     postId: string;
   }>;
 }
+
+export const generateStaticParams = placeholderParams('userId', 'postId');
 
 export async function generateMetadata({ params }: CollectionPageProps): Promise<NextMetadata> {
   try {
@@ -63,11 +65,6 @@ export async function generateMetadata({ params }: CollectionPageProps): Promise
   }
 }
 
-export default async function CollectionPage({ params }: CollectionPageProps) {
-  const { userId, postId } = await params;
-  // Malformed ids never reach Nexus; render with them as-is so the client-side
-  // not-found state handles them as before.
-  const compositeId = buildCompositeId({ pubky: userId, id: postId });
-
-  return <Collection postId={compositeId} />;
+export default function CollectionPage() {
+  return <CollectionRoute />;
 }

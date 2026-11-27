@@ -22,6 +22,13 @@ on:
           - chrome
           - firefox
         default: chrome
+      indexer_sources:
+        description: 'nexus runs the usual suite; local starts the app on its in-browser index without Nexus and runs only cypress/e2e/local-index (desktop Chrome, ignores target and browsers)'
+        type: choice
+        options:
+          - nexus
+          - local
+        default: nexus
   push:
     branches:
       - master
@@ -65,16 +72,15 @@ jobs:
     strategy:
       matrix:
         include:
-          - app: "pubky-nexus"
-            submodule_dir: "pubky-stack/pubky-nexus/"
-            image: "pubky-nexus"
+          - app: 'pubky-nexus'
+            submodule_dir: 'pubky-stack/pubky-nexus/'
+            image: 'pubky-nexus'
 
-          - app: "homeserver"
-            submodule_dir: "pubky-stack/pubky-homeserver/"
-            image: "homeserver-testnet"
+          - app: 'homeserver'
+            submodule_dir: 'pubky-stack/pubky-homeserver/'
+            image: 'homeserver-testnet'
             build_args: |
               BUILD_TARGET=testnet
-
 
     steps:
       - name: Checkout pubky-stack
@@ -151,6 +157,10 @@ jobs:
     env:
       HOMESERVER_TAG: ${{ needs.rebuild_images.outputs.homeserver-testnet_tag }}
       PUBKY_NEXUS_TAG: ${{ needs.rebuild_images.outputs.pubky-nexus_tag }}
+      # Empty on push and schedule runs, which keep the app on Nexus
+      INDEXER_SOURCES: ${{ inputs.indexer_sources }}
+      # The local-index specs need the app on its local index, every other spec needs Nexus
+      SPEC_DIR: ${{ inputs.indexer_sources == 'local' && 'e2e/local-index' || 'e2e' }}
     permissions:
       contents: read
       statuses: write
@@ -165,9 +175,12 @@ jobs:
         # ships on the ubuntu runner image.
         # Every other run is Chrome: the 03:00 scheduled run is mobile only, and push runs have no
         # inputs, so they resolve to desktop only.
-        browser: ${{ fromJSON((github.event.schedule == '0 4 * * 1,4' || inputs.browsers == 'firefox') && '["firefox"]' || '["chrome"]') }}
-        viewport: ${{ fromJSON((github.event.schedule == '0 4 * * 1,4' || inputs.browsers == 'firefox') && '["desktop"]' || github.event_name == 'schedule' && '["mobile"]' || inputs.target == 'both' && '["desktop","mobile"]' || format('["{0}"]', inputs.target || 'desktop')) }}
-        spec: ${{ fromJSON((github.event.schedule == '0 4 * * 1,4' || inputs.browsers == 'firefox') && '["onboarding.cy.ts","posts.cy.ts","profile.cy.ts"]' || '["contacts.cy.ts","feed.cy.ts","notifications.cy.ts","onboarding.cy.ts","posts.cy.ts","profile.cy.ts","search.cy.ts","settings.cy.ts","collections.cy.ts","pagination.cy.ts","collections-pagination.cy.ts","deep-links.cy.ts","locks.cy.ts"]') }}
+        # An `indexer_sources: local` dispatch runs the specs in cypress/e2e/local-index (SPEC_DIR) on
+        # desktop Chrome, whatever target and browsers say: they read media through the service
+        # worker, which Firefox never activates under Cypress, and they have no phone subset.
+        browser: ${{ fromJSON(inputs.indexer_sources == 'local' && '["chrome"]' || (github.event.schedule == '0 4 * * 1,4' || inputs.browsers == 'firefox') && '["firefox"]' || '["chrome"]') }}
+        viewport: ${{ fromJSON(inputs.indexer_sources == 'local' && '["desktop"]' || (github.event.schedule == '0 4 * * 1,4' || inputs.browsers == 'firefox') && '["desktop"]' || github.event_name == 'schedule' && '["mobile"]' || inputs.target == 'both' && '["desktop","mobile"]' || format('["{0}"]', inputs.target || 'desktop')) }}
+        spec: ${{ fromJSON(inputs.indexer_sources == 'local' && '["network.cy.ts","writes.cy.ts","visitor.cy.ts","history.cy.ts"]' || (github.event.schedule == '0 4 * * 1,4' || inputs.browsers == 'firefox') && '["onboarding.cy.ts","posts.cy.ts","profile.cy.ts"]' || '["contacts.cy.ts","feed.cy.ts","notifications.cy.ts","onboarding.cy.ts","posts.cy.ts","profile.cy.ts","search.cy.ts","settings.cy.ts","collections.cy.ts","pagination.cy.ts","collections-pagination.cy.ts","deep-links.cy.ts","locks.cy.ts"]') }}
         # Phones run a smoke subset: the `itMobile` tests (cypress/support/mobile.ts). The specs
         # excluded below have none, because every phone-only path they reach is covered by the specs
         # that remain (onboarding.cy.ts runs the Pubky Ring deeplink sign-in and sign-up on phones).
@@ -310,6 +323,40 @@ jobs:
                 PUBKY_RUNTIME_NOTIFICATION_POLL_INTERVAL_MS: "2000"
           EOF
 
+      # The stack still runs Nexus (the seed tasks tell it about each new user); only the app is cut off
+      # from it. An empty value counts as unset, so the app has neither a Nexus nor a CDN origin.
+      - name: Run pubky-app on its local index, without Nexus
+        if: inputs.indexer_sources == 'local'
+        working-directory: pubky-stack/docker
+        run: |
+          cat >> docker-compose.override.yml <<'EOF'
+                PUBKY_RUNTIME_INDEXER_SOURCES: "local"
+                PUBKY_RUNTIME_NEXUS_URL: ""
+                PUBKY_RUNTIME_CDN_URL: ""
+          EOF
+          cat docker-compose.override.yml
+
+      # The history spec alone runs with a window of minutes, so it seeds posts outside it without backdating them.
+      # The other local-index specs read their network minutes after seeding it and need the default window.
+      - name: Shorten the local index window for the history spec
+        if: inputs.indexer_sources == 'local' && matrix.spec == 'history.cy.ts'
+        working-directory: pubky-stack/docker
+        run: |
+          cat >> docker-compose.override.yml <<'EOF'
+                PUBKY_RUNTIME_INDEXER_WINDOW_MS: "120000"
+          EOF
+          cat docker-compose.override.yml
+
+      # The visitor spec also opens an un-migrated author's image post, which needs the older tree read.
+      - name: Read the older social tree for the visitor spec
+        if: inputs.indexer_sources == 'local' && matrix.spec == 'visitor.cy.ts'
+        working-directory: pubky-stack/docker
+        run: |
+          cat >> docker-compose.override.yml <<'EOF'
+                PUBKY_RUNTIME_INDEXER_LEGACY_TREE: "true"
+          EOF
+          cat docker-compose.override.yml
+
       # Locks needs Pubky Ring, Bitkit and a Lock / Paykit Server, none of which run in CI: the Locks
       # spec alone runs the app against a stubbed Lock Server (see the script and locks.cy.ts).
       - name: Enable the stubbed Locks boundary for the Locks spec
@@ -370,10 +417,12 @@ jobs:
         uses: cypress-io/github-action@v7
         env:
           DEBUG: '@cypress/github-action'
+          # Picks the spec set cypress.config.ts allows for the app's sources
+          PUBKY_RUNTIME_INDEXER_SOURCES: ${{ env.INDEXER_SOURCES }}
         with:
           working-directory: pubky-app/cypress
           config-file: cypress.config.ts
-          spec: e2e/${{ matrix.spec }}
+          spec: ${{ env.SPEC_DIR }}/${{ matrix.spec }}
           browser: ${{ matrix.browser }}
           headed: false
           summary-title: ${{ matrix.browser }} - Desktop
@@ -404,10 +453,12 @@ jobs:
         uses: cypress-io/github-action@v7
         env:
           DEBUG: '@cypress/github-action'
+          # Picks the spec set cypress.config.ts allows for the app's sources
+          PUBKY_RUNTIME_INDEXER_SOURCES: ${{ env.INDEXER_SOURCES }}
         with:
           working-directory: pubky-app/cypress
           config-file: cypress.config.mobile.ts
-          spec: e2e/${{ matrix.spec }}
+          spec: ${{ env.SPEC_DIR }}/${{ matrix.spec }}
           browser: ${{ matrix.browser }}
           headed: false
           summary-title: ${{ matrix.browser }} - Mobile

@@ -3,6 +3,8 @@ import { LucideIcon } from 'lucide-react';
 export interface SidebarSectionProps {
   /** Section title */
   title: string;
+  /** Short muted line under the title, such as the reach of a ranking */
+  hint?: string;
   /** Section content */
   children: React.ReactNode;
   /** Icon for header action button */

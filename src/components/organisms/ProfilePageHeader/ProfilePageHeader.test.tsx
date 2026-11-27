@@ -4,6 +4,10 @@ import type { ReactElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { TooltipProvider } from '@/atoms/Tooltip/Tooltip';
 import { FOLLOW_ACTIONS } from '@/hooks/useFollowUser/useFollowUser.types';
+import { resetRuntimeConfigForTests } from '@/libs/runtime-config/runtime-config';
+import type { Pubky } from '@/models/models.types';
+import { useAuthStore } from '@/stores/auth/auth.store';
+import { authInitialState } from '@/stores/auth/auth.types';
 import { ProfilePageHeader } from './ProfilePageHeader';
 import { ProfilePageHeaderProps } from './ProfilePageHeader.types';
 
@@ -466,5 +470,22 @@ describe('ProfilePageHeader - Other User Profile', () => {
     render(<ProfilePageHeader {...mockOtherUserProps} />);
 
     expect(screen.getByText('Follow')).toBeInTheDocument();
+  });
+
+  it('tells screen readers the follower count is of the viewer network under the local index', () => {
+    process.env.PUBKY_RUNTIME_INDEXER_SOURCES = 'local';
+    resetRuntimeConfigForTests();
+    useAuthStore.setState({ currentUserPubky: 'viewer-pubky' as Pubky });
+    try {
+      render(<ProfilePageHeader {...mockProps} />);
+
+      const hint = screen.getByText(', in your network');
+      expect(hint).toHaveClass('sr-only');
+      expect(hint.parentElement).toHaveTextContent('83 FOLLOWERS, in your network');
+    } finally {
+      delete process.env.PUBKY_RUNTIME_INDEXER_SOURCES;
+      resetRuntimeConfigForTests();
+      useAuthStore.setState({ ...authInitialState });
+    }
   });
 });

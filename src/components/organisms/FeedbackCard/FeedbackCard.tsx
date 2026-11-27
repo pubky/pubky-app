@@ -7,6 +7,7 @@ import { Heading } from '@/atoms/Heading/Heading';
 import { useAvatarUrl } from '@/hooks/useAvatarUrl/useAvatarUrl';
 import { useCurrentUserProfile } from '@/hooks/useCurrentUserProfile/useCurrentUserProfile';
 import { useRequireAuth } from '@/hooks/useRequireAuth/useRequireAuth';
+import { HAS_APP_SERVER } from '@/libs/static-export/appServer';
 import { AvatarWithFallback } from '../AvatarWithFallback/AvatarWithFallback';
 import { DialogFeedback } from '../DialogFeedback/DialogFeedback';
 import { FeedbackCardSkeleton } from './FeedbackCard.skeleton';
@@ -16,6 +17,9 @@ export function FeedbackCard() {
   const { requireAuth } = useRequireAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const avatarUrl = useAvatarUrl(userDetails);
+
+  // Feedback is sent through the app server.
+  if (!HAS_APP_SERVER) return null;
 
   if (userDetails === undefined) {
     return <FeedbackCardSkeleton />;

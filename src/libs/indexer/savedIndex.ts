@@ -1,0 +1,1021 @@
+import type { StoreChange } from './crawler.types';
+import { compareCursors } from './cursor';
+import type { Domain } from './domain.types';
+import { type Epoch, newestEpoch, NO_EPOCH } from './epoch';
+import { IndexerAbortedError, IndexerError, IndexFileLockedError, InvalidIndexInputError } from './indexer.errors';
+import type { Cursor, Entry, Run } from './indexer.types';
+import {
+  decodeIndexFile,
+  encodeIndexFile,
+  IndexFileError,
+  type IndexFileHomeserver,
+  type IndexFileMember,
+  type IndexFileModel,
+  type IndexFilePack,
+  type IndexFilePart,
+  isWriterId,
+} from './indexFile';
+import { evictBelow, mergeRuns } from './merge';
+import type { IndexSealer } from './runtime.types';
+import {
+  holds,
+  knownOf,
+  type KnownScopes,
+  laterAll,
+  sameKnownScopes,
+  unknownRuns,
+  withApplied,
+} from './savedIndex.known';
+import { scopeId, scopeOf } from './store.helpers';
+import type {
+  HomeserverState,
+  IndexStore,
+  ReadAt,
+  ScopeKey,
+  ScopesExport,
+  StoreBatch,
+  UserHomeserver,
+} from './store.types';
+import { buildTimeTable, cursorAt, type TimeSample } from './timeTable';
+import type { IndexFileLock, IndexFiles } from './transport.types';
+
+// The saved index: this user's index kept in their own storage as a folder that every device of theirs reads and
+// writes, so a new device, or one that lost its database, starts warm. Under `3/<group tag>/`:
+//   hot          shared: the members and their homeservers, the directory of packs, the graph of hops 0 and 1 and their
+//                activity back to a cut; the whole index while that fits in `hotMaxBytes`
+//   p/<S>/<b>    shared: every run of the members whose key hashes to bucket `b` of `S`
+//   d/<writer>   one rolling delta per device, written only by it: what it synced since its changes were last folded
+// A shared file changes only by a fold: lock it, read it, merge it into the local store, write the store's runs back
+// under the lock, unlock. Every file is a set of valid runs, so any set of files a reader finds merges into a truthful
+// index; a lock keeps work from being lost, never truth. Version 2 files, one per device at the folder's root, are
+// still read, and a fold takes them in and deletes them.
+
+const WRITER_KEY = 'savedIndex.writer';
+// Earlier states named shared heads, not stamps: read as none, which makes the next delta whole.
+const stateKey = (seed: string) => `savedIndex.state.2:${seed}`;
+const VERSION_DIR = '3/';
+const SINGLE_FILE = /^([A-Za-z0-9_-]{1,64})\.idx$/;
+/** Microseconds per millisecond, the unit a domain dates a path in and the one a clock keeps. */
+const MICROS_PER_MS = BigInt(1000);
+/** Fetches of packs in flight at once, leaving the browser's other connections to the homeserver to the crawl. */
+const PACK_READS = 4;
+/** With packs, the fewest dated records of hops 0 and 1 `hot` keeps the activity back to: a first screen. */
+const HOT_MIN_RECORDS = 20;
+
+/** Sizes that shape the folder. Defaults suit production; tests shrink them. */
+export interface SavedIndexLimits {
+  /** `hot` holds the whole index while it fits in this; past it the authors spread over packs. */
+  hotMaxBytes: number;
+  /** A pack this large on average doubles the packs. */
+  packSplitBytes: number;
+  /** A pack this small on average halves the packs, down to `firstShards`. */
+  packMergeBytes: number;
+  /** Packs when the index first outgrows `hot`. */
+  firstShards: number;
+  /** A delta past this is folded instead of written. */
+  deltaFoldBytes: number;
+  /** What the budget keeps for each writer's delta. */
+  deltaMaxBytes: number;
+  /** A delta whose oldest change is this old is folded. */
+  foldAgeMs: number;
+  /** With packs, `hot` keeps the activity of hops 0 and 1 back to the time of their newest this many dated records. */
+  hotDatedRecords: number;
+  /** Lifetime asked for a lock, and how often a fold refreshes the lock on `hot` it holds. */
+  lockSeconds: number;
+  lockRefreshMs: number;
+}
+
+export const DEFAULT_SAVED_INDEX_LIMITS: Readonly<SavedIndexLimits> = Object.freeze({
+  hotMaxBytes: 1024 * 1024,
+  packSplitBytes: 512 * 1024,
+  packMergeBytes: 128 * 1024,
+  firstShards: 4,
+  deltaFoldBytes: 48 * 1024,
+  deltaMaxBytes: 64 * 1024,
+  foldAgeMs: 24 * 60 * 60 * 1000,
+  hotDatedRecords: 100,
+  lockSeconds: 30,
+  lockRefreshMs: 10 * 1000,
+});
+
+/** FNV-1a over the UTF-8 bytes. */
+export function fnv1a32(text: string): number {
+  let hash = 0x811c9dc5;
+  for (const byte of new TextEncoder().encode(text)) hash = Math.imul(hash ^ byte, 0x01000193) >>> 0;
+  return hash;
+}
+
+/** The pack of `author` among `shards`. A power of two, so doubling splits bucket `b` into `b` and `b + shards`. */
+export const bucketOf = (author: string, shards: number): number => fnv1a32(author) % shards;
+
+/**
+ * The folder of a domain's groups: a deploy that reads other paths, such as the older social tree, keeps its own,
+ * since a shared file cannot hold runs of two group sets.
+ */
+export async function folderOf(groups: readonly string[]): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode([...groups].sort().join(',')));
+  const hex = [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+  return `${VERSION_DIR}g${hex.slice(0, 5)}/`;
+}
+
+export const hotPath = (folder: string) => `${folder}hot`;
+export const deltaPath = (folder: string, writer: string) => `${folder}d/${writer}`;
+export const packPath = (folder: string, shards: number, bucket: number) => `${folder}p/${shards}/${bucket}`;
+
+const randomPart = () => Math.random().toString(36).slice(2, 12);
+
+/**
+ * This local store's writer id, made once and kept in the store, `null` when the store keeps no meta values: then
+ * there is no saved index.
+ */
+export async function writerIdOf<D>(store: IndexStore<D>): Promise<string | null> {
+  if (store.readMeta === undefined || store.writeMeta === undefined) return null;
+  const known = await store.readMeta(WRITER_KEY);
+  if (known !== null && isWriterId(known)) return known;
+  const made = `${randomPart()}${randomPart()}`;
+  const writer = made.length > 0 ? made : '0';
+  await store.writeMeta(WRITER_KEY, writer);
+  return writer;
+}
+
+const withoutData = <D>(entry: Entry<D>): Entry<D> => {
+  if (entry.kind === 'tombstone' || entry.data === undefined) return entry;
+  return entry.hash === undefined
+    ? { kind: 'record', path: entry.path, cursor: entry.cursor }
+    : { kind: 'record', path: entry.path, cursor: entry.cursor, hash: entry.hash };
+};
+
+/** The runs grouped by scope, only those `picked` picks. */
+function byScopeOf<D>(runs: readonly Run<D>[], picked: (run: Run<D>) => boolean): Map<string, Run<D>[]> {
+  const byScope = new Map<string, Run<D>[]>();
+  for (const run of runs) {
+    if (!picked(run)) continue;
+    const id = scopeId(run);
+    byScope.set(id, [...(byScope.get(id) ?? []), run]);
+  }
+  return byScope;
+}
+
+/**
+ * Drops the data of the older half of the records with data of every scope `picked` picks, keeping the records.
+ * `null` when none of them has data left.
+ */
+function halveData<D>(runs: readonly Run<D>[], picked: (run: Run<D>) => boolean): Run<D>[] | null {
+  const cutoffs = new Map<string, Cursor>();
+  for (const [id, scopeRuns] of byScopeOf(runs, picked)) {
+    const cursors = scopeRuns
+      .flatMap((run) =>
+        run.entries.flatMap((entry) => (entry.kind === 'record' && entry.data !== undefined ? [entry.cursor] : [])),
+      )
+      .sort(compareCursors);
+    if (cursors.length > 0) cutoffs.set(id, cursors[Math.ceil(cursors.length / 2) - 1]);
+  }
+  if (cutoffs.size === 0) return null;
+  return runs.map((run) => {
+    const cutoff = cutoffs.get(scopeId(run));
+    if (cutoff === undefined) return run;
+    return { ...run, entries: run.entries.map((entry) => (entry.cursor <= cutoff ? withoutData(entry) : entry)) };
+  });
+}
+
+/**
+ * Halves the history of every scope `trimmed` picks: evicts the older half of its entries, or the whole scope once
+ * it has none. `null` when it picks no scope.
+ */
+function halve<D>(runs: readonly Run<D>[], trimmed: (run: Run<D>) => boolean): Run<D>[] | null {
+  const byScope = byScopeOf(runs, trimmed);
+  if (byScope.size === 0) return null;
+  const halved = new Map<string, Run<D>[]>();
+  for (const [id, scopeRuns] of byScope) {
+    const cursors = scopeRuns.flatMap((run) => run.entries.map((entry) => entry.cursor)).sort(compareCursors);
+    const top = scopeRuns.reduce((head, run) => (run.head > head ? run.head : head), scopeRuns[0].head);
+    const cutoff = cursors.length === 0 ? top : cursors[Math.ceil(cursors.length / 2) - 1];
+    halved.set(id, evictBelow(scopeRuns, cutoff));
+  }
+  const out: Run<D>[] = [];
+  const placed = new Set<string>();
+  for (const run of runs) {
+    const id = scopeId(run);
+    const replacement = halved.get(id);
+    if (replacement === undefined) out.push(run);
+    else if (!placed.has(id)) {
+      placed.add(id);
+      out.push(...replacement);
+    }
+  }
+  return out;
+}
+
+/**
+ * The file's bytes, within `budget` when trimming can get there. Data goes first, then windowed history, each oldest
+ * first and farthest hop first, the seed's last: a hop's scopes lose the data of their older half of records until
+ * none has data, and once no hop has any, a hop's windowed scopes are halved until they are empty. The full groups'
+ * pointers, follows and profiles, are never trimmed, so a file over budget with only those left is written as it is.
+ * This trims what is written, never the local store.
+ */
+export async function fitToBudget<D>(
+  model: IndexFileModel<D>,
+  budget: number,
+  windowGroups: ReadonlySet<string>,
+): Promise<Uint8Array> {
+  let bytes = await encodeIndexFile(model);
+  if (bytes.length <= budget) return bytes;
+  const hopOf = new Map(model.members.map(({ user, hop }): [string, number] => [user, hop]));
+  const hops = [...new Set(hopOf.values())].sort((a, b) => b - a);
+  let runs = model.runs;
+  const steps: Array<(from: readonly Run<D>[]) => Run<D>[] | null> = [
+    ...hops.map((hop) => (from: readonly Run<D>[]) => halveData(from, (run) => hopOf.get(run.author) === hop)),
+    ...hops.map(
+      (hop) => (from: readonly Run<D>[]) =>
+        halve(from, (run) => hopOf.get(run.author) === hop && windowGroups.has(run.group)),
+    ),
+  ];
+  for (const step of steps) {
+    for (let next = step(runs); next !== null; next = step(runs)) {
+      runs = next;
+      bytes = await encodeIndexFile({ ...model, runs });
+      if (bytes.length <= budget) return bytes;
+    }
+  }
+  return bytes;
+}
+
+/** What this writer keeps in its store about the folder, in one meta value so it changes atomically. */
+interface SavedState {
+  /** Generation of the last delta this writer wrote. */
+  gen: number;
+  /** Generation of this writer's delta folded when it last rebased. */
+  baseGen: number;
+  /** When the oldest change still waiting for a fold went into the delta (ms). */
+  since: number | null;
+  /** Per scope, what the shared files hold as far as this writer knows: its delta carries the rest. */
+  base: KnownScopes;
+  /** Per scope, what the delta of generation `gen` carries with the base, the base once `hot` records it folded. */
+  sent: KnownScopes;
+  /** Per pack, the `writtenAt` of the version applied here. */
+  packs: Record<string, number>;
+}
+
+const EMPTY_STATE: SavedState = Object.freeze({ gen: 0, baseGen: 0, since: null, base: {}, sent: {}, packs: {} });
+
+function parseState(value: string | null): SavedState {
+  if (value === null) return EMPTY_STATE;
+  try {
+    const parsed = JSON.parse(value) as Partial<SavedState>;
+    return { ...EMPTY_STATE, ...parsed };
+  } catch {
+    // Unreadable: the next delta starts from nothing, which is larger but still true.
+    return EMPTY_STATE;
+  }
+}
+
+export interface SavedIndexParams<D> {
+  files: IndexFiles;
+  store: IndexStore<D>;
+  domain: Domain<D>;
+  seed: string;
+  writer: string;
+  now: () => number;
+  hops: number;
+  windowDays: number;
+  /** Largest the whole folder aims for: past their share, packs lose data first, then windowed history. */
+  budget: number;
+  /** Another writer's delta that was folded and not written for this long is deleted by a fold. */
+  expiryMs: number;
+  /** Seals each file after it is compressed; a file that does not open is ignored, and a fold never overwrites it. */
+  sealer?: IndexSealer;
+  limits?: Partial<SavedIndexLimits>;
+}
+
+export interface LoadOutcome {
+  /** Files applied to the store. */
+  loaded: number;
+  /** Files that did not open or decode, had an unknown version, another seed or other groups, or runs refused. */
+  ignored: number;
+  change: StoreChange;
+  /** When the newest file applied was written (ms), `null` when none was. */
+  writtenAt: number | null;
+}
+
+/** `unchanged`: nothing to write. `delta`: this writer's delta was written. `folded`: a fold took everything in. */
+export type FlushOutcome = 'unchanged' | 'delta' | 'folded';
+
+export interface SavedIndex {
+  /**
+   * Reads `hot` and the deltas, applies them in one commit and reports it: what a first feed needs. Without `hot`, the
+   * version 2 files instead.
+   */
+  load(onChange: (change: StoreChange) => void): Promise<LoadOutcome>;
+  /**
+   * After `load`, fetches the packs whose version the directory in `hot` names is not the one this store applied, a
+   * few at a time, each reported as it lands. A crawl may run meanwhile; a save should wait for it.
+   */
+  loadPacks(onChange: (change: StoreChange) => void): Promise<LoadOutcome>;
+  /**
+   * Writes this writer's changes since its base as its delta. With `mayFold`, folds instead when the delta outgrew
+   * `deltaFoldBytes`, its oldest change is `foldAgeMs` old, or the folder has no `hot` yet or version 2 files left;
+   * a fold that cannot finish, whatever stops it, writes the delta.
+   */
+  flush(mayFold: boolean): Promise<FlushOutcome>;
+}
+
+/** A shared file this device cannot read, which a fold must not overwrite. */
+class FoldRefused extends IndexerError {}
+
+type ReadResult<D> = { model: IndexFileModel<D>; bytes: number } | 'missing' | 'bad' | 'unsupported';
+
+interface MemberScopes {
+  members: Map<string, number>;
+  homeserverOf: Map<string, UserHomeserver | null>;
+  scopes: ScopeKey[];
+}
+
+/** Runs with the state of their homeservers read together with them, the only runs a file is made of. */
+interface Exported<D> {
+  homeservers: ReadonlyMap<string, HomeserverState>;
+  runs: Run<D>[];
+}
+
+/** The runs of every exported scope, oldest range first. */
+const allRuns = <D>(read: ScopesExport<D>): Run<D>[] => [...read.runs.values()].flat();
+
+/** Per scope with coverage, all of it as read. */
+function knownAll<D>(read: ScopesExport<D>, scopes: readonly ScopeKey[]): KnownScopes {
+  const out: KnownScopes = {};
+  for (const scope of scopes) {
+    const known = knownOf(read, scope);
+    if (known !== undefined) out[scopeId(scope)] = known;
+  }
+  return out;
+}
+
+export function createSavedIndex<D>(params: SavedIndexParams<D>): SavedIndex {
+  const { files, store, domain, seed, writer, now, sealer } = params;
+  const limits = { ...DEFAULT_SAVED_INDEX_LIMITS, ...params.limits };
+  const groups = domain.groups.map(({ id }) => id);
+  const windowGroups = new Set(domain.groups.filter(({ history }) => history === 'window').map(({ id }) => id));
+  const revive = domain.reviveData?.bind(domain);
+  let folder: Promise<string> | null = null;
+  const folderPath = () => (folder ??= folderOf(groups));
+  /** Until a load finds `hot` and no version 2 file, the next flush that may fold does. */
+  let foldWanted = true;
+  /** The packs the `hot` the last load read names, for `loadPacks`. */
+  let directory: { shards: number; packs: IndexFilePack[] } | null = null;
+
+  async function readState(): Promise<SavedState> {
+    return parseState((await store.readMeta?.(stateKey(seed))) ?? null);
+  }
+
+  async function writeState(state: SavedState): Promise<void> {
+    await store.writeMeta?.(stateKey(seed), JSON.stringify(state));
+  }
+
+  async function readFile(path: string, expected: (model: IndexFileModel<D>) => boolean): Promise<ReadResult<D>> {
+    const bytes = await files.read(path);
+    if (bytes === null) return 'missing';
+    let model: IndexFileModel<D>;
+    try {
+      model = await decodeIndexFile(sealer === undefined ? bytes : await sealer.open(bytes, path), revive);
+    } catch (error) {
+      if (error instanceof IndexFileError && error.code === 'unavailable') throw error;
+      return error instanceof IndexFileError && error.code === 'unknown-version' ? 'unsupported' : 'bad';
+    }
+    // A run of a group this domain does not read was read over other paths: its mark could read as a restore.
+    if (model.seed !== seed || !expected(model) || model.runs.some(({ group }) => !groups.includes(group)))
+      return 'bad';
+    return { model, bytes: bytes.length };
+  }
+
+  const isHot = (model: IndexFileModel<D>) => model.part.kind === 'hot';
+  const isDeltaAt = (path: string) => (model: IndexFileModel<D>) =>
+    model.part.kind === 'delta' && path.endsWith(`/d/${model.writer}`);
+  const isPackOf = (shards: number, bucket: number) => (model: IndexFileModel<D>) =>
+    model.part.kind === 'pack' && model.part.shards === shards && model.part.bucket === bucket;
+  const isSingleAt = (path: string) => (model: IndexFileModel<D>) =>
+    model.part.kind === 'single' && path === `${model.writer}.idx`;
+
+  async function writeFile(path: string, model: IndexFileModel<D>, budget: number | null, lock?: IndexFileLock) {
+    const bytes = budget === null ? await encodeIndexFile(model) : await fitToBudget(model, budget, windowGroups);
+    const sealed = sealer === undefined ? bytes : await sealer.seal(bytes, path);
+    await files.write(path, sealed, lock);
+    return sealed.length;
+  }
+
+  /**
+   * Merges files into the store in one commit. Per homeserver the newest epoch any of them or the store has wins
+   * (`epoch.ts`): runs read from another log are left out, and a store that read another log drops what it holds of
+   * the homeserver and takes the newest. Each dated record is a sample of its homeserver's clock, so the clock is rebuilt
+   * from what is applied. Files that contradict each other or the store are tried one by one, the refused ones
+   * ignored. With `base`, each scope the commit changed is known to hold what the files brought: the entries the
+   * commit stamped, over the files' ranges.
+   */
+  async function applyFiles(
+    models: readonly IndexFileModel<D>[],
+    base?: KnownScopes,
+  ): Promise<{ applied: IndexFileModel<D>[]; refused: number; change: StoreChange }> {
+    const none = { applied: [], refused: 0, change: { scopes: [], seeds: [] } };
+    if (models.length === 0) return none;
+    const homeservers = new Set(
+      models.flatMap(({ homeservers: rows, runs }) => [
+        ...rows.map(({ homeserver }) => homeserver),
+        ...runs.map(({ homeserver }) => homeserver),
+      ]),
+    );
+    const local = new Map<string, Epoch>();
+    for (const homeserver of homeservers) local.set(homeserver, (await store.readHomeserverState(homeserver)).epoch);
+    const epochIn = (model: IndexFileModel<D>, homeserver: string) =>
+      model.homeservers.find((row) => row.homeserver === homeserver)?.epoch ?? NO_EPOCH;
+    const target = new Map(
+      [...homeservers].map((homeserver): [string, Epoch] => [
+        homeserver,
+        newestEpoch([local.get(homeserver) ?? NO_EPOCH, ...models.map((model) => epochIn(model, homeserver))]),
+      ]),
+    );
+    const moved = [...target].filter(([homeserver, epoch]) => epoch !== local.get(homeserver));
+    const kept = models.map((model) => ({
+      ...model,
+      homeservers: model.homeservers.filter((row) => row.epoch === target.get(row.homeserver)),
+      runs: model.runs.filter((run) => epochIn(model, run.homeserver) === target.get(run.homeserver)),
+    }));
+    const scopes = [...new Map(kept.flatMap(({ runs }) => runs).map((run) => [scopeId(run), scopeOf(run)])).values()];
+
+    const userHomeservers: Array<{ user: string; value: UserHomeserver }> = [];
+    const newest = new Map<string, UserHomeserver>();
+    for (const { members } of kept) {
+      for (const { user, homeserver } of members) {
+        if (homeserver === null) continue;
+        const known = newest.get(user) ?? (await store.readUserHomeserver(user));
+        if (known === null || homeserver.resolvedAt > known.resolvedAt) newest.set(user, homeserver);
+      }
+    }
+    for (const [user, value] of newest) userHomeservers.push({ user, value });
+    const clocks = new Map<string, TimeSample[]>();
+    for (const run of kept.flatMap(({ runs }) => runs)) {
+      for (const entry of run.entries) {
+        const time = entry.kind === 'record' ? domain.timeOfPath(entry.path) : null;
+        if (time === null) continue;
+        const samples = clocks.get(run.homeserver) ?? [];
+        samples.push({ cursor: entry.cursor, ms: Number(time / MICROS_PER_MS), writer: run.author });
+        clocks.set(run.homeserver, samples);
+      }
+    }
+    const fileMembers = new Map<string, number>();
+    for (const { members } of kept) {
+      for (const { user, hop } of members) fileMembers.set(user, Math.min(fileMembers.get(user) ?? hop, hop));
+    }
+    const seeds = fileMembers.size > 0 && (await store.readScopeMembers(seed)).size === 0 ? [seed] : [];
+    const batch: StoreBatch<D> = {
+      // A restore found meanwhile voids what these files hold of that homeserver.
+      readAt: [...local].map(([homeserver, epoch]): ReadAt => ({ homeserver, epoch })),
+      // A homeserver never read takes the files' log; one read from another log drops what it read.
+      deleteHomeservers: moved.flatMap(([homeserver, epoch]) =>
+        local.get(homeserver) === NO_EPOCH ? [] : [{ homeserver, epoch }],
+      ),
+      applyRuns: kept.flatMap(({ runs }) => runs),
+      userHomeservers,
+      homeserverStates: [
+        ...kept.flatMap(({ homeservers: rows }) =>
+          rows.flatMap(({ homeserver, highWater }) =>
+            highWater === null ? [] : [{ homeserver, patch: { highWater } }],
+          ),
+        ),
+        ...[...clocks].map(([homeserver, clock]) => ({ homeserver, patch: { clock } })),
+        ...moved.flatMap(([homeserver, epoch]) =>
+          local.get(homeserver) === NO_EPOCH ? [{ homeserver, patch: { epoch } }] : [],
+        ),
+      ],
+      ...(seeds.length > 0 ? { scopeMembers: [{ seed, members: fileMembers }] } : {}),
+    };
+    let stamp: number | null;
+    try {
+      stamp = await store.commit(batch);
+    } catch (error) {
+      if (!(error instanceof InvalidIndexInputError)) throw error;
+      if (models.length === 1) return { ...none, refused: 1 };
+      const outcomes: Array<Awaited<ReturnType<typeof applyFiles>>> = [];
+      for (const model of models) outcomes.push(await applyFiles([model], base));
+      return {
+        applied: outcomes.flatMap(({ applied }) => applied),
+        refused: outcomes.reduce((sum, { refused }) => sum + refused, 0),
+        change: {
+          scopes: outcomes.flatMap(({ change }) => change.scopes),
+          seeds: [...new Set(outcomes.flatMap(({ change }) => change.seeds))],
+        },
+      };
+    }
+    if (base !== undefined && stamp !== null) {
+      const runsOf = new Map<string, Run<D>[]>();
+      for (const run of kept.flatMap(({ runs }) => runs))
+        runsOf.set(scopeId(run), [...(runsOf.get(scopeId(run)) ?? []), run]);
+      for (const [id, runs] of runsOf) {
+        const epoch = target.get(runs[0].homeserver) ?? NO_EPOCH;
+        base[id] = withApplied(base[id], epoch, stamp, mergeRuns(runs).coverage);
+      }
+    }
+    return { applied: kept, refused: 0, change: { scopes, seeds } };
+  }
+
+  /** The seed's members with their scopes, and the members of `taken`, files folded in, this store does not have. */
+  async function memberScopes(taken: readonly IndexFileModel<D>[] = []): Promise<MemberScopes> {
+    const members = await store.readScopeMembers(seed);
+    if (!members.has(seed)) members.set(seed, 0);
+    // A follow made on another device after this one's scope sync is in that device's file only: it stays a member of
+    // the folder until a scope sync of the device that folds says otherwise.
+    for (const { members: rows } of taken)
+      for (const { user, hop } of rows) if (!members.has(user)) members.set(user, hop);
+    const homeserverOf = new Map<string, UserHomeserver | null>();
+    const scopes: ScopeKey[] = [];
+    for (const user of members.keys()) {
+      const resolved = await store.readUserHomeserver(user);
+      homeserverOf.set(user, resolved);
+      const homeserver = resolved?.homeserver ?? null;
+      if (homeserver === null) continue;
+      for (const group of groups) scopes.push({ author: user, homeserver, group });
+    }
+    return { members, homeserverOf, scopes };
+  }
+
+  /**
+   * A file of the exported runs, with the member rows of `users` and the epoch and mark of every homeserver its runs
+   * name, as read with them.
+   */
+  function modelOf(
+    part: IndexFilePart,
+    ms: MemberScopes,
+    users: readonly string[],
+    { homeservers: states, runs }: Exported<D>,
+  ): IndexFileModel<D> {
+    const members: IndexFileMember[] = users.map((user) => ({
+      user,
+      hop: ms.members.get(user) ?? 0,
+      homeserver: ms.homeserverOf.get(user) ?? null,
+    }));
+    const homeservers: IndexFileHomeserver[] = [...new Set(runs.map((run) => run.homeserver))].map((homeserver) => {
+      const state = states.get(homeserver);
+      return { homeserver, epoch: state?.epoch ?? NO_EPOCH, highWater: state?.highWater ?? null };
+    });
+    return {
+      part,
+      writer,
+      writtenAt: now(),
+      seed,
+      hops: params.hops,
+      windowDays: params.windowDays,
+      members,
+      homeservers,
+      runs,
+    };
+  }
+
+  /**
+   * Every run the store holds of `users`' scopes, oldest range first, with their homeservers' states, and per scope
+   * what a file of them holds.
+   */
+  async function runsOf(ms: MemberScopes, users: ReadonlySet<string>): Promise<Exported<D> & { known: KnownScopes }> {
+    const scopes = ms.scopes.filter(({ author }) => users.has(author));
+    const read = await store.exportScopes(scopes, { runs: true });
+    return { homeservers: read.homeservers, runs: allRuns(read), known: knownAll(read, scopes) };
+  }
+
+  /**
+   * This writer's delta: per scope what its base lacks (`unknownRuns`), the whole scope where the base is unknown or of
+   * another epoch. With the base each scope found to hold everything stored, for the next save to skip.
+   */
+  async function deltaOf(state: SavedState, ms: MemberScopes) {
+    const glance = await store.exportScopes(ms.scopes, { runs: false });
+    const moved = ms.scopes.filter((scope) => !holds(state.base[scopeId(scope)], glance, scope));
+    // Read again with the runs, and judged by what this read says: a restore since the glance moved the epoch.
+    const read = await store.exportScopes(moved, { runs: true });
+    const runs: Run<D>[] = [];
+    const users = new Set<string>();
+    const sent: KnownScopes = {};
+    const base: KnownScopes = { ...state.base };
+    let compacted = false;
+    for (const scope of moved) {
+      const id = scopeId(scope);
+      if (!read.coverage.has(id)) continue;
+      const unknown = unknownRuns(state.base[id], read, scope);
+      if (unknown.compacted !== undefined) {
+        base[id] = unknown.compacted;
+        compacted = true;
+      }
+      const known = knownOf(read, scope);
+      if (unknown.runs.length === 0 || known === undefined) continue;
+      users.add(scope.author);
+      runs.push(...unknown.runs);
+      sent[id] = known;
+    }
+    const part: IndexFilePart = { kind: 'delta', gen: state.gen + 1, base: state.baseGen };
+    return {
+      model: modelOf(part, ms, [...users], { homeservers: read.homeservers, runs }),
+      sent,
+      base: compacted ? base : null,
+    };
+  }
+
+  /**
+   * With packs, `hot` keeps the activity of hops 0 and 1 above one time for all of them, that of their newest
+   * `hotDatedRecords` dated records, placed per homeserver by its clock: a feed stops above the latest start of its
+   * authors' histories, so a cut per author would end it at the busiest one's. `null` per homeserver keeps it whole.
+   */
+  /** Per homeserver, the cursor of the time of the newest `records` dated records of `near`; none with fewer. */
+  function cutOf(near: Exported<D>, records: number): Map<string, Cursor> {
+    const times: number[] = [];
+    for (const run of near.runs) {
+      if (!windowGroups.has(run.group)) continue;
+      for (const entry of run.entries) {
+        const time = entry.kind === 'record' ? domain.timeOfPath(entry.path) : null;
+        if (time !== null) times.push(Number(time / MICROS_PER_MS));
+      }
+    }
+    const cut = new Map<string, Cursor>();
+    if (records < 1 || times.length < records) return cut;
+    const at = times.sort((a, b) => b - a)[records - 1];
+    for (const [homeserver, state] of near.homeservers) {
+      const placed = cursorAt(buildTimeTable(state.clock), at);
+      if (placed !== null) cut.set(homeserver, placed);
+    }
+    return cut;
+  }
+
+  /**
+   * `hot`, and while it holds the whole index, per scope what it holds. With packs it holds at most `hotMaxBytes`: the
+   * members, the directory and the folded generations always, the seed's own scopes whole, then the activity of hop 1
+   * back to the time of the newest `hotDatedRecords` dated records of hops 0 and 1, halved while over the bound down
+   * to `HOT_MIN_RECORDS`, and the graphs of hop 1 while they fit, the largest left out first. What it leaves out is
+   * in the packs.
+   */
+  async function hotOf(
+    ms: MemberScopes,
+    part: Extract<IndexFilePart, { kind: 'hot' }>,
+  ): Promise<{ model: IndexFileModel<D>; known: KnownScopes | null }> {
+    const users = [...ms.members.keys()];
+    if (part.shards === 0) {
+      const all = await runsOf(ms, new Set(users));
+      return { model: modelOf(part, ms, users, all), known: all.known };
+    }
+    const near = await runsOf(ms, new Set(users.filter((user) => (ms.members.get(user) ?? 0) <= 1)));
+    const byScope = new Map<string, Run<D>[]>();
+    for (const run of near.runs) byScope.set(scopeId(run), [...(byScope.get(scopeId(run)) ?? []), run]);
+    const left = new Set<string>();
+    const build = (records: number) => {
+      const cut = cutOf(near, records);
+      const runs = [...byScope].flatMap(([id, exported]) => {
+        if (left.has(id)) return [];
+        const { group, homeserver } = exported[0];
+        const cutoff = windowGroups.has(group) ? cut.get(homeserver) : undefined;
+        return cutoff === undefined ? exported : evictBelow(exported, cutoff);
+      });
+      const cutPart = { ...part, cut: [...cut].map(([homeserver, cursor]) => ({ homeserver, cursor })) };
+      return modelOf(cutPart, ms, users, { homeservers: near.homeservers, runs });
+    };
+    let records = limits.hotDatedRecords;
+    let model = build(records);
+    let bytes = (await encodeIndexFile(model)).length;
+    while (bytes > limits.hotMaxBytes && records > HOT_MIN_RECORDS) {
+      records = Math.max(HOT_MIN_RECORDS, Math.floor(records / 2));
+      model = build(records);
+      bytes = (await encodeIndexFile(model)).length;
+    }
+    const graphs = [...byScope]
+      .filter(([, [{ author, group }]]) => !windowGroups.has(group) && (ms.members.get(author) ?? 0) === 1)
+      .map(([id, exported]) => ({ id, entries: exported.reduce((sum, run) => sum + run.entries.length, 0) }))
+      .sort((a, b) => b.entries - a.entries);
+    // Each round leaves out the largest graphs worth the excess by their share of the entries, then measures again.
+    while (bytes > limits.hotMaxBytes && left.size < graphs.length) {
+      const entries = model.runs.reduce((sum, run) => sum + run.entries.length, 0);
+      let excess = ((bytes - limits.hotMaxBytes) * entries) / bytes;
+      for (const graph of graphs) {
+        if (excess <= 0) break;
+        if (left.has(graph.id)) continue;
+        left.add(graph.id);
+        excess -= graph.entries;
+      }
+      model = build(records);
+      bytes = (await encodeIndexFile(model)).length;
+    }
+    return { model, known: null };
+  }
+
+  /**
+   * Locks the pack, takes in what it holds, writes back the store's runs of its authors trimmed to `share`. Per scope
+   * of its authors, what it holds.
+   */
+  async function foldPack(
+    path: string,
+    shards: number,
+    bucket: number,
+    ms: MemberScopes,
+    share: number,
+    shared: KnownScopes,
+  ) {
+    const lock = await files.lock(path, limits.lockSeconds);
+    try {
+      const current = await readFile(path, isPackOf(shards, bucket));
+      if (current === 'bad' || current === 'unsupported') throw new FoldRefused(path);
+      if (current !== 'missing') await applyFiles([current.model], shared);
+      const users = [...ms.members.keys()].filter((user) => bucketOf(user, shards) === bucket);
+      const exported = await runsOf(ms, new Set(users));
+      const model = modelOf({ kind: 'pack', shards, bucket }, ms, users, exported);
+      const bytes = await writeFile(path, model, share, lock);
+      return { pack: { bucket, bytes, authors: users.length, writtenAt: model.writtenAt }, known: exported.known };
+    } finally {
+      await files.unlock(lock).catch(() => undefined);
+    }
+  }
+
+  /**
+   * Deletes another writer's delta this fold took in, unless that writer wrote a newer one since: under the delta's
+   * lock, so a write of the writer meanwhile is refused and lands later, never lost to the delete.
+   */
+  async function deleteFolded(path: string, read: IndexFileModel<D>) {
+    let lock: IndexFileLock;
+    try {
+      lock = await files.lock(path, limits.lockSeconds);
+    } catch {
+      return;
+    }
+    try {
+      const current = await readFile(path, isDeltaAt(path));
+      if (typeof current !== 'object' || current.model.writtenAt !== read.writtenAt) return;
+      if (current.model.part.kind !== 'delta' || read.part.kind !== 'delta') return;
+      if (current.model.part.gen === read.part.gen) await files.delete(path, lock);
+    } catch {
+      // Left for the next fold.
+    } finally {
+      await files.unlock(lock).catch(() => undefined);
+    }
+  }
+
+  /** The packs after this fold: 0 while the whole index fits in `hot`, doubled or halved as the mean pack grows. */
+  function shardsAfter(shards: number, wholeBytes: number | null, packs: readonly IndexFilePack[], hotBytes: number) {
+    if (shards === 0) {
+      if (wholeBytes === null || wholeBytes <= limits.hotMaxBytes) return 0;
+      let next = limits.firstShards;
+      while (wholeBytes / next > limits.packSplitBytes) next *= 2;
+      return next;
+    }
+    const total = packs.reduce((sum, { bytes }) => sum + bytes, 0);
+    if (total + hotBytes <= limits.hotMaxBytes / 2) return 0;
+    let next = shards;
+    while (total / next > limits.packSplitBytes) next *= 2;
+    if (next === shards && total / shards < limits.packMergeBytes && shards > limits.firstShards) next = shards / 2;
+    return next;
+  }
+
+  /**
+   * One fold, holding the lock on `hot` throughout so folds of the folder run one at a time. Takes in `hot`, every
+   * other writer's delta and the version 2 files, writes each pack their authors fall in under its own lock, then
+   * `hot`, then deletes what no file needs. The new base is what the files it wrote hold of each scope as read for
+   * them, and what it took in of the others: whatever a commit adds after those reads goes into the next delta. `null`
+   * when another writer folds.
+   */
+  async function fold(state: SavedState): Promise<SavedState | null> {
+    const f = await folderPath();
+    let hotLock: IndexFileLock;
+    try {
+      hotLock = await files.lock(hotPath(f), limits.lockSeconds);
+    } catch (error) {
+      if (error instanceof IndexFileLockedError) return null;
+      throw error;
+    }
+    let lockedAt = now();
+    const keepLock = async () => {
+      if (now() - lockedAt < limits.lockRefreshMs) return;
+      await files.refresh(hotLock, limits.lockSeconds);
+      lockedAt = now();
+    };
+    try {
+      const hot = await readFile(hotPath(f), isHot);
+      if (hot === 'bad' || hot === 'unsupported') throw new FoldRefused(hotPath(f));
+      const listing = await files.list('');
+      const deltaPaths = listing.filter((path) => path.startsWith(`${f}d/`) && path !== deltaPath(f, writer));
+      const singlePaths = listing.filter((path) => SINGLE_FILE.test(path));
+      const read = async (path: string, expected: (model: IndexFileModel<D>) => boolean) => {
+        const result = await readFile(path, expected);
+        return typeof result === 'object' ? [{ path, model: result.model }] : [];
+      };
+      const deltas = (await Promise.all(deltaPaths.map((path) => read(path, isDeltaAt(path))))).flat();
+      const singles = (await Promise.all(singlePaths.map((path) => read(path, isSingleAt(path))))).flat();
+      const previous = hot === 'missing' ? null : hot.model;
+      const part = previous?.part.kind === 'hot' ? previous.part : null;
+      const shared: KnownScopes = { ...state.base };
+      await applyFiles([...(previous === null ? [] : [previous]), ...deltas.map(({ model }) => model)], shared);
+      // Only this fold puts what a version 2 file holds into a pack: what it changes here is not shared yet.
+      await applyFiles(singles.map(({ model }) => model));
+
+      const folded = new Map((part?.folded ?? []).map(({ writer: who, gen }): [string, number] => [who, gen]));
+      const ms = await memberScopes([...deltas, ...singles].map(({ model }) => model));
+      const touched = new Set<string>();
+      for (const { model } of deltas) {
+        if (model.part.kind === 'delta' && model.part.gen > (folded.get(model.writer) ?? 0)) {
+          for (const { author } of model.runs) touched.add(author);
+        }
+      }
+      // A pack is rewritten for what its authors hold that it lacks, entries: a sync moves every head, and a range
+      // grown with no event in it waits for the next write of the pack.
+      const glance = await store.exportScopes(ms.scopes, { runs: false });
+      const unsure = ms.scopes.filter((scope) => !holds(shared[scopeId(scope)], glance, scope));
+      const stored = await store.exportScopes(unsure, { runs: true });
+      for (const scope of unsure) {
+        const { runs } = unknownRuns(shared[scopeId(scope)], stored, scope);
+        if (runs.some(({ entries }) => entries.length > 0)) touched.add(scope.author);
+      }
+
+      const shards = part?.shards ?? 0;
+      const hotBytes = hot === 'missing' ? 0 : hot.bytes;
+      const whole = shards === 0 ? await hotOf(ms, { kind: 'hot', shards: 0, folded: [], packs: [], cut: [] }) : null;
+      const wholeBytes = whole === null ? null : (await encodeIndexFile(whole.model)).length;
+      const next = shardsAfter(shards, wholeBytes, part?.packs ?? [], hotBytes);
+      const reshard = next !== shards;
+      const writers = deltaPaths.length + 1;
+      const directory = new Map<number, IndexFilePack>(
+        reshard ? [] : (part?.packs ?? []).map((pack): [number, IndexFilePack] => [pack.bucket, pack]),
+      );
+      if (reshard && shards > 0) {
+        // The old packs go once `hot` names the new ones: take them in first.
+        for (let bucket = 0; bucket < shards; bucket += 1) {
+          await keepLock();
+          const old = await readFile(packPath(f, shards, bucket), isPackOf(shards, bucket));
+          if (old === 'bad' || old === 'unsupported') throw new FoldRefused(packPath(f, shards, bucket));
+          if (old !== 'missing') await applyFiles([old.model], shared);
+        }
+      }
+      const base: KnownScopes = {};
+      for (const scope of ms.scopes) {
+        const known = shared[scopeId(scope)];
+        if (known !== undefined) base[scopeId(scope)] = known;
+      }
+      if (next > 0) {
+        const share = Math.floor((params.budget - hotBytes - limits.deltaMaxBytes * writers) / next);
+        const everyPack = reshard || previous === null;
+        const buckets = everyPack
+          ? Array.from({ length: next }, (_, bucket) => bucket)
+          : [...new Set([...touched].map((author) => bucketOf(author, next)))];
+        for (const bucket of buckets.sort((a, b) => a - b)) {
+          await keepLock();
+          const written = await foldPack(packPath(f, next, bucket), next, bucket, ms, share, shared);
+          directory.set(bucket, written.pack);
+          Object.assign(base, written.known);
+        }
+      }
+
+      for (const { model } of deltas) {
+        if (model.part.kind === 'delta')
+          folded.set(model.writer, Math.max(folded.get(model.writer) ?? 0, model.part.gen));
+      }
+      if (state.gen > 0) folded.set(writer, Math.max(folded.get(writer) ?? 0, state.gen));
+      const hotPart: Extract<IndexFilePart, { kind: 'hot' }> = {
+        kind: 'hot',
+        shards: next,
+        folded: [...folded].map(([who, gen]) => ({ writer: who, gen })).sort((a, b) => (a.writer < b.writer ? -1 : 1)),
+        packs: [...directory.values()].sort((a, b) => a.bucket - b.bucket),
+        cut: [],
+      };
+      const written =
+        next === 0 && whole !== null
+          ? { ...whole, model: { ...whole.model, part: hotPart } }
+          : await hotOf(ms, hotPart);
+      const { model } = written;
+      await keepLock();
+      await writeFile(hotPath(f), model, next === 0 ? params.budget - limits.deltaMaxBytes * writers : null, hotLock);
+      if (written.known !== null) Object.assign(base, written.known);
+
+      // Each deletion removes only what the files written above hold, or what a crawl can read again.
+      const stale = [
+        ...listing.filter((path) => path.startsWith(`${f}p/`) && (next === 0 || !path.startsWith(`${f}p/${next}/`))),
+        ...singles.map(({ path }) => path),
+      ];
+      for (const path of stale) await files.delete(path).catch(() => undefined);
+      for (const { path, model: delta } of deltas) {
+        if (delta.part.kind !== 'delta' || now() - delta.writtenAt <= params.expiryMs) continue;
+        if (delta.part.gen <= (folded.get(delta.writer) ?? 0)) await deleteFolded(path, delta);
+      }
+      const packs: Record<string, number> = {};
+      for (const pack of directory.values()) packs[packPath(f, next, pack.bucket)] = pack.writtenAt;
+      return { ...state, baseGen: state.gen, since: null, base, sent: {}, packs };
+    } finally {
+      await files.unlock(hotLock).catch(() => undefined);
+    }
+  }
+
+  return {
+    async load(onChange) {
+      const f = await folderPath();
+      const state = await readState();
+      const base: KnownScopes = { ...state.base };
+      const [hot, deltaPaths] = await Promise.all([readFile(hotPath(f), isHot), files.list(`${f}d/`)]);
+      const singlePaths = hot === 'missing' ? (await files.list('')).filter((path) => SINGLE_FILE.test(path)) : [];
+      const reads = await Promise.all([
+        ...deltaPaths.map((path) => readFile(path, isDeltaAt(path))),
+        ...singlePaths.map((path) => readFile(path, isSingleAt(path))),
+      ]);
+      const first = [hot, ...reads].flatMap((result) => (typeof result === 'object' ? [result.model] : []));
+      const unread = [hot, ...reads].filter((result) => result === 'bad' || result === 'unsupported').length;
+      const outcome = await applyFiles(first, base);
+      const writtenAt = outcome.applied.reduce<number | null>((at, { writtenAt: w }) => Math.max(at ?? w, w), null);
+      if (outcome.change.scopes.length > 0 || outcome.change.seeds.length > 0) onChange(outcome.change);
+
+      const part = typeof hot === 'object' && hot.model.part.kind === 'hot' ? hot.model.part : null;
+      directory = part === null ? null : { shards: part.shards, packs: part.packs };
+      const mine = part?.folded.find(({ writer: who }) => who === writer);
+      const rebased = mine !== undefined && state.gen > 0 && mine.gen >= state.gen;
+      await writeState({
+        ...state,
+        base: rebased ? laterAll(base, state.sent) : base,
+        ...(rebased ? { baseGen: state.gen, since: null, sent: {} } : {}),
+      });
+      foldWanted = hot === 'missing' || singlePaths.length > 0;
+      return { loaded: outcome.applied.length, ignored: unread + outcome.refused, change: outcome.change, writtenAt };
+    },
+
+    async loadPacks(onChange) {
+      const f = await folderPath();
+      const state = await readState();
+      const base: KnownScopes = { ...state.base };
+      const read = directory;
+      const outcome: LoadOutcome = { loaded: 0, ignored: 0, change: { scopes: [], seeds: [] }, writtenAt: null };
+      if (read === null) return outcome;
+      // A version is the writer's clock reading: only one other than the applied is due, whoever's clock runs ahead.
+      const packs: Record<string, number> = {};
+      const due: IndexFilePack[] = [];
+      for (const pack of read.packs) {
+        const path = packPath(f, read.shards, pack.bucket);
+        if (state.packs[path] === pack.writtenAt) packs[path] = pack.writtenAt;
+        else due.push(pack);
+      }
+      const scopes = new Map<string, ScopeKey>();
+      let failure: unknown = null;
+      let taken = 0;
+      const worker = async () => {
+        while (taken < due.length) {
+          const { bucket, writtenAt: at } = due[taken];
+          taken += 1;
+          const path = packPath(f, read.shards, bucket);
+          try {
+            const pack = await readFile(path, isPackOf(read.shards, bucket));
+            if (pack === 'missing') continue;
+            if (pack === 'bad' || pack === 'unsupported') {
+              outcome.ignored += 1;
+              continue;
+            }
+            const applied = await applyFiles([pack.model], base);
+            outcome.ignored += applied.refused;
+            outcome.loaded += applied.applied.length;
+            packs[path] = at;
+            outcome.writtenAt = Math.max(outcome.writtenAt ?? pack.model.writtenAt, pack.model.writtenAt);
+            for (const scope of applied.change.scopes) scopes.set(scopeId(scope), scope);
+            if (applied.change.scopes.length > 0) onChange(applied.change);
+          } catch (error) {
+            failure ??= error;
+          }
+        }
+      };
+      await Promise.all(Array.from({ length: PACK_READS }, worker));
+      await writeState({ ...(await readState()), base, packs });
+      if (failure !== null) throw failure;
+      return { ...outcome, change: { scopes: [...scopes.values()], seeds: [] } };
+    },
+
+    async flush(mayFold) {
+      const state = await readState();
+      const ms = await memberScopes();
+      const delta = await deltaOf(state, ms);
+      const bytes = delta.model.runs.length === 0 ? null : await encodeIndexFile(delta.model);
+      const due =
+        foldWanted ||
+        (bytes !== null && bytes.length > limits.deltaFoldBytes) ||
+        (state.since !== null && now() - state.since >= limits.foldAgeMs);
+      if (mayFold && due) {
+        let folded: SavedState | null = null;
+        try {
+          folded = await fold(state);
+        } catch (error) {
+          // Whatever stopped it, a lock, a file this device cannot read, a failed request: the delta keeps the changes.
+          if (error instanceof IndexerAbortedError) throw error;
+        }
+        if (folded !== null) {
+          await writeState(folded);
+          foldWanted = false;
+          return 'folded';
+        }
+      }
+      const base = delta.base ?? state.base;
+      // The delta on the homeserver already carries all of it: a commit of something else changed nothing here.
+      if (bytes === null || (state.gen > 0 && sameKnownScopes(delta.sent, state.sent))) {
+        if (delta.base !== null) await writeState({ ...state, base });
+        return 'unchanged';
+      }
+      const path = deltaPath(await folderPath(), writer);
+      await files.write(path, sealer === undefined ? bytes : await sealer.seal(bytes, path));
+      await writeState({
+        ...state,
+        base,
+        gen: state.gen + 1,
+        since: state.since ?? now(),
+        sent: delta.sent,
+      });
+      return 'delta';
+    },
+  };
+}

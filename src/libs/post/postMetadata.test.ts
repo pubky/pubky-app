@@ -1,5 +1,6 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Logger } from '@/libs/logger/logger';
+import { resetRuntimeConfigForTests } from '@/libs/runtime-config/runtime-config';
 import {
   fetchUserAndPostForMetadata,
   fetchWithValidation,
@@ -228,5 +229,38 @@ describe('resolveMentionsForMetadata', () => {
       { text: 'ZYXW...NMLK', isMention: true, pubky: PUBKY_B },
       { text: '!', isMention: false },
     ]);
+  });
+});
+
+describe('server-side metadata without the nexus source', () => {
+  const SOURCES_ENV = 'PUBKY_RUNTIME_INDEXER_SOURCES';
+  const PUBKY_A = 'abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnop';
+
+  beforeEach(() => {
+    process.env[SOURCES_ENV] = 'local';
+    resetRuntimeConfigForTests();
+  });
+
+  afterEach(() => {
+    delete process.env[SOURCES_ENV];
+    resetRuntimeConfigForTests();
+    vi.restoreAllMocks();
+  });
+
+  it('answers null with no request, so every caller renders its generic fallback', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+
+    expect(await fetchWithValidation('https://nexus.test/v1/user/u1', 'fetchUserDetails')).toBeNull();
+    expect(await fetchUserAndPostForMetadata('u1', 'p1')).toBeNull();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('renders mentions as shortened keys with no request and no warning', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    const warnSpy = vi.spyOn(Logger, 'warn').mockImplementation(() => {});
+
+    expect(await resolveMentionsForMetadata(`pk:${PUBKY_A} hi`, 200)).toBe('ABCD...MNOP hi');
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(warnSpy).not.toHaveBeenCalled();
   });
 });

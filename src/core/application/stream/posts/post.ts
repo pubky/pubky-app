@@ -2,6 +2,7 @@ import { FileApplication } from '@/application/file/file';
 import type {
   TCacheStreamParams,
   TFetchMissingUsersParams,
+  TFetchOriginalPostsParams,
   TFetchStreamParams,
   TGetOrFetchStreamHeadParams,
   TMissingPostsParams,
@@ -554,14 +555,13 @@ export class PostStreamApplication {
       },
     });
 
-    // Fetch original posts for any reposts served from cache
-    // (handles case where repost is cached but original was evicted)
+    // Originals of reposts served from cache, one of them possibly evicted since
     try {
       const relationships = await LocalPostService.readRelationshipsByIds(posts);
       const repostedUris = relationships
         .filter((rel): rel is PostRelationshipsModelSchema => rel !== undefined && rel.reposted !== null)
         .map((rel) => rel.reposted as string);
-      await this.fetchOriginalPostsByUris({ repostedUris, viewerId, isCurrent });
+      this.startOriginalPostsLoad({ repostedUris, viewerId, isCurrent });
     } catch (error) {
       Logger.warn('Failed to fetch missing repost content', { postIds: posts, error });
     }
@@ -745,12 +745,11 @@ export class PostStreamApplication {
       });
       // Persist the missing authors of the posts
       await this.fetchMissingPostAuthors({ posts: postBatch, viewerId, isCurrent });
-      // Fetch original posts for any reposts (to display embedded repost content)
       const repostedUris = postBatch
         .map((post) => post.relationships.reposted)
         .filter((uri): uri is string => uri !== null);
-      await this.fetchOriginalPostsByUris({ repostedUris, viewerId, isCurrent });
-      // Authors and repost originals stop early on a session change too.
+      this.startOriginalPostsLoad({ repostedUris, viewerId, isCurrent });
+      // Authors stop early on a session change too.
       return !isCurrent || isCurrent();
     } catch (error) {
       if (throwOnFailure) {
@@ -792,16 +791,7 @@ export class PostStreamApplication {
    * @param repostedUris - Array of pubky URIs pointing to original posts
    * @param viewerId - ID of the viewer
    */
-  static async fetchOriginalPostsByUris({
-    repostedUris,
-    viewerId,
-    isCurrent,
-  }: {
-    isCurrent?: () => boolean;
-    repostedUris: string[];
-    /** Optional viewer ID for relationship data. Null/undefined for unauthenticated views. */
-    viewerId?: Pubky | null;
-  }) {
+  static async fetchOriginalPostsByUris({ repostedUris, viewerId, isCurrent }: TFetchOriginalPostsParams) {
     if (repostedUris.length === 0) return;
 
     // Convert URIs to composite IDs and deduplicate
@@ -850,6 +840,17 @@ export class PostStreamApplication {
     } catch (error) {
       Logger.warn('Failed to fetch original posts for reposts', { missingOriginalPostIds, error });
     }
+  }
+
+  /**
+   * Starts loading the originals of these reposts and returns at once: a page waits for its own posts, not for the
+   * posts they embed. The card showing an original reads it itself, joining this load, and shows its loading state
+   * until the source answers for it.
+   */
+  private static startOriginalPostsLoad(params: TFetchOriginalPostsParams): void {
+    void this.fetchOriginalPostsByUris(params).catch((error: unknown) => {
+      Logger.warn('Failed to fetch original posts for reposts', { repostedUris: params.repostedUris, error });
+    });
   }
 
   /**
