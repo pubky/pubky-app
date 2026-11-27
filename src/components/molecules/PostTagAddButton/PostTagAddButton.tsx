@@ -21,7 +21,7 @@ export function PostTagAddButton({ onClick, className, disabled, variant = 'dash
       className={cn(
         'relative size-8 min-w-8! rounded-md bg-transparent p-0! transition-opacity hover:bg-transparent hover:opacity-80',
         'gap-0! px-0! has-[>svg]:px-0!',
-        variant === 'dashed' && 'border-dashed',
+        variant === 'dashed' && 'border-dashed light:shadow-none',
         variant === 'plain' && 'border-transparent shadow-none hover:border-transparent hover:shadow-none',
         disabled && 'cursor-not-allowed opacity-50',
         className,

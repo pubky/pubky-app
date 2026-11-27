@@ -230,11 +230,11 @@ describe('Custom Icons', () => {
       expect(svg).toHaveAttribute('height', '16');
     });
 
-    it('should have fill-secondary class hardcoded', () => {
+    it('should have fill-border class hardcoded', () => {
       const { container } = render(<LineHorizontal />);
       const svg = container.querySelector('svg');
 
-      expect(svg).toHaveClass('fill-secondary');
+      expect(svg).toHaveClass('fill-border');
     });
 
     it('should apply additional props', () => {
@@ -282,7 +282,7 @@ describe('Custom Icons', () => {
 
       expect(svg).toHaveClass('block');
       expect(svg).toHaveClass('size-full');
-      expect(svg).toHaveClass('fill-secondary');
+      expect(svg).toHaveClass('fill-border');
     });
 
     it('should apply additional props', () => {

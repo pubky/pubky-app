@@ -172,7 +172,8 @@ export const TagInput = forwardRef<TagInputHandle, TagInputProps>(function TagIn
             overrideDefaults={true}
             className={cn(
               'relative flex h-8 w-full items-center gap-1 rounded-md pr-1 pl-3',
-              isDashedVariant && 'border border-dashed border-input shadow-sm transition-all duration-300',
+              isDashedVariant &&
+                'border border-dashed border-input shadow-sm transition-all duration-300 light:shadow-none',
               onClick && 'cursor-pointer',
               className,
             )}

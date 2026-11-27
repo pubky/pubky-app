@@ -133,7 +133,8 @@ export function PostPreviewCard({
         ref={ttlRef}
         data-cy="post-preview-card"
         className={cn(
-          'w-full max-w-full min-w-0 rounded-md py-0',
+          // Embedded previews sit on `bg-embed` (`--muted`), so default `bg-muted` skeletons blend in.
+          'w-full max-w-full min-w-0 rounded-md py-0 [&_[data-slot=skeleton]]:bg-accent',
           navigable && 'cursor-pointer transition-colors hover:bg-accent/50',
           className,
         )}

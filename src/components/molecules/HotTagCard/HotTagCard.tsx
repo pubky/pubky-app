@@ -61,7 +61,7 @@ export function HotTagCard({
     <Container
       overrideDefaults
       className={cn(
-        'tag-palette relative flex min-h-fit min-w-0 flex-1 cursor-pointer flex-col gap-4 overflow-hidden rounded-md px-0 py-6 shadow-sm transition-opacity hover:opacity-90',
+        'tag-palette relative flex min-h-fit min-w-0 flex-1 cursor-pointer flex-col gap-4 overflow-hidden rounded-md px-0 py-6 shadow-sm transition-opacity hover:opacity-90 light:shadow-none',
         className,
       )}
       style={{

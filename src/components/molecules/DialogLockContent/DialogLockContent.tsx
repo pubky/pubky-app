@@ -133,7 +133,7 @@ export function DialogLockContent({
             <Container
               overrideDefaults
               className={cn(
-                'h-14 rounded-md border border-dashed border-input py-4 pr-5 pl-6 text-base shadow-xs',
+                'h-14 rounded-md border border-dashed border-input py-4 pr-5 pl-6 text-base shadow-xs light:shadow-none',
                 'flex items-center gap-3 bg-background/20',
               )}
             >

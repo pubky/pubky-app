@@ -219,7 +219,7 @@ function CollectionCardContent({
           aria-hidden="true"
           className="pointer-events-none absolute inset-0 -z-10 bg-cover bg-center bg-no-repeat"
           style={{
-            backgroundImage: `linear-gradient(to right, rgba(0,0,0,0.7), rgba(0,0,0,0.35)), url(${coverImage})`,
+            backgroundImage: `linear-gradient(to right, var(--collection-cover-from), var(--collection-cover-to)), url(${coverImage})`,
           }}
         />
       )}

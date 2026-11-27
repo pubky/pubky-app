@@ -163,7 +163,7 @@ export function MobileFooter({ className }: MobileFooterProps) {
           <Button
             variant="secondary"
             size="icon"
-            className="size-10 items-center justify-center border bg-glass sm:size-12"
+            className="size-10 items-center justify-center border border-border bg-glass sm:size-12 light:shadow-none"
             aria-label="Join Pubky"
             onClick={() => setShowSignInDialog(true)}
           >

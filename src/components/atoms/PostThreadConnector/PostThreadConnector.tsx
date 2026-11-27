@@ -61,7 +61,7 @@ const DialogReplyVariant = ({ dataTestId, style }: { dataTestId?: string; style?
     data-variant={POST_THREAD_CONNECTOR_VARIANTS.DIALOG_REPLY}
   >
     {/* Vertical line - 35px long from the post-card edge to the horizontal connector */}
-    <Container className="absolute top-[-13px] -left-3 h-[35px] w-px border-l border-secondary" overrideDefaults />
+    <Container className="absolute top-[-13px] -left-3 h-[35px] w-px border-l border-border" overrideDefaults />
     {/* Horizontal connector at avatar level */}
     <Container className="absolute top-[22px] -left-3" overrideDefaults>
       <LineHorizontal />

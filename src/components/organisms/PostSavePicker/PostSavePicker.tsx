@@ -296,7 +296,7 @@ function SavePickerContent({
   // or when it holds other users' collections, and stays hidden otherwise.
   const showOtherCollections = isOtherCollectionsLoading || otherCollectionIds.length > 0;
   const separator =
-    layout === 'dropdown' ? <DropdownMenuSeparator /> : <Container overrideDefaults className="h-px bg-muted" />;
+    layout === 'dropdown' ? <DropdownMenuSeparator /> : <Container overrideDefaults className="h-px bg-border" />;
 
   // The collection rows are their own scroll region, so the sentinel lives inside
   // it: scrolling the list to its end loads the next page of the author's

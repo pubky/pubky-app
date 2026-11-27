@@ -41,6 +41,7 @@ const feedState = vi.hoisted(() => ({
   mode: 'default' as 'default' | 'article' | 'imageOnly',
   keyboardVisible: false,
   populatedHotTags: false,
+  pendingPostIds: new Set<string>(),
 }));
 const mockRouterPush = vi.hoisted(() => vi.fn());
 
@@ -324,10 +325,12 @@ vi.mock('@/hooks/useIsScrolledFromTop/useIsScrolledFromTop', () => ({
 vi.mock('@/hooks/usePostDetails/usePostDetails', async () => {
   const f = await fixtures;
   const EMPTY = { postDetails: null, isLoading: false } as const;
+  const LOADING = { postDetails: null, isLoading: true } as const;
   const cache = new Map<string, { postDetails: unknown; isLoading: false }>();
   return {
     usePostDetails: (compositeId: string | null) => {
       if (!compositeId) return EMPTY;
+      if (feedState.pendingPostIds.has(compositeId)) return LOADING;
       const cached = cache.get(compositeId);
       if (cached) return cached;
       const fixture = f.postsByCompositeId.get(compositeId);
@@ -886,6 +889,47 @@ describe('Repost cards — visual regression', () => {
     }
     await matchVrtFrameScreenshot(`repost-cards-${name}`);
   });
+
+  const loadingCases = [
+    { theme: 'light', viewport: VRT_VIEWPORT_DESKTOP, name: 'light-desktop' },
+    { theme: 'light', viewport: VRT_VIEWPORT_MOBILE, name: 'light-mobile' },
+    { theme: 'dark', viewport: VRT_VIEWPORT_DESKTOP, name: 'desktop' },
+  ] as const;
+
+  it.each(loadingCases)(
+    'keeps embedded preview skeletons distinct while original post loads ($name)',
+    async ({ theme, viewport, name }) => {
+      const f = await fixtures;
+      feedState.pendingPostIds.add(f.repostOriginal.compositeId);
+      try {
+        await renderForVRT(
+          <PostMainLayoutProvider tagsLayout="inline">
+            <div className="mx-auto max-w-[840px] space-y-6 p-4">
+              <div data-testid="quote-repost-loading">
+                <PostMain postId={f.quoteRepostId} />
+              </div>
+            </div>
+          </PostMainLayoutProvider>,
+          { viewport, theme },
+        );
+        const quote = page.getByTestId('quote-repost-loading');
+        await expect.element(quote.getByRole('link', { name: 'View original post' })).toBeVisible();
+        const preview = quote.element().querySelector<HTMLElement>('[data-cy="post-preview-card"]');
+        expect(preview).not.toBeNull();
+        const previewBackground = getComputedStyle(preview!).backgroundColor;
+        const skeletons = Array.from(preview!.querySelectorAll<HTMLElement>('[data-slot="skeleton"]'));
+        expect(skeletons).toHaveLength(7);
+        for (const skeleton of skeletons) {
+          const skeletonBackground = getComputedStyle(skeleton).backgroundColor;
+          expect(skeletonBackground).not.toBe('rgba(0, 0, 0, 0)');
+          expect(skeletonBackground).not.toBe(previewBackground);
+        }
+        await matchVrtFrameScreenshot(`repost-card-loading-${name}`);
+      } finally {
+        feedState.pendingPostIds.delete(f.repostOriginal.compositeId);
+      }
+    },
+  );
 });
 
 describe('Home — article in feed — visual regression', () => {
