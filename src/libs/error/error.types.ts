@@ -25,6 +25,7 @@ export enum ErrorService {
   Locks = 'locks',
   Shop = 'shop',
   Exchangerate = 'exchangerate',
+  Pinakes = 'pinakes',
   Chatwoot = 'chatwoot',
   SocialSpecs = 'pubky-social-specs',
   Local = 'local', // Client-side operations

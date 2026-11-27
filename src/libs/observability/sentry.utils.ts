@@ -150,6 +150,19 @@ const APP_ERROR_DROP_RULES: AppErrorDropRule[] = [
       (error.category === ErrorCategory.Network || error.category === ErrorCategory.Timeout),
   },
   {
+    name: 'pinakes-transport',
+    reason:
+      'External resource cards are optional enrichment of a link: on any failure the post shows the plain link ' +
+      'preview. safeFetch constructs connection and timeout errors before that fallback runs, and they come mostly ' +
+      'from the viewer (offline, an ad blocker, a CORS refusal, a stalled connection), so one unreachable Pinakes ' +
+      'otherwise creates events for every distinct link on every feed view, each carrying the post link in its ' +
+      'context url. Pinakes HTTP errors (4xx other than 404, 5xx, malformed bodies) and every other service remain ' +
+      'reportable.',
+    matches: (error) =>
+      error.service === ErrorService.Pinakes &&
+      (error.category === ErrorCategory.Network || error.category === ErrorCategory.Timeout),
+  },
+  {
     name: 'homeserver-event-stream-connect',
     reason:
       'The shared homeserver SSE subscribe (mute list and notification last_read) drops routinely (homeserver ' +

@@ -179,6 +179,9 @@ export const getRegionModes = (): string | undefined => getRuntimeConfig().regio
 // Cypress E2E only: the stubbed Lock Server origin (undefined = the real Locks SDK).
 export const getE2eLocksStubUrl = (): string | undefined => getRuntimeConfig().e2eLocksStubUrl;
 
+// Optional Pinakes origin for external resource cards (undefined = cards disabled, no request).
+export const getPinakesUrl = (): string | undefined => getRuntimeConfig().pinakesUrl;
+
 // Optional observability tier (absent DSN = Sentry disabled; rates fall back to schema defaults).
 export const getPulseClientKey = (): string | undefined => getRuntimeConfig().pulseClientKey;
 export const getPulseEndpoint = (): string | undefined => getRuntimeConfig().pulseEndpoint;
