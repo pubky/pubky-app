@@ -65,7 +65,7 @@ describe('social migration record', () => {
     ).toBe(true);
   });
 
-  it('only treats a last run as confirmed when present and not marked unconfirmed', () => {
+  it('requires a saved confirmation before resuming without asking', () => {
     const baseLastRun = { at: 1, status: 'running', done: 0, total: 0, counts: {}, dropped: 0 };
     expect(isSocialMigrationLastRunConfirmed(null)).toBe(false);
     expect(isSocialMigrationLastRunConfirmed({ v: 1, admittedGrantIds: [] })).toBe(false);
@@ -75,8 +75,7 @@ describe('social migration record', () => {
     expect(
       isSocialMigrationLastRunConfirmed({ v: 1, admittedGrantIds: [], lastRun: { ...baseLastRun, confirmed: true } }),
     ).toBe(true);
-    // Records written by an earlier build omitted `confirmed` and were always confirmed runs
-    expect(isSocialMigrationLastRunConfirmed({ v: 1, admittedGrantIds: [], lastRun: baseLastRun })).toBe(true);
+    expect(isSocialMigrationLastRunConfirmed({ v: 1, admittedGrantIds: [], lastRun: baseLastRun })).toBe(false);
   });
 
   it('only moves the migrated revision forward and drops the last run with it', () => {

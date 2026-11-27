@@ -277,7 +277,7 @@ describe('SocialMigrationController', () => {
     writeSocialMigrationRecord(owner, {
       v: 1,
       admittedGrantIds: [GRANT],
-      lastRun: { at: 1, status: 'running', done: 2, total: 9, counts: {}, dropped: 0 },
+      lastRun: { at: 1, status: 'running', done: 2, total: 9, counts: {}, dropped: 0, confirmed: true },
     });
     const seen: Array<{ phase?: string; resumedFrom?: { done: number } }> = [];
     const unsubscribe = useSocialMigrationStore.subscribe((state) =>
@@ -400,7 +400,7 @@ describe('SocialMigrationController', () => {
       const { storage } = homeserver.session;
       return [vi.spyOn(storage, 'putJson'), vi.spyOn(storage, 'putBytes'), vi.spyOn(storage, 'delete')];
     };
-    const lastRun = { at: 1, status: 'running', done: 2, total: 9, counts: {}, dropped: 0 };
+    const lastRun = { at: 1, status: 'running', done: 2, total: 9, counts: {}, dropped: 0, confirmed: true };
 
     it('waits at confirm on a sign-in of an account that needs the update, with no engine run and no write', async () => {
       autoContinue = false;
@@ -562,6 +562,24 @@ describe('SocialMigrationController', () => {
       expect(await homeserver.session.storage.exists('/pub/social/v1/profile.json')).toBe(true);
       expect(await homeserver.session.storage.exists(SOCIAL_MIGRATION_FLAG_PATH)).toBe(true);
       expect(readSocialMigrationRecord(owner)?.migratedRev).toBe(SOCIAL_MIGRATION_TRANSFORM_REV);
+    });
+
+    it.each(['restore', 'signin'] as const)('asks on %s before copying from an older signup record', async (entry) => {
+      autoContinue = false;
+      writeSocialMigrationRecord(owner, {
+        v: 1,
+        admittedGrantIds: [GRANT],
+        lastRun: { at: 1, status: 'running', phase: 'probe', done: 0, total: 0, counts: {}, dropped: 0 },
+      });
+      await seedLegacyTree();
+
+      const migration = ensure(entry);
+      await vi.waitFor(() => expect(stage().stage).toBe('confirm'));
+      expect(await homeserver.session.storage.exists('/pub/social/v1/profile.json')).toBe(false);
+
+      SocialMigrationController.confirm();
+      expect(await migration).toBe('passed');
+      expect(await homeserver.session.storage.exists('/pub/social/v1/profile.json')).toBe(true);
     });
 
     it.each(['restore', 'signin'] as const)(

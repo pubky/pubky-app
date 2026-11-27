@@ -152,10 +152,10 @@ the engine inline (`inline: true`) on the same path as an invite-code signup, so
 lock, or finds legacy files. The inline path passes `onLegacyDataFound` through `HomeserverService.migrateToSocialV1`:
 if an existing 0.x client writes under `/pub/pubky.app/` after `hasLegacyData` returned empty and the engine's own
 listing finds any file, the run aborts before copying anything and transitions to the `confirm` screen. `lastRun`
-records `confirmed` (`false` for an automatic inline attempt, `true` once confirmed; omitted on records from earlier
-builds, which were always confirmed), so an interrupted automatic attempt never suppresses `confirm` if legacy files
-appear before the next visit, while a confirmed interrupted run skips the extra `LIST` and resumes without asking
-again.
+records `confirmed: true` after Continue and `false` for an automatic attempt. Older builds recorded progress
+for automatic signups and manual runs without distinguishing them. If one of those runs was interrupted, the next
+visit checks the legacy tree. An empty tree finishes silently. When files are present, the user confirms once before
+copying resumes. Runs with a saved confirmation resume immediately.
 
 The fallback paths when a check does not confirm an empty tree depend on the entry and local state:
 

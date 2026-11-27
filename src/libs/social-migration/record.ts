@@ -96,12 +96,9 @@ export function isSocialMigrationRecordTrusted(record: SocialMigrationRecord | n
   return record?.migratedRev !== undefined && record.migratedRev >= SOCIAL_MIGRATION_TRANSFORM_REV;
 }
 
-/**
- * Whether this browser holds an interrupted run the user confirmed (an earlier build's `lastRun`
- * omitted `confirmed` and was always confirmed; an automatic empty-tree attempt records `false`).
- */
+/** Older builds recorded progress for both automatic signups and confirmed runs, without a confirmation field. */
 export function isSocialMigrationLastRunConfirmed(record: SocialMigrationRecord | null): boolean {
-  return record?.lastRun !== undefined && record.lastRun.confirmed !== false;
+  return record?.lastRun?.confirmed === true;
 }
 
 export function admitSocialMigrationGrant(pubky: string, grantId: string): void {
