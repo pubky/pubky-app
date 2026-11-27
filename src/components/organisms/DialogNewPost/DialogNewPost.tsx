@@ -5,6 +5,7 @@ import { Container } from '@/atoms/Container/Container';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/atoms/Dialog/Dialog';
 import { useConfirmableDialog } from '@/hooks/useConfirmableDialog/useConfirmableDialog';
 import { DialogConfirmDiscard } from '@/molecules/DialogConfirmDiscard/DialogConfirmDiscard';
+import { DialogFullscreenToggle } from '@/molecules/DialogFullscreenToggle/DialogFullscreenToggle';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { PostInput } from '../PostInput/PostInput';
 
@@ -59,10 +60,13 @@ export function DialogNewPost({ open, onOpenChangeAction, onPostCreated }: Dialo
             expanded={true}
             onContentChange={handleContentChange}
             onArticleModeChange={setIsArticle}
+            hideFullscreenToggle
             onLockModeChange={setIsLockEnabled}
             layoutOverride="inline"
           />
         </Container>
+        {/* After the composer so it never takes the dialog's initial focus */}
+        <DialogFullscreenToggle enabled={isArticle} />
         {/* Nested inside parent dialog to avoid mobile touch event issues with sibling portals */}
         <DialogConfirmDiscard
           open={showConfirmDialog}

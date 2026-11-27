@@ -7,6 +7,7 @@ import { useConfirmableDialog } from '@/hooks/useConfirmableDialog/useConfirmabl
 import { usePostDetails } from '@/hooks/usePostDetails/usePostDetails';
 import { isArticleContent } from '@/libs/post/articleContent';
 import { DialogConfirmDiscard } from '@/molecules/DialogConfirmDiscard/DialogConfirmDiscard';
+import { DialogFullscreenToggle } from '@/molecules/DialogFullscreenToggle/DialogFullscreenToggle';
 import { POST_INPUT_VARIANT } from '@/organisms/PostInput/PostInput.constants';
 import { PostInput } from '../PostInput/PostInput';
 
@@ -63,7 +64,10 @@ export function DialogEditPost({ open, onOpenChangeAction, postId }: DialogEditP
             lockUrl ? { lockUrl, title: teaser?.lock_title ?? '', contentKind: teaser?.content_kind } : undefined
           }
           layoutOverride="inline"
+          hideFullscreenToggle
         />
+        {/* After the composer so it never takes the dialog's initial focus */}
+        <DialogFullscreenToggle enabled={isArticle} />
         {/* Nested inside parent dialog to avoid mobile touch event issues with sibling portals */}
         <DialogConfirmDiscard
           open={showConfirmDialog}

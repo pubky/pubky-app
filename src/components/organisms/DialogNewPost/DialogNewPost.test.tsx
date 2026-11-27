@@ -81,6 +81,12 @@ vi.mock('@/molecules/DialogConfirmDiscard/DialogConfirmDiscard', () => {
   };
 });
 
+vi.mock('@/molecules/DialogFullscreenToggle/DialogFullscreenToggle', () => ({
+  DialogFullscreenToggle: ({ enabled }: { enabled: boolean }) => (
+    <div data-testid="dialog-fullscreen-toggle" data-enabled={String(enabled)} />
+  ),
+}));
+
 // Mock organisms
 vi.mock('@/organisms/PostInput/PostInput', () => {
   return {
@@ -93,6 +99,7 @@ vi.mock('@/organisms/PostInput/PostInput', () => {
         onArticleModeChange,
         onLockModeChange,
         layoutOverride,
+        hideFullscreenToggle,
       }: {
         variant: string;
         onSuccess?: (createdPostId: string) => void;
@@ -101,12 +108,14 @@ vi.mock('@/organisms/PostInput/PostInput', () => {
         onArticleModeChange?: (isArticle: boolean) => void;
         onLockModeChange?: (isLockEnabled: boolean) => void;
         layoutOverride?: string;
+        hideFullscreenToggle?: boolean;
       }) => (
         <div
           data-testid="post-input"
           data-variant={variant}
           data-expanded={expanded}
           data-layout-override={layoutOverride}
+          data-hide-fullscreen-toggle={String(hideFullscreenToggle)}
         >
           <button data-testid="mock-success-btn" onClick={() => onSuccess?.('author:post123')}>
             Success
@@ -272,6 +281,19 @@ describe('DialogNewPost', () => {
       expect(screen.getByTestId('dialog-title')).toHaveTextContent('New Post');
       expect(screen.getByText('New Post dialog')).toBeInTheDocument();
     });
+  });
+
+  it('shows the fullscreen toggle in the header instead of the composer action bar for an article', () => {
+    render(<DialogNewPost open={true} onOpenChangeAction={vi.fn()} />);
+
+    expect(screen.getByTestId('post-input')).toHaveAttribute('data-hide-fullscreen-toggle', 'true');
+    expect(screen.getByTestId('dialog-fullscreen-toggle')).toHaveAttribute('data-enabled', 'false');
+
+    fireEvent.click(screen.getByTestId('mock-article-mode-btn'));
+    expect(screen.getByTestId('dialog-fullscreen-toggle')).toHaveAttribute('data-enabled', 'true');
+
+    fireEvent.click(screen.getByTestId('mock-article-mode-off-btn'));
+    expect(screen.getByTestId('dialog-fullscreen-toggle')).toHaveAttribute('data-enabled', 'false');
   });
 
   it('enables keyboard avoidance on DialogContent', async () => {

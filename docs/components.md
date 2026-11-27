@@ -231,8 +231,9 @@ Article mode in `PostInput` is tabbed. The `Tabs` atom (Radix, underline style) 
 icon-only. Content, Title and Header panels stay mounted while another tab shows (`forceMount` +
 `data-[state=inactive]:hidden`): the editor imports its markdown once and the title field is uncontrolled, so
 unmounting either would lose what the user typed since the last debounce. Tags and the action bar sit under every
-tab; the author's avatar and a browser fullscreen toggle (`useFullscreen`, document-level because Radix portals
-render on `body`) live in the action bar.
+tab; the author's avatar lives in the action bar. The browser fullscreen toggle (`useFullscreen`, document-level
+because Radix portals render on `body`) sits in the action bar of an inline composer; the new and edit dialogs pass
+`hideFullscreenToggle` and show `DialogFullscreenToggle` in their header, left of the close button.
 
 **Preview** is `ArticleComposerPreview`, which renders the draft through the published path (`PostText` with
 `articleMedia`): the body goes through `serializeArticleBody`, and the resulting `attachment:{n}` slots are fed
