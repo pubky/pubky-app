@@ -83,7 +83,10 @@ old post written today, as a move to social v1 writes hundreds of, an edit that 
 is one writer's claim against everyone else's, and moves nothing while the other writers' dated writes it contradicts
 outnumber it. Between as many claims the clock that ends later wins, so a homeserver with one other writer still keeps
 a move from cutting the window. The window starts at the cursor the clock places `windowDays` ago (`cursorAt`), the
-cutoff, and holds at most a user's newest `windowMaxEntries` paths (1000), a cost bound. The cutoff is placed once the
+cutoff. Two cost bounds cap a user's window, each ending it just above the first path past it: `windowMaxEntries`
+(1000) counts the records that render before they show, the files fetched before a commit, such as posts, and
+`windowMaxPaths` (10000) counts every path, tags included, the events read. A tag costs an event and a later fill,
+not a fetch before the commit, so a burst of tags never moves where a user's posts start. The cutoff is placed once the
 clock holds a write older than the window; until then a batch keeps reading newest first, so a homeserver with no dated
 write older than the window reads each user to their stream start or their cap. The clock lives in the homeserver's
 state, thinned to a sample an hour; each commit merges the dated writes read since the last one, whatever they were read
@@ -91,8 +94,7 @@ for, and a restore drops it with everything else of the homeserver. The view dat
 records it holds, so where it says a window starts is where the crawl stopped.
 
 At each sync a user whose head the clock places inside the window catches up forward from it; then one whose top range
-does not reach the cutoff and holds fewer than `windowMaxEntries` paths, as after a sync that failed halfway, is read
-newest first below it. A user with no history, or whose head lies before the window, as on a device closed for longer
+does not reach the cutoff and is at neither cap, as after a sync that failed halfway, is read newest first below it. A user with no history, or whose head lies before the window, as on a device closed for longer
 than it, is read newest first from their newest event, down to the cutoff or to their head, where the read joins what
 is stored; a range left below a gap is not served until `backfill` closes it. A sync drops nothing: as the cutoff moves
 on, ranges keep growing forward, and only `forget`, for what was loaded on demand, deletes.
@@ -223,7 +225,11 @@ deletes its scopes, an eviction at the largest cursor, which every tab hears. A 
 most once per `backfillMinIntervalMs` unless forced. Like the `ensure` calls it resolves once the view holds what it
 loaded, so a request asked right after it sees the older posts, and it says what it did: `status` (`ran`, or
 `skipped` by the rate limit), `complete` once the author's history reaches the start of their stream, the stream
-`events` and new `posts` it added, and `sinceMs`, the estimated start of what is loaded. A post stream of authors sorted by time stops above the latest start of their loaded histories, so a page never skips over posts of an author that are not loaded yet: it comes back short. A time-sorted answer merged over every member, such as a thread's replies, the
+`events` and new `posts` it added, and `sinceMs`, the estimated start of what is loaded. A post stream of authors sorted by time never skips a post the index
+will load on its own, and never waits for one it will not: it stops above the latest start of the loaded histories a
+sync still extends, so it comes back short rather than skip a post of an author not loaded yet. An author whose history
+no sync extends, at a window cap or on a homeserver whose last read failed (`History.held`), bounds nothing: the
+coverage names them partial, `not loading further`, and `more` still asks for their backfill. A time-sorted answer merged over every member, such as a thread's replies, the
 sources over the whole scope or the notifications, is served uncut instead: its latest start follows the scope's
 busiest member, a member capped by the window can start days ago, and only loading every member's history could lower
 it, so the coverage note names that start. A post stream page asks for

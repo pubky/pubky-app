@@ -189,11 +189,13 @@ function collectionKeys(
  * The page of post keys a source streams. Scores are a post's creation time in milliseconds for `timeline`, its
  * replies, reposts and tags summed for `total_engagement`. `start` and `end` bound the score inclusively, `start`
  * from above and `end` from below whatever the order; equal scores order by key, as one sorted set does.
- * A stream of authors is exact only over their whole histories. Sorted by time, a page holds no post older than where
- * an author's loaded history starts, the latest such start of the stream's authors: below it a post of theirs not
- * loaded yet could belong between, so the page comes back short instead of skipping it. `more` asks for an author's
- * backfill when an older post of theirs could join the page: the page is short, or it would continue past what is
- * loaded for them. For an author whose own records are not loaded it asks for the user.
+ * A stream of authors is exact only over their whole histories. Sorted by time, a page never skips a post the index
+ * will load on its own, and never waits for one it will not: it holds no post older than the latest start of the
+ * loaded histories a sync still extends, since below it a post not loaded yet could belong between, so the page comes
+ * back short instead of skipping it. An author whose history a sync will not extend, at a window cap or on a failing
+ * homeserver (`History.held`), bounds nothing: the coverage names them partial. `more` asks for an author's backfill
+ * when an older post of theirs could join the page: the page is short, or it would continue past what is loaded for
+ * them. For an author whose own records are not loaded it asks for the user.
  */
 export function postStreamKeys(view: SocialView, params: PostStreamParams): Answer<PostKeyStreamJson> {
   const source = oneOf(QUERY, 'source', POST_STREAM_SOURCES, params.source, 'all');
@@ -237,8 +239,9 @@ export function postStreamKeys(view: SocialView, params: PostStreamParams): Answ
   const sign = order === 'descending' ? -1 : 1;
   const partial = partlyLoaded(view, candidates.streamed);
   // A post older than where an author's loaded history starts may sit between older posts of theirs not loaded yet,
-  // so a time-sorted page stops above the latest such start: it comes back short, asking for those authors' history.
-  const boundMs = sorting !== 'timeline' ? null : latestStart(partial);
+  // so a time-sorted page stops above the latest such start of the histories a sync still extends: it comes back
+  // short, asking for those authors' history. Waiting on one no sync extends would keep the page short for good.
+  const boundMs = sorting !== 'timeline' ? null : latestStart(partial.filter(({ held }) => !held));
   // Oldest first, a page starts at its lowest score: only one starting above the bound skips nothing.
   const above = (score: number) =>
     boundMs === null || (order === 'descending' ? score > boundMs : (params.end ?? Number.NEGATIVE_INFINITY) > boundMs);
@@ -277,7 +280,9 @@ export function postStreamKeys(view: SocialView, params: PostStreamParams): Answ
   const reached = ({ sinceMs }: { sinceMs: number | null }) =>
     floorMs === null || sinceMs === null || floorMs < sinceMs;
   const more = partial.filter(reached).map(({ author }): MoreHint => ({ kind: 'backfill', author }));
-  const loaded = partial.map(({ author, sinceMs }) => `${author} since ${isoOf(sinceMs)}`).join(', ');
+  const loaded = partial
+    .map(({ author, sinceMs, held }) => `${author} since ${isoOf(sinceMs)}${held ? ', not loading further' : ''}`)
+    .join(', ');
   const served = boundMs === null ? '' : `; served only above ${isoOf(boundMs)}`;
   return withMore(scoped(data, `activity loaded only partly, estimated: ${loaded}${served}`), more);
 }

@@ -293,6 +293,22 @@ describe('postStreamKeys over a partly loaded history', () => {
     expect(following({ sorting: 'total_engagement', limit: 10 }).data.post_keys).toContain(key(BRAN, repost));
   });
 
+  it('never waits on a followee no sync loads further, naming them partial and still asking for their backfill', () => {
+    const held = buildSocialView(withPartialActivity(recordsOf(network), CLEO, BigInt(14), true));
+    const answer = postStreamKeys(held, { source: 'following', observer_id: ALICE, limit: 50 });
+
+    // Every loaded post in time order, bran's repost below where cleo's history starts included.
+    const loaded = new Set(held.rootPostsBy(CLEO).map(({ postId }) => `${CLEO}:${postId}`));
+    const whole = keys({ source: 'following', observer_id: ALICE, limit: 50 });
+    expect(answer.data.post_keys).toEqual(whole.filter((post) => !post.startsWith(`${CLEO}:`) || loaded.has(post)));
+    expect(answer.data.post_keys).toContain(key(BRAN, repost));
+    expect(answer.coverage).toEqual({
+      kind: 'scope',
+      note: `activity loaded only partly, estimated: ${CLEO} since ${isoOf(held.historyOf(CLEO).sinceMs)}, not loading further`,
+    });
+    expect(answer.more).toEqual([{ kind: 'backfill', author: CLEO }]);
+  });
+
   it('hints at a backfill for a page bounded from below only when older posts could still reach that bound', () => {
     const partial = buildSocialView(withPartialActivity(recordsOf(network), ALICE, BigInt(11)));
     const above = (end: number) => postStreamKeys(partial, { source: 'author', author_id: ALICE, end });

@@ -44,6 +44,8 @@ export interface History {
   complete: boolean;
   /** The estimated time from which it is loaded, `null` when complete or unknown. */
   sinceMs: number | null;
+  /** Whether a sync will not load it further back (`GroupHistory.held`). */
+  held: boolean;
 }
 
 /** One label on a target and the users who put it there, sorted. */
@@ -273,9 +275,9 @@ function stateOf(
     historyOf: (author, group = 'activity') => {
       const records = parts.get(author)?.records;
       const history = records === undefined || records.membership === 'referenced' ? undefined : records.history[group];
-      if (history === undefined) return { complete: false, sinceMs: null };
-      const { complete, tail } = history;
-      return { complete, sinceMs: complete || tail === null ? null : timeOf(author, tail) };
+      if (history === undefined) return { complete: false, sinceMs: null, held: false };
+      const { complete, tail, held } = history;
+      return { complete, sinceMs: complete || tail === null ? null : timeOf(author, tail), held };
     },
     postDeleted: (author, postId) => parts.get(author)?.records.deleted?.posts.has(postId) ?? false,
     profileDeleted: (user) => parts.get(user)?.records.deleted?.profile ?? false,

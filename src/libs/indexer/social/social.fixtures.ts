@@ -139,8 +139,8 @@ export type SocialNetwork = ReturnType<typeof socialNetwork>;
 
 /** Both groups loaded from the author's first event. */
 export const fullHistory = (): AuthorRecords['history'] => ({
-  graph: { complete: true, tail: BigInt(0) },
-  activity: { complete: true, tail: BigInt(0) },
+  graph: { complete: true, tail: BigInt(0), held: false },
+  activity: { complete: true, tail: BigInt(0), held: false },
 });
 
 /** What a full index serves for each user of the network: the files left after the deletes, reduced. */
@@ -184,12 +184,20 @@ export function recordsFrom(
   }));
 }
 
-/** The records with the author's activity loaded only above `tail`, as a crawl window leaves it. */
-export function withPartialActivity(records: readonly AuthorRecords[], author: string, tail: Cursor): AuthorRecords[] {
+/**
+ * The records with the author's activity loaded only above `tail`, as a crawl window leaves it; `held` when a sync will
+ * not read it further back.
+ */
+export function withPartialActivity(
+  records: readonly AuthorRecords[],
+  author: string,
+  tail: Cursor,
+  held = false,
+): AuthorRecords[] {
   return records.map((entry) => {
     if (entry.author !== author) return entry;
     const activity = new Map([...entry.activity].filter(([, record]) => record.cursor > tail));
-    return { ...entry, activity, history: { ...entry.history, activity: { complete: false, tail } } };
+    return { ...entry, activity, history: { ...entry.history, activity: { complete: false, tail, held } } };
   });
 }
 

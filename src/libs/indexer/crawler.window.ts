@@ -22,23 +22,47 @@ import type { AuthoredStreamEvent } from './transport.types';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+/** Paths of one user's window: those that render before they show, and all of them. */
+interface Held {
+  rendered: number;
+  paths: number;
+}
+
+const NOTHING_HELD: Held = Object.freeze({ rendered: 0, paths: 0 });
+const NO_CAP: Held = Object.freeze({ rendered: Infinity, paths: Infinity });
+
+/** What a user's window holds of these paths. */
+export function heldOf<D>(domain: Domain<D>, paths: Iterable<string>): Held {
+  let rendered = 0;
+  let count = 0;
+  for (const path of paths) {
+    count += 1;
+    if (domain.needsBody(path) === 'render') rendered += 1;
+  }
+  return { rendered, paths: count };
+}
+
+/** Whether a window holding this is at one of the caps, so a sync reads it no further back. */
+export const atWindowCap = (held: Held, options: Pick<CrawlerOptions, 'windowMaxEntries' | 'windowMaxPaths'>) =>
+  held.rendered >= options.windowMaxEntries || held.paths >= options.windowMaxPaths;
+
 /**
  * Where a window read of a user starts and stops: below `top`, or at their newest event for `null`, down to the
- * cutoff, or to `floor`, their stored head, where the read joins what is stored. `held` is how many paths their top
- * range holds already, when the read continues below it.
+ * cutoff, or to `floor`, their stored head, where the read joins what is stored. `held` is what their top range holds
+ * already, when the read continues below it.
  */
 interface WindowBound {
   top: Cursor | null;
   floor: Cursor | null;
-  held: number;
+  held: Held;
 }
 
-/** How a newest-first read goes: events per page, pages per batch, the cursor every user stops at, paths per user. */
+/** How a newest-first read goes: events per page, pages per batch, the cursor every user stops at, the caps per user. */
 interface NewestFirstPlan {
   limit: number;
   pages: number;
   cutoff: () => Cursor | null;
-  maxPaths: number;
+  cap: Held;
 }
 
 /** Users' events to commit newest first, each user's in their range `(tail, top]`. */
@@ -96,7 +120,7 @@ export function createWindowReads<D>(deps: WindowDeps<D>): WindowReads {
    * Keeps each user's windowed groups covered from their newest event down to the cutoff, the cursor the homeserver's
    * clock places at the start of the window. A user whose head the clock places inside the window catches up forward
    * from it; then one whose top range does not reach the cutoff, as after a sync that stopped halfway, is read newest
-   * first below it unless it holds `windowMaxEntries` paths already. A user with no history, or whose head lies before
+   * first below it unless it is at a cap already. A user with no history, or whose head lies before
    * the window, as on a device closed for longer than it, is read newest first from their newest event, down to the
    * cutoff or their head, so what a feed shows first arrives first and nothing older than the window is read forward.
    */
@@ -111,7 +135,7 @@ export function createWindowReads<D>(deps: WindowDeps<D>): WindowReads {
           const head = headOf(await store.readCoverage({ author: user, homeserver, group: group.id }));
           // A clock with no sample yet says nothing: catching up is what the user's stored history asks for.
           if (head !== null && (estimateMs(tableOf(ctx, homeserver), head) ?? startMs) >= startMs) forward.push(user);
-          else below.set(user, { top: null, floor: head, held: 0 });
+          else below.set(user, { top: null, floor: head, held: NOTHING_HELD });
         }
         await syncGroup(ctx, homeserver, group, forward, fromHead);
         const cutoff = cutoffOf(ctx, homeserver);
@@ -120,14 +144,17 @@ export function createWindowReads<D>(deps: WindowDeps<D>): WindowReads {
           const tail = topTailOf(await store.readCoverage(scope));
           if (tail === null || tail === CURSOR_ZERO || (cutoff !== null && tail <= cutoff)) continue;
           const { entries } = await store.readScope(scope);
-          const held = [...entries.values()].filter(({ cursor }) => cursor > tail).length;
-          if (held < options.windowMaxEntries) below.set(user, { top: tail, floor: null, held });
+          const held = heldOf(
+            domain,
+            [...entries.values()].flatMap(({ cursor, path }) => (cursor > tail ? [path] : [])),
+          );
+          if (!atWindowCap(held, options)) below.set(user, { top: tail, floor: null, held });
         }
         await readNewestFirst(ctx, homeserver, group, below, {
           limit: options.pageLimit,
           pages: Infinity,
           cutoff: () => cutoffOf(ctx, homeserver),
-          maxPaths: options.windowMaxEntries,
+          cap: { rendered: options.windowMaxEntries, paths: options.windowMaxPaths },
         });
       }
     });
@@ -135,7 +162,7 @@ export function createWindowReads<D>(deps: WindowDeps<D>): WindowReads {
 
   /**
    * Reads the users' group newest first from each one's top down to where their read stops: the plan's cutoff, once
-   * it places one, their floor, their `maxPaths`-th path, the plan's last page or their stream start. A window's cutoff
+   * it places one, their floor, the first path past a cap, the plan's last page or their stream start. A window's cutoff
    * comes from the homeserver's clock, to which every page read adds its dated writes, shared by every batch of the
    * homeserver: until the clock holds a write older than the window, a batch keeps reading. The batches commit as one
    * stream, newest events first: a round commits what every batch has read, everything above the highest point a
@@ -159,8 +186,9 @@ export function createWindowReads<D>(deps: WindowDeps<D>): WindowReads {
       reading: Set<string>;
       /** Per user whose read stopped, where. */
       ends: Map<string, Cursor>;
-      /** Per user, the paths read. */
+      /** Per user, the paths read, and how many of them render before they show. */
       paths: Map<string, Set<string>>;
+      rendered: Map<string, number>;
       /** Read and not committed yet. */
       events: AuthoredStreamEvent[];
       /** Every event of the users still reading above it is read. */
@@ -201,12 +229,16 @@ export function createWindowReads<D>(deps: WindowDeps<D>): WindowReads {
         const paths = batch.paths.get(user) ?? new Set<string>();
         batch.paths.set(user, paths);
         if (!paths.has(event.path)) {
-          // The range keeps the user's newest paths: it ends just above the first one past the bound.
-          if ((bounds.get(user)?.held ?? 0) + paths.size >= plan.maxPaths) {
+          // The range keeps the user's newest paths: it ends just above the first one past a cap.
+          const held = bounds.get(user)?.held ?? NOTHING_HELD;
+          const renders = domain.needsBody(event.path) === 'render';
+          const rendered = batch.rendered.get(user) ?? 0;
+          if (held.paths + paths.size >= plan.cap.paths || (renders && held.rendered + rendered >= plan.cap.rendered)) {
             end(batch, user, event.cursor);
             continue;
           }
           paths.add(event.path);
+          if (renders) batch.rendered.set(user, rendered + 1);
         }
         batch.events.push(event);
       }
@@ -235,6 +267,7 @@ export function createWindowReads<D>(deps: WindowDeps<D>): WindowReads {
         reading: new Set(users.map(([user]) => user)),
         ends: new Map(),
         paths: new Map(),
+        rendered: new Map(),
         events: [],
         low: CURSOR_ZERO,
         pages: 0,
@@ -407,12 +440,13 @@ export function createWindowReads<D>(deps: WindowDeps<D>): WindowReads {
    * events.
    */
   const readSlice = (ctx: OperationContext, scope: ScopeKey, group: PathGroup, below: Cursor | null) =>
-    readNewestFirst(ctx, scope.homeserver, group, new Map([[scope.author, { top: below, floor: null, held: 0 }]]), {
-      limit: options.sliceLimit,
-      pages: 1,
-      cutoff: () => null,
-      maxPaths: Infinity,
-    });
+    readNewestFirst(
+      ctx,
+      scope.homeserver,
+      group,
+      new Map([[scope.author, { top: below, floor: null, held: NOTHING_HELD }]]),
+      { limit: options.sliceLimit, pages: 1, cutoff: () => null, cap: NO_CAP },
+    );
 
   return { syncWindow, syncNewest, readSlice };
 }

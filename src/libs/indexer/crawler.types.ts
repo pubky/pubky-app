@@ -30,10 +30,16 @@ export interface CrawlerOptions {
    */
   windowDays: number;
   /**
-   * Most paths of one user a window read takes, their newest, counting those their top range already holds when it
-   * continues below it: a cost bound, so a user who wrote more within the window starts later.
+   * Most records that render before they show (`needsBody`), such as posts, one user's window read takes, their newest,
+   * counting those their top range already holds when it continues below it: the files it fetches before committing, a
+   * cost bound, so a user who posted more within the window starts later, at a post.
    */
   windowMaxEntries: number;
+  /**
+   * Most paths of one user a window read takes, records fetched later such as tags included, counted the same way: the
+   * events it reads, a cost bound against a user who writes without end.
+   */
+  windowMaxPaths: number;
   /** How long a resolved homeserver is used before resolving the user again. */
   homeserverTtlMs: number;
   /** Most users in a scope, seed included; nearer hops win. */
@@ -63,6 +69,7 @@ export const DEFAULT_CRAWLER_OPTIONS: Readonly<CrawlerOptions> = Object.freeze({
   homeserverConcurrency: 6,
   windowDays: 30,
   windowMaxEntries: 1000,
+  windowMaxPaths: 10000,
   homeserverTtlMs: 6 * 60 * 60 * 1000,
   maxUsers: 2000,
   excluded: new Set<string>(),

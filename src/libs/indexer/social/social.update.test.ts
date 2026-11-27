@@ -178,7 +178,7 @@ function world(seed: number) {
       const tail = BigInt(cursor - rng.below(200));
       replace({
         activity: new Map([...activity].filter(([, record]) => record.cursor > tail)),
-        history: { ...entry.history, activity: { complete: false, tail } },
+        history: { ...entry.history, activity: { complete: false, tail, held: false } },
       });
       return 'window';
     }

@@ -372,7 +372,7 @@ describe('buildSocialView membership', () => {
     expect(visited.membershipOf('stranger')).toBeNull();
     expect(ids(visited.postsBy(DION))).toEqual([id(DION, collection), id(DION, orphan)]);
     expect(visited.tagsBy(DION).map(({ label }) => label)).toEqual(['dev', 'rust']);
-    expect(visited.historyOf(DION)).toEqual({ complete: true, sinceMs: null });
+    expect(visited.historyOf(DION)).toEqual({ complete: true, sinceMs: null, held: false });
     expect(visited.followers(DION)).toEqual([CLEO]);
     expect(visited.tagsOnPost(ALICE, a1.id)).toEqual([
       { label: 'rust', taggers: [CLEO, BRAN] },
@@ -398,7 +398,7 @@ describe('buildSocialView membership', () => {
     expect(referenced.timeline([CLEO], { includeReplies: true })).toEqual([]);
     expect(referenced.repliesTo(BRAN, b1.id)).toEqual([]);
     expect(referenced.tagsBy(CLEO)).toEqual([]);
-    expect(referenced.historyOf(CLEO)).toEqual({ complete: false, sinceMs: null });
+    expect(referenced.historyOf(CLEO)).toEqual({ complete: false, sinceMs: null, held: false });
   });
 
   it('resolves a member post loaded alone by key without adding it to the stream', () => {
@@ -430,10 +430,10 @@ describe('buildSocialView history', () => {
   it('reports a whole history as complete and a windowed one from the estimated time of its tail', () => {
     const partial = buildSocialView(withPartialActivity(recordsOf(network), CLEO, BigInt(14)));
 
-    expect(view.historyOf(ALICE)).toEqual({ complete: true, sinceMs: null });
-    expect(partial.historyOf(CLEO)).toEqual({ complete: false, sinceMs: minute(6) });
-    expect(partial.historyOf(CLEO, 'graph')).toEqual({ complete: true, sinceMs: null });
+    expect(view.historyOf(ALICE)).toEqual({ complete: true, sinceMs: null, held: false });
+    expect(partial.historyOf(CLEO)).toEqual({ complete: false, sinceMs: minute(6), held: false });
+    expect(partial.historyOf(CLEO, 'graph')).toEqual({ complete: true, sinceMs: null, held: false });
     expect(ids(partial.postsBy(CLEO))).toEqual([id(CLEO, quote)]);
-    expect(partial.historyOf('stranger')).toEqual({ complete: false, sinceMs: null });
+    expect(partial.historyOf('stranger')).toEqual({ complete: false, sinceMs: null, held: false });
   });
 });

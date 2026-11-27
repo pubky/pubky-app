@@ -1,4 +1,5 @@
-import type { LeafRequest } from '../crawler.types';
+import { DEFAULT_CRAWLER_OPTIONS, type LeafRequest } from '../crawler.types';
+import { atWindowCap, heldOf } from '../crawler.window';
 import { CURSOR_ZERO } from '../cursor';
 import { createIndexerRuntime } from '../indexer';
 import { IndexerNotStartedError } from '../indexer.errors';
@@ -194,9 +195,10 @@ const asError = (error: unknown): Error => (error instanceof Error ? error : new
 const sameCoverage = (a: Coverage, b: Coverage) =>
   a.length === b.length && a.every((range, i) => range.tail === b[i].tail && range.head === b[i].head);
 
-const historyOf = ({ trusted }: MergedRuns<SocialData>): GroupHistory => ({
+const historyOf = ({ trusted }: MergedRuns<SocialData>, held: boolean): GroupHistory => ({
   complete: trusted !== null && trusted.tail === CURSOR_ZERO,
   tail: trusted === null ? null : trusted.tail,
+  held,
 });
 
 /** Whether the entry lies in the scope's trusted range, where no later event can hide in a gap. */
@@ -233,17 +235,23 @@ interface Loaded {
   activity: MergedRuns<SocialData>;
   /** The leaf scopes of the author's ensured posts. */
   leaves: MergedRuns<SocialData>[];
+  /** Whether their homeserver failed the last read of it. */
+  failing: boolean;
+  /** Whether their activity window is at a cap. */
+  capped: boolean;
 }
 
 /** What an author's records are made of: the same inputs make the same records. */
-const inputsOf = ({ homeserver, membership, hop, graph, activity, leaves }: Loaded): readonly unknown[] => [
+const inputsOf = ({
   homeserver,
   membership,
   hop,
   graph,
   activity,
-  ...leaves,
-];
+  leaves,
+  failing,
+  capped,
+}: Loaded): readonly unknown[] => [homeserver, membership, hop, graph, activity, failing, capped, ...leaves];
 
 const sameInputs = (a: readonly unknown[], b: readonly unknown[]) =>
   a.length === b.length && a.every((input, i) => input === b[i]);
@@ -258,7 +266,7 @@ function ownRecords(
 }
 
 function authorRecords(domain: SocialDomain, author: string, loaded: Loaded): AuthorRecords {
-  const { homeserver, membership, hop, graph, activity, leaves } = loaded;
+  const { homeserver, membership, hop, graph, activity, leaves, failing, capped } = loaded;
   const tree = domain.treeOf([graph.entries, activity.entries, ...leaves.map(({ entries }) => entries)]);
   const loose = new Map<string, RecordEntry<SocialData>>();
   for (const leaf of leaves) {
@@ -280,7 +288,7 @@ function authorRecords(domain: SocialDomain, author: string, loaded: Loaded): Au
       posts: deletedPosts(tree, author, [activity, ...leaves]),
       profile: profile !== undefined && profile.kind === 'tombstone' && isTrusted(graph, profile),
     },
-    history: { graph: historyOf(graph), activity: historyOf(activity) },
+    history: { graph: historyOf(graph, failing), activity: historyOf(activity, failing || capped) },
   };
   if (domain.trees.length > 1) records.tree = tree;
   return records;
@@ -315,6 +323,9 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
   const domain = createSocialDomain(params.legacyTree);
   const { graphGroup, activityGroup, profileGroup } = domain;
   const runtime = createIndexerRuntime({ ...params, domain });
+  const crawlerOptions = { ...DEFAULT_CRAWLER_OPTIONS, ...params.options?.crawler };
+  /** Per homeserver, whether it failed the last read of it, read once per build. */
+  let failingOf = new Map<string, boolean>();
   const verifyView = params.options?.verifyView ?? false;
   const emptyState = buildSocialState([]);
   const empty = emptyState.view;
@@ -412,7 +423,20 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
     if (homeserver === null) return;
     const graph = await served({ author, homeserver, group: graphGroup });
     const activity = membership === 'referenced' ? NOTHING : await served({ author, homeserver, group: activityGroup });
-    loaded.set(author, { homeserver, membership, hop, graph, activity, leaves: [] });
+    let failing = failingOf.get(homeserver);
+    if (failing === undefined) {
+      failing = (await store.readHomeserverState(homeserver)).failure !== null;
+      failingOf.set(homeserver, failing);
+    }
+    const { trusted } = activity;
+    const held = heldOf(
+      domain,
+      [...activity.entries.values()].flatMap(({ cursor, path }) =>
+        trusted !== null && cursor > trusted.tail ? [path] : [],
+      ),
+    );
+    const capped = atWindowCap(held, crawlerOptions);
+    loaded.set(author, { homeserver, membership, hop, graph, activity, leaves: [], failing, capped });
   }
 
   /** Adds each ensured post's or file's leaf scope to its author, who is referenced when not loaded otherwise. */
@@ -511,6 +535,7 @@ export function createSocialIndexer(params: SocialIndexerParams): SocialIndexer 
     const members = forSeed === null ? new Map<string, number>() : await store.readScopeMembers(forSeed);
     const hops = new Map<string, number>(members);
     if (forSeed !== null && !hops.has(forSeed)) hops.set(forSeed, 0);
+    failingOf = new Map();
     await dropForgotten();
     const loaded = new Map<string, Loaded>();
     for (const [author, hop] of hops) await load(loaded, author, 'member', hop);

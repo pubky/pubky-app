@@ -7,6 +7,8 @@ export interface LoadedStart {
   author: string;
   /** The estimated time the author's loaded activity starts, `null` when unknown. */
   sinceMs: number | null;
+  /** Whether a sync will not load it further back: only a backfill would. */
+  held: boolean;
 }
 
 /** The authors whose activity is loaded only partly, each with where it starts. */
@@ -14,7 +16,7 @@ export function partlyLoaded(view: SocialView, authors: Iterable<string>): Loade
   return [...authors]
     .map((author) => ({ author, ...view.historyOf(author) }))
     .filter(({ complete }) => !complete)
-    .map(({ author, sinceMs }) => ({ author, sinceMs }));
+    .map(({ author, sinceMs, held }) => ({ author, sinceMs, held }));
 }
 
 /**

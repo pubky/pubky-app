@@ -40,7 +40,7 @@ const COMPLETE: BackfillOutcome = { ...STEP, complete: true, sinceMs: null };
 /** A view whose authors' loaded history starts at these times, unknown for anyone else. */
 const viewSince = (since: Record<string, number> = {}) =>
   asOpaque<SocialView>({
-    historyOf: (author: string): History => ({ complete: false, sinceMs: since[author] ?? null }),
+    historyOf: (author: string): History => ({ complete: false, sinceMs: since[author] ?? null, held: false }),
   });
 
 function fakeIndexer(...responses: Array<NexusResponse | Error>) {

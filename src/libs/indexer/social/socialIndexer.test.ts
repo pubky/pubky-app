@@ -160,6 +160,22 @@ describe('createSocialIndexer', () => {
     });
   });
 
+  it('names a followee at the window cap partial in the following feed instead of waiting on them', async () => {
+    const { indexerOf } = socialWorld({ windowMaxEntries: 1 });
+    const indexer = indexerOf();
+
+    indexer.start(ALICE);
+    await indexer.whenSynced();
+    const answer = await indexer.request({ url: FOLLOWING, method: 'GET' });
+
+    // Each followee's newest post only; no sync loads either further, so neither bounds the page.
+    const note = answer.coverage.kind === 'scope' ? (answer.coverage.note ?? '') : '';
+    expect(note.match(/, not loading further/g)).toHaveLength(2);
+    expect(note).toContain(`${BRAN} since`);
+    expect(note).not.toContain('served only above');
+    expect(answer.more).toEqual(expect.arrayContaining([{ kind: 'backfill', author: BRAN }]));
+  });
+
   it('shows a post, marked syncing, while the tags on it are fetched, and is synced once they are in', async () => {
     const { fixture, network, time, indexerOf } = socialWorld();
     const url = `/v1/post/${ALICE}/${fixture.posts.a1.id}`;

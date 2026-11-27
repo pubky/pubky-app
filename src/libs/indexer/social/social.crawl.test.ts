@@ -36,6 +36,7 @@ describe('the social domain behind the crawler', () => {
       const historyOf = ({ trusted }: MergedRuns<SocialData>) => ({
         complete: trusted !== null && trusted.tail === BigInt(0),
         tail: trusted === null ? null : trusted.tail,
+        held: false,
       });
       records.push({
         author,

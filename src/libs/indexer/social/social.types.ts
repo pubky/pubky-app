@@ -126,6 +126,11 @@ export interface GroupHistory {
   complete: boolean;
   /** The trusted range's tail cursor, `null` without coverage. */
   tail: Cursor | null;
+  /**
+   * Whether a sync will not read it further back: the author's homeserver failed its last read, or the window is at a
+   * cap (`windowMaxEntries`, `windowMaxPaths`). Only a `backfill` loads it further then.
+   */
+  held: boolean;
 }
 
 /**
