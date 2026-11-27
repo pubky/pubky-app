@@ -13,10 +13,10 @@ const TERMS_PREAMBLE: LegalPreamble = {
     <>
       <LegalParagraph>
         Thank you for using the Pubky platform and the products, services and features we make available to you as part
-        of the platform, including the Pubky App and Pubky Shop (collectively, the &quot;Platform&quot;). The terms and
-        conditions set forth below (as updated and amended from time to time, and collectively with the Privacy Policy
-        and any other materials explicitly incorporated by us, these &quot;Terms&quot;) govern your access to and use of
-        the Platform.
+        of the platform, including the Pubky App and Pubky Market (collectively, the &quot;Platform&quot;). The terms
+        and conditions set forth below (as updated and amended from time to time, and collectively with the Privacy
+        Policy and any other materials explicitly incorporated by us, these &quot;Terms&quot;) govern your access to and
+        use of the Platform.
       </LegalParagraph>
       <LegalParagraph>
         <strong>
@@ -391,7 +391,7 @@ const TERMS_SECTIONS: LegalSection[] = [
             your Complaint; and
           </li>
           <li>
-            If your complaint concerns any particular listing on Pubky Shop, please provide the listing information
+            If your complaint concerns any particular listing on Pubky Market, please provide the listing information
             identifying the specific reasons for your complaint (e.g., fraud).
           </li>
         </LegalList>
@@ -499,11 +499,11 @@ const TERMS_SECTIONS: LegalSection[] = [
   },
   {
     id: 'pubky-shop',
-    title: 'PUBKY SHOP AND PUBKY MARKET',
+    title: 'PUBKY MARKET',
     content: (
       <>
         <LegalParagraph italic>
-          This section explains Pubky Shop. It does not replace the rest of these Terms. Listings and related material
+          This section explains Pubky Market. It does not replace the rest of these Terms. Listings and related material
           remain Content. Prohibited Uses still apply, including to goods and services offered for sale.
         </LegalParagraph>
       </>
@@ -511,13 +511,13 @@ const TERMS_SECTIONS: LegalSection[] = [
     subsections: [
       {
         id: 'what-pubky-shop-is',
-        title: 'What Pubky Shop is',
+        title: 'What Pubky Market is',
         content: (
           <>
             <LegalParagraph>
-              Pubky Shop is our marketplace client. Sellers may publish listings. Buyers may browse, bid, make offers,
-              join timed drops, place orders, and pay the seller. We operate the Shop website, a catalog index, a
-              transaction service (including stock, auction close, and drop timing), payment verification, and a Lock
+              Pubky Market is our marketplace client. Sellers may publish listings. Buyers may browse, bid, make offers,
+              join timed drops, place orders, and pay the seller. We operate the Pubky Market website, a catalog index,
+              a transaction service (including stock, auction close, and drop timing), payment verification, and a Lock
               Server for gated digital content. We are not the seller of listed goods or services unless a listing is
               made by an account we operate and that listing says so.
             </LegalParagraph>
@@ -526,12 +526,11 @@ const TERMS_SECTIONS: LegalSection[] = [
       },
       {
         id: 'what-pubky-market-is',
-        title: 'What Pubky Market is',
+        title: 'Other marketplaces',
         content: (
           <>
             <LegalParagraph>
-              Pubky Market is the name we use for commerce on Pubky. These Terms govern Pubky Shop. They do not
-              automatically govern some other operator’s marketplace.
+              These Terms govern Pubky Market. They do not automatically govern some other operator’s marketplace.
             </LegalParagraph>
           </>
         ),
@@ -570,7 +569,7 @@ const TERMS_SECTIONS: LegalSection[] = [
         content: (
           <>
             <LegalParagraph>
-              You must not list or buy through Pubky Shop anything that is illegal to offer or acquire in a place that
+              You must not list or buy through Pubky Market anything that is illegal to offer or acquire in a place that
               applies to you, or that otherwise breaches these Terms or our Community Guidelines. We may refuse, unlist,
               or restrict listings and orders. We operate moderation for prohibited goods. Moderation on our services is
               not a promise that every listing is lawful or that origin copies are gone.
@@ -584,8 +583,8 @@ const TERMS_SECTIONS: LegalSection[] = [
         content: (
           <>
             <LegalParagraph>
-              We do not charge a fee for Pubky Shop in these Terms. You do not pay Synonym the price of the listed item.
-              We do not custody the purchase amount. We are not the PayPal merchant of record for the sale.
+              We do not charge a fee for Pubky Market in these Terms. You do not pay Synonym the price of the listed
+              item. We do not custody the purchase amount. We are not the PayPal merchant of record for the sale.
             </LegalParagraph>
           </>
         ),
@@ -605,7 +604,7 @@ const TERMS_SECTIONS: LegalSection[] = [
               </li>
               <li>
                 <strong>PayPal:</strong> the buyer pays the seller’s PayPal address. PayPal confirms payment, not Pubky
-                Shop.
+                Market.
               </li>
             </LegalList>
             <LegalParagraph>
@@ -636,8 +635,8 @@ const TERMS_SECTIONS: LegalSection[] = [
           <>
             <LegalParagraph>
               Checkout may collect a delivery address and other order details to pass between buyer and seller. You are
-              responsible for the accuracy of what you submit. Shop may include messages about an order. We are not a
-              party to those messages. Do not treat Shop messages as legal notice to Synonym.
+              responsible for the accuracy of what you submit. Pubky Market may include messages about an order. We are
+              not a party to those messages. Do not treat Pubky Market messages as legal notice to Synonym.
             </LegalParagraph>
           </>
         ),
@@ -672,7 +671,7 @@ const TERMS_SECTIONS: LegalSection[] = [
         content: (
           <>
             <LegalParagraph>
-              The Recovery Phrase rules in these Terms still apply. Do not enter a recovery phrase into Pubky Shop, a
+              The Recovery Phrase rules in these Terms still apply. Do not enter a recovery phrase into Pubky Market, a
               Lock Server page, PayPal, or setup except through Pubky Ring or the wallet itself as designed.
             </LegalParagraph>
           </>
@@ -1088,7 +1087,7 @@ const TERMS_SECTIONS: LegalSection[] = [
           <li>
             “<strong>Content</strong>” means user-generated text, images, videos and other content provided on the
             Platform, listings, listing photographs, shop profiles, reviews, bids, offers, order messages, and other
-            Pubky Shop material.;
+            Pubky Market material.;
           </li>
           <li>
             “<strong>Law</strong>” means all laws, statutes, orders, regulations, rules, treaties, and/or official
@@ -1123,23 +1122,18 @@ const TERMS_SECTIONS: LegalSection[] = [
           </li>
           <li>
             “<strong>Pubky App</strong>” means the progressive web application software named Pubky as provided by
-            Synonym. Pubky App may display a control that opens Pubky Shop. Use of Pubky Shop is use of the Platform
+            Synonym. Pubky App may display a control that opens Pubky Market. Use of Pubky Market is use of the Platform
             under these Terms;
           </li>
           <li>
-            &quot;<strong>Pubky Shop</strong>&quot; means the Synonym-operated commerce client and related services at
+            &quot;<strong>Pubky Market</strong>&quot; means the Synonym-operated commerce client and related services at
             shop.pubky.app (including catalog, cart, checkout, orders, seller studio, and associated transaction, index,
-            Lock Server, and payment-verification services we operate).
-          </li>
-          <li>
-            &quot;<strong>Pubky Market</strong>&quot; means the concept of commerce among Pubky identities. Pubky Shop
-            is the Synonym-operated instance of that concept. Pubky Market is not a separate product or a second set of
-            Terms.
+            Lock Server, and payment-verification services we operate). Pubky Market is not a second set of Terms.
           </li>
           <li>
             &quot;<strong>Lock Server</strong>&quot; means a service that applies access conditions (including proof of
-            payment) to digital content a seller has chosen to gate. Synonym operates a Lock Server used by Pubky Shop.
-            A Lock Server does not receive your identity secret (recovery phrase or root key).
+            payment) to digital content a seller has chosen to gate. Synonym operates a Lock Server used by Pubky
+            Market. A Lock Server does not receive your identity secret (recovery phrase or root key).
           </li>
           <li>
             “<strong>Third-Party Material(s)</strong>” means sites on the Internet, software application, content other
