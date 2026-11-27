@@ -12,7 +12,7 @@ export interface ArticleCoverInput {
    * `type`), for rule B: a 0.x article's slot 0 is its cover only when it is an image, and only
    * metadata says what it is, never the markdown (for v1 media, which Nexus keeps no metadata
    * for, the row is the one `FileNormalizer` synthesizes from the URI's extension). Omit it while
-   * unread; `null` once the read settled without a row. The other shapes ignore it.
+   * unread; `null` once the read settled without a row. Rule A ignores it.
    */
   slotZeroContentType?: string | null;
 }
@@ -21,8 +21,8 @@ export interface ResolvedArticleCover {
   /** The cover's URI, or null when the article has none (or, under rule B, none is known yet). */
   cover: string | null;
   /**
-   * The attachment each `attachment:{n}` reference of the body names, by slot: `slots[n]`.
-   * Undefined (or `''`, a hole) past the end or for a slot nothing names.
+   * The attachment each `attachment:{n}` reference of the body names, by slot: `slots[n]`, the
+   * attachments as stored. Undefined past the end; an empty entry names no file.
    */
   slots: readonly string[];
   /**
@@ -61,31 +61,28 @@ export function settleArticleSlotZero(resolved: ResolvedArticleCover, slotZeroIs
 }
 
 /**
- * Where an article's cover and inline media are, for the three shapes a reader meets (ADR-0023 as
+ * Where an article's cover and inline media are, for the two shapes a reader meets (ADR-0023 as
  * amended by ADR-0027):
  *
  * - **A** (written by this app, and by `pubky-social-migrator` 1.0.0-rc.2, the pinned one, when it
  *   promotes a 0.x cover): `cover_image` set, `attachments` hold the inline media only and
- *   `attachment:{n}` indexes them directly. rc.2 (transform revision 4) promotes `attachments[0]`
- *   only when it is an image the body does not reference, and then renumbers every reference
- *   `attachment:{n}` to `attachment:{n-1}`; otherwise it writes a null cover and the attachments
- *   as they were, which reads as rule B.
- * - **A'** (migrated by `pubky-social-migrator` 1.0.0-rc.1, before rc.2 was pinned):
- *   `cover_image` set because the migrator promoted `attachments[0]` into it, but the body's
- *   references were not renumbered, so a reference `n` still means the file that is now at
- *   `attachments[n - 1]`. Told apart from A by references that exist but never name slot 0,
- *   which this app's writer always does when it has any inline media, and so does rc.2's
- *   renumbering of a 0.x body that named slot 1, as every body the 0.x composer wrote with inline
- *   media did (one whose lowest image reference is above slot 1 would read as A'). A' stays for
- *   as long as an rc.1-written article is left to read: the migrator's writes are create-only,
- *   so neither pinning rc.2 nor raising `SOCIAL_MIGRATION_TRANSFORM_REV` rewrites an article
- *   rc.1 copied (ADR-0023, amended 2026-11-10 and 2026-11-18).
+ *   `attachment:{n}` indexes them directly, whichever slots the body names. rc.2 (transform
+ *   revision 4) promotes `attachments[0]` only when it is an image the body does not reference,
+ *   and then renumbers every reference its textual scan sees, `attachment:{n}` to
+ *   `attachment:{n-1}`; otherwise it writes a null cover and the attachments as they were, which
+ *   reads as rule B.
  * - **B** (0.x, never migrated; also every migrated article as Nexus serves it, in the 0.x content
  *   shape): no `cover_image`; `attachments[0]` is the cover when the body does not reference
  *   `attachment:0` and its file is an image, which only its metadata says
  *   (`slotZeroContentType`). Until the caller has read that, the slot is the `coverCandidate` and
  *   nothing paints as a cover, so a PDF or a video at slot 0 never flashes as one. Every reference
  *   indexes `attachments` directly.
+ *
+ * A reference that kept its 0.x number while the cover was promoted has no rule of its own: it
+ * reads as A, one file later. That is every reference of an article `pubky-social-migrator`
+ * 1.0.0-rc.1 copied, and in an rc.2 copy each reference written as a reference-style definition
+ * or with an entity-escaped slot, which the migrator's textual scan does not renumber and this
+ * app never wrote (ADR-0023, amended 2026-11-19).
  *
  * Pure and server-safe.
  */
@@ -95,18 +92,13 @@ export function resolveArticleCover({
   slotZeroContentType,
 }: ArticleCoverInput): ResolvedArticleCover {
   const article = parseArticleContent(content);
-  const refs = collectAttachmentRefIndexes(article?.body ?? '');
   const list = attachments ?? [];
 
   if (article?.cover_image) {
-    const migrated = refs.size > 0 && !refs.has(0);
-    return {
-      cover: article.cover_image,
-      slots: migrated ? ['', ...list] : list,
-      legacyCoverSlot: false,
-      coverCandidate: null,
-    };
+    return { cover: article.cover_image, slots: list, legacyCoverSlot: false, coverCandidate: null };
   }
+
+  const refs = collectAttachmentRefIndexes(article?.body ?? '');
 
   // Rule B. A referenced slot 0 is inline media and the article has no cover.
   if (refs.has(0)) return { cover: null, slots: list, legacyCoverSlot: false, coverCandidate: null };

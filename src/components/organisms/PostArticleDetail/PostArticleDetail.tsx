@@ -92,9 +92,8 @@ export const PostArticleDetail = ({ postId, content, attachments, isBlurred, unl
     coverImageDesktopFallbackVariant: POST_COVER_DESKTOP_FALLBACK_VARIANT,
   });
 
-  // What each `attachment:{n}` of the body names depends on the stored shape (the envelope's cover,
-  // a migrated article's shifted slots, or a 0.x article's slot 0): the resolved slots stand in
-  // for the raw attachments wherever a slot is read.
+  // Each `attachment:{n}` of the body names the attachment at that slot, as stored (ADR-0023): the
+  // resolver's slots are read wherever a slot is.
   const { slots } = resolveArticleCover({ content, attachments });
 
   // Inline slots are typed from their file rows (the markdown never says video or image). Only the

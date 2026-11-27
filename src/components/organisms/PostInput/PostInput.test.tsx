@@ -1870,6 +1870,55 @@ describe('PostInput', () => {
     );
   });
 
+  it('seeds an article with an envelope cover from its attachments as stored', () => {
+    const first = 'pubky://author/pub/pubky.app/files/first';
+    const second = 'pubky://author/pub/pubky.app/files/second';
+    render(
+      <PostInput
+        variant={POST_INPUT_VARIANT.EDIT}
+        editPostId="author:post-1"
+        editContent={JSON.stringify({
+          title: 'T',
+          body: '![a](attachment:0) ![b](attachment:1)',
+          cover_image: 'pubky://author/pub/pubky.app/files/cover',
+        })}
+        editIsArticle={true}
+        editAttachments={[first, second]}
+      />,
+    );
+
+    // The cover is the envelope's, so slot 0 is the first attachment and slot 1 the second
+    expect(mockSetContent).toHaveBeenCalledWith(`![a](${first}) ![b](${second})`);
+    expect(vi.mocked(toast)).not.toHaveBeenCalled();
+  });
+
+  it('removes, with a warning, a reference one past the attachments of an article with an envelope cover', () => {
+    // The shape `pubky-social-migrator` 1.0.0-rc.1 wrote: the cover promoted, the reference still at its 0.x number
+    render(
+      <PostInput
+        variant={POST_INPUT_VARIANT.EDIT}
+        editPostId="author:post-1"
+        editContent={JSON.stringify({
+          title: 'T',
+          body: 'Body ![a](attachment:1)',
+          cover_image: 'pubky://author/pub/pubky.app/files/cover',
+        })}
+        editIsArticle={true}
+        editAttachments={['pubky://author/pub/pubky.app/files/only']}
+      />,
+    );
+
+    // Slot 1 holds nothing: the one attachment is slot 0, never read one slot down
+    expect(mockSetContent).toHaveBeenCalledWith('Body ');
+    expect(vi.mocked(toast)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(toast)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        variant: 'warning',
+        description: 'An attachment with a broken reference was removed from the article.',
+      }),
+    );
+  });
+
   it('shows PostInputAttachments without existing attachments for non-edit variants', () => {
     render(<PostInput variant={POST_INPUT_VARIANT.POST} />);
 

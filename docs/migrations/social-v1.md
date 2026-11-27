@@ -51,7 +51,8 @@ ones listed under _Reductions_. No new 1.x features ship in this round.
   `HOMESERVER_CAPABILITIES = [APP_CAPABILITIES, ...SOCIAL_V1_APP_CAPABILITIES, ...LOCKS_CAPABILITIES]`;
   `APP_CAPABILITIES = '/pub/pubky.app/:rw'` stays (0.x deletes, the migrator). Pinned in `src/config/auth.test.ts`.
 - **Articles (D14):** the cover goes in the envelope `cover_image`; attachments hold inline media only; a reader
-  rule handles app-written v1, migrated (off by one until the migrator fix) and legacy articles.
+  rule handles app-written v1 and legacy articles (the rule for an rc.1 copy, off by one, was removed once rc.2 was
+  pinned; ADR-0023, amended 2026-11-19).
 - **App files (D15):** settings and the notification cursor move to `/priv/app.pubky/v1/`, copied from the legacy
   files in the first bootstrap after the gate; legacy fallback reads stay as a safety net. The copy never replaces a
   newer v1 file it finds on its re-read right before the PUT: `last_read` goes through the forward-only writer
@@ -557,9 +558,6 @@ After dev-sync 3 (2026-11-09):
   not its current route, so its user loses their in-app place at the cut-over (FIX-FINAL-7); a tab of a build with the
   update hook announces itself and is left in place since FIX-FINAL-8, unless its announce lost the race to the worker's
   `matchAll`.
-- Migrated articles with the rc.1 off-by-one render through the migrated-article reader rule (A′), and keep doing so
-  under the fixed migrator the app pins (1.0.0-rc.2, transform revision 4), which rewrites nothing an earlier run wrote
-  (ADR-0023 amendments). Only accounts migrated on test stacks and staging before rc.2 was pinned have such articles.
 - Mute changes and the notification read boundary (`last_read`) changed on another device appear within the poll
   interval (≤30 s) or on focus, not live: a session-bound stream's lease is unbounded while its response headers are
   outstanding (pubky/pubky-homeserver#798; ADR-0014, and the `last_read` poll is ADR-0029).
@@ -612,6 +610,11 @@ After dev-sync 3 (2026-11-09):
   and stops indexing for every user until an operator moves the Redis cursor past the event. No app change; the local
   stack recovered by a cursor bump in QA-4. Fixed in pubky/pubky-nexus#1231 (uniqueness per author; the old constraint
   is dropped at start-up), on the carrier from `dc9cd459`.
+- The migrator's article scan (`pubky-social-migrator`, 1.0.0-rc.2) reads plain inline destinations only, so it
+  promotes a 0.x cover without renumbering a reference written as a reference-style definition or with an
+  entity-escaped slot. pubky.app never wrote those spellings, so only a 0.x article another client wrote has them;
+  since rule A′ was removed the reader shows each such reference one file later, beside the plain references of the
+  same body, which are renumbered and read right. The repair is in the migrator's scan, not in the reader.
 - Migrated articles are served by Nexus in the 0.x content shape on `/v1` (QA-3 F-1, Nexus contract point 24); the app
   renders both shapes through the reader rules, so no change here.
 - Cleanup pass of the `/pub/pubky.app/` copies: not at release (meeting 2026-11-04: no app-side deletion; Nexus clears
@@ -723,7 +726,7 @@ the repository (`qa1-report.md`, `qa-3-results.md`, `qa-4-results.md`, `qa-5-res
 
 **QA-1 (2026-10-30/31, `feat/social-v1` with B3 merged, Nexus placeholder `feat/v1-social-indexing`): 19 PASS, 1 N/A of 20.** Persisted 0.x sessions signed out (`pre-migration-grant`, a Ring 0.x grant `missing-scopes`, a never-backed-up key
 with the backup prompt first) · phrase sign-in → `/migration` → summary → home, flag revision 3, 0.x tree
-byte-identical · reload after migration: no gate, no migrator chunk · migrated article (rule A′), collection and image
+byte-identical · reload after migration: no gate, no migrator chunk · migrated article (rule A′; removed 2026-11-19, ADR-0023), collection and image
 note render · post create, edit (second version is the head), reply, repost, delete (every version gone, tombstone,
 the 0.x copy removed too) · article with cover and inline media, title edit · collections create, add (also into a
 migrated one), remove, cover removal (BUG-1 and BUG-2 found here) · tags, migrated tag untag via `tag_uri`, hashtag
@@ -922,9 +925,15 @@ where they changed the app.
   otherwise). Where the migrator and the app's reader differ: the migrator scans the body as text, so an
   `attachment:0` inside a code span or fence blocks the promotion, while the app walks the markdown tree, sees no
   reference and shows that image as the cover through rule B, as the 0.x app did; an entity-escaped slot or a
-  reference-style definition, which the app counts, the migrator does not, and a body whose lowest image reference is
-  above slot 1 reads as A′. The 0.x composer wrote none of these. The app's own suites now run the rc.2 migrator on a 0.x
-  article with a cover and inline media and on one whose slot 0 is referenced
+  reference-style definition, which the app counts, the migrator does not. The 0.x composer wrote none of these. A body
+  whose lowest image reference is above slot 1 read as A′ until that rule was removed (ADR-0023, amended 2026-11-19)
+  and now reads as rule A, as stored. When every reference of a 0.x article with an
+  image at slot 0 is an entity-escaped slot or a reference-style definition, the migrator promotes the cover and
+  renumbers nothing, and the reader, which A′ had shifted back, now shows each reference one file later
+  (_Follow-ups_; pubky.app never wrote those spellings). In a body that mixes those spellings with plain references
+  the migrator renumbers the plain ones only and the reader shows each of the others one file later; A′ never read
+  such a body right. The app's own suites now run the rc.2 migrator on a 0.x
+  article with a cover and inline media, on one whose only reference is above slot 1 and on one whose slot 0 is referenced
   (`homeserver.social-migration.test.ts`), and the Cypress migration test seeds the first and checks the stored copy and
   the rendered article. The re-QA of a migrated article with a cover and inline media the adoption asked for ran as
   that test: `onboarding.cy.ts` on a production build against the local stack on 2026-11-18 (20 of 20, the extended

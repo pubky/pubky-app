@@ -106,7 +106,7 @@ boundary), item notes and alt text are preserved but not shown, no drafts, slugs
   route `{nexus}/v1/static/files/{owner}/{hash}.{ext}/{variant}` (`NEXUS_V1_STATIC_PATH` in `src/config/nexus.ts`,
   FIX-5, Nexus N5); 0.x files and every avatar stay on `/static` (D6: no app-side homeserver fallback).
 - **Articles** write the cover in `cover_image`; `attachments` hold inline media only and `attachment:{n}` indexes
-  them directly. One reader, `resolveArticleCover`, serves the three stored shapes (ADR-0023 amendment).
+  them directly. One reader, `resolveArticleCover`, serves the two stored shapes (ADR-0023 amendments).
 - **Collections** write `{ uri, note }` items through `toNewInput` / `toStored` + `encodeContent`; notes are kept. An
   edit is a `TCollectionEdit` change applied to the stored head (see _Edit_), so any edit rewrites a stored `layout`
   this client does not know to the default through `parse` (pre-existing).

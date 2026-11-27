@@ -485,10 +485,10 @@ describe('PostArticleDetail', () => {
     expect(mockUseAttachmentsMetadata).toHaveBeenLastCalledWith({ fileUris: [attachments[0]] });
   });
 
-  it("reads a migrated article's body media through its shifted slots (A')", () => {
-    // rc.1 promoted slot 0 into `cover_image` without renumbering the body: `attachment:1` now names
-    // the file at `attachments[0]`
-    const attachments = ['pubky://user123/pub/pubky.app/files/clip'];
+  it('reads the body media of an article with an envelope cover from the slots as stored', () => {
+    // The cover is in the envelope and the body leaves slot 0 alone: `attachment:1` names
+    // `attachments[1]`, never the file one slot down
+    const attachments = ['pubky://user123/pub/pubky.app/files/doc', 'pubky://user123/pub/pubky.app/files/clip'];
     const body = 'Text with ![a](attachment:1)';
     const content = JSON.stringify({
       title: 'Test Article Title',
@@ -505,8 +505,8 @@ describe('PostArticleDetail', () => {
 
     render(<PostArticleDetail {...defaultProps} content={content} attachments={attachments} />);
 
-    expect(mockUseAttachmentsMetadata).toHaveBeenLastCalledWith({ fileUris: [attachments[0]] });
-    expect(postTextProps.articleMedia).toEqual(expect.objectContaining({ attachments: ['', attachments[0]] }));
+    expect(mockUseAttachmentsMetadata).toHaveBeenLastCalledWith({ fileUris: [attachments[1]] });
+    expect(postTextProps.articleMedia).toEqual(expect.objectContaining({ attachments }));
   });
 
   it('reports the metadata read as unsettled while the inline rows are loading', () => {

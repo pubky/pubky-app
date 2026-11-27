@@ -70,46 +70,30 @@ describe('resolveArticleCover', () => {
     });
   });
 
-  describe("shape A': migrated by pubky-social-migrator 1.0.0-rc.1", () => {
-    it('shifts every slot by one when the body references attachments but never slot 0', () => {
-      // The migrator promoted `attachments[0]` into `cover_image` and removed it from the list,
-      // but left the body's references as the 0.x article numbered them (from 1, after the cover)
-      const migrated = encodeContent({
-        title: 'Title',
-        body: '![a](attachment:1)\n\n![b](attachment:2)',
-        cover_image: COVER,
+  describe('shape A: an envelope cover from another writer', () => {
+    it('indexes the attachments directly when the body references none at slot 0', () => {
+      // Valid from another client: the cover in the envelope, slot 0 an attachment the body leaves
+      // alone, the lowest reference above it. No reference is ever read one slot down.
+      const resolved = resolveArticleCover({
+        content: encodeContent({
+          title: 'Title',
+          body: '![a](attachment:1)\n\n![b](attachment:2)',
+          cover_image: COVER,
+        }),
+        attachments: [PDF, INLINE_A, INLINE_B],
       });
-      const resolved = resolveArticleCover({ content: migrated, attachments: [INLINE_A, INLINE_B] });
 
-      expect(resolved.cover).toBe(COVER);
-      expect(resolved.legacyCoverSlot).toBe(false);
-      expect(resolved.coverCandidate).toBeNull();
+      expect(resolved).toEqual({
+        cover: COVER,
+        slots: [PDF, INLINE_A, INLINE_B],
+        legacyCoverSlot: false,
+        coverCandidate: null,
+      });
       expect(resolved.slots[1]).toBe(INLINE_A);
       expect(resolved.slots[2]).toBe(INLINE_B);
-      expect(resolved.slots[0]).toBe('');
     });
 
-    it('is the exact shape the migrator produces from a 0.x article with a cover and inline media', () => {
-      // 0.x: attachments [cover, inline], body references slot 1 (the inline file)
-      const legacyArticle = resolveArticleCover({
-        content: legacy('![a](attachment:1)'),
-        attachments: [LEGACY_COVER, LEGACY_INLINE],
-        slotZeroContentType: IMAGE,
-      });
-      expect(legacyArticle.cover).toBe(LEGACY_COVER);
-      expect(legacyArticle.slots[1]).toBe(LEGACY_INLINE);
-
-      // Migrated: the cover moved into the envelope, the list lost it, the body kept its numbers
-      const migrated = resolveArticleCover({
-        content: encodeContent({ title: 'Title', body: '![a](attachment:1)', cover_image: COVER }),
-        attachments: [INLINE_A],
-      });
-      expect(migrated.cover).toBe(COVER);
-      expect(migrated.slots[1]).toBe(INLINE_A);
-    });
-
-    it('trusts an envelope cover rc.1 promoted from a non-image slot 0; the reader drops it from its row', () => {
-      // rc.1 promoted ANY slot 0: `[pdf, image]` became cover_image = pdf, attachments [image].
+    it('trusts an envelope cover that is not an image; the reader drops it from its row', () => {
       // The envelope is what it is; whether it renders is the metadata read's call, not this one's.
       const resolved = resolveArticleCover({
         content: encodeContent({ title: 'Title', body: '![a](attachment:1)', cover_image: PDF }),
@@ -117,12 +101,12 @@ describe('resolveArticleCover', () => {
         slotZeroContentType: IMAGE,
       });
 
-      expect(resolved).toEqual({ cover: PDF, slots: ['', INLINE_A], legacyCoverSlot: false, coverCandidate: null });
+      // The one attachment is slot 0; the body's reference to slot 1 finds no file
+      expect(resolved).toEqual({ cover: PDF, slots: [INLINE_A], legacyCoverSlot: false, coverCandidate: null });
+      expect(resolved.slots[1]).toBeUndefined();
     });
 
-    it('is not what a `[video]` article becomes: with no reference there is no shift', () => {
-      // rc.1 promoted the video into the envelope and left no inline media behind: shape A for the
-      // reader (no references to shift); the row drops the cover, as for any non-image envelope cover
+    it('trusts a video the envelope names beside no inline media', () => {
       const resolved = resolveArticleCover({
         content: encodeContent({ title: 'Title', body: 'text', cover_image: VIDEO }),
         attachments: [],

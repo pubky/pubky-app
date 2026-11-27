@@ -143,7 +143,7 @@ export function usePostArticle({
   // Where the cover is, computed synchronously from the envelope and the published body so the
   // cover never flashes for articles whose slot 0 is an inline image (ADR-0023 as amended by
   // ADR-0027). A local slot-0 entry already knows its type, which rule B needs from the slot's
-  // metadata; the other shapes ignore it.
+  // metadata; rule A ignores it.
   const located = resolveArticleCover({ content, attachments, slotZeroContentType: slotZeroEntry?.type });
 
   // Only the cover is relevant; inline attachments render inside the article body and are never

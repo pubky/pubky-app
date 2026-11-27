@@ -381,8 +381,8 @@ describe('usePostArticle', () => {
     });
 
     it('drops an envelope cover whose row says it is not an image', async () => {
-      // rc.1 promoted any slot 0 into `cover_image`, a PDF included; the envelope is trusted until
-      // the row says otherwise, as before.
+      // Another writer can name any file in `cover_image`, a PDF included; the envelope is trusted
+      // until the row says otherwise.
       const content = JSON.stringify({
         title: 'Test',
         body: 'Content',
@@ -1075,7 +1075,6 @@ describe('Envelope cover and the slot-0 rule', () => {
   });
 
   it('paints the envelope cover over a slot 0 the body leaves alone, which is still no cover', () => {
-    // An rc.1-migrated article (A'): refs exist but never name slot 0; slot 0 is still no cover
     const { result } = renderHook(() =>
       usePostArticle({
         content: envelope('Intro\n\n![shot](attachment:1)', COVER_URI),

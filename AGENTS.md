@@ -84,7 +84,7 @@ Controller naming encodes IO: `fetch*` network only, `get*` local only, `getMany
   listed). `docs/data-patterns.md`, `docs/migrations/social-v1.md`, ADR-0027/0028
 - Article bodies embed every media kind as `![alt](attachment:{n})`; the kind comes from file metadata, never the
   markdown; the cover is the envelope `cover_image` and stays image-only; every reader goes through
-  `resolveArticleCover` (rules A, A′ for a migrated article, B for a 0.x one). `docs/data-patterns.md`, ADR-0023
+  `resolveArticleCover` (rule A for an envelope cover, B for a 0.x article). `docs/data-patterns.md`, ADR-0023
 - Migration gate: every restore and sign-in passes `SocialMigrationController.ensureMigrated` before the session
   enters the auth store (`restoreStatus` `social-migration`, `AuthStatus.NEEDS_SOCIAL_MIGRATION`, route `/migration`);
   a new route, coordinator or provider respects that status, and no code path needs an epoch check because every
