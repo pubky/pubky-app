@@ -21,6 +21,12 @@ import { isPubkyIdentifier, stripPubkyPrefix } from '@/libs/utils/utils';
  * real id for the legitimate request.
  */
 
+/**
+ * The post ids Nexus accepts: 13 characters its Crockford base32 decoder reads,
+ * in either case. That decoder maps I, L and O onto 1, 1 and 0 and rejects only U.
+ */
+const POST_ID_PATTERN = /^[0-9a-tv-z]{13}$/i;
+
 /** `decodeURIComponent` without throwing on malformed input (`'abc%'`). */
 export function safeDecode(value: string): string | null {
   try {
@@ -66,8 +72,8 @@ export function normalizeProfileId(raw: string): string | null {
 /**
  * Normalizes the user/post id pair of a post route param.
  * Returns `null` when either id cannot decode or is not usable: the user id
- * must be a valid pubky identifier and the post id must start and end with an
- * alphanumeric character.
+ * must be a valid pubky identifier and the post id a 13-character Crockford
+ * base32 id.
  */
 export function normalizePostIds(rawUserId: string, rawPostId: string): { userId: string; postId: string } | null {
   const userSegment = normalizeSegment(rawUserId);
@@ -77,9 +83,9 @@ export function normalizePostIds(rawUserId: string, rawPostId: string): { userId
   const userId = stripPubkyPrefix(userSegment);
   if (!isPubkyIdentifier(userId)) return null;
 
-  // A post id is opaque to this layer (short id), but punctuation glued to it
-  // by crawlers is never part of one. Mid-id characters stay untouched.
-  if (postId.length === 0 || /^[^a-z0-9]|[^a-z0-9]$/i.test(postId)) return null;
+  // Nexus accepts only a 13-character Crockford base32 post id and answers 400
+  // to anything else (PUBKY-APP-KG/KF: a crawler requesting `/Next.Metadata`).
+  if (!POST_ID_PATTERN.test(postId)) return null;
 
   return { userId, postId };
 }

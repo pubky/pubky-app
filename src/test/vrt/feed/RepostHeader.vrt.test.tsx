@@ -47,7 +47,7 @@ describe('RepostHeader — visual regression', () => {
     await undo.hover();
     expect(getComputedStyle(button).backgroundColor).not.toBe(defaultBackground);
     expect(getComputedStyle(button).borderColor).toBe(defaultBorder);
-    await matchVrtElementScreenshot(headers, 'repost-header-hover');
+    await matchVrtElementScreenshot(headers, 'repost-header-hover', { hover: undo });
 
     await page.getByText('You reposted', { exact: true }).hover();
     // Establish keyboard modality, then focus explicitly: Safari's Tab order

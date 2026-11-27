@@ -27,6 +27,11 @@ const mockOnboardingStore = {
   })),
 };
 
+const mockLocksController = {
+  stopReaderFileCopy: vi.fn(),
+  resumeReaderFileCopy: vi.fn(),
+};
+
 const mockIdentity = {
   keypairFromSecretKey: vi.fn(() => ({ keypair: 'test-keypair' })),
   createRecoveryFile: vi.fn(),
@@ -34,6 +39,9 @@ const mockIdentity = {
 
 vi.mock('@/application/profile/profile', () => ({
   ProfileApplication: mockProfileApplication,
+}));
+vi.mock('@/controllers/locks/locks', () => ({
+  LocksController: mockLocksController,
 }));
 vi.mock('@/pipes/user/user.normalizer', () => ({
   UserNormalizer: mockUserNormalizer,
@@ -224,6 +232,11 @@ describe('ProfileController', () => {
         setProgress,
       });
       expect(mockClearExperienceCompleted).toHaveBeenCalledWith(testPubky);
+      // The deletion lists the files once: no Locks copy write may land after that list.
+      expect(mockLocksController.stopReaderFileCopy.mock.invocationCallOrder[0]).toBeLessThan(
+        mockProfileApplication.commitDelete.mock.invocationCallOrder[0],
+      );
+      expect(mockLocksController.resumeReaderFileCopy).not.toHaveBeenCalled();
     });
 
     it('propagates errors from ProfileApplication.commitDelete', async () => {
@@ -234,6 +247,7 @@ describe('ProfileController', () => {
 
       await expect(ProfileController.commitDelete({ pubky: testPubky, setProgress })).rejects.toThrow('delete failed');
       expect(mockClearExperienceCompleted).not.toHaveBeenCalled();
+      expect(mockLocksController.resumeReaderFileCopy).toHaveBeenCalledOnce();
     });
   });
 

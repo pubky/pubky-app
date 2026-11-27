@@ -6,6 +6,7 @@ import { isMobile } from './mobile';
 import { showProfileHeader } from './profile';
 import { confirmLogoutBackupBeforeNavigation } from './logout';
 import { waitForFeedToLoad } from './posts';
+import { recordRoutes } from './routes';
 import { approvePubkyAuthViaApi, signUpViaApi, signUpWithPubkyAuthViaApi } from './seed';
 import { CheckForNewPosts, HasBackedUp, OnboardingExperience, PostType, WaitForNewPosts } from './types/enums';
 // ***********************************************
@@ -174,15 +175,10 @@ Cypress.Commands.add(
     landingPath = '/home',
     { migrates = false, asked, beforeContinue, beforeRun, whileMigrating, acknowledgesSummary = false } = {},
   ) => {
-    // `asked: false`: every route from here on, so a passing visit to the gate cannot slip between two polls
+    // `asked: false`: every route from here on, so a passing visit to the gate cannot slip between two polls.
+    // The list has to contain the landing route: an empty one would make the gate check pass unwatched.
     const visited: string[] = [];
-    if (asked === false) {
-      cy.then(() => {
-        cy.on('url:changed', (url) => {
-          visited.push(url);
-        });
-      });
-    }
+    if (asked === false) recordRoutes(visited);
     openSignInPage();
     readPubkyRingAuthUrl().then((authUrl) => {
       expect(authUrl).to.match(/^pubkyauth:\/\//);
@@ -249,8 +245,10 @@ Cypress.Commands.add(
     if (asked === false) {
       cy.get(CONFIRM_CONTINUE_BUTTON).should('not.exist');
       cy.then(() => {
+        const pathnames = visited.map((url) => new URL(url).pathname);
+        expect(pathnames, 'routes during a sign-in that is never asked').to.include(landingPath);
         expect(
-          visited.filter((url) => new URL(url).pathname === '/migration'),
+          pathnames.filter((pathname) => pathname === '/migration'),
           'visits to the gate during a sign-in that is never asked',
         ).to.deep.eq([]);
       });

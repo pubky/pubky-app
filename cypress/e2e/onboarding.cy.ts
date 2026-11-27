@@ -40,6 +40,7 @@ import {
 } from '../support/profile';
 import { itMobile } from '../support/mobile';
 import { confirmLogoutBackupBeforeNavigation } from '../support/logout';
+import { recordRoutes } from '../support/routes';
 import {
   bookmarkViaApi,
   createArticleViaApi,
@@ -61,16 +62,6 @@ import {
 } from '../support/seed';
 import { CheckForNewPosts, HasBackedUp, OnboardingExperience } from '../support/types/enums';
 import type { SeededPost, SeededUser } from '../support/types/seed';
-
-// Records every route the tab visits from here on into the test's own list, which an assertion reads later. Kept as
-// reported: Cypress also reports an empty URL between tests, and a listener that throws hangs the run.
-const recordRoutes = (visited: string[]) => {
-  cy.then(() => {
-    cy.on('url:changed', (url) => {
-      visited.push(url);
-    });
-  });
-};
 
 // Records each title the gate's screen shows from here on, in order, into the test's own list, so a test can tell
 // every screen a run passed through, however briefly. The app's window survives every stage change of the gate.
@@ -1426,11 +1417,24 @@ describe('Onboarding', () => {
 
     cy.get('@signupFlag.all').should('have.length', 1);
     cy.then(() => {
+      const pathnames = visitedUrls.map((url) => new URL(url).pathname);
       expect(
-        visitedUrls.filter((url) => url.includes('/migration')),
+        pathnames.filter((pathname) => pathname === '/migration'),
         'visits to the gate during signup',
       ).to.deep.eq([]);
-      expect(visitedUrls, 'routes during signup').to.not.deep.eq([]);
+      // The steps `completeSignUpWithPubkyRing` lands on, in order. An earlier hop (the scan screen
+      // sending a missing invite code back to the invite step) may precede them; a missed one fails
+      // and the message is the whole list, so an empty recording cannot pass.
+      const expected = ['/onboarding/profile', '/onboarding/tags', '/onboarding/follow', '/home'];
+      const found: string[] = [];
+      let next = 0;
+      for (const pathname of pathnames) {
+        if (pathname === expected[next]) {
+          found.push(pathname);
+          next += 1;
+        }
+      }
+      expect(found, `routes during signup (${pathnames.join(' -> ') || 'none'})`).to.deep.eq(expected);
     });
 
     goToProfilePageFromHeader();

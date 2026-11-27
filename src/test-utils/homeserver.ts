@@ -130,14 +130,21 @@ export function stubMemoryHomeserver(owner: string) {
 
   const list = vi
     .spyOn(HomeserverService, 'list')
-    .mockImplementation(async ({ baseDirectory, cursor, reverse = false, limit = LIST_PAGE }) => {
-      try {
-        return await listUrls(baseDirectory, cursor ?? null, reverse, limit);
-      } catch (error) {
-        if (extractStatusCode(error) === HttpStatusCode.NOT_FOUND) return [];
-        return handleError({ error, additionalContext: { url: baseDirectory, baseDirectory } });
-      }
-    });
+    .mockImplementation(
+      async ({ baseDirectory, cursor, reverse = false, limit = LIST_PAGE, session: explicitSession }) => {
+        try {
+          if (explicitSession) {
+            const path = ownedPath(baseDirectory, 'list');
+            const dirPath = path.endsWith('/') ? path : `${path}/`;
+            return await session.storage.list(dirPath, cursor ?? null, reverse, limit, false);
+          }
+          return await listUrls(baseDirectory, cursor ?? null, reverse, limit);
+        } catch (error) {
+          if (extractStatusCode(error) === HttpStatusCode.NOT_FOUND) return [];
+          return handleError({ error, additionalContext: { url: baseDirectory, baseDirectory } });
+        }
+      },
+    );
 
   const listAll = vi.spyOn(HomeserverService, 'listAll').mockImplementation(async ({ baseDirectory }) => {
     const files: string[] = [];

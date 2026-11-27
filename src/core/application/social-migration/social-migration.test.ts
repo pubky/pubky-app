@@ -1,4 +1,5 @@
 import type { Session } from '@synonymdev/pubky';
+import { listPrefix } from 'pubky-social-specs';
 import { fakeOwner } from 'pubky-social-specs/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { HOMESERVER_SYNC_READ_TIMEOUT_MS } from '@/config/network';
@@ -89,6 +90,68 @@ describe('SocialMigrationApplication', () => {
     });
   });
 
+  describe('hasLegacyData', () => {
+    it('is false when the 0.x tree is empty and lists with limit 1 and the explicit session', async () => {
+      expect(await SocialMigrationApplication.hasLegacyData({ session, pubky: homeserver.owner })).toBe(false);
+      expect(homeserver.spies.list).toHaveBeenCalledWith({
+        baseDirectory: listPrefix(homeserver.owner, 'legacy'),
+        limit: 1,
+        session,
+      });
+    });
+
+    it('is true when any file exists under the 0.x tree', async () => {
+      await homeserver.session.storage.putJson('/pub/pubky.app/profile.json', { name: 'Alice' });
+      expect(await SocialMigrationApplication.hasLegacyData({ session, pubky: homeserver.owner })).toBe(true);
+    });
+
+    it('throws a failed list instead of reporting the 0.x tree empty', async () => {
+      const refused = Err.auth(AuthErrorCode.FORBIDDEN, 'Forbidden', {
+        service: ErrorService.Homeserver,
+        operation: 'list',
+        context: { statusCode: 403 },
+      });
+      homeserver.spies.list.mockRejectedValueOnce(refused);
+
+      await expect(SocialMigrationApplication.hasLegacyData({ session, pubky: homeserver.owner })).rejects.toBe(
+        refused,
+      );
+    });
+
+    it("refuses to list another account's 0.x tree through this session", async () => {
+      await expect(SocialMigrationApplication.hasLegacyData({ session, pubky: fakeOwner(2) })).rejects.toMatchObject({
+        service: ErrorService.Homeserver,
+      });
+    });
+
+    describe('a list that never answers', () => {
+      beforeEach(() => {
+        vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+      });
+
+      afterEach(() => {
+        vi.useRealTimers();
+      });
+
+      it('rejects with a request timeout after the sync-read bound when the LIST never answers', async () => {
+        homeserver.spies.list.mockReturnValueOnce(new Promise(() => {}));
+        const checking = SocialMigrationApplication.hasLegacyData({ session, pubky: homeserver.owner });
+        const outcome = expect(checking).rejects.toMatchObject({
+          category: ErrorCategory.Timeout,
+          code: TimeoutErrorCode.REQUEST_TIMEOUT,
+          service: ErrorService.Homeserver,
+          operation: 'checkLegacyMigrationData',
+          context: { pubky: homeserver.owner, timeoutMs: HOMESERVER_SYNC_READ_TIMEOUT_MS },
+        });
+
+        await vi.advanceTimersByTimeAsync(HOMESERVER_SYNC_READ_TIMEOUT_MS);
+
+        await outcome;
+        expect(vi.getTimerCount()).toBe(0);
+      });
+    });
+  });
+
   describe('run', () => {
     it('hands the session, signal and callbacks to the service run', async () => {
       const run = vi.spyOn(HomeserverService, 'migrateToSocialV1').mockResolvedValue(asOpaque({ status: 'done' }));
@@ -99,6 +162,18 @@ describe('SocialMigrationApplication', () => {
       await SocialMigrationApplication.run({ session, signal, onProgress, onLockWait });
 
       expect(run).toHaveBeenCalledExactlyOnceWith({ session, signal, onProgress, onLockWait });
+    });
+
+    it('forwards onLegacyDataFound when given', async () => {
+      const run = vi.spyOn(HomeserverService, 'migrateToSocialV1').mockResolvedValue(asOpaque({ status: 'done' }));
+      const { signal } = new AbortController();
+      const onProgress = vi.fn();
+      const onLockWait = vi.fn();
+      const onLegacyDataFound = vi.fn();
+
+      await SocialMigrationApplication.run({ session, signal, onProgress, onLockWait, onLegacyDataFound });
+
+      expect(run).toHaveBeenCalledExactlyOnceWith({ session, signal, onProgress, onLockWait, onLegacyDataFound });
     });
   });
 });

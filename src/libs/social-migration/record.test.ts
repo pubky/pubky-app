@@ -5,6 +5,7 @@ import {
   acknowledgeSocialMigrationProfileNotice,
   admitSocialMigrationGrant,
   isSocialMigrationGrantAdmitted,
+  isSocialMigrationLastRunConfirmed,
   isSocialMigrationRecordTrusted,
   markSocialMigrated,
   mergeSocialMigrationDroppedProfile,
@@ -62,6 +63,19 @@ describe('social migration record', () => {
     expect(
       isSocialMigrationRecordTrusted({ v: 1, admittedGrantIds: [], migratedRev: SOCIAL_MIGRATION_TRANSFORM_REV + 1 }),
     ).toBe(true);
+  });
+
+  it('requires a saved confirmation before resuming without asking', () => {
+    const baseLastRun = { at: 1, status: 'running', done: 0, total: 0, counts: {}, dropped: 0 };
+    expect(isSocialMigrationLastRunConfirmed(null)).toBe(false);
+    expect(isSocialMigrationLastRunConfirmed({ v: 1, admittedGrantIds: [] })).toBe(false);
+    expect(
+      isSocialMigrationLastRunConfirmed({ v: 1, admittedGrantIds: [], lastRun: { ...baseLastRun, confirmed: false } }),
+    ).toBe(false);
+    expect(
+      isSocialMigrationLastRunConfirmed({ v: 1, admittedGrantIds: [], lastRun: { ...baseLastRun, confirmed: true } }),
+    ).toBe(true);
+    expect(isSocialMigrationLastRunConfirmed({ v: 1, admittedGrantIds: [], lastRun: baseLastRun })).toBe(false);
   });
 
   it('only moves the migrated revision forward and drops the last run with it', () => {

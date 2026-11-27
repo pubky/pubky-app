@@ -2,7 +2,7 @@
 // Vitest `__vi_import_N__` aliases; reordering causes a TDZ crash in
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
-import { describe, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { matchVrtFrameScreenshot, renderForVRT } from '@/test-utils/vrt';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook } from '@/test-utils/stores';
@@ -77,5 +77,21 @@ describe('Profile (onboarding) — visual regression', () => {
   it('renders the create-profile page at mobile viewport', async () => {
     await renderForVRT(<ProfileWithHeader />, { viewport: VRT_VIEWPORT_MOBILE });
     await matchVrtFrameScreenshot('onboarding-profile-mobile');
+  });
+
+  // #3205: sign-up starts from the default links, so the 100-character label goes in through the dialog.
+  it.each([
+    ['desktop', VRT_VIEWPORT_DESKTOP],
+    ['mobile', VRT_VIEWPORT_MOBILE],
+  ] as const)('wraps a 100-character link label at %s viewport', async (name, viewport) => {
+    const label = 'ABCD'.repeat(25);
+    const screen = await renderForVRT(<ProfileWithHeader />, { viewport });
+    await screen.getByRole('button', { name: 'Add link' }).click();
+    const dialog = screen.getByTestId('dialog-content');
+    await dialog.getByPlaceholder('Twitter', { exact: true }).fill(label);
+    await dialog.getByPlaceholder('https://twitter.com/satoshi', { exact: true }).fill('https://example.com/alice');
+    await dialog.getByRole('button', { name: 'Save link' }).click();
+    await expect.element(screen.getByText(label)).toBeVisible();
+    await matchVrtFrameScreenshot(`onboarding-profile-long-link-label-${name}`);
   });
 });
