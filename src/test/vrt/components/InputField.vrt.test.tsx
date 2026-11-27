@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-import { userEvent } from 'vitest/browser';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { cdp, server, userEvent } from 'vitest/browser';
 import { InputField } from '@/molecules/InputField/InputField';
 import { TextareaField } from '@/molecules/TextareaField/TextareaField';
 import { contrastRatio, paintedHex } from '@/test-utils/color-contrast';
@@ -83,55 +83,125 @@ for (const width of [390, 1440]) {
   });
 }
 
-for (const [name, Field] of [
+const fields = [
   ['Name', InputField],
   ['Bio', TextareaField],
-] as const) {
-  describe(name, () => {
-    for (const theme of ['dark', 'light'] as const) {
-      it.each(['default', 'error'] as const)(`shows the %s focus ring on a ${theme} card`, async (status) => {
-        const error = status === 'error';
+] as const;
+
+describe.skipIf(server.browser !== 'chromium')('field focus in forced colors', () => {
+  beforeEach(async () => {
+    await cdp().send('Emulation.setEmulatedMedia', { features: [{ name: 'forced-colors', value: 'active' }] });
+    expect(window.matchMedia('(forced-colors: active)').matches).toBe(true);
+  });
+
+  afterEach(async () => {
+    await cdp().send('Emulation.setEmulatedMedia', { features: [] });
+  });
+
+  for (const [name, Field] of fields) {
+    it.each(['default', 'error', 'success'] as const)(
+      `outlines ${name} when tabbing into the %s field`,
+      async (status) => {
         const screen = await renderForVRT(
-          <main style={{ backgroundColor: 'var(--card)' }}>
+          <main>
+            <button type="button">Previous field</button>
+            <Field value="Example" readOnly status={status} />
+          </main>,
+          { viewport: { width: 390, height: 844 } },
+        );
+        const wrapper = screen.getByTestId('container').element();
+        await screen.getByRole('button', { name: 'Previous field' }).click();
+        expect(getComputedStyle(wrapper).outlineStyle).toBe('none');
+        await userEvent.tab();
+        await expect.element(screen.getByRole('textbox')).toHaveFocus();
+        const style = getComputedStyle(wrapper);
+        expect(style.outlineStyle).toBe('solid');
+        expect(parseFloat(style.outlineWidth)).toBeGreaterThanOrEqual(2);
+      },
+    );
+  }
+
+  it('distinguishes the focused icon action from the focused field', async () => {
+    const screen = await renderForVRT(
+      <InputField
+        value="Link"
+        readOnly
+        icon={<span>Paste</span>}
+        iconPosition="right"
+        iconAriaLabel="Paste"
+        onClickIcon={vi.fn()}
+      />,
+      { viewport: { width: 390, height: 844 } },
+    );
+    const input = screen.getByRole('textbox');
+    const action = screen.getByRole('button', { name: 'Paste' });
+    await input.click();
+    await expect.element(input).toHaveFocus();
+    expect(getComputedStyle(action.element()).outlineStyle).toBe('none');
+    await userEvent.tab();
+    await expect.element(action).toHaveFocus();
+    const style = getComputedStyle(action.element());
+    expect(style.outlineStyle).toBe('solid');
+    expect(parseFloat(style.outlineWidth)).toBeGreaterThanOrEqual(2);
+  });
+});
+
+for (const [name, Field] of fields) {
+  describe.each(['dark', 'light'] as const)(`${name} in %s mode`, (theme) => {
+    describe.each(['bg-background', 'bg-card'])('on %s', (surface) => {
+      it.each(['default', 'error', 'success'] as const)('shows keyboard focus for the %s state', async (status) => {
+        const screen = await renderForVRT(
+          <main className={`p-4 ${surface}`}>
             <button type="button">Previous field</button>
             <Field
               value="Example"
               readOnly
+              variant="dashed"
               status={status}
-              messageType="error"
-              message={error ? 'Check this field' : undefined}
+              messageType={status === 'error' ? 'error' : undefined}
+              message={status === 'error' ? 'Check this field' : undefined}
             />
           </main>,
           { viewport: { width: 390, height: 844 }, theme },
         );
         const input = screen.getByRole('textbox');
         const wrapper = screen.getByTestId('container').element();
+        const idleBorder = getComputedStyle(wrapper).borderColor;
         const ringSize = '0px 0px 0px 3px';
         expect(getComputedStyle(wrapper).boxShadow).not.toContain(ringSize);
         await screen.getByRole('button', { name: 'Previous field' }).click();
         await userEvent.tab();
         await expect.element(input).toHaveFocus();
 
-        const surface = getComputedStyle(screen.getByRole('main').element()).backgroundColor;
+        const background = getComputedStyle(screen.getByRole('main').element()).backgroundColor;
+        const surfaceColor = paintedHex(background);
         const style = getComputedStyle(wrapper);
-        const border = style.getPropertyValue(error ? '--destructive' : '--ring');
-        const errorOpacity = theme === 'dark' ? 40 : 20;
-        expect(paintedHex(style.borderColor)).toBe(paintedHex(border));
-        expect(contrastRatio(paintedHex(style.borderColor), paintedHex(surface))).toBeGreaterThanOrEqual(3);
+        const borderToken = { default: '--ring', error: '--destructive', success: '--brand' }[status];
+        expect(paintedHex(style.borderColor)).toBe(paintedHex(style.getPropertyValue(borderToken)));
         const ring = style.boxShadow.split(/,(?![^()]*\))/).find((shadow) => shadow.includes(ringSize));
         expect(ring).toBeDefined();
         const ringColor = ring!.replace(ringSize, '').trim();
-        expect(paintedHex(surface, ringColor)).toBe(
-          paintedHex(surface, `color-mix(in oklab, ${border} ${error ? errorOpacity : 50}%, transparent)`),
-        );
-        if (error) {
+        expect(CSS.supports('color', ringColor)).toBe(true);
+        const paintedRing = paintedHex(background, ringColor);
+        if (status === 'default') {
+          const ringToken = style.getPropertyValue('--ring');
+          expect(paintedRing).toBe(paintedHex(background, `color-mix(in oklab, ${ringToken} 50%, transparent)`));
+        } else {
+          expect(style.borderColor).toBe(idleBorder);
+          expect(paintedRing).toBe(paintedHex(background, style.getPropertyValue('--ring')));
+          expect(contrastRatio(paintedRing, surfaceColor)).toBeGreaterThanOrEqual(3);
+        }
+        if (status !== 'success') {
+          expect(contrastRatio(paintedHex(style.borderColor), surfaceColor)).toBeGreaterThanOrEqual(3);
+        }
+        if (status === 'error') {
           const message = screen.getByText('Check this field');
           await expect.element(message).toBeVisible();
           expect(
-            contrastRatio(paintedHex(surface), paintedHex(surface, getComputedStyle(message.element()).color)),
+            contrastRatio(surfaceColor, paintedHex(background, getComputedStyle(message.element()).color)),
           ).toBeGreaterThanOrEqual(4.5);
         }
       });
-    }
+    });
   });
 }

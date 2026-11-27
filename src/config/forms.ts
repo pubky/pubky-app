@@ -25,12 +25,15 @@ export const VALIDATION_MESSAGES = {
  */
 export const FORM_LABEL_CLASSES = 'text-xs font-medium tracking-wide text-muted-foreground uppercase';
 
-/** The wrapper draws the focus ring around the input and any attached icons. */
+// Browsers suppress box shadows in forced colors mode, so the wrapper also needs an outline.
+const FIELD_FOCUS_CLASSES =
+  'focus-within:ring-[3px] forced-colors:focus-within:outline-2 forced-colors:focus-within:outline-solid';
+
+/** The wrapper draws the focus indicator around the input and any attached icons. */
 export const FIELD_STATUS_CLASSES = {
-  default: 'focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50',
-  success: 'border-brand text-brand focus-within:ring-[3px] focus-within:ring-ring/50',
-  error:
-    'border-destructive text-error-foreground focus-within:ring-[3px] focus-within:ring-destructive/40 light:focus-within:ring-destructive/20',
+  default: `${FIELD_FOCUS_CLASSES} focus-within:border-ring focus-within:ring-ring/50`,
+  success: `${FIELD_FOCUS_CLASSES} border-brand text-brand focus-within:ring-ring`,
+  error: `${FIELD_FOCUS_CLASSES} border-destructive text-error-foreground focus-within:ring-ring`,
 } as const;
 
 export const FIELD_MESSAGE_CLASSES = {
