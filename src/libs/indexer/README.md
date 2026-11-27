@@ -300,9 +300,12 @@ the folder are kept there.
 The folder (`savedIndex.ts`) is `3/<group tag>/` under the index root, the tag the first five hex digits of the
 SHA-256 of the domain's sorted group ids, so a deploy reading other paths (the older tree on) keeps its own:
 
-- `hot`, shared: every member with hop and homeserver, each homeserver's epoch and high-water mark, the directory of
-  packs, which writer's delta generations are folded, and the graph of hops 0 and 1 with their activity back to one
-  time, that of their 100th newest dated record. While the whole index fits in 1 MB, `hot` is the whole index.
+- `hot`, shared: what a first feed needs. While the whole index fits in 1 MB (`hotMaxBytes`), `hot` is the whole
+  index. With packs it holds at most that much: every member with hop and homeserver, each homeserver's epoch and
+  high-water mark, the directory of packs and which writer's delta generations are folded, always; the seed's own
+  scopes whole; the activity of hops 0 and 1 back to one time, that of their 100th newest dated record, halved while
+  over the bound down to the 20th; and the graphs of hop 1 while they fit, the largest left out first. What it leaves
+  out is in the packs.
 - `p/<S>/<b>`, shared: every run of the members whose key hashes to bucket `b` (FNV-1a of the key, modulo `S`), about
   256 KB each. `S` is a power of two: 4 when the index outgrows `hot`, doubled when the mean pack passes 512 KB, which
   splits bucket `b` into `b` and `b + S`, halved under 128 KB, and back to none under half of `hot`'s size.
@@ -334,12 +337,19 @@ of the entries they hold and their ranges. Each part of the delta is a valid run
 the top goes from the known head up, any other new or changed range goes whole, and an entry stamped since inside a
 known range, such as a tag's file a fill fetched, goes as the run of its one event. The whole scope goes where the base
 is unknown or of another epoch. Applying files tells the base what they brought: the commit's stamp and their ranges,
-so a fill that lands meanwhile still counts as unshared. Right after a scope sync, whose members are whole, it folds instead when the delta passes 48 KB, its
-oldest change is a day old, the folder has no `hot` yet, or a version 2 file was found: it takes in `hot`, every other
-writer's delta and the version 2 files, writes each pack their changed authors fall in, then `hot`, then deletes what
-nothing needs any more (packs of another `S`, the version 2 files it folded, another writer's delta it folded once
-that writer has not written it for `writerExpiryMs`). Its new base is the store's heads once all of it was taken in;
-another writer rebases when it reads `hot` saying its latest generation is folded. A fold that cannot finish, whatever
+so a fill that lands meanwhile still counts as unshared.
+
+Right after a scope sync, whose members are whole, a save folds instead when the delta passes 48 KB, its oldest change
+is a day old, or the folder has no `hot` yet or a version 2 file: it takes in `hot`, every other writer's delta and the
+version 2 files, writes each pack whose authors hold entries the packs lack, then `hot`, then deletes what nothing
+needs any more. A sync moves every scope's head, so a range grown with no event in it waits for the next write of its
+pack. The members written are the seed's and those of every file taken in, so a follow made on another device after
+this one's scope sync stays in the folder. Deleted: packs of another `S`; the version 2 files it folded, which a device
+on an earlier release writes again at its next save, the next fold taking it in again at the cost of the packs of the
+authors it changed; and another writer's delta it folded once that writer has not written it for `writerExpiryMs`,
+under the delta's lock and only while it is still the generation folded, so a writer that wakes meanwhile loses
+nothing. Its new base is what the files it wrote hold, as read for them, and what it took in of the rest; another
+writer rebases when it reads `hot` saying its latest generation is folded. A fold that cannot finish, whatever
 stops it, a lock, a lost lock, a shared file it cannot read or a failed request, writes the delta instead, never
 overwriting a file it cannot read. Index file calls are requests to the user's homeserver like the crawl's
 (`Crawler.indexFilesOf`): queued at its gate, a lock's calls ahead of crawls and the rest behind them, retried, paced
@@ -349,9 +359,11 @@ Only the members' domain groups are written, so what the user opened on demand n
 first; the graph is never trimmed.
 
 At start the crawling tab reads `hot` and lists `d/` at once, then fetches the deltas: three requests for a feed at
-any size with one other device. It applies them in one commit and reports it, so the view rebuilds from `hot` before
-the packs arrive; then it fetches the packs whose directory entry is newer than what this store applied, four at a
-time, each reported as it lands. The first scope sync waits for the packs. Without `hot` it reads the version 2 files,
+any size with one other device. It applies them in one commit and reports it, so the view rebuilds from `hot`, and the
+first scope sync starts. Beside it the packs arrive, four at a time, each reported as it lands: those whose version the
+directory names, its writer's clock reading, is not the one this store applied, so a writer whose clock runs ahead
+never hides a later pack. A sync that reads an author before their pack lands reads what the pack holds too; runs
+merge in any order, and a save waits for the packs. Without `hot` it reads the version 2 files,
 one per writer at the folder's root, which earlier releases wrote and still write while they run; those never see the
 new layout, whose names they do not read. Runs merge with what the store has, a record without data never erases a
 stored body at the same cursor, and each dated record goes into its homeserver's clock as if it had been read, so the
@@ -368,8 +380,14 @@ old log from the shared files. The high-water marks still let the next sync catc
 that could not be read, such as an account's before its session is restored, are read again after the next scope
 sync.
 
+Unsealed, which is the default and what the app runs, the files are plain gzip under `/priv`. That keeps them from other
+users and from anyone without the session, and nothing more: the homeserver's operator reads them, and can write runs
+every device of the user trusts, posts by any author or tombstones that hide real ones, which the index then serves as
+the scope's truth. A reader checks each file's shape and each payload's form, never who wrote it.
+
 With `sealer` each file's gzip bytes are sealed before writing and opened after reading, under the file's path. A
 file that does not open is ignored, and a fold that meets one stops rather than overwrite it. `createIndexSealer(key)`
 (`indexSealer.ts`) seals with AES-256-GCM under a key per path derived with HKDF-SHA-256, so a homeserver cannot swap
-two files, at 28 bytes per file; names stay as they are, since they hold no author key. Every device of the user needs
-the same key.
+two files, at 28 bytes per file; names stay as they are, since they hold no author key. A homeserver can still serve
+an older sealed file at its own path, which holds only older valid runs: the index is then behind, never wrong. Every
+device of the user needs the same key.

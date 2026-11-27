@@ -59,6 +59,8 @@ const SINGLE_FILE = /^([A-Za-z0-9_-]{1,64})\.idx$/;
 const MICROS_PER_MS = BigInt(1000);
 /** Fetches of packs in flight at once, leaving the browser's other connections to the homeserver to the crawl. */
 const PACK_READS = 4;
+/** With packs, the fewest dated records of hops 0 and 1 `hot` keeps the activity back to: a first screen. */
+const HOT_MIN_RECORDS = 20;
 
 /** Sizes that shape the folder. Defaults suit production; tests shrink them. */
 export interface SavedIndexLimits {
@@ -300,14 +302,19 @@ export type FlushOutcome = 'unchanged' | 'delta' | 'folded';
 
 export interface SavedIndex {
   /**
-   * Reads `hot` and the deltas, applies them in one commit and reports it, then the packs newer than what this store
-   * applied, each reported as it lands. Without `hot`, the version 2 files instead.
+   * Reads `hot` and the deltas, applies them in one commit and reports it: what a first feed needs. Without `hot`, the
+   * version 2 files instead.
    */
   load(onChange: (change: StoreChange) => void): Promise<LoadOutcome>;
   /**
+   * After `load`, fetches the packs whose version the directory in `hot` names is not the one this store applied, a
+   * few at a time, each reported as it lands. A crawl may run meanwhile; a save should wait for it.
+   */
+  loadPacks(onChange: (change: StoreChange) => void): Promise<LoadOutcome>;
+  /**
    * Writes this writer's changes since its base as its delta. With `mayFold`, folds instead when the delta outgrew
    * `deltaFoldBytes`, its oldest change is `foldAgeMs` old, or the folder has no `hot` yet or version 2 files left;
-   * a fold that cannot run (another writer folds, the lock was lost, a shared file does not read) writes the delta.
+   * a fold that cannot finish, whatever stops it, writes the delta.
    */
   flush(mayFold: boolean): Promise<FlushOutcome>;
 }
@@ -352,6 +359,8 @@ export function createSavedIndex<D>(params: SavedIndexParams<D>): SavedIndex {
   const folderPath = () => (folder ??= folderOf(groups));
   /** Until a load finds `hot` and no version 2 file, the next flush that may fold does. */
   let foldWanted = true;
+  /** The packs the `hot` the last load read names, for `loadPacks`. */
+  let directory: { shards: number; packs: IndexFilePack[] } | null = null;
 
   async function readState(): Promise<SavedState> {
     return parseState((await store.readMeta?.(stateKey(seed))) ?? null);
@@ -506,9 +515,14 @@ export function createSavedIndex<D>(params: SavedIndexParams<D>): SavedIndex {
     return { applied: kept, refused: 0, change: { scopes, seeds } };
   }
 
-  async function memberScopes(): Promise<MemberScopes> {
+  /** The seed's members with their scopes, and the members of `taken`, files folded in, this store does not have. */
+  async function memberScopes(taken: readonly IndexFileModel<D>[] = []): Promise<MemberScopes> {
     const members = await store.readScopeMembers(seed);
     if (!members.has(seed)) members.set(seed, 0);
+    // A follow made on another device after this one's scope sync is in that device's file only: it stays a member of
+    // the folder until a scope sync of the device that folds says otherwise.
+    for (const { members: rows } of taken)
+      for (const { user, hop } of rows) if (!members.has(user)) members.set(user, hop);
     const homeserverOf = new Map<string, UserHomeserver | null>();
     const scopes: ScopeKey[] = [];
     for (const user of members.keys()) {
@@ -604,7 +618,8 @@ export function createSavedIndex<D>(params: SavedIndexParams<D>): SavedIndex {
    * `hotDatedRecords` dated records, placed per homeserver by its clock: a feed stops above the latest start of its
    * authors' histories, so a cut per author would end it at the busiest one's. `null` per homeserver keeps it whole.
    */
-  function cutOf(near: Exported<D>): Map<string, Cursor> {
+  /** Per homeserver, the cursor of the time of the newest `records` dated records of `near`; none with fewer. */
+  function cutOf(near: Exported<D>, records: number): Map<string, Cursor> {
     const times: number[] = [];
     for (const run of near.runs) {
       if (!windowGroups.has(run.group)) continue;
@@ -614,8 +629,8 @@ export function createSavedIndex<D>(params: SavedIndexParams<D>): SavedIndex {
       }
     }
     const cut = new Map<string, Cursor>();
-    if (times.length < limits.hotDatedRecords) return cut;
-    const at = times.sort((a, b) => b - a)[limits.hotDatedRecords - 1];
+    if (records < 1 || times.length < records) return cut;
+    const at = times.sort((a, b) => b - a)[records - 1];
     for (const [homeserver, state] of near.homeservers) {
       const placed = cursorAt(buildTimeTable(state.clock), at);
       if (placed !== null) cut.set(homeserver, placed);
@@ -623,7 +638,13 @@ export function createSavedIndex<D>(params: SavedIndexParams<D>): SavedIndex {
     return cut;
   }
 
-  /** `hot`, and while it holds the whole index, per scope what it holds. */
+  /**
+   * `hot`, and while it holds the whole index, per scope what it holds. With packs it holds at most `hotMaxBytes`: the
+   * members, the directory and the folded generations always, the seed's own scopes whole, then the activity of hop 1
+   * back to the time of the newest `hotDatedRecords` dated records of hops 0 and 1, halved while over the bound down
+   * to `HOT_MIN_RECORDS`, and the graphs of hop 1 while they fit, the largest left out first. What it leaves out is
+   * in the packs.
+   */
   async function hotOf(
     ms: MemberScopes,
     part: Extract<IndexFilePart, { kind: 'hot' }>,
@@ -634,16 +655,46 @@ export function createSavedIndex<D>(params: SavedIndexParams<D>): SavedIndex {
       return { model: modelOf(part, ms, users, all), known: all.known };
     }
     const near = await runsOf(ms, new Set(users.filter((user) => (ms.members.get(user) ?? 0) <= 1)));
-    const cut = cutOf(near);
     const byScope = new Map<string, Run<D>[]>();
     for (const run of near.runs) byScope.set(scopeId(run), [...(byScope.get(scopeId(run)) ?? []), run]);
-    const runs = [...byScope.values()].flatMap((exported) => {
-      const { group, homeserver } = exported[0];
-      const cutoff = windowGroups.has(group) ? cut.get(homeserver) : undefined;
-      return cutoff === undefined ? exported : evictBelow(exported, cutoff);
-    });
-    const cutPart = { ...part, cut: [...cut].map(([homeserver, cursor]) => ({ homeserver, cursor })) };
-    return { model: modelOf(cutPart, ms, users, { homeservers: near.homeservers, runs }), known: null };
+    const left = new Set<string>();
+    const build = (records: number) => {
+      const cut = cutOf(near, records);
+      const runs = [...byScope].flatMap(([id, exported]) => {
+        if (left.has(id)) return [];
+        const { group, homeserver } = exported[0];
+        const cutoff = windowGroups.has(group) ? cut.get(homeserver) : undefined;
+        return cutoff === undefined ? exported : evictBelow(exported, cutoff);
+      });
+      const cutPart = { ...part, cut: [...cut].map(([homeserver, cursor]) => ({ homeserver, cursor })) };
+      return modelOf(cutPart, ms, users, { homeservers: near.homeservers, runs });
+    };
+    let records = limits.hotDatedRecords;
+    let model = build(records);
+    let bytes = (await encodeIndexFile(model)).length;
+    while (bytes > limits.hotMaxBytes && records > HOT_MIN_RECORDS) {
+      records = Math.max(HOT_MIN_RECORDS, Math.floor(records / 2));
+      model = build(records);
+      bytes = (await encodeIndexFile(model)).length;
+    }
+    const graphs = [...byScope]
+      .filter(([, [{ author, group }]]) => !windowGroups.has(group) && (ms.members.get(author) ?? 0) === 1)
+      .map(([id, exported]) => ({ id, entries: exported.reduce((sum, run) => sum + run.entries.length, 0) }))
+      .sort((a, b) => b.entries - a.entries);
+    // Each round leaves out the largest graphs worth the excess by their share of the entries, then measures again.
+    while (bytes > limits.hotMaxBytes && left.size < graphs.length) {
+      const entries = model.runs.reduce((sum, run) => sum + run.entries.length, 0);
+      let excess = ((bytes - limits.hotMaxBytes) * entries) / bytes;
+      for (const graph of graphs) {
+        if (excess <= 0) break;
+        if (left.has(graph.id)) continue;
+        left.add(graph.id);
+        excess -= graph.entries;
+      }
+      model = build(records);
+      bytes = (await encodeIndexFile(model)).length;
+    }
+    return { model, known: null };
   }
 
   /**
@@ -668,6 +719,29 @@ export function createSavedIndex<D>(params: SavedIndexParams<D>): SavedIndex {
       const model = modelOf({ kind: 'pack', shards, bucket }, ms, users, exported);
       const bytes = await writeFile(path, model, share, lock);
       return { pack: { bucket, bytes, authors: users.length, writtenAt: model.writtenAt }, known: exported.known };
+    } finally {
+      await files.unlock(lock).catch(() => undefined);
+    }
+  }
+
+  /**
+   * Deletes another writer's delta this fold took in, unless that writer wrote a newer one since: under the delta's
+   * lock, so a write of the writer meanwhile is refused and lands later, never lost to the delete.
+   */
+  async function deleteFolded(path: string, read: IndexFileModel<D>) {
+    let lock: IndexFileLock;
+    try {
+      lock = await files.lock(path, limits.lockSeconds);
+    } catch {
+      return;
+    }
+    try {
+      const current = await readFile(path, isDeltaAt(path));
+      if (typeof current !== 'object' || current.model.writtenAt !== read.writtenAt) return;
+      if (current.model.part.kind !== 'delta' || read.part.kind !== 'delta') return;
+      if (current.model.part.gen === read.part.gen) await files.delete(path, lock);
+    } catch {
+      // Left for the next fold.
     } finally {
       await files.unlock(lock).catch(() => undefined);
     }
@@ -726,21 +800,27 @@ export function createSavedIndex<D>(params: SavedIndexParams<D>): SavedIndex {
       const previous = hot === 'missing' ? null : hot.model;
       const part = previous?.part.kind === 'hot' ? previous.part : null;
       const shared: KnownScopes = { ...state.base };
-      await applyFiles(
-        [...(previous === null ? [] : [previous]), ...[...deltas, ...singles].map(({ model }) => model)],
-        shared,
-      );
+      await applyFiles([...(previous === null ? [] : [previous]), ...deltas.map(({ model }) => model)], shared);
+      // Only this fold puts what a version 2 file holds into a pack: what it changes here is not shared yet.
+      await applyFiles(singles.map(({ model }) => model));
 
       const folded = new Map((part?.folded ?? []).map(({ writer: who, gen }): [string, number] => [who, gen]));
-      const ms = await memberScopes();
+      const ms = await memberScopes([...deltas, ...singles].map(({ model }) => model));
       const touched = new Set<string>();
       for (const { model } of deltas) {
         if (model.part.kind === 'delta' && model.part.gen > (folded.get(model.writer) ?? 0)) {
           for (const { author } of model.runs) touched.add(author);
         }
       }
+      // A pack is rewritten for what its authors hold that it lacks, entries: a sync moves every head, and a range
+      // grown with no event in it waits for the next write of the pack.
       const glance = await store.exportScopes(ms.scopes, { runs: false });
-      for (const scope of ms.scopes) if (!holds(shared[scopeId(scope)], glance, scope)) touched.add(scope.author);
+      const unsure = ms.scopes.filter((scope) => !holds(shared[scopeId(scope)], glance, scope));
+      const stored = await store.exportScopes(unsure, { runs: true });
+      for (const scope of unsure) {
+        const { runs } = unknownRuns(shared[scopeId(scope)], stored, scope);
+        if (runs.some(({ entries }) => entries.length > 0)) touched.add(scope.author);
+      }
 
       const shards = part?.shards ?? 0;
       const hotBytes = hot === 'missing' ? 0 : hot.bytes;
@@ -768,7 +848,7 @@ export function createSavedIndex<D>(params: SavedIndexParams<D>): SavedIndex {
       }
       if (next > 0) {
         const share = Math.floor((params.budget - hotBytes - limits.deltaMaxBytes * writers) / next);
-        const everyPack = reshard || previous === null || singles.length > 0;
+        const everyPack = reshard || previous === null;
         const buckets = everyPack
           ? Array.from({ length: next }, (_, bucket) => bucket)
           : [...new Set([...touched].map((author) => bucketOf(author, next)))];
@@ -805,15 +885,12 @@ export function createSavedIndex<D>(params: SavedIndexParams<D>): SavedIndex {
       const stale = [
         ...listing.filter((path) => path.startsWith(`${f}p/`) && (next === 0 || !path.startsWith(`${f}p/${next}/`))),
         ...singles.map(({ path }) => path),
-        ...deltas.flatMap(({ path, model: delta }) =>
-          delta.part.kind === 'delta' &&
-          delta.part.gen <= (folded.get(delta.writer) ?? 0) &&
-          now() - delta.writtenAt > params.expiryMs
-            ? [path]
-            : [],
-        ),
       ];
       for (const path of stale) await files.delete(path).catch(() => undefined);
+      for (const { path, model: delta } of deltas) {
+        const expired = delta.part.kind === 'delta' && now() - delta.writtenAt > params.expiryMs;
+        if (expired && delta.part.gen <= (folded.get(delta.writer) ?? 0)) await deleteFolded(path, delta);
+      }
       const packs: Record<string, number> = {};
       for (const pack of directory.values()) packs[packPath(f, next, pack.bucket)] = pack.writtenAt;
       return { ...state, baseGen: state.gen, since: null, base, sent: {}, packs };
@@ -834,38 +911,59 @@ export function createSavedIndex<D>(params: SavedIndexParams<D>): SavedIndex {
         ...singlePaths.map((path) => readFile(path, isSingleAt(path))),
       ]);
       const first = [hot, ...reads].flatMap((result) => (typeof result === 'object' ? [result.model] : []));
-      let ignored = [hot, ...reads].filter((result) => result === 'bad' || result === 'unsupported').length;
+      const unread = [hot, ...reads].filter((result) => result === 'bad' || result === 'unsupported').length;
       const outcome = await applyFiles(first, base);
-      ignored += outcome.refused;
-      let loaded = outcome.applied.length;
-      let writtenAt = outcome.applied.reduce<number | null>((at, { writtenAt: w }) => Math.max(at ?? w, w), null);
-      const scopes = new Map(outcome.change.scopes.map((scope) => [scopeId(scope), scope]));
+      const writtenAt = outcome.applied.reduce<number | null>((at, { writtenAt: w }) => Math.max(at ?? w, w), null);
       if (outcome.change.scopes.length > 0 || outcome.change.seeds.length > 0) onChange(outcome.change);
 
       const part = typeof hot === 'object' && hot.model.part.kind === 'hot' ? hot.model.part : null;
-      const packs: Record<string, number> = { ...state.packs };
+      directory = part === null ? null : { shards: part.shards, packs: part.packs };
+      const mine = part?.folded.find(({ writer: who }) => who === writer);
+      const rebased = mine !== undefined && state.gen > 0 && mine.gen >= state.gen;
+      await writeState({
+        ...state,
+        base: rebased ? laterAll(base, state.sent) : base,
+        ...(rebased ? { baseGen: state.gen, since: null, sent: {} } : {}),
+      });
+      foldWanted = hot === 'missing' || singlePaths.length > 0;
+      return { loaded: outcome.applied.length, ignored: unread + outcome.refused, change: outcome.change, writtenAt };
+    },
+
+    async loadPacks(onChange) {
+      const f = await folderPath();
+      const state = await readState();
+      const base: KnownScopes = { ...state.base };
+      const read = directory;
+      const outcome: LoadOutcome = { loaded: 0, ignored: 0, change: { scopes: [], seeds: [] }, writtenAt: null };
+      if (read === null) return outcome;
+      // A version is the writer's clock reading: only one other than the applied is due, whoever's clock runs ahead.
+      const packs: Record<string, number> = {};
+      const due: IndexFilePack[] = [];
+      for (const pack of read.packs) {
+        const path = packPath(f, read.shards, pack.bucket);
+        if (state.packs[path] === pack.writtenAt) packs[path] = pack.writtenAt;
+        else due.push(pack);
+      }
+      const scopes = new Map<string, ScopeKey>();
       let failure: unknown = null;
-      const due = (part?.packs ?? []).filter(
-        ({ bucket, writtenAt: at }) => (state.packs[packPath(f, part?.shards ?? 0, bucket)] ?? -1) < at,
-      );
       let taken = 0;
       const worker = async () => {
-        while (part !== null && taken < due.length) {
+        while (taken < due.length) {
           const { bucket, writtenAt: at } = due[taken];
           taken += 1;
-          const path = packPath(f, part.shards, bucket);
+          const path = packPath(f, read.shards, bucket);
           try {
-            const pack = await readFile(path, isPackOf(part.shards, bucket));
+            const pack = await readFile(path, isPackOf(read.shards, bucket));
             if (pack === 'missing') continue;
             if (pack === 'bad' || pack === 'unsupported') {
-              ignored += 1;
+              outcome.ignored += 1;
               continue;
             }
             const applied = await applyFiles([pack.model], base);
-            ignored += applied.refused;
-            loaded += applied.applied.length;
+            outcome.ignored += applied.refused;
+            outcome.loaded += applied.applied.length;
             packs[path] = at;
-            writtenAt = Math.max(writtenAt ?? pack.model.writtenAt, pack.model.writtenAt);
+            outcome.writtenAt = Math.max(outcome.writtenAt ?? pack.model.writtenAt, pack.model.writtenAt);
             for (const scope of applied.change.scopes) scopes.set(scopeId(scope), scope);
             if (applied.change.scopes.length > 0) onChange(applied.change);
           } catch (error) {
@@ -874,18 +972,9 @@ export function createSavedIndex<D>(params: SavedIndexParams<D>): SavedIndex {
         }
       };
       await Promise.all(Array.from({ length: PACK_READS }, worker));
-
-      const mine = part?.folded.find(({ writer: who }) => who === writer);
-      const rebased = mine !== undefined && state.gen > 0 && mine.gen >= state.gen;
-      await writeState({
-        ...state,
-        base: rebased ? laterAll(base, state.sent) : base,
-        ...(rebased ? { baseGen: state.gen, since: null, sent: {} } : {}),
-        packs,
-      });
-      foldWanted = hot === 'missing' || singlePaths.length > 0;
+      await writeState({ ...(await readState()), base, packs });
       if (failure !== null) throw failure;
-      return { loaded, ignored, change: { scopes: [...scopes.values()], seeds: outcome.change.seeds }, writtenAt };
+      return { ...outcome, change: { scopes: [...scopes.values()], seeds: [] } };
     },
 
     async flush(mayFold) {

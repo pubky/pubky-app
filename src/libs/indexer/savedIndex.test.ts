@@ -138,7 +138,12 @@ function device(w: World, writer: string, options: DeviceOptions = {}) {
     store,
     crawler,
     sync: () => crawler.syncScope('alice'),
-    load: () => saved.load(() => undefined),
+    /** `hot` and the deltas, then the packs, counted together. */
+    load: async () => {
+      const first = await saved.load(() => undefined);
+      const rest = await saved.loadPacks(() => undefined);
+      return { ...first, loaded: first.loaded + rest.loaded, ignored: first.ignored + rest.ignored };
+    },
     flush: (mayFold = true) => saved.flush(mayFold),
     restart: () => {
       saved = make();
@@ -200,6 +205,31 @@ const requestsSince = (files: FakeIndexFiles, from: number) =>
 const authorsOf = (runs: readonly Run<Post>[]) => [...new Set(runs.map(({ author }) => author))].sort();
 
 const shardsOf = (model: IndexFileModel<Post>) => (model.part.kind === 'hot' ? model.part.shards : -1);
+
+/** A device's whole index as the previous release writes it, one version 2 file. */
+async function versionTwoOf(w: World, store: IndexStore<Post>): Promise<Uint8Array> {
+  const scratch = new FakeIndexFiles();
+  await createSavedIndex({
+    files: scratch,
+    store,
+    domain: savedDomain,
+    seed: 'alice',
+    writer: 'old',
+    now: () => w.clock.now,
+    hops: 2,
+    windowDays: 30,
+    budget: Infinity,
+    expiryMs: DAY_MS,
+  }).flush(true);
+  const bytes = (await scratch.read(hotPath(FOLDER))) ?? new Uint8Array();
+  const [, , ...rest] = JSON.parse(gunzipSync(bytes).toString('utf8')) as unknown[];
+  const marks = (rest[7] as unknown[][]).map(([homeserver, , cursor, author]) => [homeserver, cursor, author]);
+  return new Uint8Array(gzipSync(JSON.stringify([2, ...rest.slice(0, 7), marks, rest[8]])));
+}
+
+const PACKED = { hotMaxBytes: 1500, firstShards: 2, packSplitBytes: 1200, packMergeBytes: 10, deltaFoldBytes: 0 };
+const writesOf = (files: FakeIndexFiles, from: number) =>
+  files.requests.slice(from).flatMap(({ op, path }) => (op === 'write' ? [path.slice(FOLDER.length)] : []));
 
 describe('saved index folder', () => {
   it('names the folder by its groups', async () => {
@@ -505,30 +535,174 @@ describe('saved index folder', () => {
     expect(await servedAll(c.store, users)).toEqual(truthOf(w.network, users));
   });
 
+  it('starts from hot and the deltas, and fetches the packs after, beside a crawl', async () => {
+    const users = [...USERS, ...Array.from({ length: 8 }, (_, i) => `u${i}`)];
+    const w = world({ alice: 2, bob: 3, carol: 4 }, 8);
+    const a = device(w, 'wa', { limits: PACKED });
+    await a.sync();
+    expect(await a.flush()).toBe('folded');
+    const shards = shardsOf(await decoded(w.files, hotPath(FOLDER)));
+    expect(shards).toBeGreaterThan(0);
+
+    const b = device(w, 'wb', { limits: PACKED });
+    const store = b.store;
+    const saved = createSavedIndex({
+      files: w.files,
+      store,
+      domain: savedDomain,
+      seed: 'alice',
+      writer: 'wb',
+      now: () => w.clock.now,
+      hops: 2,
+      windowDays: 30,
+      budget: Infinity,
+      expiryMs: 30 * DAY_MS,
+      limits: PACKED,
+    });
+    const from = w.files.requests.length;
+    await saved.load(() => undefined);
+    expect(requestsSince(w.files, from).filter((request) => request.includes(' p/'))).toEqual([]);
+    // A crawl and the packs at once: runs merge in any order.
+    await Promise.all([b.sync(), saved.loadPacks(() => undefined)]);
+    expect(requestsSince(w.files, from).filter((request) => request.includes(' p/'))).toHaveLength(shards);
+    expect(await servedAll(store, users)).toEqual(truthOf(w.network, users));
+    // Applied once: the next load fetches no pack again.
+    const again = w.files.requests.length;
+    await saved.load(() => undefined);
+    await saved.loadPacks(() => undefined);
+    expect(requestsSince(w.files, again).filter((request) => request.includes(' p/'))).toEqual([]);
+  });
+
+  it('keeps hot within its bound, leaving the largest graphs of hop 1 to the packs', async () => {
+    const users = [...USERS, ...Array.from({ length: 60 }, (_, i) => `u${i}`)];
+    const w = world({ alice: 2, bob: 3, carol: 4 }, 60);
+    const limits = { ...PACKED, hotMaxBytes: 1000, packSplitBytes: 100_000 };
+    const a = device(w, 'wa', { limits });
+    await a.sync();
+    expect(await a.flush()).toBe('folded');
+
+    expect((w.files.files.get(hotPath(FOLDER)) ?? new Uint8Array()).length).toBeLessThanOrEqual(1000);
+    const hot = await decoded(w.files, hotPath(FOLDER));
+    expect(shardsOf(hot)).toBeGreaterThan(0);
+    // bob follows the 60: his graph is the largest of hop 1 and goes; alice's scopes stay whole.
+    expect(hot.runs.some(({ author, group }) => author === 'bob' && group === GRAPH)).toBe(false);
+    expect(
+      hot.runs
+        .filter(({ author }) => author === 'alice')
+        .map(({ group }) => group)
+        .sort(),
+    ).toEqual([ACTIVITY, GRAPH]);
+    expect(hot.members).toHaveLength(users.length);
+    const b = device(w, 'wb', { limits });
+    await b.load();
+    expect(await servedAll(b.store, users)).toEqual(truthOf(w.network, users));
+  });
+
+  it('loads a pack another writer rewrote, even under an earlier time than its clock-fast version', async () => {
+    const users = [...USERS, ...Array.from({ length: 8 }, (_, i) => `u${i}`)];
+    const w = world({ alice: 2, bob: 3, carol: 4 }, 8);
+    const fast = device(w, 'wf', { limits: PACKED });
+    await fast.sync();
+    w.clock.now += 3 * HOUR_MS;
+    expect(await fast.flush()).toBe('folded');
+    const reader = device(w, 'wr', { limits: PACKED });
+    await reader.load();
+
+    w.clock.now -= 3 * HOUR_MS;
+    w.network.putJson('carol', postPath(HOUR_MS / 2), { text: 'carol new' });
+    const right = device(w, 'wc', { limits: PACKED });
+    await right.load();
+    await right.sync();
+    expect(await right.flush()).toBe('folded');
+    reader.restart();
+    await reader.load();
+
+    expect(await servedAll(reader.store, users)).toEqual(truthOf(w.network, users));
+  });
+
+  it('folds what a version 2 file changed into its authors’ packs only', async () => {
+    const users = [...USERS, ...Array.from({ length: 16 }, (_, i) => `u${i}`)];
+    const w = world({ alice: 2, bob: 3, carol: 4 }, 16);
+    const limits = { ...PACKED, packSplitBytes: 600 };
+    const old = device(w, 'old');
+    await old.sync();
+    await w.files.write('old.idx', await versionTwoOf(w, old.store));
+    // A device that starts from the folder of the previous release reads its log as that release named it.
+    const a = device(w, 'wa', { limits });
+    await a.load();
+    await a.sync();
+    expect(await a.flush()).toBe('folded');
+    const shards = shardsOf(await decoded(w.files, hotPath(FOLDER)));
+    expect(shards).toBeGreaterThanOrEqual(4);
+
+    // The previous release writes its file again, one of its authors changed.
+    w.network.putJson('u3', postPath(HOUR_MS / 2), { text: 'u3 new' });
+    await old.sync();
+    await w.files.write('old.idx', await versionTwoOf(w, old.store));
+    w.network.putJson('alice', postPath(HOUR_MS / 4), { text: 'alice newer' });
+    await a.crawler.syncUsers(['alice']);
+    const from = w.files.requests.length;
+    expect(await a.flush()).toBe('folded');
+
+    const changed = [...new Set(['u3', 'alice'].map((user) => `p/${shards}/${bucketOf(user, shards)}`))].sort();
+    expect(
+      writesOf(w.files, from)
+        .filter((path) => path.startsWith('p/'))
+        .sort(),
+    ).toEqual(changed);
+    expect(w.files.files.has('old.idx')).toBe(false);
+    const c = device(w, 'wc', { limits });
+    await c.load();
+    expect(await servedAll(c.store, users)).toEqual(truthOf(w.network, users));
+  });
+
+  it('keeps a delta its writer rewrote while a fold read the one before, and the follows made on that device', async () => {
+    const w = world();
+    w.network.addUser('dave', 'hs1');
+    const b = device(w, 'wb');
+    await b.sync();
+    expect(await b.flush(false)).toBe('delta');
+    // Past the expiry, b's delta is one a fold deletes once folded.
+    w.clock.now += 40 * DAY_MS;
+    w.network.putJson('dave', postPath(-40 * DAY_MS + HOUR_MS), { text: 'dave' });
+    // A follow b makes after a's scope sync: only b's delta holds dave.
+    w.network.put('alice', `${FOLLOWS}dave`);
+    let wrote = false;
+    const files = w.files.with({
+      lock: async (path, seconds) => {
+        if (path === deltaPath(FOLDER, 'wb') && !wrote) {
+          wrote = true;
+          await b.sync();
+          expect(await b.flush(false)).toBe('delta');
+        }
+        return w.files.lock(path, seconds);
+      },
+    });
+    const a = device(w, 'wa', { files });
+    await a.crawler.syncUsers(['alice', 'bob', 'carol']);
+    await a.store.writeScopeMembers(
+      'alice',
+      new Map([
+        ['alice', 0],
+        ['bob', 1],
+        ['carol', 2],
+      ]),
+    );
+    w.clock.now += 1;
+    expect(await a.flush()).toBe('folded');
+
+    expect(wrote).toBe(true);
+    expect((await decoded(w.files, deltaPath(FOLDER, 'wb'))).part).toMatchObject({ kind: 'delta', gen: 2 });
+    const c = device(w, 'wc');
+    await c.load();
+    expect(await served(c.store, 'dave', 'hs1', ACTIVITY)).toEqual(w.network.liveOf('dave', [POSTS]));
+  });
+
   it('reads version 2 files without hot, folds them in and deletes them, and takes in one written again', async () => {
     const w = world();
     const old = device(w, 'old');
     await old.sync();
-    /** The old device's file as the previous release writes it. */
-    const versionTwo = async () => {
-      const scratch = new FakeIndexFiles();
-      await createSavedIndex({
-        files: scratch,
-        store: old.store,
-        domain: savedDomain,
-        seed: 'alice',
-        writer: 'old',
-        now: () => w.clock.now,
-        hops: 2,
-        windowDays: 30,
-        budget: Infinity,
-        expiryMs: DAY_MS,
-      }).flush(true);
-      const bytes = (await scratch.read(hotPath(FOLDER))) ?? new Uint8Array();
-      const [, , ...rest] = JSON.parse(gunzipSync(bytes).toString('utf8')) as unknown[];
-      const marks = (rest[7] as unknown[][]).map(([homeserver, , cursor, author]) => [homeserver, cursor, author]);
-      return new Uint8Array(gzipSync(JSON.stringify([2, ...rest.slice(0, 7), marks, rest[8]])));
-    };
+    const versionTwo = () => versionTwoOf(w, old.store);
     await w.files.write('old.idx', await versionTwo());
 
     const b = device(w, 'wb');

@@ -97,6 +97,8 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
   let scoping: Promise<void> | null = null;
   /** Whether the running work reads the saved index, which a scope sync and a fill wait for. */
   let loading = false;
+  /** The packs a load left to fetch beside the crawls, which a save waits for. */
+  let packing: Promise<void> | null = null;
   /** The fill running beside the crawls, and what stops it. */
   let filling: Promise<void> | null = null;
   let stopFill: AbortController | null = null;
@@ -264,9 +266,29 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     try {
       const index = await savedIndexOf(current);
       if (index === null) return;
-      // Each part is reported as it lands: the feed renders from `hot` while the packs still arrive.
+      // The first sync waits for `hot` and the deltas only: the packs arrive beside it, each reported as it lands.
       const outcome = await index.load(announce);
       saved = { ...saved, loadedFiles: outcome.loaded, ignoredFiles: outcome.ignored, error: null };
+      if (outcome.writtenAt !== null) noteAsOf(outcome.writtenAt);
+      if (outcome.loaded > 0) {
+        dirty = true;
+        scanDue = true;
+      }
+      packing = loadPacks(index).finally(() => {
+        packing = null;
+      });
+    } catch (error) {
+      saved = { ...saved, error: asError(error) };
+      loadAgain = true;
+    }
+  }
+
+  /** Never rejects: a failure goes to the status, and the folder is read again after the next scope sync. */
+  async function loadPacks(index: SavedIndex): Promise<void> {
+    try {
+      const outcome = await index.loadPacks(announce);
+      const { loadedFiles, ignoredFiles } = saved;
+      saved = { ...saved, loadedFiles: loadedFiles + outcome.loaded, ignoredFiles: ignoredFiles + outcome.ignored };
       if (outcome.writtenAt !== null) noteAsOf(outcome.writtenAt);
       if (outcome.loaded > 0) {
         dirty = true;
@@ -276,6 +298,8 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
       saved = { ...saved, error: asError(error) };
       loadAgain = true;
     }
+    pump();
+    emitStatus();
   }
 
   /**
@@ -288,6 +312,8 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     if (!options.savedIndex || current === null || saving !== null) return;
     if (!force && lastSaveAt !== null && now() - lastSaveAt < options.saveMinIntervalMs) return;
     saving = (after ?? Promise.resolve())
+      // A save reads and writes what the writer knows of the folder, which the packs still landing change.
+      .then(() => packing)
       .then(async () => {
         if (!dirty) return;
         dirty = false;
