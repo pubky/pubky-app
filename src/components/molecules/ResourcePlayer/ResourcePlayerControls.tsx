@@ -25,7 +25,7 @@ import type { PlayerTarget } from './resourcePlayer.utils';
 
 interface ProviderMenuProps {
   targets: PlayerTarget[];
-  /** The service shown now (playing, or a song's player up front), or `null`. */
+  /** The service shown now (playing, or a song's player shown), or `null`. */
   current: PlayerTarget | null;
   onSelect: (target: PlayerTarget) => void;
   trigger: ReactNode;
@@ -33,8 +33,8 @@ interface ProviderMenuProps {
   icons?: boolean;
   /** The menu's accessible name: what picking a row does. */
   label: string;
-  /** A "Card" row before the services: shows the link's card instead of a player, current while `current` is `null`. */
-  onShowCard?: () => void;
+  /** The "Card" row before the services: shows the link's card instead of a player, current while `current` is `null`. */
+  onShowCard: () => void;
 }
 
 /** A row of the app's menus in the post menu's style (the service menu, the audio player's speeds). */
@@ -59,36 +59,34 @@ function ProviderMenu({ targets, current, onSelect, trigger, icons = true, label
         className="flex w-56 flex-col gap-2.5"
         data-testid="play-on-menu"
       >
-        {onShowCard && (
-          <>
-            <DropdownMenuItem
-              data-testid="play-on-card"
-              aria-label="Show the link card instead of a player"
-              aria-current={cardShown || undefined}
-              onSelect={onShowCard}
-              className={MENU_ROW}
+        <>
+          <DropdownMenuItem
+            data-testid="play-on-card"
+            aria-label="Show the link card instead of a player"
+            aria-current={cardShown || undefined}
+            onSelect={onShowCard}
+            className={MENU_ROW}
+          >
+            {icons && (
+              <LinkIcon
+                aria-hidden="true"
+                className={cn(
+                  'size-4 shrink-0 transition-colors group-hover:text-foreground',
+                  cardShown ? 'text-foreground' : 'text-muted-foreground',
+                )}
+              />
+            )}
+            <Typography
+              as="span"
+              overrideDefaults
+              className={cn(MENU_ROW_TEXT, 'min-w-0 flex-1', cardShown ? 'text-foreground' : 'text-muted-foreground')}
             >
-              {icons && (
-                <LinkIcon
-                  aria-hidden="true"
-                  className={cn(
-                    'size-4 shrink-0 transition-colors group-hover:text-foreground',
-                    cardShown ? 'text-foreground' : 'text-muted-foreground',
-                  )}
-                />
-              )}
-              <Typography
-                as="span"
-                overrideDefaults
-                className={cn(MENU_ROW_TEXT, 'min-w-0 flex-1', cardShown ? 'text-foreground' : 'text-muted-foreground')}
-              >
-                Card
-              </Typography>
-              {cardShown && <Check aria-hidden="true" className="size-4 shrink-0 text-brand" />}
-            </DropdownMenuItem>
-            {targets.length > 0 && <DropdownMenuSeparator className="-mx-4 my-0" />}
-          </>
-        )}
+              Card
+            </Typography>
+            {cardShown && <Check aria-hidden="true" className="size-4 shrink-0 text-brand" />}
+          </DropdownMenuItem>
+          {targets.length > 0 && <DropdownMenuSeparator className="-mx-4 my-0" />}
+        </>
         {targets.map((target) => {
           const playing = current?.provider === target.provider;
           return (
@@ -121,11 +119,11 @@ function ProviderMenu({ targets, current, onSelect, trigger, icons = true, label
 /**
  * A card's embed/card switch, in the header of its frame or card (`useCardPlayer`'s `switcher`): the
  * shown service's favicon, name and a chevron, in the action row's pill style, opening Card and,
- * below a separator, the services to show instead (`ProviderMenu`). Picking one only switches
- * the player shown; it never starts it. While the card shows (`current` is `null`), the switch reads Card;
- * a service whose link is a match by metadata shows no label here either, its note in the hover text and name.
- * On a phone it shows the favicon (or the card's link icon) and the chevron only; the name stays in
- * its accessible name.
+ * below a separator, the services to show instead (`ProviderMenu`). A pick is the viewer's press: the
+ * picked service's player loads and starts (`useCardPlayer`). While the card shows (`current` is `null`), the
+ * switch reads Card; a service whose link is a match by metadata shows no label here either, its note in
+ * the hover text and name. On a phone it shows the favicon (or the card's link icon) and the chevron
+ * only; the name stays in its accessible name.
  */
 export function PlayerSwitch({
   targets,
@@ -139,6 +137,7 @@ export function PlayerSwitch({
   /** The service shown, or `null` while the card shows instead. */
   current: PlayerTarget | null;
   onSelect: (target: PlayerTarget) => void;
+  /** Card's row. */
   onShowCard: () => void;
   /** The services' favicons (served by the app, `ResourceSourceIcon`). */
   icons?: boolean;
@@ -178,12 +177,14 @@ export function PlayerSwitch({
 /**
  * The player pill in the action row's own buttons: ▶ and the service's logo, while open the logo and
  * ✕; the label (the service's name) is its accessible name and tooltip: an X post's "Show on" on
- * its card (`NativeEmbedResource`).
+ * its card (`NativeEmbedResource`), a text link's or a link card's (`NativeEmbedLinkCard`). `text` is a short word after
+ * the logo while closed, from `sm` on (a phone shows the icons only).
  */
 export function PlayOnPill({
   uri,
   isOpen,
   label,
+  text,
   surface = 'muted',
   className,
   ...props
@@ -192,6 +193,7 @@ export function PlayOnPill({
   uri: string;
   isOpen: boolean;
   label: string;
+  text?: string;
   surface?: PostActionSurface;
 } & Omit<ComponentProps<typeof Button>, 'variant' | 'size' | 'children' | 'aria-label' | 'title'>) {
   return (
@@ -205,15 +207,40 @@ export function PlayOnPill({
     >
       {!isOpen && <Play aria-hidden="true" className="fill-current" />}
       <ResourceSourceIcon uri={uri} />
+      {!isOpen && text && (
+        <Typography as="span" overrideDefaults aria-hidden="true" className="max-sm:hidden">
+          {text}
+        </Typography>
+      )}
       {isOpen && <X aria-hidden="true" />}
     </Button>
   );
 }
 
 /**
+ * The place of a `PlayOnPill` held while it is not known yet whether one shows (a post's link preview,
+ * which may name a video, is read): the same size, invisible, out of the tab order and hidden from
+ * screen readers, so the row does not move when the pill comes.
+ */
+export function PlayOnPillPlaceholder({ uri, surface }: { uri: string; surface?: PostActionSurface }) {
+  return (
+    <PlayOnPill
+      uri={uri}
+      isOpen={false}
+      label=""
+      surface={surface}
+      aria-hidden="true"
+      tabIndex={-1}
+      className="invisible"
+      data-testid="show-embed-placeholder"
+    />
+  );
+}
+
+/**
  * A player that is not loaded yet, as one row: the action row's Play button (`label` its name and
  * tooltip) beside the title and a line under it. Without `onPlay` (its player open under it) only
- * the title and line. `useCardPlayer`'s stand-in with platform embeds up front off, a show's episode
+ * the title and line. `useCardPlayer`'s stand-in before a press, a show's episode
  * (`ResourceAudioPlayer`). With `href` (an episode's own page) the title is a link that covers the
  * row: a press anywhere but Play opens it, in a new tab with `linkTarget` (where links may not
  * navigate). `image` adds a cover after the title (`ResourceAudioArt`) and `titleLines` lets the
@@ -243,7 +270,7 @@ export function PlayStandIn({
   surface?: PostActionSurface;
   href?: string | null;
   linkTarget?: '_blank';
-  /** A cover image (`http(s)`), or `null` for the type's tile; absent shows none. */
+  /** A cover on the app's image route (`getResourceImageUrl`), or `null` for the type's tile; absent shows none. */
   image?: string | null;
   titleLines?: 1 | 2;
   hideTitle?: boolean;
@@ -327,7 +354,7 @@ export interface PagePlayer {
  * dock (CSS only, the frame is never moved, so it keeps playing) with Close and a way back; back in
  * view it returns to the card. The dock sits above the phone's bottom bar and left of the new-post
  * button, so it never covers either (`DOCK_CLASS`). Audio uses the service's compact height; video
- * keeps its ratio at the dock's width. A player nobody started (a player shown up front, `dockable` off)
+ * keeps its ratio at the dock's width. A player nobody started (a player shown paused, `dockable` off)
  * stays in its card, and a post pauses it off screen like any embed. Here (no player host: tests, a
  * tree outside the app) a paused player is not `dockable`, so one paused in this dock goes back to
  * its card; the host keeps one paused in the dock there.

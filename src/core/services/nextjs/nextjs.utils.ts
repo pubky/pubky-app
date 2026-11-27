@@ -1,3 +1,4 @@
+import { APP_VERSION } from '@/config/app';
 import { ServerErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
@@ -197,3 +198,10 @@ export async function normalizeImageUrl(image: string, baseUrl: string): Promise
 
   return imageUrl.toString();
 }
+
+/**
+ * How the app's server names itself to a fixed partner host it reads on viewers' behalf (X's
+ * syndication host for `/api/x-post`, OpenFreeMap for `/api/map`): the app and its version, and where
+ * it lives. `PubkyApp`, not the site's name followed by a slash, which reads as a 0.x namespace path.
+ */
+export const APP_USER_AGENT = `PubkyApp/${APP_VERSION} (+https://pubky.app)`;

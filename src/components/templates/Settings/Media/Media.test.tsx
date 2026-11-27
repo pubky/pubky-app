@@ -12,7 +12,7 @@ describe('Media', () => {
     render(<Media />);
     expect(screen.getByText('Links and Media')).toBeInTheDocument();
     expect(screen.getByText('Players')).toBeInTheDocument();
-    expect(screen.getByText('Show platform embeds up front')).toBeInTheDocument();
+    expect(screen.queryByText('Show platform embeds up front')).not.toBeInTheDocument();
   });
 
   it('shows no settings without Pinakes, which they would not act on', () => {
@@ -21,6 +21,5 @@ describe('Media', () => {
     expect(screen.getByText('Links and Media')).toBeInTheDocument();
     expect(screen.getByText('Link cards are not available here, so there is nothing to set.')).toBeInTheDocument();
     expect(screen.queryByText('Players')).not.toBeInTheDocument();
-    expect(screen.queryByText('Show platform embeds up front')).not.toBeInTheDocument();
   });
 });

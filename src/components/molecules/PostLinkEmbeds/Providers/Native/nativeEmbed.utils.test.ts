@@ -17,14 +17,12 @@ describe('getShowPostLabel', () => {
 
 describe('chooseNativeEmbed', () => {
   it.each([
-    [{ hasCard: true }, 'embed'],
+    [{ hasCard: true }, 'card'],
     [{ hasCard: false }, 'embed'],
     [{ hasCard: true, embedFailed: true }, 'card'],
     [{ hasCard: false, embedFailed: true }, 'embed'],
-    [{ hasCard: true, upFront: false }, 'card'],
-    [{ hasCard: true, upFront: false, engaged: true }, 'embed'],
-    [{ hasCard: false, upFront: false }, 'embed'],
-    [{ hasCard: true, embedFailed: true, upFront: false }, 'card'],
+    [{ hasCard: true, engaged: true }, 'embed'],
+    [{ hasCard: true, embedFailed: true, engaged: true }, 'card'],
   ] as const)('%o -> %s', (input, expected) => {
     expect(chooseNativeEmbed(input)).toBe(expected);
   });

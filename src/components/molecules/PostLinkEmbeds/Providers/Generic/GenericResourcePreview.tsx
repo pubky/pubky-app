@@ -84,13 +84,12 @@ interface GenericResourcePreviewProps {
  * shows or plays the file inline.
  *
  * Embed or card (`useCardPlayer`): a link on a service with a player (a Spotify track or artist
- * page) shows that service's player up front, in the resource frame (`ResourceEmbedFrame`); a
- * generic link Pinakes knows on such services (a MusicBrainz or Wikipedia page) shows our card up
- * front. Either has the embed/card switch in its header when there is a choice (Card, then the
- * services), and no Play on in its action row; in a post, the composer and a collection alike. A
- * player plays only on a press inside it, and never docks in a post being written. A viewer who
- * turned platform embeds up front off (Settings, Links & Media) gets a stand-in that loads nothing
- * until its Play.
+ * page) shows that service's player as the app draws it, in the resource frame (`ResourceEmbedFrame`);
+ * a generic link Pinakes knows on such services (a MusicBrainz or Wikipedia page) shows our card.
+ * Either has the embed/card switch in its header when there is a choice (Card, then the services),
+ * and no Play on in its action row; in a post, the composer and a collection alike. Nothing loads
+ * from the service until the viewer's press on the drawing or pick in the switch, which loads its
+ * player in place; it never docks in a post being written.
  *
  * A link Pinakes does not know yet (a post published seconds ago) is read again while the preview
  * is on screen (`usePinakesCard`'s `recheck`), and its card replaces the link's own preview in the
@@ -144,7 +143,7 @@ function ResourcePreview({
   const isReading = isLoading || Boolean(isResolving);
   const isSlow = useSlowRead(lookupUrl, isReading, PINAKES_SLOW_READ_MS);
   // Embed or card, with the switch; in a post being written a player previews (`preview`).
-  const { embed, switcher } = useCardPlayer(card && !hasNothingToShow(card) ? card : null, url, actionSurface, {
+  const { embed, switcher, player } = useCardPlayer(card && !hasNothingToShow(card) ? card : null, url, actionSurface, {
     preview: isPreview,
   });
 
@@ -189,7 +188,17 @@ function ResourcePreview({
       </ResourceEmbedFrame>
     );
   }
+  // The card, the switch in its header; a post it cannot show from its data, its press inside it.
   return (
-    <ResourceCard card={shownCard} href={url} actions={actions} isOnScreen={isOnScreen} headerControl={switcher} />
+    <ResourceCard
+      card={shownCard}
+      href={url}
+      actions={actions}
+      isOnScreen={isOnScreen}
+      headerControl={switcher}
+      player={player}
+      // A social post shows as a post, from its card's data.
+      asPost
+    />
   );
 }

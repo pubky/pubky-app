@@ -11,10 +11,7 @@ import { asOpaque } from '@/test-utils/type-assertions';
 import { PlayerFrom, PlayerHost } from './PlayerHost';
 import { useCardPlayer } from './useCardPlayer';
 
-// These cases are for platform embeds up front (Settings, Links & Media) turned on; the default
-// is off (`defaultMediaPreferences`): a card, nothing loaded from the platform before Play.
-const upFrontMedia = { ...defaultMediaPreferences, embedsUpFront: true };
-beforeEach(() => useSettingsStore.setState({ media: upFrontMedia }));
+beforeEach(() => useSettingsStore.setState({ media: defaultMediaPreferences }));
 
 const push = vi.hoisted(() => vi.fn());
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }));
@@ -58,6 +55,15 @@ function layOut() {
 }
 
 const frames = () => screen.queryAllByTestId('resource-player-frame');
+/**
+ * The viewer's press on the player the app draws in the card `testId` (else the page's first): that
+ * service's player loads in its place, started, as the page's player. The frames on the page after it.
+ */
+const load = (testId?: string) => {
+  const scope = testId ? within(screen.getByTestId(testId)) : screen;
+  fireEvent.click(scope.getAllByTestId('player-facade')[0]);
+  return frames();
+};
 const slotOf = (testId: string) => within(screen.getByTestId(testId)).getByTestId('player-dock-slot');
 const dock = () => screen.queryByRole('complementary', { name: `Player dock: ${SONG.name}` });
 
@@ -109,14 +115,31 @@ describe('PlayerHost', () => {
       </PlayerHost>,
     );
 
-    const [frame] = frames();
+    const [frame] = load();
     expect(screen.getByTestId('feed')).not.toContainElement(frame);
     expect(screen.getByTestId('player-host')).toContainElement(frame);
     const box = frame.closest<HTMLElement>('[data-testid="hosted-player"]')!;
     expect(box).toHaveStyle({ top: '100px', left: '0px', width: '400px' });
     // Assistive technology reads it in the card.
     expect(slotOf('feed')).toHaveAttribute('aria-owns', box.id);
-    expect(document.querySelector('[data-keep-playing]')).toBeNull();
+  });
+
+  it('takes the keyboard from the card into its player laid over it, which sits at the end of the page', () => {
+    render(
+      <PlayerHost>
+        <Song testId="feed" />
+      </PlayerHost>,
+    );
+
+    const [frame] = load();
+    const into = within(slotOf('feed')).getByRole('button', { name: /^Go to the player: / });
+    // Reached by Tab or Shift+Tab, it keeps the focus: nothing moves on focus alone.
+    act(() => into.focus());
+    expect(document.activeElement).toBe(into);
+
+    // Pressed (Enter or Space press it as a click): into the player.
+    fireEvent.click(into);
+    expect(document.activeElement).toBe(frame);
   });
 
   it('keeps the same playing frame across pages: the dock with no card, then the next card of the same link', () => {
@@ -125,7 +148,7 @@ describe('PlayerHost', () => {
         <Song key="feed" testId="feed" />
       </PlayerHost>,
     );
-    const [frame] = frames();
+    const [frame] = load();
     press(frame);
     expect(frame.closest('[data-keep-playing]')).not.toBeNull();
     expect(dock()).toBeNull();
@@ -151,6 +174,45 @@ describe('PlayerHost', () => {
     expect(slotOf('feed-again')).toHaveAttribute('aria-owns', frame.closest('[data-testid="hosted-player"]')!.id);
   });
 
+  it('lays the playing frame over the next card of the same link, never a second one', () => {
+    const { rerender } = render(
+      <PlayerHost>
+        <Song key="feed" testId="feed" />
+      </PlayerHost>,
+    );
+    // Drawn by the app until a press: nothing loaded.
+    expect(frames()).toEqual([]);
+    fireEvent.click(within(screen.getByTestId('feed')).getByTestId('player-facade'));
+    const [frame] = frames();
+    expect(frame.getAttribute('src')).toContain('open.spotify.com/embed/');
+
+    // Its post opened: the new card of the same link shows the playing frame, not its drawing nor a frame of its own.
+    rerender(
+      <PlayerHost>
+        <Song key="post" testId="post" />
+      </PlayerHost>,
+    );
+    expect(within(screen.getByTestId('post')).queryByTestId('player-facade')).not.toBeInTheDocument();
+    expect(frames()).toEqual([frame]);
+    expect(slotOf('post')).toHaveAttribute('aria-owns', frame.closest('[data-testid="hosted-player"]')!.id);
+
+    // Another page, the frame in the dock, closed there: a card of the link shows its drawing again, nothing loaded.
+    rerender(
+      <PlayerHost>
+        <p key="profile">Profile</p>
+      </PlayerHost>,
+    );
+    expect(dock()).toContainElement(frame);
+    fireEvent.click(screen.getByTestId('player-dock-close'));
+    rerender(
+      <PlayerHost>
+        <Song key="feed-again" testId="feed-again" />
+      </PlayerHost>,
+    );
+    expect(frames()).toEqual([]);
+    expect(within(screen.getByTestId('feed-again')).getByTestId('player-facade')).toBeInTheDocument();
+  });
+
   it('lays the playing frame over the open post’s card of the same link while the feed is hidden, and back', () => {
     const page = (postOpen: boolean) => (
       <PlayerHost>
@@ -161,7 +223,7 @@ describe('PlayerHost', () => {
       </PlayerHost>
     );
     const { rerender } = render(page(false));
-    const [frame] = frames();
+    const [frame] = load();
     press(frame);
 
     rerender(page(true));
@@ -182,7 +244,7 @@ describe('PlayerHost', () => {
         <Song key="feed" testId="feed" />
       </PlayerHost>,
     );
-    const [frame] = frames();
+    const [frame] = load();
     press(frame);
 
     // Another post's link to the same song, spelled as shared: the card's own link is the player's.
@@ -201,7 +263,7 @@ describe('PlayerHost', () => {
         <Song key="feed" testId="feed" />
       </PlayerHost>,
     );
-    const [frame] = frames();
+    const [frame] = load();
     press(frame);
 
     rerender(
@@ -210,9 +272,13 @@ describe('PlayerHost', () => {
       </PlayerHost>,
     );
     expect(dock()).toContainElement(frame);
-    const other = frames().find((element) => element !== frame)!;
-    expect(other).toHaveAttribute('src', 'https://open.spotify.com/embed/track/69kOkLUCkxIZYexIgSG8rq');
-    expect(other.closest('[data-keep-playing]')).toBeNull();
+    // The other link's card draws its own player: nothing of it loaded, the playing frame stays in the dock.
+    expect(frames()).toEqual([frame]);
+    const other = load('other').find((element) => element !== frame)!;
+    expect(other).toHaveAttribute(
+      'src',
+      expect.stringContaining('https://open.spotify.com/embed/track/69kOkLUCkxIZYexIgSG8rq'),
+    );
   });
 
   it('closes from the dock: the frame of a card that is gone is unloaded', () => {
@@ -221,7 +287,7 @@ describe('PlayerHost', () => {
         <Song key="feed" testId="feed" />
       </PlayerHost>,
     );
-    press(frames()[0]);
+    press(load()[0]);
     rerender(<PlayerHost>{null}</PlayerHost>);
 
     fireEvent.click(within(dock()!).getByRole('button', { name: 'Close the Spotify player' }));
@@ -236,14 +302,14 @@ describe('PlayerHost', () => {
         <Song key="feed" testId="feed" />
       </PlayerHost>,
     );
-    const [first] = frames();
+    const [first] = load();
     press(first);
     rerender(
       <PlayerHost>
         <Song key="other" card={OTHER_SONG} testId="other" />
       </PlayerHost>,
     );
-    const second = frames().find((element) => element !== first)!;
+    const second = load('other').find((element) => element !== first)!;
 
     press(second);
     expect(first).not.toBeInTheDocument();
@@ -264,7 +330,7 @@ describe('PlayerHost', () => {
       </PlayerHost>
     );
     const { rerender } = render(page(false));
-    const [frame] = frames();
+    const [frame] = load();
     press(frame);
 
     rerender(page(true));
@@ -292,7 +358,7 @@ describe('PlayerHost', () => {
         <Song key="resource" testId="resource" />
       </PlayerHost>,
     );
-    press(frames()[0]);
+    press(load()[0]);
     window.history.replaceState(null, '', '/settings');
     rerender(<PlayerHost>{null}</PlayerHost>);
 
@@ -310,7 +376,7 @@ describe('PlayerHost', () => {
         </PlayerFrom>
       </PlayerHost>,
     );
-    press(frames()[0]);
+    press(load()[0]);
     rerender(<PlayerHost>{null}</PlayerHost>);
 
     fireEvent.click(within(dock()!).getByRole('button', { name: `Back to ${SONG.name}` }));
@@ -328,7 +394,7 @@ describe('PlayerHost', () => {
         <Song key="feed" testId="feed" />
       </PlayerHost>,
     );
-    const [first] = frames();
+    const [first] = load();
     press(first);
 
     rerender(
@@ -338,7 +404,9 @@ describe('PlayerHost', () => {
     );
     expect(first).not.toBeInTheDocument();
     expect(dock()).toBeNull();
-    expect(frames()).toHaveLength(1);
+    // The other resource's player is drawn again, nothing loaded until a press.
+    expect(frames()).toEqual([]);
+    expect(within(screen.getByTestId('feed')).getByTestId('player-facade')).toBeInTheDocument();
   });
 
   it('keeps the frame, once, in StrictMode’s double effects', () => {
@@ -349,7 +417,7 @@ describe('PlayerHost', () => {
         </PlayerHost>
       </StrictMode>,
     );
-    const [frame] = frames();
+    const [frame] = load();
     expect(frames()).toHaveLength(1);
     press(frame);
 
@@ -361,72 +429,6 @@ describe('PlayerHost', () => {
     expect(dock()).toContainElement(frame);
   });
 
-  it('unloads a quiet player hidden with its card behind an open post, and loads it again with the feed', () => {
-    const page = (postOpen: boolean) => (
-      <PlayerHost>
-        <div data-hidden={postOpen || undefined}>
-          <Song testId="feed" />
-        </div>
-      </PlayerHost>
-    );
-    const { rerender } = render(page(false));
-    const [frame] = frames();
-    const box = frame.closest('[data-testid="hosted-player"]')!;
-    expect(box).not.toHaveClass('hidden');
-    act(() => frame.dispatchEvent(new Event('load')));
-    expect(within(box as HTMLElement).queryByTestId('resource-player-placeholder')).toBeNull();
-
-    rerender(page(true));
-    act(() => {
-      window.dispatchEvent(new Event('resize'));
-      vi.advanceTimersByTime(20);
-    });
-    // Hidden, it loads nothing: no frame of it is left on the page
-    expect(frames()).toEqual([]);
-    expect(box).toHaveClass('hidden');
-    expect(dock()).toBeNull();
-
-    rerender(page(false));
-    act(() => {
-      window.dispatchEvent(new Event('resize'));
-      vi.advanceTimersByTime(20);
-    });
-    expect(frames()).toHaveLength(1);
-    expect(box).not.toHaveClass('hidden');
-    // A new frame, loading anew: its placeholder covers it until it has loaded, as on the first load.
-    const [reloaded] = frames();
-    expect(reloaded).not.toBe(frame);
-    const region = reloaded.closest('[data-player-region]')!;
-    expect(region).toHaveAttribute('aria-busy', 'true');
-    expect(reloaded).toHaveClass('opacity-0');
-    expect(within(box as HTMLElement).getByTestId('resource-player-placeholder')).toBeInTheDocument();
-    act(() => reloaded.dispatchEvent(new Event('load')));
-    expect(region).toHaveAttribute('aria-busy', 'false');
-    expect(reloaded).toHaveClass('opacity-100');
-    expect(within(box as HTMLElement).queryByTestId('resource-player-placeholder')).toBeNull();
-  });
-
-  it('lets a quiet player go with its card, and never docks one', () => {
-    const page = (away: boolean, shown = true) => (
-      <PlayerHost>
-        <div data-offscreen={away || undefined}>{shown && <Song testId="feed" />}</div>
-      </PlayerHost>
-    );
-    const { rerender } = render(page(false));
-    const [frame] = frames();
-
-    rerender(page(true));
-    act(() => {
-      window.dispatchEvent(new Event('scroll'));
-      vi.advanceTimersByTime(20);
-    });
-    expect(dock()).toBeNull();
-    expect(frames()).toEqual([frame]);
-
-    rerender(page(true, false));
-    expect(frames()).toEqual([]);
-  });
-
   it('keeps a preview’s player (the composer) in place', () => {
     render(
       <PlayerHost>
@@ -434,7 +436,7 @@ describe('PlayerHost', () => {
       </PlayerHost>,
     );
 
-    expect(screen.getByTestId('composer')).toContainElement(frames()[0]);
+    expect(screen.getByTestId('composer')).toContainElement(load()[0]);
   });
 
   it('never docks a player paused in its card: it stays over its card off screen, and docks once played on', () => {
@@ -446,7 +448,7 @@ describe('PlayerHost', () => {
       </PlayerHost>
     );
     const { rerender } = render(page(false));
-    const [frame] = frames();
+    const [frame] = load();
     const box = frame.closest('[data-testid="hosted-player"]')!;
     press(frame);
     tell(frame, { isPaused: true });
@@ -470,7 +472,7 @@ describe('PlayerHost', () => {
       </PlayerHost>
     );
     const { rerender } = render(page(false));
-    const [frame] = frames();
+    const [frame] = load();
     const box = frame.closest('[data-testid="hosted-player"]')!;
     press(frame);
     tell(frame, { isPaused: true });
@@ -498,7 +500,7 @@ describe('PlayerHost', () => {
         <Song key="feed" testId="feed" />
       </PlayerHost>,
     );
-    const [frame] = frames();
+    const [frame] = load();
     press(frame);
     rerender(<PlayerHost>{null}</PlayerHost>);
     expect(dock()).toContainElement(frame);
@@ -600,7 +602,7 @@ describe('PlayerHost', () => {
         </PlayerHost>
       );
       const { rerender } = render(page(false));
-      const [song] = frames();
+      const [song] = load('song');
       press(song);
 
       fireEvent.click(screen.getByRole('button', { name: `Play ${EPISODE.name}` }));

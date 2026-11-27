@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { FaviconController, type TFaviconControllerResult } from '@/controllers/favicon/favicon';
+import { IMAGE_RESPONSE_HEADERS } from '@/libs/api/image-response';
 import { handleApiError } from '@/libs/api/route-error-handler';
 import { HttpStatusCode } from '@/libs/http/http.types';
 
@@ -13,11 +14,6 @@ import { HttpStatusCode } from '@/libs/http/http.types';
  * on the CDN. A host with no icon is cached for an hour, a refused one for a day. While too many
  * other sites are being read the answer is 503, never cached, so the next view asks again.
  */
-const SAFE_HEADERS = {
-  'X-Content-Type-Options': 'nosniff',
-  'Content-Security-Policy': "default-src 'none'; sandbox",
-  'Cross-Origin-Resource-Policy': 'same-origin',
-};
 const ICON_CACHE = 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=86400';
 const MISS_CACHE = 'public, max-age=3600, s-maxage=3600';
 const REFUSED_CACHE = 'public, max-age=86400, s-maxage=86400';
@@ -36,13 +32,13 @@ export async function GET(request: NextRequest) {
     if (!result.ok) {
       return new NextResponse(null, {
         status: result.statusCode,
-        headers: { ...SAFE_HEADERS, 'Cache-Control': FAILURE_CACHE[result.statusCode] },
+        headers: { ...IMAGE_RESPONSE_HEADERS, 'Cache-Control': FAILURE_CACHE[result.statusCode] },
       });
     }
     return new NextResponse(result.icon.body, {
       status: 200,
       headers: {
-        ...SAFE_HEADERS,
+        ...IMAGE_RESPONSE_HEADERS,
         'Content-Type': result.icon.contentType,
         'Content-Length': String(result.icon.body.byteLength),
         'Cache-Control': ICON_CACHE,

@@ -1,17 +1,12 @@
 import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useOgMetadata } from '@/hooks/useOgMetadata/useOgMetadata';
-import { useSettingsStore } from '@/stores/settings/settings.store';
-import { defaultMediaPreferences } from '@/stores/settings/settings.types';
 import { asInvalid } from '@/test-utils/type-assertions';
 import type { EmbedData } from '../../Providers/Provider.types';
+import { GenericLinkPreview } from './GenericLinkPreview';
 import { GenericPreview } from './GenericPreview';
 import { GenericResourcePreview } from './GenericResourcePreview';
 import { Generic } from './ProviderGeneric';
-
-// A video or audio file shows its player right away with platform embeds up front on; the default
-// (off) waits for Play on (`GenericPreview.test.tsx`).
-beforeEach(() => useSettingsStore.setState({ media: { ...defaultMediaPreferences, embedsUpFront: true } }));
 
 // Mock the hooks module
 vi.mock('@/hooks/useOgMetadata/useOgMetadata', () => ({
@@ -157,10 +152,10 @@ describe('ProviderGeneric', () => {
       expect(typeof result).toBe('object');
     });
 
-    it('keeps the generic website preview for a link that is only in the text', () => {
+    it('keeps the generic website preview for a link that is only in the text (its card when it says nothing)', () => {
       const result = Generic.renderEmbed({ type: 'url', value: 'https://example.com' }, { isComposing: true });
 
-      expect(result).toMatchObject({ type: GenericPreview, props: { url: 'https://example.com' } });
+      expect(result).toMatchObject({ type: GenericLinkPreview, props: { url: 'https://example.com' } });
     });
 
     it('renders the external resource preview for the link a post embeds', () => {
@@ -286,88 +281,5 @@ describe('GenericPreview', () => {
     });
   });
 
-  describe('image type rendering', () => {
-    it('renders image preview for image type', () => {
-      const imageUrl = 'https://example.com/photo.jpg';
-      mockUseOgMetadata.mockReturnValue({
-        metadata: {
-          url: imageUrl,
-          title: null,
-          image: null,
-          type: 'image',
-        },
-        isLoading: false,
-        error: null,
-      });
-
-      render(<GenericPreview url={imageUrl} />);
-
-      const image = screen.getByAltText('Image preview');
-      expect(image).toBeInTheDocument();
-      expect(image).toHaveAttribute('src', imageUrl);
-    });
-
-    it('wraps image in a link to the original URL', () => {
-      const imageUrl = 'https://example.com/photo.png';
-      mockUseOgMetadata.mockReturnValue({
-        metadata: {
-          url: imageUrl,
-          title: null,
-          image: null,
-          type: 'image',
-        },
-        isLoading: false,
-        error: null,
-      });
-
-      render(<GenericPreview url={imageUrl} />);
-
-      const link = screen.getByRole('link');
-      expect(link).toHaveAttribute('href', imageUrl);
-    });
-  });
-
-  describe('video type rendering', () => {
-    it('renders video element for video type', () => {
-      const videoUrl = 'https://example.com/video.mp4';
-      mockUseOgMetadata.mockReturnValue({
-        metadata: {
-          url: videoUrl,
-          title: null,
-          image: null,
-          type: 'video',
-        },
-        isLoading: false,
-        error: null,
-      });
-
-      render(<GenericPreview url={videoUrl} />);
-
-      const video = document.querySelector('video');
-      expect(video).toBeInTheDocument();
-      expect(video).toHaveAttribute('src', videoUrl);
-    });
-  });
-
-  describe('audio type rendering', () => {
-    it('renders audio element for audio type', () => {
-      const audioUrl = 'https://example.com/audio.mp3';
-      mockUseOgMetadata.mockReturnValue({
-        metadata: {
-          url: audioUrl,
-          title: null,
-          image: null,
-          type: 'audio',
-        },
-        isLoading: false,
-        error: null,
-      });
-
-      render(<GenericPreview url={audioUrl} />);
-
-      const audio = document.querySelector('audio');
-      expect(audio).toBeInTheDocument();
-      expect(audio).toHaveAttribute('src', audioUrl);
-    });
-  });
+  // Links to an image, video or audio file show as finished cards: `GenericPreview.test.tsx`.
 });

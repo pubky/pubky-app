@@ -112,9 +112,9 @@ interface ResourceActionsProps {
    */
   eventFeed?: TEventFeed | null;
   /**
-   * A pill that shows the platform's own embed (an X post's "Show on <site>" with platform embeds up
-   * front off): on its own line above the footer, so the footer's tags and buttons are the post's,
-   * never squeezed by it. A service's player is picked in the card's header switch instead.
+   * A pill that shows the platform's own embed (an X post's "Show on <site>"): on its own line above
+   * the footer, so the footer's tags and buttons are the post's, never squeezed by it. A service's
+   * player is picked in the card's header switch instead.
    */
   playOn?: ReactNode;
   /** `large`: under the resource page's large card, with its padding and the post's pills. */

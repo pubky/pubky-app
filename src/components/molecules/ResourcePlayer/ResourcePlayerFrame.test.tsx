@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { getPlayerTarget } from './resourcePlayer.utils';
+import { getEmbedTarget, getPlayerTarget } from './resourcePlayer.utils';
 import { ResourcePlayerFrame } from './ResourcePlayerFrame';
 import { useResourcePlayer } from './useResourcePlayer';
 
@@ -303,7 +303,7 @@ describe('ResourcePlayerFrame', () => {
     expect(screen.getByRole('link', { name: 'Open in Spotify' })).toHaveAttribute('href', SPOTIFY.link);
   });
 
-  it('stops an embed shown up front once pressed, when other media starts: loaded anew, paused', () => {
+  it('stops a quiet embed once pressed, when other media starts: loaded anew, paused', () => {
     vi.useFakeTimers();
     const ALBUM = getPlayerTarget('https://www.deezer.com/album/302127')!;
     render(
@@ -343,7 +343,48 @@ describe('ResourcePlayerFrame', () => {
     expect(region).toHaveAttribute('aria-busy', 'false');
   });
 
-  it('loads anew an embed shown up front that said it plays, when other media starts', () => {
+  it.each([
+    ['post', true, true],
+    ['post', false, false],
+    ['map', true, false],
+  ] as const)('a press inside a %s frame (holding a video: %s) counts as a start: %s', (frame, holdsVideo, starts) => {
+    vi.useFakeTimers();
+    const FRAME = {
+      ...DEEZER,
+      provider: 'mastodon',
+      name: 'mastodon.social',
+      src: 'https://mastodon.social/@someone/1/embed',
+      frame,
+    };
+    render(
+      <>
+        <ResourcePlayerFrame
+          target={FRAME}
+          title="A post"
+          load="ready"
+          onLoaded={() => {}}
+          quiet
+          holdsVideo={holdsVideo}
+        />
+        <Player target={SPOTIFY} />
+      </>,
+    );
+    const shown = screen.getByLabelText('mastodon.social embed: A post', { selector: 'iframe' });
+    act(() => shown.dispatchEvent(new Event('load')));
+    act(() => {
+      fireEvent.mouseOver(shown);
+      shown.focus();
+      window.dispatchEvent(new Event('blur'));
+      vi.advanceTimersByTime(1);
+    });
+
+    // Other media starts: a post's video stops (loaded anew); a map stays as it is.
+    fireEvent.click(screen.getByRole('button', { name: 'play' }));
+    const after = screen.getByLabelText('mastodon.social embed: A post', { selector: 'iframe' });
+    expect(after === shown).toBe(!starts);
+  });
+
+  it('loads anew a quiet embed that said it plays, when other media starts', () => {
     render(
       <>
         <ResourcePlayerFrame target={SPOTIFY} title="Get Lucky" load="ready" onLoaded={() => {}} quiet />
@@ -357,10 +398,78 @@ describe('ResourcePlayerFrame', () => {
     expect(screen.getByLabelText('Spotify player: Get Lucky', { selector: 'iframe' })).not.toBe(song);
   });
 
-  it('shows no status line and loads lazily when quiet (an embed shown up front)', () => {
+  it('shows no status line and loads lazily when quiet (a frame loaded but not started)', () => {
     render(<ResourcePlayerFrame target={MIXCLOUD} title="Party time" load="ready" onLoaded={() => {}} quiet />);
 
     expect(screen.getByTestId('resource-player-status')).toHaveClass('hidden');
     expect(screen.getByTestId('resource-player-frame')).toHaveAttribute('loading', 'lazy');
+  });
+
+  it('takes the height an Instagram post frame asks for, from that frame only, so the post shows whole', () => {
+    const target = getEmbedTarget(
+      {
+        provider: 'instagram',
+        kind: 'post',
+        src: 'https://www.instagram.com/p/DgB34vHhlaT/embed/captioned/',
+        height: null,
+        aspect: null,
+        allow: [],
+        autoplay_param: null,
+      },
+      'https://www.instagram.com/p/DgB34vHhlaT/',
+      'instagram.com',
+    )!;
+    render(<ResourcePlayerFrame target={target} title="Post on instagram.com" load="ready" onLoaded={() => {}} />);
+    const region = screen.getByRole('region', { name: 'instagram.com embed: Post on instagram.com' });
+    const frame = screen.getByTestId('resource-player-frame') as HTMLIFrameElement;
+    // Before it says, Instagram's resting height, never wider than its own embed.
+    expect(region.style.getPropertyValue('--player-h')).toBe('760px');
+    expect(region.style.maxWidth).toBe('658px');
+
+    const measure = JSON.stringify({ type: 'MEASURE', details: { height: 731 } });
+    // Another window, or another origin, changes nothing.
+    act(() => {
+      window.dispatchEvent(new MessageEvent('message', { data: measure, origin: 'https://www.instagram.com' }));
+    });
+    postFromFrame(frame, measure, 'https://evil.example');
+    // Its own other messages neither.
+    postFromFrame(frame, JSON.stringify({ type: 'MOUNTED', details: { height: 900 } }), 'https://www.instagram.com');
+    expect(region.style.getPropertyValue('--player-h')).toBe('760px');
+
+    postFromFrame(frame, measure, 'https://www.instagram.com');
+    expect(region.style.getPropertyValue('--player-h')).toBe('731px');
+  });
+
+  it('gives two Instagram post frames on one page each only its own height', () => {
+    const post = (code: string) =>
+      getEmbedTarget(
+        {
+          provider: 'instagram',
+          kind: 'post',
+          src: `https://www.instagram.com/p/${code}/embed/captioned/`,
+          height: null,
+          aspect: null,
+          allow: [],
+          autoplay_param: null,
+        },
+        `https://www.instagram.com/p/${code}/`,
+        'instagram.com',
+      )!;
+    render(
+      <>
+        <ResourcePlayerFrame target={post('AAA')} title="First" load="ready" onLoaded={() => {}} />
+        <ResourcePlayerFrame target={post('BBB')} title="Second" load="ready" onLoaded={() => {}} />
+      </>,
+    );
+    const [first, second] = screen.getAllByTestId('resource-player-frame') as HTMLIFrameElement[];
+    const region = (name: string) => screen.getByRole('region', { name: `instagram.com embed: ${name}` });
+    const measure = (height: number) => JSON.stringify({ type: 'MEASURE', details: { height } });
+
+    postFromFrame(first, measure(600), 'https://www.instagram.com');
+    expect(region('First').style.getPropertyValue('--player-h')).toBe('600px');
+    expect(region('Second').style.getPropertyValue('--player-h')).toBe('760px');
+    postFromFrame(second, measure(900), 'https://www.instagram.com');
+    expect(region('First').style.getPropertyValue('--player-h')).toBe('600px');
+    expect(region('Second').style.getPropertyValue('--player-h')).toBe('900px');
   });
 });

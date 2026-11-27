@@ -4,11 +4,12 @@ import { ChevronRight } from 'lucide-react';
 import { getResourceRoute } from '@/app/routes';
 import { Container } from '@/atoms/Container/Container';
 import { Link } from '@/atoms/Link/Link';
+import { getResourceImageUrl } from '@/libs/image/resourceImage';
 import { useIsPostPreviewNavigable } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import { ResourceAudioPlayer } from '@/molecules/ResourcePlayer/ResourceAudioPlayer';
 import type { PostActionSurface } from '@/organisms/PostActionsBar/PostActionButton';
 import type { TPinakesEpisode } from '@/services/pinakes/pinakes.types';
-import { EPISODES_ANCHOR, type TPlayableEpisode } from './ResourceCard.utils';
+import { EPISODES_ANCHOR, getHttpUrl, type TPlayableEpisode } from './ResourceCard.utils';
 import { formatDuration, formatFactDate } from './ResourceFacts.utils';
 
 /** How many of a show's latest episodes its card lists: the newest, then two more. */
@@ -18,7 +19,20 @@ export const CARD_EPISODES = 3;
 export interface TEpisodeShow {
   uri: string;
   name?: string | null;
+  /** The show's cover, as its card carries it. */
   image?: string | null;
+}
+
+/**
+ * An episode's art on the app's image route (`getResourceImageUrl`, named by its show's card and,
+ * for an episode the show's card does not list, its title): its own, else the show's cover; `null`
+ * with neither.
+ */
+export function getEpisodeArtUrl(episode: Pick<TPinakesEpisode, 'image' | 'name'>, show: TEpisodeShow): string | null {
+  const own = getHttpUrl(episode.image);
+  return own
+    ? getResourceImageUrl(show.uri, own, { episode: episode.name })
+    : getResourceImageUrl(show.uri, getHttpUrl(show.image));
 }
 
 interface ResourceEpisodeRowProps {
@@ -47,7 +61,7 @@ export function ResourceEpisodeRow({ episode, audioUrl, show, featured = false, 
       href={episode.uri ? getResourceRoute(episode.uri) : null}
       linkTarget={navigable ? undefined : '_blank'}
       from={show.name?.trim() || null}
-      image={episode.image || show.image || null}
+      image={getEpisodeArtUrl(episode, show)}
       featured={featured}
       surface={surface}
       data-testid="resource-card-episode-audio"

@@ -21,10 +21,7 @@ import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
 import { useSettingsStore } from '@/stores/settings/settings.store';
 import { defaultMediaPreferences } from '@/stores/settings/settings.types';
 
-// These cases are for platform embeds up front (Settings, Links & Media) turned on; the default
-// is off (`defaultMediaPreferences`): a card, nothing loaded from the platform before Play.
-const upFrontMedia = { ...defaultMediaPreferences, embedsUpFront: true };
-beforeEach(() => useSettingsStore.setState({ media: upFrontMedia }));
+beforeEach(() => useSettingsStore.setState({ media: defaultMediaPreferences }));
 
 /**
  * A post's external resource where the post is shown inside another surface: a quote in the feed, the
@@ -255,13 +252,12 @@ const VIDEO_CARD: TPinakesResourceDetail = {
 const ARTICLE_WRITTEN = 'https://en.m.wikipedia.org/wiki/Bitcoin';
 const ARTICLE_CARD: TPinakesResourceDetail = { ...articleFixture, refs: [articleFixture.uri, ARTICLE_WRITTEN] };
 
-// How many third-party frames the resource loads up front: the video's platform embed (no Also
-// on), none for the article.
+// How many third-party frames the resource loads before a press: none, for every kind of resource.
 const RESOURCES = [
-  { name: 'a video (Native provider)', written: VIDEO_WRITTEN, card: VIDEO_CARD, frames: 1 },
+  { name: 'a video (Native provider)', written: VIDEO_WRITTEN, card: VIDEO_CARD, frames: 0 },
   { name: 'a web article (Generic provider)', written: ARTICLE_WRITTEN, card: ARTICLE_CARD, frames: 0 },
 ];
-// A song on Spotify, also on TIDAL and YouTube (players) and Apple Music: its player up front, with a switch.
+// A song on Spotify, also on TIDAL and YouTube (players) and Apple Music: its player drawn, with a switch.
 const SONG_WRITTEN = musicFixture.uri;
 const SONG_CARD: TPinakesResourceDetail = {
   ...musicFixture,
@@ -398,11 +394,11 @@ describe('PostLinkEmbeds - an external resource inside a post preview (integrati
     mocks.postTagIds = [];
     mocks.tags = SHORT_TAGS.slice(0, 2);
     mocks.addTag.mockResolvedValue({ success: true });
-    useSettingsStore.setState({ media: upFrontMedia });
+    useSettingsStore.setState({ media: defaultMediaPreferences });
   });
 
   afterEach(() => {
-    useSettingsStore.setState({ media: upFrontMedia });
+    useSettingsStore.setState({ media: defaultMediaPreferences });
   });
 
   describe('outer post → quoted post → external resource', () => {
@@ -460,44 +456,33 @@ describe('PostLinkEmbeds - an external resource inside a post preview (integrati
   });
 
   describe('outer post → quoted post → song (Generic provider)', () => {
-    it('shows the song’s player, its switch and its footer, as its own post does', () => {
+    it('draws the song’s player, its switch and its footer, as its own post does, loading nothing', () => {
       givenQuoteOfResource(SONG_WRITTEN, SONG_CARD);
       show(<PostContent postId={OUTER} />);
 
       const quote = quoteCard();
       const frame = within(resourceIn(quote)).getByTestId('resource-embed-frame');
-      expect(within(frame).getByTestId('resource-player-frame')).toHaveAttribute(
-        'src',
-        'https://open.spotify.com/embed/track/1YQWosTIljIvxAgHWTp7KP',
+      expect(within(frame).getByRole('button', { name: `Play ${SONG_CARD.name} on Spotify` })).toHaveAttribute(
+        'data-testid',
+        'player-facade',
       );
       expect(within(frame).getByRole('button', { name: /choose another service$/ })).toBeInTheDocument();
       expect(within(frame).getByTestId('resource-actions')).toBeInTheDocument();
       expect(new Set(mocks.tagUris)).toEqual(new Set([SONG_CARD.uri]));
-      expect(iframes()).toHaveLength(1);
+      expect(iframes()).toHaveLength(0);
 
       // The quote's own surface still opens the quoted post
       fireEvent.click(quote);
       expect(mocks.navigateToPost).toHaveBeenCalledWith(QUOTED);
     });
 
-    it('shows the stand-in and loads nothing with platform embeds up front off', () => {
-      act(() => useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } }));
-      givenQuoteOfResource(SONG_WRITTEN, SONG_CARD);
-      show(<PostContent postId={OUTER} />);
-
-      const resource = resourceIn(quoteCard());
-      expect(
-        within(within(resource).getByTestId('embed-player')).getByRole('button', { name: 'Play on Spotify' }),
-      ).toBeInTheDocument();
-      expect(within(resource).getByTestId('resource-actions')).toBeInTheDocument();
-      expect(iframes()).toHaveLength(0);
-    });
-
     it('lets a feed quote’s pressed player dock, as in its own post', async () => {
       givenQuoteOfResource(SONG_WRITTEN, SONG_CARD);
       show(<PostContent postId={OUTER} />);
 
-      await pressInside(within(resourceIn(quoteCard())).getByTestId('resource-player-frame'));
+      const resource = resourceIn(quoteCard());
+      fireEvent.click(within(resource).getByTestId('player-facade'));
+      await pressInside(within(resource).getByTestId('resource-player-frame'));
       expect(dockablePlayer()).not.toBeNull();
     });
 
@@ -506,6 +491,8 @@ describe('PostLinkEmbeds - an external resource inside a post preview (integrati
       show(<DialogRepost postId={QUOTED} open onOpenChangeAction={vi.fn()} />);
 
       const resource = resourceIn(quoteCard());
+      // A post being written previews the player: its drawing shows it, paused, on the press.
+      fireEvent.click(within(resource).getByRole('button', { name: 'Show the Spotify player' }));
       const player = within(resource).getByTestId('resource-player-frame');
       expect(player).toHaveAttribute('src', 'https://open.spotify.com/embed/track/1YQWosTIljIvxAgHWTp7KP');
       await pressInside(player);
@@ -851,11 +838,7 @@ describe('PostLinkEmbeds - an external resource inside a post preview (integrati
     });
   });
 
-  describe('platform embeds up front turned off (Settings, Links & Media)', () => {
-    beforeEach(() => {
-      act(() => useSettingsStore.setState({ media: { ...upFrontMedia, embedsUpFront: false } }));
-    });
-
+  describe('nothing third-party before a press, for every viewer', () => {
     it.each([
       { name: 'with a card', card: VIDEO_CARD },
       { name: 'without a card', card: null },

@@ -1,4 +1,5 @@
 import { TIMELINE_FEED_VARIANT, type TimelineFeedVariant } from '@/config/feed';
+import { getYouTubeThumbnailUrl } from '@/libs/image/resourceImage';
 import type { ContentType } from '@/stores/home/home.types';
 import type { VisualRow, VisualTile, VisualTileSize } from './TimelineFeedVisual.types';
 
@@ -17,7 +18,8 @@ export const VISUAL_WIDE_MIN_RATIO = 16 / 9;
 export const VISUAL_LINK_VIDEO_WIDTH = 16;
 export const VISUAL_LINK_VIDEO_HEIGHT = 9;
 // i.ytimg answers a missing thumbnail variant, or an unknown video id, with a 404
-// carrying a 120x90 placeholder image. `default.jpg` has the same size and is never requested.
+// carrying a 120x90 placeholder image (the image route serves neither: its answer is
+// a 404). `default.jpg` has the same size and is never requested.
 const YOUTUBE_PLACEHOLDER_THUMBNAIL_WIDTH = 120;
 const YOUTUBE_PLACEHOLDER_THUMBNAIL_HEIGHT = 90;
 const VISUAL_ROW_PREFERRED_SIZE_SCORE = 3;
@@ -96,12 +98,13 @@ export function getVisualMediaKind(contentType: string): 'image' | 'video' {
 }
 
 /**
- * YouTube's thumbnail for a video id. `hq720` (1280x720) is sharp on wide tiles but
- * missing for some older uploads; `mqdefault` (320x180) exists for every video. Both
+ * YouTube's thumbnail for a video id, from the app's image route (`getYouTubeThumbnailUrl`), which
+ * reads it from `i.ytimg.com`: the viewer's browser never asks YouTube. `hq720` (1280x720) is sharp on
+ * wide tiles but missing for some older uploads; `mqdefault` (320x180) exists for every video. Both
  * are 16:9, unlike `hqdefault` and `sddefault`, which add letterbox bars.
  */
 export function getVisualYouTubeThumbnailUrl(videoId: string, variant: 'hq720' | 'mqdefault'): string {
-  return `https://i.ytimg.com/vi/${videoId}/${variant}.jpg`;
+  return getYouTubeThumbnailUrl(videoId, variant);
 }
 
 export function isVisualYouTubePlaceholderThumbnail(width: number, height: number): boolean {

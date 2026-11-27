@@ -14,7 +14,6 @@ const { mockSettingsController, mockIsAppError } = vi.hoisted(() => ({
     setHideSearch: vi.fn(),
     setNeverShowPosts: vi.fn(),
     setPlayers: vi.fn(),
-    setEmbedsUpFront: vi.fn(),
     setLanguages: vi.fn(),
   },
   mockIsAppError: vi.fn(),
@@ -64,17 +63,15 @@ describe('useSettingsActions', () => {
     expect(mockSettingsController.setBlurCensored).toHaveBeenCalledWith(true);
   });
 
-  it('calls SettingsController.setPlayers, setEmbedsUpFront and setLanguages', async () => {
+  it('calls SettingsController.setPlayers and setLanguages', async () => {
     const { result } = renderHook(() => useSettingsActions());
 
     await act(async () => {
       await result.current.setPlayers(['tidal'], ['youtube'], 'podcasts');
-      await result.current.setEmbedsUpFront(false);
       await result.current.setLanguages(['de']);
     });
 
     expect(mockSettingsController.setPlayers).toHaveBeenCalledWith(['tidal'], ['youtube'], 'podcasts');
-    expect(mockSettingsController.setEmbedsUpFront).toHaveBeenCalledWith(false);
     expect(mockSettingsController.setLanguages).toHaveBeenCalledWith(['de']);
   });
 

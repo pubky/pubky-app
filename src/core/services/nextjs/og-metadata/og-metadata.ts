@@ -87,8 +87,8 @@ class OgMetadataBlockedIpError extends Error {
  * The global `fetch` runs on the Undici bundled with Node (7.x on Node 24), which dispatches with
  * the legacy handler API that the `undici` package's v8 `Agent` rejects (`invalid onRequestStart
  * method`). `Dispatcher1Wrapper` adapts legacy handlers and passes v8 handlers through unchanged, so
- * the guarded `Agent` keeps working whichever Undici major Node bundles. Also used by the favicon
- * route (`NextJsFaviconService`), so both read external sites through the same guard.
+ * the guarded `Agent` keeps working whichever Undici major Node bundles. Also used by the favicon and
+ * image routes (`fetchGuardedImage`), so all read external sites through the same guard.
  */
 export const SAFE_OG_METADATA_DISPATCHER: Dispatcher = new Dispatcher1Wrapper(
   new Agent({
@@ -320,7 +320,32 @@ function fallback(
   context: Record<string, unknown> = {},
 ): TOgMetadataResult {
   logFallback(url, fallbackReason, context);
-  return buildFallbackMetadata(url);
+  const result = buildFallbackMetadata(url);
+  if (TRANSIENT_FALLBACK_REASONS.has(fallbackReason)) transientFallbacks.add(result);
+  return result;
+}
+
+/** Why a page's preview may come out whole another time: it did not answer in time, or answered an error. */
+const TRANSIENT_FALLBACK_REASONS: ReadonlySet<TOgMetadataFallbackReason> = new Set([
+  'timeout',
+  'network',
+  'dns_failed',
+  'http_error',
+  'rate_limit',
+  'body_timeout',
+  'body_unreadable',
+]);
+
+/** The fallback previews built for a reason that may pass (`TRANSIENT_FALLBACK_REASONS`). */
+const transientFallbacks = new WeakSet<TOgMetadataResult>();
+
+/**
+ * Whether a preview is the fallback for a page that could not be read for now (a timeout, an HTTP
+ * error, ...), not one that has no preview: a caller keeping previews does not remember it as such.
+ * The `/api/og-metadata` answer is the same either way.
+ */
+export function isTransientOgFallback(result: TOgMetadataResult): boolean {
+  return transientFallbacks.has(result);
 }
 
 function logFallback(

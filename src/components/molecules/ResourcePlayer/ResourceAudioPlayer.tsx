@@ -39,7 +39,7 @@ interface ResourceAudioPlayerProps {
 /**
  * An audio file in a card (a show's episode) as one row (`PlayStandIn`): Play, its title, date and
  * length; with `href` the title (and the row outside Play) opens its page. Nothing loads before
- * Play, whatever platform embeds up front says. Play replaces the row with the app's audio player
+ * Play. Play replaces the row with the app's audio player
  * (`ResourceAudioControls`: cover, title, show, controls), started by that press, as the page's
  * player (`useResourcePlayer`): the app's player host keeps it (`PlayerDock`), so it plays on across
  * pages, docks while it plays and its card is away, and one media plays at a time. Paused in the

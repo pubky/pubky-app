@@ -10,7 +10,7 @@ import { Err } from '@/libs/error/error.factories';
 import { httpResponseToError, safeFetch } from '@/libs/error/error.http';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpMethod, HttpStatusCode } from '@/libs/http/http.types';
-import { parseResponseOrThrow } from '@/libs/http/response.utils';
+import { parseResponseOrThrow, parseRetryAfterHeader } from '@/libs/http/response.utils';
 import { isResolvableLink } from '@/pipes/resource/resource.search';
 import { pinakesCardStaleTime, pinakesQueryClient } from './pinakes.query-client';
 import type {
@@ -40,6 +40,18 @@ const ACCEPTED = 202;
  * new-link budget).
  */
 const QUIET_RESOLVE_STATUSES: ReadonlySet<number> = new Set([400, 404, 405, 429, 503]);
+
+/**
+ * What the image route's reads (`readCardForImage`, `readGroupForImage`, `readEpisodesForImage`)
+ * answer when Pinakes says it is busy (429) or fails (5xx): an expected answer for a server reading on
+ * behalf of many viewers, so it is no error and nothing is reported. `retryAfterMs`: its `Retry-After`.
+ */
+export type TPinakesBusy = { busy: true; retryAfterMs: number | null };
+
+/** Whether an image route read answered that Pinakes is busy (`TPinakesBusy`). */
+export function isPinakesBusy(value: unknown): value is TPinakesBusy {
+  return typeof value === 'object' && value !== null && 'busy' in value && value.busy === true;
+}
 
 /**
  * Pinakes service: read-only reads of the public Pinakes API (`PUBKY_RUNTIME_PINAKES_URL`),
@@ -148,22 +160,27 @@ export class PinakesService {
    * Asks Pinakes to read a link now (`POST /v1/resolve`): the card within about 3 s (200), else a
    * `pending` card with its ID to read again (202). Pinakes keeps such a card for a few days unless
    * someone references the link; it is no reference and is not listed by search. Its own budget
-   * (`previews_per_minute`, `previews_per_uri_per_minute`) is small, so no retry here.
+   * (`previews_per_minute`, `previews_per_uri_per_minute`, new links per hour) is small and counted
+   * per client, so no retry here.
    *
-   * A card is optional: every refusal answers `null` quietly (see `QUIET_RESOLVE_STATUSES`; any
-   * other failure is reported), and the caller keeps the link's own preview. A link that carries
-   * credentials (`user:password@`) or does not parse is never sent.
+   * A card is optional: every refusal answers quietly (see `QUIET_RESOLVE_STATUSES`; any other
+   * failure is reported), and the caller keeps the link's own preview. A 429 or 503 (a budget used up
+   * for now), any other server error and a failed connection answer `TPinakesBusy` (with its
+   * `Retry-After`, if any), so a caller can stop asking for a while instead of asking for every link;
+   * any other refusal answers `null`. A link that carries credentials (`user:password@`) or does not
+   * parse is never sent.
    *
-   * @returns The card (`pending` while still read), or `null`
+   * @returns The card (`pending` while still read), `TPinakesBusy`, or `null`
    */
-  static async resolveCard(uri: string): Promise<TPinakesResourceDetail | null> {
+  static async resolveCard(uri: string): Promise<TPinakesResourceDetail | TPinakesBusy | null> {
     const base = getPinakesBaseUrl();
     if (!base || new TextEncoder().encode(uri).length > PINAKES_URI_MAX_BYTES || !isResolvableLink(uri)) {
       return null;
     }
     const endpoint = `${base}${RESOLVE_PATH}`;
+    let response: Response;
     try {
-      const response = await safeFetch(
+      response = await safeFetch(
         endpoint,
         {
           method: HttpMethod.POST,
@@ -174,12 +191,22 @@ export class PinakesService {
         ErrorService.Pinakes,
         'resolveCard',
       );
+    } catch {
+      // A failed connection or a timeout (reported by `safeFetch`, dropped by the `pinakes-transport`
+      // Sentry rule): Pinakes may answer later.
+      return { busy: true, retryAfterMs: null };
+    }
+    try {
       if (response.status !== HttpStatusCode.OK && response.status !== ACCEPTED) {
         // Refusals Pinakes documents for this route stay quiet; anything else is reported.
         if (!QUIET_RESOLVE_STATUSES.has(response.status)) {
           httpResponseToError(response, ErrorService.Pinakes, 'resolveCard', endpoint);
         }
         response.body?.cancel().catch(() => {});
+        if (response.status === HttpStatusCode.TOO_MANY_REQUESTS || response.status >= 500) {
+          const seconds = parseRetryAfterHeader(response.headers.get('retry-after'));
+          return { busy: true, retryAfterMs: seconds === undefined ? null : seconds * 1000 };
+        }
         return null;
       }
       return await parseResponseOrThrow<TPinakesResourceDetail>(
@@ -189,8 +216,7 @@ export class PinakesService {
         endpoint,
       );
     } catch {
-      // A transport failure or a malformed body was already reported as an AppError (the
-      // `pinakes-transport` Sentry rule drops the transport ones); the link keeps its own preview.
+      // A malformed body was already reported as an AppError; the link keeps its own preview.
       return null;
     }
   }
@@ -337,6 +363,57 @@ export class PinakesService {
   }
 
   /**
+   * One link's card for the server's image route (`GET /v1/resources/by-uri`): one read past the
+   * shared cache, kept nowhere (the route keeps its own bounded cache, `ImageApplication`).
+   *
+   * @returns The card; `null` when Pinakes does not know the link, it is too long or carries
+   *   credentials, or Pinakes is not configured; `TPinakesBusy` when Pinakes answers 429 or 5xx
+   * @throws AppError when Pinakes fails otherwise
+   */
+  static async readCardForImage(uri: string): Promise<TPinakesResourceDetail | null | TPinakesBusy> {
+    const base = getPinakesBaseUrl();
+    if (!base || new TextEncoder().encode(uri).length > PINAKES_URI_MAX_BYTES || !isResolvableLink(uri)) {
+      return null;
+    }
+    return fetchPinakesQuietly<TPinakesResourceDetail>({
+      url: `${base}${BY_URI_PATH}?${new URLSearchParams({ uri })}`,
+      endpoint: `${base}${BY_URI_PATH}`,
+      operation: 'readCardForImage',
+    });
+  }
+
+  /**
+   * A group's members for the server's image route (`GET /v1/groups/{id}`), as `readCardForImage`.
+   *
+   * @returns The group, `null` when it no longer exists or Pinakes is not configured, or `TPinakesBusy`
+   * @throws AppError when Pinakes fails otherwise
+   */
+  static async readGroupForImage(id: string): Promise<TPinakesGroupDetail | null | TPinakesBusy> {
+    const base = getPinakesBaseUrl();
+    if (!base) return null;
+    const endpoint = `${base}${GROUPS_PATH}/${encodeURIComponent(id)}`;
+    return fetchPinakesQuietly<TPinakesGroupDetail>({ url: endpoint, endpoint, operation: 'readGroupForImage' });
+  }
+
+  /**
+   * A show's episodes whose title matches `q` for the server's image route
+   * (`GET /v1/resources/{id}/episodes`, the page a show's episode list reads), as `readCardForImage`.
+   *
+   * @returns The page, `null` when Pinakes does not know the show or is not configured, or `TPinakesBusy`
+   * @throws AppError when Pinakes fails otherwise
+   */
+  static async readEpisodesForImage(id: string, q: string): Promise<TPinakesEpisodePage | null | TPinakesBusy> {
+    const base = getPinakesBaseUrl();
+    if (!base) return null;
+    const endpoint = `${base}${RESOURCES_PATH}/${encodeURIComponent(id)}/episodes`;
+    return fetchPinakesQuietly<TPinakesEpisodePage>({
+      url: `${endpoint}?${new URLSearchParams({ limit: String(EPISODES_FOR_IMAGE_LIMIT), q })}`,
+      endpoint: `${base}${RESOURCES_PATH}/{id}/episodes`,
+      operation: 'readEpisodesForImage',
+    });
+  }
+
+  /**
    * A group another reader already read (`fetchGroup`, the resource page), without asking Pinakes:
    * `undefined` when it was not read, `null` when Pinakes answered that it no longer exists.
    */
@@ -378,6 +455,41 @@ function byUriKey(uri: string): readonly unknown[] {
   return ['pinakes', 'by-uri', uri];
 }
 
+/** Episodes one image route read asks for: the most Pinakes' episodes route gives at once. */
+const EPISODES_FOR_IMAGE_LIMIT = 20;
+
+/**
+ * `fetchPinakesOrNull` for the server's image route, whose reads a caller chooses: a 429 or a server
+ * error is `TPinakesBusy` and any other client error `null`, all answered before any AppError is built,
+ * so they report nothing (`docs/sentry.md`). A failed connection or timeout is dropped by the
+ * `pinakes-transport` rule; only a malformed answer is reported.
+ */
+async function fetchPinakesQuietly<T>(request: {
+  url: string;
+  endpoint: string;
+  operation: string;
+}): Promise<T | null | TPinakesBusy> {
+  const response = await safeFetch(
+    request.url,
+    { method: HttpMethod.GET, signal: AbortSignal.timeout(PINAKES_REQUEST_TIMEOUT_MS) },
+    ErrorService.Pinakes,
+    request.operation,
+  );
+  // Busy (429) or failing (5xx): the route answers busy and pauses its reads, reporting nothing.
+  if (response.status === HttpStatusCode.TOO_MANY_REQUESTS || response.status >= 500) {
+    response.body?.cancel().catch(() => {});
+    const seconds = parseRetryAfterHeader(response.headers.get('retry-after'));
+    return { busy: true, retryAfterMs: seconds === undefined ? null : seconds * 1000 };
+  }
+  // A request Pinakes will not answer (a link it refuses, 400): no card, as a 404. A caller of this
+  // route chooses the link, so it is no app error and nothing is reported.
+  if (response.status >= 400 && response.status < 500) {
+    response.body?.cancel().catch(() => {});
+    return null;
+  }
+  return answerOrNull<T>(response, request);
+}
+
 /**
  * One GET with no retry of its own, ended after `PINAKES_REQUEST_TIMEOUT_MS`. A 404 is an answer
  * ("Pinakes does not know it"), not a failure, so it returns `null` without creating an AppError.
@@ -402,6 +514,14 @@ async function fetchPinakesOrNull<T>({
     ErrorService.Pinakes,
     operation,
   );
+  return answerOrNull<T>(response, { endpoint, operation });
+}
+
+/** A read's answer: `null` for 404, the parsed body for a success, an AppError for anything else. */
+async function answerOrNull<T>(
+  response: Response,
+  { endpoint, operation }: { endpoint: string; operation: string },
+): Promise<T | null> {
   if (response.status === HttpStatusCode.NOT_FOUND) {
     response.body?.cancel().catch(() => {});
     return null;

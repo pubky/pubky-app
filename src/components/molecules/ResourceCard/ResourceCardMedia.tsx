@@ -10,7 +10,7 @@ import { cn } from '@/libs/utils/utils';
 import { PostAttachmentsImagesAndVideos } from '@/molecules/PostAttachmentsImagesAndVideos/PostAttachmentsImagesAndVideos';
 
 interface ResourceCardMediaProps {
-  /** An `http(s)` image. */
+  /** The image on the app's image route (`getResourceImageUrl`): never its host's address. */
   imageUrl: string;
   /** What the image shows: the card's title, its name here and in the lightbox. */
   name: string;
@@ -66,26 +66,32 @@ interface ResourceCardCoverProps extends ResourceCardMediaProps {
   isLarge: boolean;
   /** The type's own frame is 16:9 (a video, a film: `hasWideImage`): wide before the image loads. */
   wideByType?: boolean;
+  /**
+   * Always a square, whatever the image's shape: the middle of a YouTube upload's 16:9 thumbnail, where a song's
+   * cover sits, without the bars beside it.
+   */
+  square?: boolean;
 }
 
 /**
  * A card's own image, not one that stands in for an embed (`showsEmbedImage`): its own, a group member's or its
  * link's preview (an event's, an article's, a cover, a photo). Small, left of the card's text: a 16:9 thumbnail when
- * the loaded image is wide (`WIDE_RATIO`), a square when it is upright, and by its type (`wideByType`) before it
- * loads; aligned to the top so a tall text column never stretches it. A tap opens it in the post's lightbox
- * (`PostAttachmentsImagesAndVideos`, its own trigger), with pinch and double-tap zoom; a press on it never opens the
- * resource page (`data-resource-controls`), the rest of the card still does.
+ * the loaded image is wide (`WIDE_RATIO`), a square when it is upright or is to stay `square`, and by its type
+ * (`wideByType`) before it loads; aligned to the top so a tall text column never stretches it. A tap opens it in the
+ * post's lightbox (`PostAttachmentsImagesAndVideos`, its own trigger), with pinch and double-tap zoom; a press on it
+ * never opens the resource page (`data-resource-controls`), the rest of the card still does.
  */
 export function ResourceCardCover({
   imageUrl,
   name,
   isLarge,
   wideByType = false,
+  square = false,
   dimmed,
   onImageError,
 }: ResourceCardCoverProps) {
   const [loadedShape, setLoadedShape] = useState<{ url: string; wide: boolean } | null>(null);
-  const isWide = loadedShape?.url === imageUrl ? loadedShape.wide : wideByType;
+  const isWide = !square && (loadedShape?.url === imageUrl ? loadedShape.wide : wideByType);
   const squareSize = isLarge ? 'size-24 sm:size-40' : 'size-20 sm:size-24';
   const wideSize = isLarge ? 'aspect-video w-40 sm:w-64' : 'aspect-video w-28 sm:w-40';
   return (

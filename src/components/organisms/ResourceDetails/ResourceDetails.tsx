@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
 import { CircleAlert, Link2Off, RotateCw } from 'lucide-react';
 import { Button, ButtonVariant } from '@/atoms/Button/Button';
 import { Container } from '@/atoms/Container/Container';
@@ -14,6 +14,7 @@ import { usePinakesGroup } from '@/hooks/usePinakesGroup/usePinakesGroup';
 import type { UsePinakesQueryResult } from '@/hooks/usePinakesQuery/usePinakesQuery.types';
 import { usePubkyAppFile } from '@/hooks/usePubkyAppFile/usePubkyAppFile';
 import type { UseResourceRepliesResult } from '@/hooks/useResourceReplies/useResourceReplies';
+import { prefetchXPost } from '@/hooks/useXPost/useXPost';
 import { getPubkyAppTarget } from '@/libs/pubkyApp/pubkyAppTarget';
 import { IllustratedEmptyState } from '@/molecules/IllustratedEmptyState/IllustratedEmptyState';
 import { parseUrlForLinkEmbed } from '@/molecules/PostLinkEmbeds/PostLinkEmbeds.utils';
@@ -36,14 +37,19 @@ import {
 import { ResourceFileCard } from '@/molecules/ResourceCard/ResourceFileCard';
 import { FILE_TAGS_LABEL, FILE_TYPE_LABEL } from '@/molecules/ResourceCard/ResourceFileCard.utils';
 import { ResourceLinkCard } from '@/molecules/ResourceCard/ResourceLinkCard';
+import { hasPostVideo, showsPostFromCard } from '@/molecules/ResourceCard/ResourcePost';
+import { usePostPreviewImage } from '@/molecules/ResourceCard/usePostPreviewImage';
+import { useXPostCard } from '@/molecules/ResourceCard/useXPostCard';
+import { XPostPlayer } from '@/molecules/ResourceCard/XPostVideo';
 import { ResourceCardSkeleton } from '@/molecules/ResourceCardSkeleton/ResourceCardSkeleton';
-import { PlayOnPill } from '@/molecules/ResourcePlayer/ResourcePlayerControls';
+import { PlayOnPill, PlayOnPillPlaceholder } from '@/molecules/ResourcePlayer/ResourcePlayerControls';
+import { ResourcePostPress } from '@/molecules/ResourcePlayer/ResourcePostPress';
 import { useCardPlayer } from '@/molecules/ResourcePlayer/useCardPlayer';
 import { DialogNewPost } from '@/organisms/DialogNewPost/DialogNewPost';
 import { DialogReply } from '@/organisms/DialogReply/DialogReply';
 import { ResourceActions } from '@/organisms/ResourceActions/ResourceActions';
+import { getXPostVideo } from '@/pipes/x-post/x-post';
 import type { TPinakesResourceDetail } from '@/services/pinakes/pinakes.types';
-import { useSettingsStore } from '@/stores/settings/settings.store';
 import { ResourceNearby } from './ResourceNearby';
 import { getOtherLinks, getOwnLinkUris, mergeOtherLinkTags } from './ResourceOtherTags.utils';
 import { ResourceReplies } from './ResourceReplies';
@@ -230,17 +236,30 @@ function ResourceKnown({
   const otherTags = mergeOtherLinkTags(otherLinkTags.reads);
   // A series date's feed (its group, read above): the footer's tags switch between this date and all dates
   const { feed } = useEventFeed(getResourceFamily(card) === ResourceFamily.EVENT ? card : null);
-  // An X post shows X's own embed as the card's body, as in a post (`usePostEmbed`).
-  const postEmbed = usePostEmbed(card, uri);
-  // Embed or card, as in a post (`useCardPlayer`): the page's own link's player up front in place of
-  // the card's image and text, a generic link's card; the switch in the large card's header. An X
-  // post's embed, or its Show on, is its only source; once X cannot show it, its card is generic.
-  const showsPost = postEmbed !== null && (postEmbed.isOpen || postEmbed.showPost !== undefined);
-  const { embed, switcher, showsPlayer } = useCardPlayer(showsPost ? null : card, uri, 'default');
-  // A service's player loaded in the body: a card that plays whole in our player (a show's latest
-  // episodes, an episode's audio) gives way to it, as in a post's resource frame. A recording's
-  // preview, and the stand-in that loads nothing (platform embeds up front off, until its Play on
-  // is pressed), keep ours.
+  // An X post the card cannot tell (no text: unread, pending, failed) is read by the app's own server
+  // and shows as a post, as in a post (`useXPostCard`).
+  const xPost = useXPostCard(card, uri, true);
+  const shownCard = xPost.card ?? card;
+  // An X post as a post from its card, X's own embed behind its press, as in a post (`usePostEmbed`).
+  const postEmbed = usePostEmbed(shownCard, uri);
+  // Embed or card, as in a post (`useCardPlayer`): the page's own link's player (drawn until a press)
+  // in place of the card's image and text, a generic link's card; the switch in the large card's
+  // header. An X post's press, or its Show on, is its only source; once X cannot show it, its card is
+  // generic.
+  const showsPost =
+    postEmbed !== null &&
+    (postEmbed.isOpen || postEmbed.showPost !== undefined || postEmbed.pressInCard || postEmbed.isPostFromCard);
+  const {
+    embed,
+    switcher,
+    showsPlayer,
+    player: postPress,
+  } = useCardPlayer(showsPost ? null : card, uri, 'default', {
+    previewImage: postEmbed?.postImage,
+  });
+  // A service's player in the body (its drawing until a press): a card that plays whole in our
+  // player (a show's latest episodes, an episode's audio) gives way to it, as in a post's resource
+  // frame; a recording's preview keeps ours.
   const ownPlayerAside = showsPlayer === true && playsInCard(card);
   const actions = (
     <ResourceActions
@@ -256,17 +275,25 @@ function ResourceKnown({
       isOtherTagListLoading={(Boolean(card.group) && isGroupLoading) || otherLinkTags.isLoading}
       labels={card.labels}
       eventFeed={feed}
-      playOn={postEmbed?.showPost}
+      playOn={xPost.pending ? undefined : postEmbed?.showPost}
       size="large"
       replyCount={replies.replyCount}
       onReplySubmitted={replies.addReply}
       {...dialogs}
     />
   );
+  // An X post its card cannot tell is read by the app's server: the skeleton holds the place meanwhile.
+  if (xPost.pending) {
+    return (
+      <Container as="section" data-testid="resource-loading" aria-busy="true" aria-label="Loading post">
+        <ResourceCardSkeleton withActions size="large" link={uri} actions={actions} />
+      </Container>
+    );
+  }
   return (
     <Container overrideDefaults data-testid="resource-details" className="min-w-0">
       <ResourceCard
-        card={ownPlayerAside ? { ...card, stream: null, episodes: null } : card}
+        card={ownPlayerAside ? { ...card, stream: null, episodes: null } : shownCard}
         size="large"
         actions={actions}
         renderBody={
@@ -280,49 +307,71 @@ function ResourceKnown({
                   {embed}
                 </>
               )
-            : postEmbed?.renderBody
+            : postEmbed?.inCard
+              ? undefined
+              : postEmbed?.renderBody
         }
-        isBodyReplaced={postEmbed?.isOpen}
+        isBodyReplaced={postEmbed?.isOpen && !postEmbed.inCard}
         headerControl={switcher}
+        // An X post's embed loads inside the card, as does the post frame of a post the card cannot
+        // tell (its press).
+        player={postEmbed?.inCard ? postEmbed.embedInCard : postPress}
+        asPost
+        imageUrl={xPost.imageUrl}
       />
     </Container>
   );
 }
 
 /**
- * An X post's own embed (a provider whose `resourceKind` is `post`) as the large card's body, chosen
- * as in a post (`chooseNativeEmbed`): up front, its only source (no switch). A post X cannot show
- * leaves our card without the pill. `null` for any other link. A viewer who turned platform embeds
- * up front off (Settings, Links & Media) gets our card with "Show on <site>".
+ * An X post (a provider whose `resourceKind` is `post`) on the large card, chosen as in a post
+ * (`chooseNativeEmbed`), with nothing asked from X before the viewer's press: a post the card tells
+ * shows as a post from its data (`showsPostFromCard`), with nothing to press; one it cannot tell has
+ * the press inside the card, under its text (`ResourcePostPress`), which loads the post in its place
+ * (`embedInCard`); one with a video keeps "Play on <site>", which loads the post inside the card the
+ * same way. With no card to show (Pinakes still reading it, or no name), X's embed is the body once
+ * Show on is pressed (`renderBody`). A post X cannot show leaves our card without the pill. `null` for
+ * any other link.
  */
 function usePostEmbed(card: TPinakesResourceDetail, uri: string) {
   const [isPostOpen, setIsPostOpen] = useState(false);
   const [failed, setFailed] = useState(false);
-  const embedsUpFront = useSettingsStore((state) => state.media.embedsUpFront);
   const found = [uri, card.uri]
     .map((link) => parseUrlForLinkEmbed(link, false))
     .find(({ provider }) => provider?.resourceKind === 'post');
+  // An X post shows its video by its link preview's still (`hasPostVideo`): read as the card reads it.
+  const postPreview = usePostPreviewImage(card, Boolean(found?.embed));
+  const postImage = postPreview.image;
   if (!found?.embed || !found.provider) return null;
   const { embed, provider } = found;
 
-  const choice = chooseNativeEmbed({
-    hasCard: getNativeEmbedCard(card) !== null,
-    embedFailed: failed,
-    upFront: embedsUpFront,
-  });
-  // Platform embeds up front off and no card to show instead (Pinakes still reading it, or no name):
-  // X's embed waits for Show on, as in a post (`NativeEmbedResource`).
-  const onPress = !embedsUpFront && choice === 'embed';
-  const isOpen = !failed && ((choice === 'embed' && !onPress) || isPostOpen);
-  // The card player's pill, as on a post's card, on the page's surface.
+  const choice = chooseNativeEmbed({ hasCard: getNativeEmbedCard(card) !== null, embedFailed: failed });
+  // A post the card tells from its own data shows at once as a post (`ResourcePost`): nothing is asked
+  // from X, and there is no Show on.
+  const isPostFromCard = choice === 'card' && showsPostFromCard(card, postImage);
+  // X's embed shows only once pressed (no card to show instead: Pinakes still reading it, or no name,
+  // it waits for Show on, as in a post).
+  const isOpen = !failed && !isPostFromCard && isPostOpen;
+  // The post loads inside our card, under its text.
+  const inCard = choice === 'card';
+  // A post the card cannot tell, without a video: the press inside the card is its way to the post.
+  const pressInCard = inCard && !failed && !isPostFromCard && !hasPostVideo(card, postImage);
+  // The card player's pill, as on a post's card, on the page's surface. While the link preview, which
+  // may name a video, is read, its place is held.
   const showPost =
-    (choice === 'card' || onPress) && !failed ? (
+    // Only where the pill could come: not once X could not show the post.
+    isPostFromCard && postPreview.pending && !failed ? (
+      <PlayOnPillPlaceholder uri={uri} surface="default" />
+    ) : !failed && !isPostFromCard && !pressInCard ? (
       <PlayOnPill
         uri={uri}
         isOpen={isPostOpen}
-        label={getShowPostLabel(getResourceLinks(card, uri).siteName, isPostOpen)}
+        label={getShowPostLabel(getResourceLinks(card, uri).siteName, isPostOpen, hasPostVideo(card, postImage))}
         surface="default"
         aria-expanded={isPostOpen}
+        // Reaching for it starts reading the post, so its video is known by the press.
+        onPointerDown={() => prefetchXPost(uri)}
+        onFocus={() => prefetchXPost(uri)}
         onClick={() => setIsPostOpen((open) => !open)}
         data-testid="show-embed"
       />
@@ -341,20 +390,92 @@ function usePostEmbed(card: TPinakesResourceDetail, uri: string) {
         </>
       )
     : undefined;
-  return { showPost, renderBody, isOpen };
+  // An X post's video the app's server read plays in the app's player, else the site's post shows.
+  const postVideo = getXPostVideo(card);
+  const postInCard = (
+    <Container overrideDefaults className="min-w-0" data-testid="native-embed-body">
+      <XPostPlayer
+        link={uri}
+        src={postVideo}
+        fallback={() =>
+          provider.renderEmbed(embed, { isPostEmbed: true, onEmbedError: () => setFailed(true), fill: true })
+        }
+      />
+    </Container>
+  );
+  const embedInCard = pressInCard ? (
+    <ResourcePostPress
+      link={uri}
+      siteName={getResourceLinks(card, uri).siteName ?? 'X'}
+      isOpen={isOpen}
+      onOpenChange={setIsPostOpen}
+    >
+      {postInCard}
+    </ResourcePostPress>
+  ) : inCard && isOpen ? (
+    postInCard
+  ) : undefined;
+  return { showPost, renderBody, isOpen, inCard, embedInCard, pressInCard, isPostFromCard, postImage };
 }
 
 /**
  * A link Pinakes has no card for (it would not read it, has not yet, or is not configured): the
- * link's own preview, as a post shows such a link (`ResourceLinkCard`), large, closed by the same
+ * link's own preview, as a post shows such a link (`ResourceLinkCard`), large (an X post: the post the
+ * app's server read), closed by the same
  * footer as a card, on the link as written: tags and replies are Nexus', by link, and need no card.
  * A URI the app does not write (`javascript:`, junk, a link with credentials) gets no footer. The
  * page puts the posts replying to it under it.
  */
 function ResourceUnknown({ uri, replies, dialogs }: LinkActionsProps) {
+  // An X post Pinakes has no card for is read by the app's server and shows as a post (`useXPostCard`).
+  const xPost = useXPostCard(null, uri, true);
+  const [isVideoOpen, setIsVideoOpen] = useState(false);
+  const actions = getLinkActions({ uri, replies, dialogs });
+  if (xPost.pending) {
+    return (
+      <Container as="section" data-testid="resource-loading" aria-busy="true" aria-label="Loading post">
+        <ResourceCardSkeleton withActions size="large" link={uri} actions={actions} />
+      </Container>
+    );
+  }
+  if (xPost.card) {
+    // A video in it plays in the app's player inside the card, from its Play.
+    const video = getXPostVideo(xPost.card);
+    const siteName = getResourceLinks(xPost.card, uri).siteName;
+    return (
+      <Container overrideDefaults data-testid="resource-unknown" className="min-w-0">
+        <ResourceCard
+          card={xPost.card}
+          href={uri}
+          size="large"
+          actions={actions}
+          asPost
+          imageUrl={xPost.imageUrl}
+          headerControl={
+            video ? (
+              <PlayOnPill
+                uri={uri}
+                isOpen={isVideoOpen}
+                label={getShowPostLabel(siteName, isVideoOpen, true)}
+                surface="default"
+                aria-expanded={isVideoOpen}
+                onClick={() => setIsVideoOpen((open) => !open)}
+                data-testid="show-embed"
+              />
+            ) : undefined
+          }
+          player={
+            video && isVideoOpen ? (
+              <XPostPlayer link={uri} src={video} fallback={() => renderXPostEmbed(uri)} />
+            ) : undefined
+          }
+        />
+      </Container>
+    );
+  }
   return (
     <Container overrideDefaults data-testid="resource-unknown" className="min-w-0">
-      <ResourceLinkCard url={uri} size="large" actions={getLinkActions({ uri, replies, dialogs })} />
+      <ResourceLinkCard url={uri} size="large" actions={actions} />
     </Container>
   );
 }
@@ -485,4 +606,10 @@ function PlainLink({ uri }: { uri: string }) {
       {uri}
     </Link>
   );
+}
+
+/** X's own post for an X link (its embed), where the app's player cannot play the post's video. */
+function renderXPostEmbed(uri: string): ReactNode {
+  const { embed, provider } = parseUrlForLinkEmbed(uri, false);
+  return embed && provider ? provider.renderEmbed(embed, { isPostEmbed: true, fill: true }) : null;
 }

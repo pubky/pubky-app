@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getResourceRoute } from '@/app/routes';
 import { useOgMetadata } from '@/hooks/useOgMetadata/useOgMetadata';
+import { getLinkImageUrl } from '@/libs/image/resourceImage';
 import { PostPreviewNavigableProvider } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import { ResourceLinkCard } from './ResourceLinkCard';
 
@@ -35,7 +36,11 @@ describe('ResourceLinkCard', () => {
     expect(screen.getByTestId('resource-link-card-title')).toHaveAttribute('href', getResourceRoute(URL));
     expect(screen.getByTestId('resource-link-card-title')).not.toHaveAttribute('target');
     expect(screen.getByTestId('resource-card-source')).toHaveAttribute('target', '_blank');
-    expect(screen.getByTestId('resource-link-card-image')).toHaveAttribute('src', 'https://cdn.example.com/a.png');
+    // From the app's image route, named by the link: never the image's host.
+    expect(screen.getByTestId('resource-link-card-image')).toHaveAttribute(
+      'src',
+      new globalThis.URL(getLinkImageUrl(URL, 'https://cdn.example.com/a.png')!, window.location.href).href,
+    );
     expect(screen.getByTestId('resource-card-source')).toHaveTextContent('example.com');
     expect(screen.getByTestId('resource-card-source')).toHaveAccessibleName('Open in example.com');
     expect(screen.getByTestId('resource-card-source')).not.toHaveTextContent('articles');
@@ -96,8 +101,25 @@ describe('ResourceLinkCard', () => {
 
     render(<ResourceLinkCard url={URL} actions={<div data-testid="actions" />} />);
 
-    expect(screen.queryByTestId('resource-link-card')).not.toBeInTheDocument();
+    // The media file's own card (`GenericPreview`), with its Play and no footer.
+    expect(screen.getByTestId('media-preview')).toHaveAttribute('data-type', 'audio');
     expect(screen.queryByTestId('actions')).not.toBeInTheDocument();
+  });
+
+  it('keeps its frame for a file link when asked, the given title and type in it', () => {
+    mockUseOgMetadata.mockReturnValue({
+      metadata: { url: URL, title: null, image: null, type: 'image' },
+      isLoading: false,
+      error: null,
+    });
+
+    render(<ResourceLinkCard url={URL} title="photo.jpg" typeLabel="Image" keepFrame />);
+
+    expect(screen.getByTestId('resource-link-card-title')).toHaveTextContent('photo.jpg');
+    expect(screen.getByText('Image')).toBeInTheDocument();
+    // A file's page has nothing more: no click-through, the title no link.
+    expect(screen.getByTestId('resource-link-card')).not.toHaveAttribute('data-click-through');
+    expect(screen.getByTestId('resource-link-card-title').tagName).toBe('SPAN');
   });
 
   describe('large, atop the link’s resource page', () => {

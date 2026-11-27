@@ -487,6 +487,119 @@ every spelling holding it.
   `src/libs/post/externalParent.ts`) and is disabled otherwise. Locally `replied` stays `null`; like Nexus, it is
   listed only in `author_replies` and counted as a reply (no timeline, author stream or post thread).
 
+**Card images.** A Pinakes card's images, a link preview's and the visual timeline's YouTube thumbnails never load
+from their host in the viewer's browser: every one goes through the app's `/api/image` (`getResourceImageUrl`,
+`getCardPreviewImageUrl`, `getLinkImageUrl`, `getYouTubeThumbnailUrl`), as site icons go through `/api/favicon`.
+`?uri=<card link>&src=<image>` reads that card from the app's Pinakes (`GET /v1/resources/by-uri`, read-only, never
+`POST /v1/resolve`) and reads the image only when the card is settled (anything but `pending`: a `missing` card keeps
+showing its last image, dimmed) and carries it: its own `image`, a latest episode's art (`episodes`), a settled group
+member's `image` (`GET /v1/groups/{id}`, the image it may borrow), or, with `&episode=<title>`, the art of the show's
+episodes by that title (`GET /v1/resources/{id}/episodes`). With `&og=1` a settled card with no image of its own shows
+its own web link's preview image (`getCardPreviewLink`), so a card never names a page by itself. `?link=<link>&src=`
+is for a link with no card (`ResourceLinkCard`, `GenericPreview`): it serves only that page's `og:image`, the page
+`/api/og-metadata` reads anyway. `?xpost=<post ID>&src=` serves only a photo or video still on `pbs.twimg.com` that
+the X post the app's server read (`/api/x-post`) carries. `?youtube=<video id>&variant=hq720|mqdefault` reads only
+`https://i.ytimg.com/vi/<id>/<variant>.jpg`. Anything else is a 404 with no image read; Pinakes unset or not knowing
+the card is a 404, a page or image host failing for now a 502. Images are JPEG, PNG, WebP or GIF by their bytes, at
+most 4 MB, read within 8 s over at most three redirects, each hop address-checked (`fetchGuardedImage`, shared with
+the icon route), an `https` image never followed to `http`; cards are kept five minutes (thirty seconds while unknown
+or pending, read once more before a 404 for an image they lacked), link previews an hour, images a day, all in bounded
+caches (`BoundedReadCache`) that keep a value until a new one replaces it. Pinakes reads and page reads each come
+from a budget of their own, part of the Pinakes one kept for cards already known; after Pinakes answers 429 or 5xx (for
+its `Retry-After`, else 30 s) it is not asked for a while, and a read not made now answers from the card, group or
+episodes known before, expired or not, else 503. A link Pinakes refuses is a card it does not know; none of these
+answers is reported. Images and pages are read at most 16 at once and 2 per site (`getFaviconSite`, every redirect
+hop of an image for its own site; a page's redirects take none, its budget bounds them); `?link=` leaves part of the
+page budget to cards' own links, a page not read now answers with its preview known before, and YouTube thumbnails
+have a budget and a cache of their own. The budgets are per server instance and there is no limit per client here (a
+forwarded address can be spoofed): a deployment limits `/api/image` per client at its edge, keyed by the address its
+own proxy trusts. A card asks a failed route image once more, then shows its next image or its type tile, never the
+image's own address. A card image that is a YouTube thumbnail (`getYouTubeThumbnailVideoId`; Pinakes names
+`hqdefault`, which has bars above and below the video) shows the video's 16:9 `hq720`, else `mqdefault`, from
+`?youtube=`, and the image as the card names it only when neither loads; a song's, album's or playlist's cover then
+shows the thumbnail's middle square, where a label upload's cover sits.
+A link straight to an image file (`GenericPreview`) is read by Pinakes on view
+like a platform's link (`resolveOnView`): its card is an image's whose image is the file, served by `?uri=<link>&src=`
+as any card's; with no card it shows as a finished link card (its name and site). A link straight to a video or
+audio file shows a card from the app's origin (its kind, site and file name) with
+Play in its header; the press loads the file's player inside the card, started by it, and the same pill closes it.
+What remains, route by route: `/api/image` reads any public raster image that a real, settled card or a real page's
+preview names (anyone can have Pinakes read a page of theirs), within those caps; with `?xpost=` only a photo or video
+still on `pbs.twimg.com` of an X post the app's server read; with `?youtube=` only `i.ytimg.com` thumbnails.
+`/api/x-post` reads X's syndication answer for any well-formed post ID, and gives the browser that post's MP4 address
+on `video.twimg.com`, loaded only on the press of its Play, with no Referer (a frame of its own). `/api/map` reads only the allow-listed paths of
+`tiles.openfreemap.org`. A calendar occurrence's image other than its calendar's is not one the image route serves.
+
+**Players and posts in a card.** On every surface (a post's embed, the composer, Edit and Repost, feeds and
+collections, the resource page, and a YouTube, Vimeo or X link that is only in a post's text), nothing is asked from
+the service before a press. Where a service's player shows first (a link that is
+itself on that service, unless Card (no player) ranks above it in Players), the app draws that player from the card's
+data in its place (`useCardPlayer`'s `embed` → `ResourcePlayerFacade`): the player's height (a video's 16:9 box, an
+audio player's own height), the cover or still through `/api/image`, the title, the card's summary line and the
+service's mark, one button named "Play <title> on <service>". A press on it (click, tap, Enter, Space) loads the
+service's player in its place with autoplay, as the page's player; there is no separate Play and no dialog: the press
+is the consent. The header holds only the service switch (Card, then the services): picking a service loads its player
+at once, started (the pick is the press), and Card shows the card and unloads the player. A player let go (other
+media started, the dock closed it) gives way to its drawing again. A generic link, a podcast that plays in its card,
+and a card whose Card ranks first show the card as before. A map or document frame that is the link's own, and the
+post frame of a social post whose card has its text (`getResourcePost`), show the card first, the frame in the switch (a post with no text: see
+below). A settled social post shows as a post from the card's own data at once (`getResourcePost`,
+`ResourcePost`: author, handle, text, date, its image through `/api/image`), with nothing loaded from its site; when
+it carries no video (`showsPostFromCard`) there is nothing to press. One with a video (a video frame or stream, a
+`VideoObject` type, or an X video thumbnail as its card or link preview image: `hasPostVideo`) keeps a press: an X
+post "Play on <site>", another site's post its frame in the switch. The press opens the site's post inside the card
+and its video plays there, inside the post (a post's frame
+takes no autoplay parameter); a press inside that frame counts as its start, so what played stops, and the frame
+is loaded anew, stopped, when other media starts (`ResourcePlayerFrame`'s `holdsVideo`). A player the app's player
+host lays over its card is reached from the card by a skip link (`PlayerSlot`'s "Go to the player", shown while focused, acting only when pressed). An X post whose card does not tell it (no card, or one without its text: unread,
+pending, failed) is read by the app's own server (`/api/x-post?id=`, `XPostApplication`: X's
+syndication host at the one address `react-tweet` reads, only the post's ID sent, as `PubkyApp/<version>`, nothing
+of the viewer's, no redirect, 512 KB and 6 s; a 200 that is no JSON object is a failure, one that is no post none; posts kept an hour in a
+bounded cache, a per-instance budget, X paused 30 s after a 429, 5xx or no answer) as soon as the link's card read has
+answered (not waiting for a resolve, and also with Pinakes unset), and shows as a post the same way (`useXPostCard` →
+`withXPost`; on the resource page too, a link with no card included), its image through `?xpost=`. A video in it shows
+its still and Play: the press plays its MP4 (`video.twimg.com` only, at most 720p) in the app's own player inside the
+post (`XPostVideo`: a same-origin frame whose document sends no Referer, as X's video host refuses another site's;
+the page's own referrer policy is untouched; a page-wide Content-Security-Policy added later must allow
+`media-src https://video.twimg.com` and the frame's inline style), read from `/api/x-post` only then when the card told the post itself
+(`XPostPlayer`; the read starts as the viewer reaches for Play, pointer down or focus); one with no MP4 (a live
+broadcast), or a video that errs or has no data within 8 s, loads X's post there instead. A post whose card has no post text (`getResourcePost` is `null`:
+Pinakes could not read it, its name is the link's shape alone such as "Post on instagram.com", the host of its link or
+its site, or the site refused the read, `facts.blocked`) but whose own link has a post frame (Pinakes' `embed` of kind `post`, any site: Instagram,
+Mastodon, an X post the server could not read either) shows its card, and in it, under its text, the press where the
+post will show (`ResourcePostPress`, drawn with the parts of the players' drawing: "Show post", the site's mark through
+`/api/favicon` and the Play glyph, one button named "Show post from <site>"). The press loads the site's post in
+its place inside the card at the card's width, which stays; Close above it gives the card back (the focus moves to
+Close, back to the press, or to the card when the post could not be shown). There is no pill; the switch lists only
+the card's other services, when it has any. An X post with no text but a video keeps "Play on <site>"; another
+site's (an Instagram reel) has the press; a post with no frame is its plain card, with nothing to press. Instagram's
+frame rests at its laid-out width plus 220 px (the shape of its captioned photo embed; 760 px until the width is
+known) until it says its height by a message (`MEASURE`), which the frame takes from that frame's window and origin only (`readFrameHeight`); it is never wider
+than 658 px (its oEmbed blockquote's `max-width`), left-aligned, and laid out at 326 px at least, scaled to a
+narrower card (as Apple's players are, `getMinFrameWidth`). Any other post frame keeps its height from Pinakes, else
+420 px. A card whose site refused Pinakes' read never reads its link's own preview (that page is a sign-in wall, its
+image the site's logo), shows no description (Pinakes' "Blocked by the site."), and the resource page's Details say
+so in one plain line ("instagram.com didn't share this post's details.", `getBlockedNote`) in place of a `blocked`
+row.
+This press is a fallback. A post from another network (X, Mastodon, Bluesky, Instagram) is normally drawn from its
+card, with nothing to press and nothing loaded from its site. The press is there when the card has no post to draw,
+most often because the site refused Pinakes' read (Instagram, for one, sends every read from an address it rate-limits
+to its sign-in page): the app reads no other site's post itself (X aside, above), and loads nothing from the site before the
+press, so the site gets the viewer's address only once they ask for the post. Each card has its own press; no choice is
+remembered for a site. Pinakes reads a refused link again after 1, 2 and 4 days, then every 7 days; once the site
+answers, the card has the post's text and the next read of it draws the post like an X post, with no press.
+A YouTube, Vimeo or X link Pinakes does not know (a post's embed or a link in its text) is sent to Pinakes once its
+box is near the screen (`usePinakesCard`'s `resolveOnView`: `POST /v1/resolve` from the viewer's browser, so it counts
+against the viewer's own Pinakes budget; once per link per page load, a refusal kept, never a `pubky://` or pubky.app
+link; at most two asks at once, the others in turn; a `pending` answer is not polled by its ID, the link's on-screen
+card read follows it). After a 429, a 5xx or no answer, no link is asked until its `Retry-After` has passed (a minute
+without one, ten at most), and that link may be asked once more by a later view. A generic link only in a post's text
+is sent the same way only when its own preview says nothing (no title and no image: `GenericLinkPreview`). The card's skeleton holds the place meanwhile (at most
+`PINAKES_SLOW_READ_MS`); a link still without a card shows its own preview as a card (`NativeEmbedLinkCard` on
+`ResourceLinkCard`: the page's title and site, a YouTube video's thumbnail from `?youtube=`, else the page's preview
+image from `?link=`), the platform's Play (Show for a post) in its header, its embed loading inside the card on the
+press.
+
 **Places and events (maps, agenda, dates).** A place's or an event's card shows where it is with `ResourceLocation`
 (`src/components/molecules/ResourceMap/`): a map of its `point` when that is on the map (`getMapPoint`), else, with
 only an address, one line; an event that names neither (an online one, a venue known by name alone) gets no map and
@@ -496,8 +609,24 @@ end, a selected pin's card; its `geo:` entry ("Default maps app") shows on Andro
 - Nothing loads before a map is on screen (`ResourceMap`: no tile, and no library unless a search's Map button
   started it on hover or focus), and the map is removed when it leaves the screen or its card goes away, so a feed
   never holds one WebGL context per card. Until the style is read the box shows a loading skeleton; the pins go on
-  then, before the tiles. With platform embeds up front off (the default) a viewer gets "Show map" first. Every request goes out without credentials or a referrer (`toPrivateMapRequest`),
-  and nothing of the resource or the viewer is put into a tile address or an "Open in Maps" link.
+  then, before the tiles. Every request of a map (style, TileJSON, tiles, fonts, sprites) goes to the app's own
+  `/api/map?p=<path>` (`toPrivateMapRequest` → `toMapRouteUrl`), without credentials or a referrer, so a map is
+  drawn at once, with nothing asked from another host. The route reads
+  `tiles.openfreemap.org` only, and only the paths `toMapTileRequest` allows (the two styles, the planet's TileJSON
+  in either of its copies, `planet` and `backup_planet`, which the styles switch between, and vector tiles to zoom 14
+  of a tile set a TileJSON named in the last two days; a set newer than every one seen in its copy has that copy's
+  TileJSON read again past the cache, at most once a minute per copy, before it is refused, Natural Earth relief to zoom 6, the styles' Noto Sans font ranges, the sprites; any
+  other path is a 400 with nothing read), no redirect, 2 MB and 8 s per file, each served as its pattern's type
+  (a PNG only when its bytes are one) with nosniff, sandbox and same-origin headers, the app naming itself
+  (`PubkyApp/<version>`). Files are kept a day (a style an hour, the TileJSON ten minutes, as long as browsers
+  and the CDN are told to keep it) in a bounded cache (64 MB, 2048
+  files), at most 24 reads at once, others waiting their turn up to 4 s (a cold map asks for 12-16 files, two maps
+  20-30; MapLibre never asks again for a tile that failed), from a per-instance budget; a read whose body breaks
+  off is a failure, not a missing file, and the host is not asked for 10 s after it failed. An address on another
+  host, or with a query, goes to the route with no path (refused), never to that host. A card that draws its own
+  map offers no map service's frame (Pinakes' OpenStreetMap `embed`, `useCardPlayer`): it would be a second map; a
+  card with no map drawn (no point, a row) keeps it. Nothing of the resource or the viewer is put into a tile
+  address or an "Open in Maps" link.
 - The library, its stylesheet and its worker file are one lazily imported unit (`src/libs/maps/maplibre.runtime.ts`),
   kept out of the service worker's precache (`docs/pwa.md`, _Precache diet_).
 - A card's map is inert until tapped; any map asks for two fingers or a modifier key, so the page's scroll never stops

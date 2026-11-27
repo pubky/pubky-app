@@ -58,7 +58,7 @@ describe('PlayerDock', () => {
     expect(screen.getByTitle('player')).toBe(frame);
   });
 
-  it('never docks a player shown up front that nobody started (`dockable` off), nor keeps it playing off screen', () => {
+  it('never docks a player shown paused that nobody started (`dockable` off), nor keeps it playing off screen', () => {
     render(
       <PlayerDock target={SPOTIFY} title="Get Lucky" onClose={vi.fn()} dockable={false}>
         <iframe title="player" />

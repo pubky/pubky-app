@@ -3,7 +3,13 @@
  * no key and no account. One host serves the style, the tiles, the fonts and the sprites.
  */
 
-/** The map's style in each theme (`useThemePreference`). */
+/**
+ * The app's own route the map's requests go to (`toPrivateMapRequest`): it reads the host's style, tiles,
+ * fonts and sprites itself, so the viewer's browser never asks the tile host.
+ */
+export const MAP_TILE_ROUTE = '/api/map';
+
+/** The map's style in each theme (`useThemePreference`), as the tile host names it. */
 export const MAP_STYLE_URLS = {
   dark: 'https://tiles.openfreemap.org/styles/dark',
   light: 'https://tiles.openfreemap.org/styles/positron',

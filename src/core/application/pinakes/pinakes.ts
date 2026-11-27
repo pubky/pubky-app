@@ -2,7 +2,7 @@ import { withNormalizedCredits } from '@/pipes/pinakes/pinakes.credits';
 import { getRecheckDelay, isUnsettledCard } from '@/pipes/pinakes/pinakes.recheck';
 import { getGroupPage, hasSameSummary, type TEventInstance, toEventInstance } from '@/pipes/resource/resource.events';
 import { buildResourceSearchParams, type TResourceQuery } from '@/pipes/resource/resource.search';
-import { PinakesService } from '@/services/pinakes/pinakes';
+import { isPinakesBusy, PinakesService, type TPinakesBusy } from '@/services/pinakes/pinakes';
 import type {
   TPinakesCard,
   TPinakesEpisodePage,
@@ -38,11 +38,19 @@ export class PinakesApplication {
    * Has Pinakes read a link now (a link being written into a post) and returns its card once read:
    * a `pending` answer is read again by its ID on the recheck schedule (`getRecheckDelay`, about
    * two minutes in all). A read card goes into the link's card cache, so the published post shows
-   * it at once. `null` when Pinakes refused or failed; a card still `pending` when it ran out.
+   * it at once. `null` when Pinakes refused or failed; `TPinakesBusy` (with its `Retry-After`) when
+   * its budget is used up for now or it fails; a card still `pending` when it ran out. Without `poll`
+   * (a link read on view, whose card read is re-read while on screen) a `pending` answer is returned as
+   * it is, read again by nothing here.
    */
-  static async resolveCard(uri: string): Promise<TPinakesResourceDetail | null> {
-    let card = await PinakesService.resolveCard(uri);
-    for (let count = 0; card?.id && isUnsettledCard(card); count++) {
+  static async resolveCard(
+    uri: string,
+    { poll = true }: { poll?: boolean } = {},
+  ): Promise<TPinakesResourceDetail | TPinakesBusy | null> {
+    const answer = await PinakesService.resolveCard(uri);
+    if (isPinakesBusy(answer)) return answer;
+    let card = answer;
+    for (let count = 0; poll && card?.id && isUnsettledCard(card); count++) {
       const delay = getRecheckDelay(count);
       if (delay === null) break;
       await new Promise((resolve) => setTimeout(resolve, delay));

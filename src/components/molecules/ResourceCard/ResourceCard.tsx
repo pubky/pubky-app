@@ -21,7 +21,6 @@ import { Container } from '@/atoms/Container/Container';
 import { Link } from '@/atoms/Link/Link';
 import { Typography } from '@/atoms/Typography/Typography';
 import { useEventDates } from '@/hooks/useEventDates/useEventDates';
-import { useOgMetadata } from '@/hooks/useOgMetadata/useOgMetadata';
 import { cn } from '@/libs/utils/utils';
 import { useIsPostPreviewNavigable } from '@/molecules/PostPreviewCard/PostPreviewNestingContext';
 import { getLocationRowText, isLocationRow, ResourceLocation } from '@/molecules/ResourceMap/ResourceLocation';
@@ -45,6 +44,7 @@ import {
   getResourceLinks,
   getResourceStatus,
   getResourceTypeLabel,
+  hasCoverArt,
   hasWideImage,
   OTHER_DATES_ANCHOR,
 } from './ResourceCard.utils';
@@ -63,9 +63,11 @@ import {
   getResourceSummary,
   isBlockedCard,
 } from './ResourceFacts.utils';
+import { getResourcePost, hasPostVideo, RESOURCE_POST_FACTS, ResourcePost } from './ResourcePost';
 import { useResourceSurface } from './ResourceSurfaceContext';
 import { getResourceTypeIcon } from './ResourceTypeIcon';
-import { useResourceFallback } from './useResourceFallback';
+import { useCardImage } from './useCardImage';
+import { usePostPreviewImage } from './usePostPreviewImage';
 
 /** What a card that is not `ok` says about itself. Only `missing` has a documented meaning (`/llms.txt`). */
 const STATUS_NOTES: Readonly<
@@ -93,7 +95,7 @@ const DETAIL_ICON_SIZE = 14;
  * and source on top, then the title with the card's image as a small thumbnail left of it
  * (`ResourceCardCover`; the type's icon when there is no image), a summary line of the type's facts
  * (`getResourceSummary`) and the description. An image that stands in for an embed
- * (`showsEmbedImage`: a video's) shows under them instead, as a post shows one
+ * (`showsEmbedImage`: a video's, the still of a post's video) shows under them instead, as a post shows one
  * (`ResourceCardMedia`). An event leads with its dates, venue,
  * organizer and attendance; a card with an audio `stream` (an episode, or a recording's preview)
  * plays it, and a show its latest episodes (`ResourceEpisodes`). A sparse card fills a missing
@@ -105,9 +107,11 @@ const DETAIL_ICON_SIZE = 14;
  * click on the card outside its controls (`ResourceCardFrame`); a tap on the image opens it in the
  * post's lightbox. The header's source is the one link out (none on a `missing` card). A player or
  * embed in the body (`isBodyReplaced`) is its own set of controls, as the episode's audio is, and
- * takes the image's place too. The `large` card heads the resource page, lists every fact under
- * "Details" (not while an X post's embed is its body, `isBodyReplaced`), with one plain line in place
- * of a refused read's `blocked` fact (`getBlockedNote`), and is no click-through.
+ * takes the image's place too. An embed loaded inside the card (`player`: an X post's, after its press)
+ * sits under the text instead of a video's image under it, and the card stays. The `large`
+ * card heads the resource page, lists every fact under "Details" (not while an X post's embed is its body,
+ * `isBodyReplaced`), with one plain line in place of a refused read's `blocked` fact (`getBlockedNote`),
+ * and is no click-through.
  * Only `http(s)` values become links, images or audio.
  */
 export function ResourceCard({
@@ -119,10 +123,12 @@ export function ResourceCard({
   renderBody,
   isBodyReplaced = false,
   headerControl,
+  player,
+  asPost = false,
+  imageUrl: ownImageUrl,
 }: ResourceCardProps) {
   const navigable = useIsPostPreviewNavigable();
   const [expanded, setExpanded] = useState(false);
-  const [failedImages, setFailedImages] = useState<string[]>([]);
   const [wasOnScreen, setWasOnScreen] = useState(isOnScreen);
   if (isOnScreen && !wasOnScreen) setWasOnScreen(true);
 
@@ -149,38 +155,29 @@ export function ResourceCard({
   // A feed card reads what it lacks (its group, the link's preview) once it has been on screen.
   const canFillIn = isLarge || wasOnScreen;
 
-  const imageUrl = getHttpUrl(card.image);
   // A refused read's description is Pinakes' "Blocked by the site.", not the object's: the resource
   // page's Details say it in words (`getBlockedNote`), a feed card shows its title alone.
   const description = isBlockedCard(card) ? null : card.description?.trim() || null;
-  // An own image that failed to load leaves the slot to a group member's, like no image at all.
-  const ownImageShown = imageUrl !== null && !failedImages.includes(imageUrl);
-  const fallback = useResourceFallback(card, {
-    description: canFillIn && !description,
-    image: canFillIn && !ownImageShown,
-    skipImages: failedImages,
-  });
-  const cardImage = ownImageShown ? imageUrl : (fallback.image?.value ?? null);
-  const usableCardImage = cardImage && !failedImages.includes(cardImage) ? cardImage : null;
-  // A title or image the card still lacks comes from the link's own preview (`/api/og-metadata`),
-  // asked once the group has answered so a group image is never first replaced by the OG one. Not
-  // for a link whose site refused Pinakes' read: the app's read meets the same wall, and its
-  // preview is the site's sign-in page (its logo), not the object.
-  const needsOg =
-    canFillIn &&
-    titleUrl !== null &&
-    !fallback.pending &&
-    !isBlockedCard(card) &&
-    (!card.name?.trim() || usableCardImage === null);
-  const { metadata: og } = useOgMetadata(needsOg ? titleUrl : null);
-  const ogImage = getHttpUrl(og?.image);
-  const shownImage = usableCardImage ?? (ogImage && !failedImages.includes(ogImage) ? ogImage : null);
-  const onImageError = (url: string) => setFailedImages((urls) => [...urls, url]);
-  // An image that stands in for an embed shows large under the text; every other one is a small
-  // thumbnail beside it.
-  const isEmbedImage = showsEmbedImage(card, { href });
+  const { fallback, og, ownImageShown, usableCardImage, youTubeSrc, shownImageSrc, onShownImageError } = useCardImage(
+    card,
+    { canFillIn, ownImageUrl },
+  );
   const title = card.name?.trim() || og?.title?.trim() || getDisplayLink(href || card.uri);
   const shownDescription = description ?? fallback.description?.value ?? null;
+
+  // A social post shows as a post, from its card's data alone.
+  const post = asPost ? getResourcePost(card) : null;
+  // An image that stands in for an embed (a video's, the still of a post's video) shows large under the
+  // text; every other one, a post's photo too, is a small thumbnail beside it. A post's video is told as its
+  // card's callers tell it (`hasPostVideo` with its link preview's image, read only for a card with no image of
+  // its own): the preview the card read for its image or title (`og`), or, for a card that read none (it shows
+  // a group member's image under its own title), its own read of it.
+  const readsNoOg = usableCardImage !== null && Boolean(card.name?.trim());
+  const postPreview = usePostPreviewImage(card, post !== null && canFillIn && readsNoOg);
+  const isEmbedImage = showsEmbedImage(card, {
+    href,
+    isPostVideo: post !== null && hasPostVideo(card, getHttpUrl(card.image) ? null : (postPreview.image ?? og?.image)),
+  });
 
   // A Bitcoin or Lightning card shows its lines, with links to what it names, instead of a summary.
   const chain = getChainView(card);
@@ -232,7 +229,10 @@ export function ResourceCard({
   // An X post's embed in the large card's body (`isBodyReplaced`) shows who wrote it and when.
   const detailRows =
     isLarge && !isBodyReplaced
-      ? getResourceDetailRows(card, { withDates: !isEvent }).filter((row) => !chain?.shownFacts.includes(row.key))
+      ? getResourceDetailRows(card, { withDates: !isEvent }).filter(
+          // A post's own lines already say who wrote it and when.
+          (row) => !chain?.shownFacts.includes(row.key) && !(post && RESOURCE_POST_FACTS.includes(row.key)),
+        )
       : [];
   const isLongDescription = isLarge && (shownDescription?.length ?? 0) > LONG_DESCRIPTION_CHARS;
   const clampOnPhone = isLongDescription && !expanded;
@@ -304,6 +304,8 @@ export function ResourceCard({
       // The large card stands where a post stands on its page, on the post card's surface.
       className={cn(isLarge && 'bg-card text-card-foreground shadow-sm')}
       data-testid="resource-card"
+      // The card's root, for a control in it that hands the focus back to the card (`ResourcePostPress`).
+      data-resource-card
       data-status={status}
       data-family={family}
       data-size={size}
@@ -329,143 +331,168 @@ export function ResourceCard({
           <Container overrideDefaults className="flex min-w-0 flex-col gap-3">
             <Container overrideDefaults className="flex min-w-0 gap-4">
               {/* Left of the text: the card's image, small, or without one the type's icon. */}
-              {!shownImage && <ResourceCardTypeTile typeIcon={getResourceTypeIcon(card)} isLarge={isLarge} />}
-              {shownImage && !isEmbedImage && (
+              {!shownImageSrc && !post && (
+                <ResourceCardTypeTile typeIcon={getResourceTypeIcon(card)} isLarge={isLarge} />
+              )}
+              {shownImageSrc && !isEmbedImage && (
                 <ResourceCardCover
-                  imageUrl={shownImage}
+                  imageUrl={shownImageSrc}
                   name={title}
                   isLarge={isLarge}
                   wideByType={hasWideImage(card)}
+                  square={youTubeSrc !== null && hasCoverArt(card)}
                   dimmed={isMissing}
-                  onImageError={onImageError}
+                  onImageError={onShownImageError}
                 />
               )}
 
-              <Container className="min-w-0 flex-1 gap-1.5">
-                {statusNote && (
-                  <Badge
-                    variant="secondary"
-                    data-testid="resource-card-status"
-                    className="max-w-full whitespace-normal"
-                  >
-                    <statusNote.icon aria-hidden="true" />
-                    {statusNote.text}
-                  </Badge>
-                )}
-                {isLarge ? (
-                  withCopy(
-                    <Typography
-                      as="h2"
-                      overrideDefaults
-                      dir="auto"
-                      className={cn(
-                        'text-xl font-bold wrap-anywhere text-foreground sm:text-2xl',
-                        isMissing && 'text-foreground/70',
-                      )}
+              {post ? (
+                <ResourcePost post={post} href={smallTitleUrl} linkTarget={titleTarget} isLarge={isLarge} />
+              ) : (
+                <Container className="min-w-0 flex-1 gap-1.5">
+                  {statusNote && (
+                    <Badge
+                      variant="secondary"
+                      data-testid="resource-card-status"
+                      className="max-w-full whitespace-normal"
                     >
-                      {/* Not a link: the header's "Open in <site>" is the one way to the same place. */}
-                      <span data-testid="resource-card-title" title={shownTitle === title ? undefined : title}>
-                        {shownTitle}
-                      </span>
-                    </Typography>,
-                  )
-                ) : (
-                  <Link
-                    href={smallTitleUrl}
-                    target={titleTarget}
-                    rel={titleTarget ? 'noopener noreferrer' : undefined}
-                    overrideDefaults
-                    dir="auto"
-                    data-testid="resource-card-title"
-                    className="line-clamp-3 text-base font-bold wrap-anywhere text-foreground hover:text-brand"
-                  >
-                    {shownTitle}
-                  </Link>
-                )}
-
-                {show && (
-                  <Typography
-                    size="sm"
-                    dir="auto"
-                    data-testid="resource-card-show"
-                    className="font-medium text-foreground/90"
-                  >
-                    From{' '}
+                      <statusNote.icon aria-hidden="true" />
+                      {statusNote.text}
+                    </Badge>
+                  )}
+                  {isLarge ? (
+                    withCopy(
+                      <Typography
+                        as="h2"
+                        overrideDefaults
+                        dir="auto"
+                        className={cn(
+                          'text-xl font-bold wrap-anywhere text-foreground sm:text-2xl',
+                          isMissing && 'text-foreground/70',
+                        )}
+                      >
+                        {/* Not a link: the header's "Open in <site>" is the one way to the same place. */}
+                        <span data-testid="resource-card-title" title={shownTitle === title ? undefined : title}>
+                          {shownTitle}
+                        </span>
+                      </Typography>,
+                    )
+                  ) : (
                     <Link
-                      href={getResourceRoute(show.uri)}
+                      href={smallTitleUrl}
                       target={titleTarget}
                       rel={titleTarget ? 'noopener noreferrer' : undefined}
                       overrideDefaults
-                      className="font-bold wrap-anywhere hover:text-brand"
+                      dir="auto"
+                      data-testid="resource-card-title"
+                      className="line-clamp-3 text-base font-bold wrap-anywhere text-foreground hover:text-brand"
                     >
-                      {show.name || getDisplayLink(show.uri)}
+                      {shownTitle}
                     </Link>
-                  </Typography>
-                )}
+                  )}
 
-                {summary && (
-                  <Typography
-                    size="sm"
-                    dir="auto"
-                    data-testid="resource-card-summary"
-                    className="line-clamp-2 font-medium wrap-anywhere text-foreground/90"
-                  >
-                    <ResourceArrowText text={summary} />
-                  </Typography>
-                )}
+                  {show && (
+                    <Typography
+                      size="sm"
+                      dir="auto"
+                      data-testid="resource-card-show"
+                      className="font-medium text-foreground/90"
+                    >
+                      From{' '}
+                      <Link
+                        href={getResourceRoute(show.uri)}
+                        target={titleTarget}
+                        rel={titleTarget ? 'noopener noreferrer' : undefined}
+                        overrideDefaults
+                        className="font-bold wrap-anywhere hover:text-brand"
+                      >
+                        {show.name || getDisplayLink(show.uri)}
+                      </Link>
+                    </Typography>
+                  )}
 
-                {chain && <ResourceChainLines view={chain} isLarge={isLarge} target={titleTarget} />}
+                  {summary && (
+                    <Typography
+                      size="sm"
+                      dir="auto"
+                      data-testid="resource-card-summary"
+                      className="line-clamp-2 font-medium wrap-anywhere text-foreground/90"
+                    >
+                      <ResourceArrowText text={summary} />
+                    </Typography>
+                  )}
 
-                {/* An event leads with when and where. */}
-                {eventDetails}
+                  {chain && <ResourceChainLines view={chain} isLarge={isLarge} target={titleTarget} />}
 
-                {shownDescription && (
-                  <Typography
-                    size="sm"
-                    dir="auto"
-                    id={descriptionId}
-                    data-testid="resource-card-description"
-                    data-borrowed={description ? undefined : 'true'}
-                    className={cn(
-                      'font-normal wrap-anywhere text-muted-foreground',
-                      !isLarge && 'line-clamp-2',
-                      clampOnPhone && 'max-sm:line-clamp-6',
-                    )}
-                  >
-                    {shownDescription}
-                  </Typography>
-                )}
-                {isLongDescription && (
-                  <Button
-                    type="button"
-                    variant={ButtonVariant.GHOST}
-                    data-testid="resource-card-more"
-                    aria-expanded={expanded}
-                    aria-controls={descriptionId}
-                    onClick={() => setExpanded((value) => !value)}
-                    className="h-auto w-fit p-0 text-sm font-medium text-foreground hover:bg-transparent hover:text-brand sm:hidden"
-                  >
-                    {expanded ? 'Less' : 'More'}
-                  </Button>
-                )}
+                  {/* An event leads with when and where. */}
+                  {eventDetails}
 
-                {point && <ResourceDetail icon={MapPin} text={point} testId="resource-card-point" />}
-                {eventStatusNote && (
-                  <ResourceDetail icon={CircleAlert} text={eventStatusNote} testId="resource-card-event-status" />
-                )}
-                {cardAttribution && (
-                  <Typography
-                    size="xs"
-                    data-testid="resource-card-attribution"
-                    className="font-normal wrap-anywhere text-muted-foreground"
-                  >
-                    {cardAttribution}
-                  </Typography>
-                )}
-              </Container>
+                  {shownDescription && (
+                    <Typography
+                      size="sm"
+                      dir="auto"
+                      id={descriptionId}
+                      data-testid="resource-card-description"
+                      data-borrowed={description ? undefined : 'true'}
+                      className={cn(
+                        'font-normal wrap-anywhere text-muted-foreground',
+                        !isLarge && 'line-clamp-2',
+                        clampOnPhone && 'max-sm:line-clamp-6',
+                      )}
+                    >
+                      {shownDescription}
+                    </Typography>
+                  )}
+                  {isLongDescription && (
+                    <Button
+                      type="button"
+                      variant={ButtonVariant.GHOST}
+                      data-testid="resource-card-more"
+                      aria-expanded={expanded}
+                      aria-controls={descriptionId}
+                      onClick={() => setExpanded((value) => !value)}
+                      className="h-auto w-fit p-0 text-sm font-medium text-foreground hover:bg-transparent hover:text-brand sm:hidden"
+                    >
+                      {expanded ? 'Less' : 'More'}
+                    </Button>
+                  )}
+
+                  {point && <ResourceDetail icon={MapPin} text={point} testId="resource-card-point" />}
+                  {eventStatusNote && (
+                    <ResourceDetail icon={CircleAlert} text={eventStatusNote} testId="resource-card-event-status" />
+                  )}
+                  {cardAttribution && (
+                    <Typography
+                      size="xs"
+                      data-testid="resource-card-attribution"
+                      className="font-normal wrap-anywhere text-muted-foreground"
+                    >
+                      {cardAttribution}
+                    </Typography>
+                  )}
+                </Container>
+              )}
             </Container>
-            {shownImage && isEmbedImage && (
-              <ResourceCardMedia imageUrl={shownImage} name={title} dimmed={isMissing} onImageError={onImageError} />
+            {player ? (
+              // A player loaded in the card: its own controls, never a click-through.
+              <Container
+                overrideDefaults
+                data-resource-controls
+                data-testid="resource-card-player"
+                className="min-w-0 cursor-auto"
+              >
+                {player}
+              </Container>
+            ) : (
+              shownImageSrc &&
+              isEmbedImage && (
+                <ResourceCardMedia
+                  imageUrl={shownImageSrc}
+                  name={title}
+                  dimmed={isMissing}
+                  onImageError={onShownImageError}
+                />
+              )
             )}
           </Container>,
         )}
@@ -482,7 +509,7 @@ export function ResourceCard({
               hideTitle
               length={formatDuration(card.stream?.duration_s)}
               from={show?.name ?? null}
-              image={shownImage}
+              image={shownImageSrc}
               surface={isLarge || onCard ? 'default' : 'muted'}
               data-testid="resource-card-audio"
             />

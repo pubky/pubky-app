@@ -86,7 +86,7 @@ Modules are imported directly through the path aliases in `tsconfig.json`. Keep 
 - `homegate/` — Homegate API
 - `chatwoot/` — Chatwoot integration
 - `exchangerate/` — Exchange rate service
-- `nextjs/` — Server-only work (OG-metadata scraping for link previews, site icons served from the app's origin, Next.js route-handler helpers)
+- `nextjs/` — Server-only work (OG-metadata scraping for link previews, site icons and Pinakes card images served from the app's origin, Next.js route-handler helpers)
 - **NEVER** call application or controllers
 - **NEVER** access stores — the session exception in ADR 0004/0024 allows session-owning services to read
   their session store via `getState()` (`homeserver` → `useAuthStore`, `locks` → `useLocksAuthStore`).
@@ -314,7 +314,7 @@ Trace call sites and mirror the existing pattern before changing any of these. N
 - `src/core/application/**` cross-domain calls — verify the ADR-0009 allow-list above before wiring two Applications together.
 - `src/libs/env/env.ts` + `src/libs/runtime-config/**` — the only places allowed to read `process.env.NEXT_PUBLIC_*` / `process.env.PUBKY_RUNTIME_*` (ESLint-enforced). Runtime config is injected into the browser as `window.__PUBKY_CONFIG__`, so never put a secret there (`docs/environment.md`).
 - `src/libs/{password,identity,phone}`, `src/components/organisms/{DialogBackup*,Human*}` — cryptographic, identity and onboarding-verification flows.
-- `src/core/services/nextjs/og-metadata/**`, `src/core/services/nextjs/favicon/**` + `src/libs/network/network.ts` — server-side fetching of user-supplied URLs for link previews and of site icons (`/api/favicon`, a host name in, one fixed icon address read), deliberately SSRF-guarded (`checkDnsSafety`, `isIpSafe`, DNS-rebinding checks). Any change here is a security change: keep the guards and their tests intact.
+- `src/core/services/nextjs/og-metadata/**`, `src/core/services/nextjs/favicon/**`, `src/core/services/nextjs/image/**`, `src/core/services/nextjs/x-post/**`, `src/core/services/nextjs/map-tile/**`, `src/core/services/nextjs/nextjs.image.ts` + `src/libs/network/network.ts` — server-side fetching of user-supplied URLs for link previews, of site icons (`/api/favicon`, a host name in, one fixed icon address read), of X posts (`/api/x-post`, a post ID of digits in, X's one syndication address read), of map files (`/api/map`, a path on `tiles.openfreemap.org` in, only allow-listed path patterns read from that one host) and of Pinakes card images (`/api/image`, a card's link, or an X post's ID, and one image of it in: the card or post is read and only an image it carries is read, never an address alone), deliberately SSRF-guarded (`checkDnsSafety`, `isIpSafe`, DNS-rebinding checks, every redirect hop checked, raster bytes only). Any change here is a security change: keep the guards and their tests intact.
 - `src/sw.ts`, `next.config.ts`, `src/instrumentation*.ts`, `src/sentry.*.config.ts`, `.github/workflows/**` — build and runtime plumbing with cross-cutting effects. Change them only when the task is about them; `public/sw.js` is generated from `src/sw.ts`, never edit it by hand.
 
 ## Architecture Decision Records

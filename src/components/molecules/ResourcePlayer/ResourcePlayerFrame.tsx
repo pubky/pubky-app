@@ -1,6 +1,6 @@
 'use client';
 
-import { type CSSProperties, type ReactNode, type RefObject, useEffect, useRef, useState } from 'react';
+import { type CSSProperties, type ReactNode, type RefObject, useEffect, useEffectEvent, useRef, useState } from 'react';
 import { ArrowUpRight, Loader2 } from 'lucide-react';
 import { Container } from '@/atoms/Container/Container';
 import { Iframe } from '@/atoms/Iframe/Iframe';
@@ -11,7 +11,13 @@ import { tellsWhenPlaying } from '@/libs/utils/mediaPlayback';
 import { cn } from '@/libs/utils/utils';
 import { VIDEO_EMBED_PROPS } from '@/molecules/PostLinkEmbeds/Providers/Provider.constants';
 import { ResourceAudioControls } from './ResourceAudioControls';
-import { getMinFrameWidth, type PlayerStart, type PlayerTarget } from './resourcePlayer.utils';
+import {
+  getMinFrameWidth,
+  type PlayerStart,
+  type PlayerTarget,
+  readFrameHeight,
+  saysFrameHeight,
+} from './resourcePlayer.utils';
 import { type PlayerLoadState, useFramePress } from './useResourcePlayer';
 
 interface ResourcePlayerFrameProps {
@@ -28,14 +34,21 @@ interface ResourcePlayerFrameProps {
   /** Its media was paused or has ended, where its player tells (`useMediaBox`): paused in its card, it does not dock. */
   onPause?: () => void;
   /**
-   * The app's audio player asks, once mounted, whether a press opened it (`ResourceAudioPlayer`): its
-   * Play/Pause then takes the focus of the Play that is gone.
+   * Asked once mounted whether a press opened it: the app's audio player's Play/Pause then takes the
+   * focus of the Play that is gone (`ResourceAudioPlayer`); a service's frame its region, so the next Tab
+   * goes into the player (a card's drawing of it, `useCardPlayer`).
    */
   takeFocus?: () => boolean;
   /**
-   * An embed shown up front (a card without Also on, `GenericResourcePreview`), not opened by Play:
-   * no status line, since nothing was asked to start; loaded once near the screen, like a post's
-   * video embed.
+   * A post frame that holds a video (`hasPostVideo`: a Mastodon post with one): a press inside it counts
+   * as its start, so other media stops, and it is loaded anew, stopped, when other media starts. A press
+   * in any other post, map or document frame starts nothing.
+   */
+  holdsVideo?: boolean;
+  /**
+   * A frame loaded but not started (a post, map or document frame, a preview's player, a player let
+   * go by other media): no status line, since nothing was asked to start; loaded once near the
+   * screen, like a post's video embed.
    */
   quiet?: boolean;
 }
@@ -91,25 +104,57 @@ function useStartMessage(target: PlayerTarget, onLoaded: () => void) {
 }
 
 /**
- * The scale that fits a frame laid out at `minWidth` (`getMinFrameWidth`) into its region: below 1
- * only while the region is narrower; 1 when it fits, without a minimum width, or before the width is
- * known.
+ * The height a post frame asks for by its own message (`readFrameHeight`: Instagram's), from that frame's
+ * window only, for its current `src`; `null` until it asks, and for every other frame.
  */
-function useFitScale(regionRef: RefObject<HTMLDivElement | null>, minWidth: number | undefined): number {
-  const [scale, setScale] = useState(1);
+function useMessagedHeight(frameRef: RefObject<HTMLIFrameElement | null>, target: PlayerTarget): number | null {
+  const [measured, setMeasured] = useState<{ src: string; height: number } | null>(null);
+  const { src, provider, frame } = target;
+  useEffect(() => {
+    if (!saysFrameHeight({ provider, frame })) return;
+    const onMessage = (event: MessageEvent) => {
+      if (!frameRef.current || event.source !== frameRef.current.contentWindow) return;
+      const height = readFrameHeight({ provider, frame }, event.origin, event.data);
+      if (height !== null) setMeasured({ src, height });
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [frameRef, src, provider, frame]);
+  return measured?.src === src ? measured.height : null;
+}
+
+/**
+ * The region's layout width (px, untransformed, with fractions) while `enabled`, from one
+ * `ResizeObserver`; `null` before it is known, and without `ResizeObserver`. The first report comes
+ * before the next paint. A hidden region reports 0: the last width is kept, so a frame comes back as it was.
+ */
+function useObservedWidth(regionRef: RefObject<HTMLDivElement | null>, enabled: boolean): number | null {
+  const [width, setWidth] = useState<number | null>(null);
   useEffect(() => {
     const region = regionRef.current;
-    if (!minWidth || !region || typeof ResizeObserver === 'undefined') return;
-    // The layout width (untransformed, with fractions); the first report comes before the next paint.
-    // A hidden region reports 0: the last scale is kept, so the frame comes back scaled.
+    if (!enabled || !region || typeof ResizeObserver === 'undefined') return;
     const observer = new ResizeObserver(([entry]) => {
-      const width = entry?.contentRect.width ?? 0;
-      if (width > 0) setScale(width < minWidth ? width / minWidth : 1);
+      const next = entry?.contentRect.width ?? 0;
+      if (next > 0) setWidth(next);
     });
     observer.observe(region);
     return () => observer.disconnect();
-  }, [regionRef, minWidth]);
-  return minWidth ? scale : 1;
+  }, [regionRef, enabled]);
+  return enabled ? width : null;
+}
+
+/** The scale that fits a frame laid out at `minWidth` into a region `width` wide (`useFitScale`). */
+function getFitScale(width: number | null, minWidth: number | undefined): number {
+  return minWidth && width !== null && width < minWidth ? width / minWidth : 1;
+}
+
+/**
+ * The scale that fits a frame laid out at `minWidth` (`getMinFrameWidth`) into its region: below 1
+ * only while the region is narrower; 1 when it fits, without a minimum width, or before the width is
+ * known. A card's drawing of the player (`ResourcePlayerFacade`) takes the same height with it.
+ */
+export function useFitScale(regionRef: RefObject<HTMLDivElement | null>, minWidth: number | undefined): number {
+  return getFitScale(useObservedWidth(regionRef, Boolean(minWidth)), minWidth);
 }
 
 /**
@@ -122,7 +167,8 @@ function useFitScale(regionRef: RefObject<HTMLDivElement | null>, minWidth: numb
  * (Spotify, TIDAL). A service that cannot start that way (Mixcloud, Deezer) says a press inside its
  * player is needed, to screen readers only; the card never claims playback. One media plays on the
  * page (`useMediaBox`). A frame that is no player (`target.frame`: a post, a map, a document) is shown
- * the same way at the size Pinakes names, and a press inside it starts no media.
+ * the same way at the size Pinakes names; a press inside it starts no media, except in a post that holds
+ * a video (`holdsVideo`).
  */
 export function ResourcePlayerFrame({
   target,
@@ -133,8 +179,11 @@ export function ResourcePlayerFrame({
   onPlay,
   onPause,
   takeFocus,
+  holdsVideo = false,
 }: ResourcePlayerFrameProps) {
   const { frameRef, onLoad } = useStartMessage(target, onLoaded);
+  // A post frame that says its height (Instagram's) takes it: the post shows whole, with no scrollbar.
+  const messagedHeight = useMessagedHeight(frameRef, target);
   const regionRef = useRef<HTMLDivElement>(null);
   // A player that does not say when it plays (Deezer, TIDAL, Mixcloud, Spotify) starts by a press
   // inside it. A frame no card owns, once started, is stopped when other media starts: paused by the
@@ -158,8 +207,9 @@ export function ResourcePlayerFrame({
       setStarted(true);
       if (frameRef.current) reportMediaStart(frameRef.current);
     },
-    // A post, map or document frame plays nothing: a press inside it (panning a map) starts no media.
-    !tells && !started && !target.frame,
+    // A post, map or document frame plays nothing: a press inside it (panning a map) starts no media,
+    // unless it is a post that holds a video (`holdsVideo`), which tells nothing of its own.
+    !tells && !started && (!target.frame || (target.frame === 'post' && holdsVideo)),
   );
   const startHere = (media: Element) => {
     setStarted(true);
@@ -171,12 +221,31 @@ export function ResourcePlayerFrame({
     if (!tells) setRound((value) => value + 1);
   };
   useMediaBox(regionRef, onPlay ? { onStart: onPlay, onPause } : { onStart: startHere, onStop: stop });
+  // Loaded by a press on what stood here (a card's drawing of the player), now gone: the press's focus
+  // moves to the frame's region. Mounted again without a press (the host loads a hidden frame anew), it
+  // leaves the focus alone.
+  // The app's audio player moves it itself (`ResourceAudioControls`).
+  const focusOnOpen = useEffectEvent(() => {
+    if (target.element === 'audio') return;
+    const lost = !document.activeElement || document.activeElement === document.body;
+    if (takeFocus?.() && lost) regionRef.current?.focus({ preventScroll: true });
+  });
+  useEffect(() => focusOnOpen(), []);
   const label = `${target.name} ${target.frame ? 'embed' : 'player'}: ${title}`;
   const isVideo = target.layout.kind === 'video';
   // An embed with a minimum width (Apple's) is laid out at it and scaled to the region, the region's
   // height with it: the player keeps its proportions, with no scrollbar, cut edge or gap under it.
   const minWidth = target.element === 'iframe' ? getMinFrameWidth(target) : undefined;
-  const fit = useFitScale(regionRef, minWidth);
+  // A post frame that rests at its laid-out width plus a fixed part (Instagram's) until it says its height:
+  // laid out at the region's width, or at its minimum width when scaled down to a narrower one. One
+  // observer gives the width for both that and the fit scale (`useFitScale`).
+  const widthPlus = target.layout.kind === 'audio' ? target.layout.widthPlus : undefined;
+  const regionWidth = useObservedWidth(regionRef, Boolean(minWidth) || widthPlus !== undefined);
+  const fit = getFitScale(regionWidth, minWidth);
+  const restingHeight =
+    widthPlus !== undefined && messagedHeight === null && regionWidth !== null
+      ? Math.max(regionWidth, minWidth ?? 0) + widthPlus
+      : null;
   const fitStyle: CSSProperties | undefined =
     minWidth && fit < 1
       ? { width: minWidth, height: `${100 / fit}%`, transform: `scale(${fit})`, transformOrigin: '0 0' }
@@ -186,7 +255,9 @@ export function ResourcePlayerFrame({
     ? undefined
     : target.layout.kind === 'audio'
       ? ({
-          '--player-h': `${target.layout.height * fit}px`,
+          // A post frame with a width of its own (Instagram's) stays that narrow, left-aligned.
+          ...(target.layout.maxWidth && { maxWidth: target.layout.maxWidth }),
+          '--player-h': `${(messagedHeight ?? restingHeight ?? target.layout.height) * fit}px`,
           '--player-dock-h': `${(target.layout.dockHeight ?? target.layout.height) * fit}px`,
         } as CSSProperties)
       : target.layout.aspect
@@ -203,12 +274,14 @@ export function ResourcePlayerFrame({
         data-provider={target.provider}
         data-load={load}
         data-player-region
+        // Focusable from script only, where a press may load the frame: that press leaves its focus here.
+        tabIndex={takeFocus ? -1 : undefined}
         style={style}
         // The services draw their own rounded corners (TIDAL, Spotify: 12 px, `rounded-lg` here): ours
         // match them, and our background shows only until the player has loaded, so none peeks out at a
         // corner; never behind a plain file, whose own pill is rounder than the box.
         className={cn(
-          'relative w-full overflow-hidden rounded-lg',
+          'relative w-full overflow-hidden rounded-lg outline-none',
           target.element !== 'audio' && load !== 'ready' && 'bg-card',
           // A tall frame (a 9:16 video) stays within the screen; the app's audio player is as tall as its controls.
           isVideo ? 'aspect-video max-h-[80vh]' : !isAudioFile && 'h-(--player-h)',

@@ -1,12 +1,16 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { getResourceImageUrl } from '@/libs/image/resourceImage';
 import { formatClock, ResourceAudioControls } from './ResourceAudioControls';
 import { getAudioPlayer } from './resourcePlayer.utils';
 
+/** The show's cover, as cards give it: on the app's image route. */
+const SHOW_ART = getResourceImageUrl('https://darknetdiaries.com/', 'https://cdn.example.com/show.jpg')!;
+
 const TARGET = getAudioPlayer('https://cdn.example.com/ep182.mp3', {
   from: 'Darknet Diaries',
-  image: 'https://cdn.example.com/show.jpg',
+  image: SHOW_ART,
   page: '/resource?uri=https%3A%2F%2Fdarknetdiaries.com%2Fepisode%2F182%2F',
 });
 
@@ -55,7 +59,9 @@ describe('ResourceAudioControls', () => {
     expect(audio.controls).toBe(false);
     expect(audio).toHaveAttribute('autoplay');
     expect(onLoadedMetadata).toHaveBeenCalledTimes(1);
-    expect(screen.getByTestId('resource-audio-art')).toHaveAttribute('src', 'https://cdn.example.com/show.jpg');
+    expect(new URL(screen.getByTestId('resource-audio-art').getAttribute('src')!, window.location.href).href).toBe(
+      new URL(SHOW_ART, window.location.href).href,
+    );
     expect(screen.getByRole('link', { name: '182: Episode 182' })).toHaveAttribute('href', TARGET.about!.page);
     expect(screen.getByTestId('resource-audio-from')).toHaveTextContent('Darknet Diaries');
     expect(screen.getByTestId('resource-audio-time')).toHaveTextContent('0:00');

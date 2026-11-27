@@ -5,7 +5,6 @@ import { Typography } from '@/atoms/Typography/Typography';
 import { useSettingsActions } from '@/hooks/useSettingsActions/useSettingsActions';
 import { getCategoryPlayers, PlayerCategory } from '@/molecules/ResourcePlayer/resourcePlayer.utils';
 import { SettingsSwitchGroup } from '@/molecules/Settings/SettingsSwitchGroup/SettingsSwitchGroup';
-import { SettingsSwitchItem } from '@/molecules/Settings/SettingsSwitchItem/SettingsSwitchItem';
 import { useSettingsStore } from '@/stores/settings/settings.store';
 import { MediaLanguageList } from './MediaLanguageList';
 import { MediaPlayerList } from './MediaPlayerList';
@@ -15,13 +14,12 @@ const CATEGORIES = [PlayerCategory.MUSIC, PlayerCategory.PODCASTS, PlayerCategor
 
 /**
  * Links and media: the services cards play on, ranked, with the ones the viewer removed never played,
- * one list per kind of resource (`MediaPlayerList`: Music, Podcasts, Video), the languages
- * Wikipedia and other wikis open in (`MediaLanguageList`), and whether a link's platform embed
- * shows up front.
+ * one list per kind of resource (`MediaPlayerList`: Music, Podcasts, Video), and the languages
+ * Wikipedia and other wikis open in (`MediaLanguageList`).
  */
 export function MediaSettings() {
   const { media } = useSettingsStore();
-  const { setPlayers, setEmbedsUpFront, setLanguages } = useSettingsActions();
+  const { setPlayers, setLanguages } = useSettingsActions();
 
   return (
     <SettingsSwitchGroup>
@@ -46,13 +44,6 @@ export function MediaSettings() {
         ))}
       </Container>
       <MediaLanguageList languages={media.languages ?? []} onChange={setLanguages} />
-      <SettingsSwitchItem
-        id="media-switch-embedsUpFront"
-        label={'Show platform embeds up front'}
-        description={'When off, links show their card, and the platform loads only when you press Play or Show on.'}
-        checked={media.embedsUpFront}
-        onChange={setEmbedsUpFront}
-      />
     </SettingsSwitchGroup>
   );
 }

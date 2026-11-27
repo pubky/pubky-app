@@ -25,6 +25,7 @@ vi.mock('@/services/pinakes/pinakes', () => ({
     getCachedSearch: vi.fn(),
     fetchOccurrences: vi.fn(),
   },
+  isPinakesBusy: (value: unknown) => typeof value === 'object' && value !== null && 'busy' in value,
 }));
 
 const MALFORMED_CREDITS = asInvalid<TPinakesResourceDetail['credits']>([
@@ -177,6 +178,23 @@ describe('PinakesApplication', () => {
 
       await expect(result).resolves.toBe(pending);
       expect(PinakesService.fetchCardById).toHaveBeenCalledTimes(7);
+      expect(PinakesService.seedCardByUri).not.toHaveBeenCalled();
+    });
+
+    it('answers busy with its Retry-After when Pinakes’ budget is used up for now, reading nothing again', async () => {
+      const busy = { busy: true as const, retryAfterMs: 30_000 };
+      vi.mocked(PinakesService.resolveCard).mockResolvedValue(busy);
+
+      await expect(PinakesApplication.resolveCard(URI)).resolves.toEqual(busy);
+      expect(PinakesService.fetchCardById).not.toHaveBeenCalled();
+      expect(PinakesService.seedCardByUri).not.toHaveBeenCalled();
+    });
+
+    it('returns a pending answer as it is without polling, when asked not to (a link read on view)', async () => {
+      vi.mocked(PinakesService.resolveCard).mockResolvedValue(pending);
+
+      await expect(PinakesApplication.resolveCard(URI, { poll: false })).resolves.toEqual(pending);
+      expect(PinakesService.fetchCardById).not.toHaveBeenCalled();
       expect(PinakesService.seedCardByUri).not.toHaveBeenCalled();
     });
 

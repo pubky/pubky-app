@@ -255,7 +255,17 @@ export function isRankedOrder(playerOrder: readonly string[]): boolean {
  * width, audio (and any other frame of fixed height: a post, a document) its own strip height;
  * `dockHeight` is the service's own compact height, used in the dock (defaults to `height`).
  */
-export type PlayerLayout = { kind: 'video'; aspect?: number } | { kind: 'audio'; height: number; dockHeight?: number };
+export type PlayerLayout =
+  | { kind: 'video'; aspect?: number }
+  /** `maxWidth`: a post frame drawn no wider (px), left-aligned in the card. */
+  | {
+      kind: 'audio';
+      height: number;
+      dockHeight?: number;
+      maxWidth?: number;
+      /** A post frame that rests at its laid-out width plus this (px) until it says its height. */
+      widthPlus?: number;
+    };
 
 export interface PlayerTarget {
   provider: EmbedProvider;
@@ -301,7 +311,7 @@ export interface PlayerTarget {
 
 /** What the app's audio player shows of a plain audio file besides its title (`PlayerTarget.about`). */
 export interface AudioAbout {
-  /** An `http(s)` image: the episode's, else its show's. */
+  /** The cover on the app's image route (`getResourceImageUrl`): the episode's, else its show's. */
   image?: string | null;
   /** What it is from: a podcast show's name. */
   from?: string | null;
@@ -573,10 +583,12 @@ const APPLE_MUSIC_LIST_EMBED = /^https:\/\/embed\.music\.apple\.com\/[a-z]{2}\/(
 /**
  * The narrowest width a service's embed lays itself out at, if any: Apple Podcasts' show and episode
  * embeds and Apple Music's album and playlist embeds keep 290 px, and scroll sideways (and so down) in
- * a narrower frame. `ResourcePlayerFrame` lays such a frame out at that width and scales it to the card.
+ * a narrower frame; Instagram's post frame 326 px (its embed code's `min-width`). `ResourcePlayerFrame`
+ * lays such a frame out at that width and scales it to the card.
  */
 export function getMinFrameWidth(target: Pick<PlayerTarget, 'provider' | 'src'>): number | undefined {
   if (target.provider === PlayerProvider.APPLE_PODCASTS) return 290;
+  if (target.provider === 'instagram') return 326;
   if (target.provider === PlayerProvider.APPLE_MUSIC && APPLE_MUSIC_LIST_EMBED.test(target.src)) return 290;
   return undefined;
 }
@@ -748,6 +760,57 @@ const FRAME_FEATURES = new Set([
 const FRAME_HEIGHT = 420;
 
 /**
+ * A post frame's resting size where Pinakes names none, by provider. Instagram's, until its frame says its
+ * own height (`readFrameHeight`): its laid-out width plus 220 px (`widthPlus`), the shape of its captioned
+ * photo embed (a 54 px header, a square photo as wide as the frame, about 166 px of actions, caption and
+ * footer; Instagram's oEmbed answer gives no height), so a 326 px phone frame has no blank under the post
+ * and a 658 px one no inner scrollbar; 760 px (the 540 px layout) until the frame's width is known. Never
+ * wider than 658 px, the `max-width` of the blockquote its own oEmbed answer gives (measured 2026-11-25).
+ */
+const POST_FRAME_SIZES: Readonly<Record<string, { height: number; maxWidth: number; widthPlus: number }>> = {
+  instagram: { height: 760, maxWidth: 658, widthPlus: 220 },
+};
+
+/**
+ * Post frames that say their own height by a message to the page, by provider: the origin it comes
+ * from. Instagram's posts `{"type":"MEASURE","details":{"height":<px>}}` (what its embed script reads).
+ */
+const FRAME_HEIGHT_ORIGINS: Readonly<Record<string, string>> = { instagram: 'https://www.instagram.com' };
+
+/** A frame asks for at most this height (px): a post, not a page. */
+const MAX_MESSAGED_HEIGHT = 2000;
+
+/** Whether a post frame says its own height by a message (`readFrameHeight`). */
+export function saysFrameHeight(target: Pick<PlayerTarget, 'provider' | 'frame'>): boolean {
+  return target.frame === 'post' && Object.hasOwn(FRAME_HEIGHT_ORIGINS, target.provider);
+}
+
+/**
+ * The height (px, whole) a post frame asks for by a message from its own origin
+ * (`FRAME_HEIGHT_ORIGINS`), at most `MAX_MESSAGED_HEIGHT`; `null` for any other message or sender.
+ */
+export function readFrameHeight(
+  target: Pick<PlayerTarget, 'provider' | 'frame'>,
+  origin: string,
+  data: unknown,
+): number | null {
+  if (!saysFrameHeight(target) || origin !== FRAME_HEIGHT_ORIGINS[target.provider]) return null;
+  let message: unknown = data;
+  if (typeof data === 'string') {
+    try {
+      message = JSON.parse(data);
+    } catch {
+      return null;
+    }
+  }
+  if (typeof message !== 'object' || message === null) return null;
+  const { type, details } = message as { type?: unknown; details?: { height?: unknown } | null };
+  const height = details?.height;
+  if (type !== 'MEASURE' || typeof height !== 'number' || !Number.isFinite(height) || height <= 0) return null;
+  return Math.min(Math.ceil(height), MAX_MESSAGED_HEIGHT);
+}
+
+/**
  * The frame Pinakes names for a link (`embed`), as a card shows it: a player (`audio`, `video`; a
  * listed service's with its start command and dock height), or a post, map or document frame shown the
  * same way (`frame`). Its address is Pinakes' as is, with the `autoplay_param` only for a press on
@@ -775,6 +838,8 @@ export function getEmbedTarget(embed: TPinakesEmbed, link: string, site?: string
   // TIDAL's plain player, as for a TIDAL link the app reads itself (`tidal()`): no ⋯ menu, and no Sign up / Log
   // in panel over it when a preview ends. Not for a video, which would lose its fullscreen button too.
   if (embed.provider === PlayerProvider.TIDAL && embed.kind !== 'video') src.searchParams.set('hideOverlays', 'true');
+  const postSize =
+    embed.kind === 'post' && Object.hasOwn(POST_FRAME_SIZES, embed.provider) ? POST_FRAME_SIZES[embed.provider] : null;
   const frame =
     embed.kind === 'post' || embed.kind === 'map'
       ? embed.kind
@@ -790,7 +855,12 @@ export function getEmbedTarget(embed: TPinakesEmbed, link: string, site?: string
     element: 'iframe',
     layout: embed.aspect
       ? { kind: 'video', aspect: embed.aspect }
-      : { kind: 'audio', height: embed.height ?? FRAME_HEIGHT, dockHeight: commands?.dockHeight },
+      : {
+          kind: 'audio',
+          height: embed.height ?? postSize?.height ?? FRAME_HEIGHT,
+          dockHeight: commands?.dockHeight,
+          ...(postSize && { maxWidth: postSize.maxWidth, widthPlus: postSize.widthPlus }),
+        },
     allow: embed.allow.filter((feature) => FRAME_FEATURES.has(feature)).join('; '),
     autoplay: startsByParam || Boolean(commands?.start),
     start: commands?.start,
@@ -861,9 +931,10 @@ function getOwnTarget(card: TOwnLinks, href?: string | null): PlayerTarget | nul
 }
 
 /**
- * A player shown up front, not after a press on Play: the same player without what starts it on
- * load (its autoplay parameter and start message), so it plays only when pressed inside. A plain
- * audio file keeps the app's audio player, which then does not start on its own (`autoplay: false`).
+ * A player shown but not started by the viewer's press (a preview's, a post, map or document frame,
+ * one let go by other media): the same player without what starts it on load (its autoplay
+ * parameter and start message), so it plays only when pressed inside. A plain audio file keeps the
+ * app's audio player, which then does not start on its own (`autoplay: false`).
  */
 export function getUpFrontTarget(target: PlayerTarget): PlayerTarget {
   if (target.element !== 'iframe') return { ...target, autoplay: false };
@@ -919,17 +990,20 @@ export function getPlayerTargets(
 
 /**
  * Whether a card's image stands in for an embed: it then shows large under the card's text, where that embed stands,
- * as a post shows its image (`ResourceCardMedia`). It does for a card whose type is of the Video kind
- * (`getPlayerCategory` by type alone, so a channel or an article with a video in Also on is not) that offers a video
- * player of an exact link (`getPlayerTargets`, metadata matches left out: YouTube, Vimeo) or is a video post (its
- * `embed` a post's frame: an X or Mastodon video; not once the post is `missing`). The viewer's Players are not read,
- * so the layout never depends on settings. Every other card's image (an event's, an article's, a link's preview, a
- * song's or album's cover, an artist's photo) is a small thumbnail left of the text (`ResourceCardCover`).
+ * as a post shows its image (`ResourceCardMedia`). It does for a post shown from its card that carries a video
+ * (`isPostVideo`: the video's still stands where the video loads on the press), and for a card whose type is of the
+ * Video kind (`getPlayerCategory` by type alone, so a channel or an article with a video in Also on is not) that
+ * offers a video player of an exact link (`getPlayerTargets`, metadata matches left out: YouTube, Vimeo) or is a video
+ * post (its `embed` a post's frame: an X or Mastodon video; not once the post is `missing`). The viewer's Players are
+ * not read, so the layout never depends on settings. Every other card's image (a post's photo, an event's, an
+ * article's, a link's preview, a song's or album's cover, an artist's photo) is a small thumbnail left of the text
+ * (`ResourceCardCover`).
  */
 export function showsEmbedImage(
   card: Parameters<typeof getPlayerTargets>[0] & Pick<TPinakesCard, 'type' | 'type_path'>,
-  { href }: { href?: string | null } = {},
+  { href, isPostVideo = false }: { href?: string | null; isPostVideo?: boolean } = {},
 ): boolean {
+  if (isPostVideo) return true;
   if (getPlayerCategory(card) !== PlayerCategory.VIDEO) return false;
   if (card.status !== 'missing' && card.embed?.kind === 'post') return true;
   return getPlayerTargets(card, { href }).some(

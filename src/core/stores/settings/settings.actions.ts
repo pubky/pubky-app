@@ -177,20 +177,6 @@ export const createSettingsActions = (set: ZustandSet<SettingsStore>): SettingsA
     );
   },
 
-  setEmbedsUpFront: (embedsUpFront) => {
-    set(
-      (state) =>
-        withTimestamp({
-          media: {
-            ...state.media,
-            embedsUpFront,
-          },
-        }),
-      false,
-      SettingsActionTypes.SET_EMBEDS_UP_FRONT,
-    );
-  },
-
   setLanguages: (languages) => {
     set(
       (state) =>

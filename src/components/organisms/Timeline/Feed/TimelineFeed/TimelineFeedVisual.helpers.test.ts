@@ -288,10 +288,11 @@ describe('getVisualPendingOverflowFallbackIds', () => {
 });
 
 describe('link video tile helpers', () => {
-  it('builds the i.ytimg thumbnail URL for a video id and variant', () => {
-    expect(getVisualYouTubeThumbnailUrl('dQw4w9WgXcQ', 'hq720')).toBe('https://i.ytimg.com/vi/dQw4w9WgXcQ/hq720.jpg');
+  it('builds the image route’s thumbnail URL for a video id and variant', () => {
+    // From the app's image route, never i.ytimg.com from the viewer's browser.
+    expect(getVisualYouTubeThumbnailUrl('dQw4w9WgXcQ', 'hq720')).toBe('/api/image?youtube=dQw4w9WgXcQ&variant=hq720');
     expect(getVisualYouTubeThumbnailUrl('dQw4w9WgXcQ', 'mqdefault')).toBe(
-      'https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg',
+      '/api/image?youtube=dQw4w9WgXcQ&variant=mqdefault',
     );
   });
 

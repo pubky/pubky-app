@@ -90,6 +90,20 @@ export function getNearestTypes(card: Pick<TPinakesCard, 'type' | 'type_path'>):
 }
 
 /**
+ * schema.org types whose `image` is cover art: a song's, an album's or release's, a playlist's (`MusicAlbum` and
+ * `MusicRelease` are playlists in schema.org). An artist (`MusicGroup`, `Person`) has a photo, not a cover.
+ */
+const COVER_ART_TYPES: ReadonlySet<string> = new Set(['MusicRecording', 'MusicPlaylist', 'MusicAlbum', 'MusicRelease']);
+
+/**
+ * Whether the card's image is cover art (`COVER_ART_TYPES`), from its `type` or any `type_path` entry: from a
+ * YouTube thumbnail, such a cover shows as the thumbnail's middle square (`ResourceCardCover`'s `square`).
+ */
+export function hasCoverArt(card: Pick<TPinakesCard, 'type' | 'type_path'>): boolean {
+  return getNearestTypes(card).some((type) => COVER_ART_TYPES.has(type));
+}
+
+/**
  * schema.org types whose `image` is mostly a 16:9 frame (a video's still; a film's or series' image is often wide):
  * the card's thumbnail is 16:9 before the image loads, where a square crop would cut it (and any text in it). Every
  * other card (music, books, places, articles) starts square; the loaded image's own shape decides after that. The

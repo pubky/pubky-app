@@ -3,7 +3,12 @@ import { fakeOwner } from 'pubky-social-specs/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import videoFixture from '@/services/pinakes/fixtures/by-uri.video.json';
 import { PinakesStatus } from '@/services/pinakes/pinakes.types';
-import { PINAKES_RESOLVE_DEBOUNCE_MS, usePinakesCard } from './usePinakesCard';
+import {
+  PINAKES_RESOLVE_DEBOUNCE_MS,
+  PINAKES_VIEW_RESOLVE_PAUSE_MS,
+  resetViewResolves,
+  usePinakesCard,
+} from './usePinakesCard';
 
 const mocks = vi.hoisted(() => ({ configured: true, fetchCardByUri: vi.fn(), resolveCard: vi.fn() }));
 
@@ -326,6 +331,168 @@ describe('usePinakesCard', () => {
       expect(fresh(unknown)).toBe(0);
       expect(fresh(pending)).toBeGreaterThan(0);
     });
+  });
+});
+
+describe('usePinakesCard resolveOnView', () => {
+  let n = 0;
+  // Each test its own links and its own page load.
+  const link = (name: string) => `https://www.youtube.com/watch?v=view${n}${name}`;
+
+  beforeEach(() => {
+    n += 1;
+    vi.clearAllMocks();
+    mocks.configured = true;
+    resetViewResolves();
+    mocks.fetchCardByUri.mockResolvedValue(null);
+  });
+
+  it('asks Pinakes to read a link it does not know at once, waiting for it, and shows the card it read', async () => {
+    const uri = link('a');
+    let answer: (card: typeof videoFixture) => void = () => {};
+    mocks.resolveCard.mockReturnValue(new Promise((resolve) => (answer = resolve)));
+
+    const { result } = renderHook(() => usePinakesCard(uri, { recheck: true, resolveOnView: true }));
+
+    // Not polled by its ID: the card read's own re-reads follow a pending answer.
+    await waitFor(() => expect(mocks.resolveCard).toHaveBeenCalledWith({ uri, poll: false }));
+    expect(result.current.isResolving).toBe(true);
+    await act(async () => answer(videoFixture));
+    expect(result.current).toEqual({ data: videoFixture, isLoading: false, isError: false });
+  });
+
+  it('asks at most two links at once, the others in turn', async () => {
+    const answers: ((card: null) => void)[] = [];
+    mocks.resolveCard.mockImplementation(() => new Promise((resolve) => answers.push(resolve)));
+
+    for (const name of ['p', 'q', 'r', 's']) renderHook(() => usePinakesCard(link(name), { resolveOnView: true }));
+    await waitFor(() => expect(mocks.resolveCard).toHaveBeenCalledTimes(2));
+
+    await act(async () => answers[0](null));
+    await waitFor(() => expect(mocks.resolveCard).toHaveBeenCalledTimes(3));
+    expect(mocks.resolveCard.mock.calls[2][0]).toEqual({ uri: link('r'), poll: false });
+  });
+
+  it('sends no waiting ask whose previews are all gone (a link typed on, a box scrolled past)', async () => {
+    const answers: ((card: null) => void)[] = [];
+    mocks.resolveCard.mockImplementation(() => new Promise((resolve) => answers.push(resolve)));
+
+    renderHook(() => usePinakesCard(link('w1'), { resolveOnView: true }));
+    renderHook(() => usePinakesCard(link('w2'), { resolveOnView: true }));
+    const gone = renderHook(() => usePinakesCard(link('w3'), { resolveOnView: true }));
+    renderHook(() => usePinakesCard(link('w4'), { resolveOnView: true }));
+    await waitFor(() => expect(mocks.resolveCard).toHaveBeenCalledTimes(2));
+    gone.unmount();
+
+    await act(async () => answers[0](null));
+    await waitFor(() => expect(mocks.resolveCard).toHaveBeenCalledTimes(3));
+    expect(mocks.resolveCard.mock.calls[2][0]).toEqual({ uri: link('w4'), poll: false });
+  });
+
+  it('asks no other link once Pinakes failed (a 5xx or no answer, told as busy), sending the waiting ones none', async () => {
+    let fail: (answer: { busy: true; retryAfterMs: null }) => void = () => {};
+    mocks.resolveCard
+      .mockImplementationOnce(() => new Promise((resolve) => (fail = resolve)))
+      .mockImplementation(() => new Promise(() => {}));
+
+    renderHook(() => usePinakesCard(link('down-1'), { resolveOnView: true }));
+    renderHook(() => usePinakesCard(link('down-2'), { resolveOnView: true }));
+    renderHook(() => usePinakesCard(link('down-3'), { resolveOnView: true }));
+    await waitFor(() => expect(mocks.resolveCard).toHaveBeenCalledTimes(2));
+    await act(async () => fail({ busy: true, retryAfterMs: null }));
+    renderHook(() => usePinakesCard(link('down-4'), { resolveOnView: true }));
+    await act(async () => {});
+
+    // down-3, waiting its turn, is not sent once the pause began; down-4 neither.
+    expect(mocks.resolveCard).toHaveBeenCalledTimes(2);
+  });
+
+  it('asks a link once per page load, however many previews show it, also when Pinakes refused it', async () => {
+    const uri = link('once');
+    mocks.resolveCard.mockResolvedValue(null);
+
+    const first = renderHook(() => usePinakesCard(uri, { resolveOnView: true }));
+    await waitFor(() => expect(mocks.resolveCard).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(first.result.current.isResolving).toBeUndefined());
+    first.unmount();
+    const second = renderHook(() => usePinakesCard(uri, { resolveOnView: true }));
+    await waitFor(() => expect(second.result.current).toEqual({ data: null, isLoading: false, isError: false }));
+
+    expect(mocks.resolveCard).toHaveBeenCalledTimes(1);
+    expect(second.result.current.data).toBeNull();
+  });
+
+  it('asks nothing while Pinakes said it is busy, until its Retry-After has passed, then once more', async () => {
+    vi.useFakeTimers();
+    try {
+      const busy = link('busy');
+      const other = link('other');
+      mocks.resolveCard.mockResolvedValueOnce({ busy: true, retryAfterMs: 30_000 }).mockResolvedValue(videoFixture);
+
+      const first = renderHook(() => usePinakesCard(busy, { resolveOnView: true }));
+      await act(() => vi.advanceTimersByTimeAsync(0));
+      expect(first.result.current.data).toBeNull();
+      // Another link while paused: not asked.
+      const paused = renderHook(() => usePinakesCard(other, { resolveOnView: true }));
+      await act(() => vi.advanceTimersByTimeAsync(0));
+      expect(mocks.resolveCard).toHaveBeenCalledTimes(1);
+      expect(paused.result.current.data).toBeNull();
+
+      await act(() => vi.advanceTimersByTimeAsync(30_000));
+      first.unmount();
+      const again = renderHook(() => usePinakesCard(busy, { resolveOnView: true }));
+      await act(() => vi.advanceTimersByTimeAsync(0));
+
+      expect(mocks.resolveCard).toHaveBeenCalledTimes(2);
+      expect(again.result.current.data).toEqual(videoFixture);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('pauses for its own default when Pinakes is busy with no Retry-After', async () => {
+    vi.useFakeTimers();
+    try {
+      mocks.resolveCard.mockResolvedValueOnce({ busy: true, retryAfterMs: null }).mockResolvedValue(videoFixture);
+      renderHook(() => usePinakesCard(link('x'), { resolveOnView: true }));
+      await act(() => vi.advanceTimersByTimeAsync(0));
+      expect(mocks.resolveCard).toHaveBeenCalledTimes(1);
+      await act(() => vi.advanceTimersByTimeAsync(PINAKES_VIEW_RESOLVE_PAUSE_MS - 1_000));
+      renderHook(() => usePinakesCard(link('y'), { resolveOnView: true }));
+      await act(() => vi.advanceTimersByTimeAsync(0));
+      expect(mocks.resolveCard).toHaveBeenCalledTimes(1);
+
+      await act(() => vi.advanceTimersByTimeAsync(1_000));
+      renderHook(() => usePinakesCard(link('z'), { resolveOnView: true }));
+      await act(() => vi.advanceTimersByTimeAsync(0));
+      expect(mocks.resolveCard).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('never asks about a pubky link, a link that is not http(s), nor a link Pinakes knows', async () => {
+    mocks.fetchCardByUri.mockImplementation(async ({ uri }: { uri: string }) =>
+      uri.includes('known') ? videoFixture : null,
+    );
+
+    for (const uri of [
+      'pubky://o1gg96ewuojmopcjbz8895478wdtxtzzuxnfjjz8o8e77csa1ngo/pub/pubky.app/posts/0034A0X7NJ52G',
+      'isbn:9780141036144',
+      link('known'),
+    ]) {
+      const { result } = renderHook(() => usePinakesCard(uri, { resolveOnView: true }));
+      await waitFor(() => expect(result.current.isLoading).toBe(false));
+    }
+
+    expect(mocks.resolveCard).not.toHaveBeenCalled();
+  });
+
+  it('asks nothing without resolveOnView', async () => {
+    const { result } = renderHook(() => usePinakesCard(link('off'), { recheck: false }));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
+
+    expect(mocks.resolveCard).not.toHaveBeenCalled();
   });
 });
 

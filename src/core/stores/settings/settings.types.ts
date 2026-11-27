@@ -47,12 +47,6 @@ export interface MediaPreferences {
   /** Player ids the viewer removed: no player or embed loads from them. Default none. */
   hiddenPlayers: string[];
   /**
-   * A link's platform embed shows up front instead of our card. Default off: our card shows, and a
-   * platform's player, embed or map loads only once its Play or Show on is pressed. A viewer who
-   * turns it on keeps it (a stored `true` is read as it is).
-   */
-  embedsUpFront: boolean;
-  /**
    * The viewer's Players for one kind of resource each (`PlayerCategory`: `music`, `podcasts`,
    * `video`), saved once that kind's list is changed. A kind without its own uses `playerOrder` and
    * `hiddenPlayers` (Podcasts with its built-in player first).
@@ -98,7 +92,6 @@ export interface SettingsActions {
   // Links and media actions
   /** With `category`, that kind's Players (`players`); without, the ones every kind falls back to. */
   setPlayers: (playerOrder: string[], hiddenPlayers: string[], category?: string) => void;
-  setEmbedsUpFront: (embedsUpFront: boolean) => void;
   setLanguages: (languages: string[]) => void;
   // Muted users actions
   addMutedUser: (userId: string) => void;
@@ -139,7 +132,6 @@ export const defaultPrivacyPreferences: PrivacyPreferences = {
 export const defaultMediaPreferences: MediaPreferences = {
   playerOrder: [],
   hiddenPlayers: [],
-  embedsUpFront: false,
 };
 
 function getStrings(value: unknown): string[] | undefined {
@@ -163,11 +155,20 @@ function getCategoryPlayers(value: unknown): Record<string, CategoryPlayers> | u
 }
 
 /**
+ * `media` keys an earlier version stored that mean nothing now: `embedsUpFront` (platform embeds up
+ * front, a switch that is gone: every embed shows the app's view of it until the viewer's press).
+ */
+const RETIRED_MEDIA_KEYS = ['embedsUpFront'];
+
+/**
  * A stored `media` object (settings.json, the persisted store) with missing or malformed keys as
- * their defaults. Keys a later version adds are kept, and so are kinds of `players` it adds.
+ * their defaults. Keys a later version adds are kept, and so are kinds of `players` it adds; retired
+ * keys (`RETIRED_MEDIA_KEYS`) are dropped, so the next save leaves them out.
  */
 export function normalizeMediaPreferences(media: unknown): MediaPreferences {
-  const stored = getRecord(media) ?? {};
+  const stored = Object.fromEntries(
+    Object.entries(getRecord(media) ?? {}).filter(([key]) => !RETIRED_MEDIA_KEYS.includes(key)),
+  );
   const players = getCategoryPlayers(stored.players);
   // Each code once: a list from another client may repeat one.
   const languages = getStrings(stored.languages)?.filter((code, index, all) => code && all.indexOf(code) === index);
@@ -176,8 +177,6 @@ export function normalizeMediaPreferences(media: unknown): MediaPreferences {
     ...stored,
     playerOrder: getStrings(stored.playerOrder) ?? [],
     hiddenPlayers: getStrings(stored.hiddenPlayers) ?? [],
-    embedsUpFront:
-      typeof stored.embedsUpFront === 'boolean' ? stored.embedsUpFront : defaultMediaPreferences.embedsUpFront,
   };
   if (players) normalized.players = players;
   else delete normalized.players;
@@ -208,7 +207,6 @@ export enum SettingsActionTypes {
   SET_NEVER_SHOW_POSTS = 'SET_NEVER_SHOW_POSTS',
   SET_MODERATION_BOT = 'SET_MODERATION_BOT',
   SET_PLAYERS = 'SET_PLAYERS',
-  SET_EMBEDS_UP_FRONT = 'SET_EMBEDS_UP_FRONT',
   SET_LANGUAGES = 'SET_LANGUAGES',
   ADD_MUTED_USER = 'ADD_MUTED_USER',
   REMOVE_MUTED_USER = 'REMOVE_MUTED_USER',

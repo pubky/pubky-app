@@ -168,7 +168,7 @@ describe('SettingsNormalizer', () => {
           ...defaultPrivacyPreferences,
           blurCensored: false,
         },
-        media: { playerOrder: ['tidal', 'spotify'], hiddenPlayers: ['youtube'], embedsUpFront: false },
+        media: { playerOrder: ['tidal', 'spotify'], hiddenPlayers: ['youtube'] },
         updatedAt: 1700000000000,
         version: 2,
       };
@@ -180,7 +180,6 @@ describe('SettingsNormalizer', () => {
       expect(result.media).toEqual({
         playerOrder: ['tidal', 'spotify'],
         hiddenPlayers: ['youtube'],
-        embedsUpFront: false,
       });
       expect(result.muted).toEqual([]); // Muted is not synced, always empty from homeserver
       expect(result.updatedAt).toBe(1700000000000);
@@ -237,18 +236,21 @@ describe('SettingsNormalizer', () => {
       expect(result.updatedAt).toBeLessThanOrEqual(after);
     });
 
-    it('reads platform embeds up front as off when a file has no value for it, and keeps a stored one', () => {
-      expect(defaultMediaPreferences.embedsUpFront).toBe(false);
-      expect(SettingsNormalizer.from({ media: { playerOrder: ['tidal'] } }).media.embedsUpFront).toBe(false);
-      expect(SettingsNormalizer.from({ media: { embedsUpFront: true } }).media.embedsUpFront).toBe(true);
-      expect(SettingsNormalizer.from({ media: { embedsUpFront: false } }).media.embedsUpFront).toBe(false);
-    });
+    it.each([true, false, 'yes'])(
+      'drops platform embeds up front an earlier version stored (%j), so it is never read or written again',
+      (stored) => {
+        const media = asInvalid<{ playerOrder: string[] }>({ playerOrder: ['tidal'], embedsUpFront: stored });
+        const read = SettingsNormalizer.from({ media }).media;
+
+        expect(read).toEqual({ ...defaultMediaPreferences, playerOrder: ['tidal'] });
+        expect(read).not.toHaveProperty('embedsUpFront');
+        const { settings } = SettingsNormalizer.to(createMockSettingsState({ media: read }), TEST_PUBKY.USER_1);
+        expect(JSON.parse(JSON.stringify(settings)).media).not.toHaveProperty('embedsUpFront');
+      },
+    );
 
     it('fills the media defaults a file written before them lacks', () => {
-      expect(SettingsNormalizer.from({ media: { embedsUpFront: false } }).media).toEqual({
-        ...defaultMediaPreferences,
-        embedsUpFront: false,
-      });
+      expect(SettingsNormalizer.from({ media: { playerOrder: [] } }).media).toEqual(defaultMediaPreferences);
     });
 
     it('ignores what is no list of ids', () => {
@@ -260,7 +262,7 @@ describe('SettingsNormalizer', () => {
     });
 
     it('keeps the ids of players a later version adds, so they round-trip', () => {
-      const media = { playerOrder: ['bandcamp', 'tidal'], hiddenPlayers: ['audius'], embedsUpFront: true };
+      const media = { playerOrder: ['bandcamp', 'tidal'], hiddenPlayers: ['audius'], autoplayTrailers: true };
 
       expect(SettingsNormalizer.from({ media }).media).toEqual(media);
     });
@@ -317,7 +319,7 @@ describe('SettingsNormalizer', () => {
 
   describe('round-trip conversion', () => {
     it('should keep the links and media preferences', () => {
-      const media = { playerOrder: ['tidal', 'spotify'], hiddenPlayers: ['youtube', 'vimeo'], embedsUpFront: false };
+      const media = { playerOrder: ['tidal', 'spotify'], hiddenPlayers: ['youtube', 'vimeo'] };
       const original = createMockSettingsState({ media });
       const restored = SettingsNormalizer.from(SettingsNormalizer.to(original, TEST_PUBKY.USER_1).settings);
 
@@ -331,7 +333,6 @@ describe('SettingsNormalizer', () => {
       expect(JSON.parse(JSON.stringify(settings)).media).toEqual({
         playerOrder: [],
         hiddenPlayers: [],
-        embedsUpFront: false,
         languages: ['de', 'fr'],
       });
       expect(SettingsNormalizer.from(settings).media).toEqual(media);

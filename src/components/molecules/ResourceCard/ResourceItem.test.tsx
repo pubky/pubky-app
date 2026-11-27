@@ -11,10 +11,7 @@ import { defaultMediaPreferences } from '@/stores/settings/settings.types';
 import { asOpaque } from '@/test-utils/type-assertions';
 import { ResourceItem } from './ResourceItem';
 
-// These cases are for platform embeds up front (Settings, Links & Media) turned on; the default
-// is off (`defaultMediaPreferences`): a card, nothing loaded from the platform before Play.
-const upFrontMedia = { ...defaultMediaPreferences, embedsUpFront: true };
-beforeEach(() => useSettingsStore.setState({ media: upFrontMedia }));
+beforeEach(() => useSettingsStore.setState({ media: defaultMediaPreferences }));
 
 const mocks = vi.hoisted(() => ({
   card: vi.fn(),
@@ -180,7 +177,7 @@ describe('ResourceItem', () => {
       also_on: [],
     };
     const setMedia = (media: Partial<typeof defaultMediaPreferences>) =>
-      useSettingsStore.setState({ media: { ...upFrontMedia, ...media } });
+      useSettingsStore.setState({ media: { ...defaultMediaPreferences, ...media } });
     const read = (data: TPinakesResourceDetail | null) =>
       mocks.card.mockImplementation((uri: string | null) => ({
         data: uri ? data : null,
@@ -199,43 +196,36 @@ describe('ResourceItem', () => {
       setMedia({});
     });
 
-    it('shows an X post with no Also on as X’s own embed up front, on the item’s card surface', () => {
+    it('shows an X post with no Also on as a post shows it, on the item’s card surface', () => {
       read(POST_CARD);
       render(<ResourceItem uri={POST_URL} data-testid="item" />);
 
       const resource = screen.getByTestId('native-embed-resource');
       expect(resource).toHaveAttribute('data-kind', 'post');
-      expect(within(screen.getByTestId('native-embed-body')).getByTestId('twitter-tweet')).toHaveAttribute(
-        'data-tweet-id',
-        '1987654321098765432',
-      );
-      // X's embed fills the card's width, as on a post.
-      expect(screen.getByTestId('twitter-container')).not.toHaveClass('max-w-70');
+      expect(within(resource).getByTestId('resource-card-post')).toHaveTextContent('LNbits: a post');
+      expect(mocks.tweet).not.toHaveBeenCalled();
       expect(screen.queryByTestId('preview')).not.toBeInTheDocument();
-      // The item's frame: its type opens the resource page, its source the link, the footer on the card surface.
-      const frame = screen.getByTestId('resource-embed-frame');
+      // The item's card: its type opens the resource page, its source the link, the footer on the card surface.
+      const card = screen.getByTestId('resource-card');
       expect(
-        within(frame)
+        within(card)
           .getAllByRole('link')
           .map((link) => link.getAttribute('href')),
       ).toEqual(expect.arrayContaining([getResourceRoute(POST_URL), POST_URL]));
-      expect(within(frame).getByTestId('resource-actions')).toHaveAttribute('data-surface', 'card');
+      expect(within(card).getByTestId('resource-actions')).toHaveAttribute('data-surface', 'card');
       expect(screen.getByTestId('item')).toHaveClass('@container/grid');
       expect(screen.getByTestId('item')).not.toHaveClass('bg-card');
     });
 
-    it('keeps our card with Show on, loading nothing from X, when platform embeds up front are off', () => {
-      setMedia({ embedsUpFront: false });
+    it('shows the post from our card’s data, loading nothing from X and needing no press', () => {
       read(POST_CARD);
       render(<ResourceItem uri={POST_URL} />);
 
-      expect(screen.getByTestId('resource-card')).toHaveTextContent('LNbits: a post');
+      expect(screen.getByTestId('resource-card-post')).toHaveTextContent('LNbits: a post');
+      expect(screen.queryByRole('button', { name: /^Show on / })).not.toBeInTheDocument();
       expect(screen.queryByTestId('native-embed-body')).not.toBeInTheDocument();
       expect(mocks.tweet).not.toHaveBeenCalled();
       expect(document.querySelectorAll('iframe')).toHaveLength(0);
-
-      fireEvent.click(screen.getByRole('button', { name: /^Show on / }));
-      expect(within(screen.getByTestId('native-embed-body')).getByTestId('twitter-tweet')).toBeInTheDocument();
     });
 
     it('pauses the platform’s embed off screen as a post does, and leaves any other link’s card as it was', () => {
@@ -260,29 +250,37 @@ describe('ResourceItem', () => {
       expect(screen.queryByTestId('twitter-tweet-not-found')).not.toBeInTheDocument();
     });
 
-    it('shows a YouTube video Pinakes has read as a post shows it: its player up front', () => {
+    it('shows a YouTube video Pinakes has read as a post shows it: its player drawn, nothing loaded', () => {
       read({ ...videoFixture, also_on: [] });
       const { unmount } = render(<PostLinkEmbeds url={VIDEO_URL} />);
-      const inPost = screen.getByTestId('resource-player-frame').getAttribute('src');
+      const inPost = screen.getByTestId('player-facade').getAttribute('aria-label');
       unmount();
 
       render(<ResourceItem uri={VIDEO_URL} />);
       expect(screen.getByTestId('native-embed-resource')).toHaveAttribute('data-kind', 'video');
-      expect(screen.getByTestId('resource-player-frame')).toHaveAttribute('src', inPost);
+      expect(screen.getByTestId('player-facade')).toHaveAttribute('aria-label', inPost);
+      expect(inPost).toBe(`Play ${videoFixture.name} on YouTube`);
+      expect(document.querySelectorAll('iframe')).toHaveLength(0);
       expect(screen.queryByTestId('preview')).not.toBeInTheDocument();
     });
 
     it.each([
       ['YouTube', VIDEO_URL],
       ['Vimeo', VIMEO_URL],
-    ])('shows a %s video Pinakes does not know as the platform’s embed, as a post does', (_, url) => {
-      read(null);
-      render(<ResourceItem uri={url} />);
+    ])(
+      'shows a %s video Pinakes does not know as its own preview, the platform’s embed on its Play, as a post does',
+      (site, url) => {
+        read(null);
+        render(<ResourceItem uri={url} />);
 
-      expect(screen.getByTestId('native-embed-resource')).toHaveAttribute('data-kind', 'video');
-      expect(within(screen.getByTestId('native-embed-body')).getByTitle(/video/i).tagName).toBe('IFRAME');
-      expect(screen.queryByTestId('preview')).not.toBeInTheDocument();
-    });
+        expect(screen.getByTestId('native-embed-resource')).toHaveAttribute('data-kind', 'video');
+        const card = screen.getByTestId('resource-link-card');
+        expect(document.querySelectorAll('iframe')).toHaveLength(0);
+        fireEvent.click(within(card).getByRole('button', { name: `Play on ${site}` }));
+        expect(within(screen.getByTestId('resource-link-card-player')).getByTitle(/video/i).tagName).toBe('IFRAME');
+        expect(screen.queryByTestId('preview')).not.toBeInTheDocument();
+      },
+    );
 
     it('keeps no live frame of a video Pinakes does not know while the feed is hidden behind an open post', () => {
       // The box tells its size through a size observer; hidden (`display: none` above it), it is laid out nowhere.
@@ -314,11 +312,12 @@ describe('ResourceItem', () => {
         });
       read(null);
       render(<ResourceItem uri={VIMEO_URL} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Play on Vimeo' }));
       expect(document.querySelectorAll('iframe')).toHaveLength(1);
 
       setHidden(true);
       expect(document.querySelectorAll('iframe')).toHaveLength(0);
-      expect(screen.getByTestId('resource-embed-frame')).toBeInTheDocument();
+      expect(screen.getByTestId('resource-link-card')).toBeInTheDocument();
 
       setHidden(false);
       expect(document.querySelectorAll('iframe')).toHaveLength(1);
@@ -352,12 +351,12 @@ describe('ResourceItem', () => {
       expect(screen.getByTestId('native-embed-resource')).toBeInTheDocument();
     });
 
-    it('keeps X’s embed when every player is removed: an X post is no player', () => {
+    it('keeps the X post when every player is removed: an X post is no player', () => {
       setMedia({ hiddenPlayers: ['youtube', 'vimeo', 'spotify', 'soundcloud', 'mixcloud', 'tidal', 'deezer'] });
       read(POST_CARD);
       render(<ResourceItem uri={POST_URL} />);
 
-      expect(within(screen.getByTestId('native-embed-body')).getByTestId('twitter-tweet')).toBeInTheDocument();
+      expect(within(screen.getByTestId('native-embed-resource')).getByTestId('resource-card-post')).toBeInTheDocument();
     });
 
     it.each([
