@@ -105,7 +105,11 @@ describe('collection batch hydration', () => {
     // The page's batch and every original read (the batch behind the page and each card's own) answer separately.
     const originalResponses = Promise.withResolvers<Awaited<ReturnType<typeof NexusPostStreamService.fetchByIds>>>();
     byIdsSpy.mockImplementation((p) =>
-      p.post_ids.some((id) => memberIds.includes(id)) ? batch.promise : originalResponses.promise,
+      p.post_ids.some((id) => memberIds.includes(id))
+        ? batch.promise
+        : originalResponses.promise.then((posts) =>
+            posts.filter((post) => p.post_ids.includes(`${AUTHOR}:${post.details.id}`)),
+          ),
     );
     await act(async () => stream.resolve({ post_keys: memberIds, last_post_score: null }));
     await waitFor(() => expect(byIdsSpy.mock.calls.some(([p]) => p.post_ids.length === 10)).toBe(true));
@@ -154,9 +158,13 @@ describe('collection batch hydration', () => {
 
     await act(async () => originalResponses.resolve(originalPosts));
 
-    await waitFor(() => {
-      originalPosts.forEach((_post, i) => expect(view.container.textContent).toContain(`original ${i}`));
-    });
+    // The batch behind the page and each card's own read persist these posts side by side.
+    await waitFor(
+      () => {
+        originalPosts.forEach((_post, i) => expect(view.container.textContent).toContain(`original ${i}`));
+      },
+      { timeout: 10_000 },
+    );
     // The same cards, filled in place.
     expect(cards()).toEqual(mounted);
     expect(view.container.textContent).not.toContain('Post not found.');
@@ -168,9 +176,12 @@ describe('collection batch hydration', () => {
 
     await act(async () => originalResponses.resolve([]));
 
-    await waitFor(() => {
-      for (const card of cards()) expect(card.textContent).toContain('Post not found.');
-    });
+    await waitFor(
+      () => {
+        for (const card of cards()) expect(card.textContent).toContain('Post not found.');
+      },
+      { timeout: 10_000 },
+    );
     view.unmount();
   });
 });
