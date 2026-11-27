@@ -78,11 +78,21 @@ export default defineConfig({
             // baseline is treated as unchanged, so `--update` only rewrites
             // baselines that changed beyond sub-pixel/anti-aliasing noise.
             // Trade-off: visual diffs under this ratio won't be flagged.
+            //
+            // `threshold` is the per-pixel colour tolerance: a pixel counts
+            // as mismatched only when its YIQ delta exceeds
+            // `35215 * threshold²`. Anti-aliased pixels are never counted
+            // (`includeAA` stays false). The default 0.1 (allowance ~352)
+            // let a page background change from #eeeef6 to #ffffff (delta
+            // ~134) pass on 98% of the page; 0.05 (allowance ~88) flags it
+            // and still ignores a uniform grey shift of up to ~13 levels.
+            // Trade-off: an even fainter whole-surface change is not flagged.
             expect: {
               toMatchScreenshot: {
                 comparatorName: 'pixelmatch',
                 comparatorOptions: {
                   allowedMismatchedPixelRatio: 0.001,
+                  threshold: 0.05,
                 },
                 // Image-heavy suites (Home, Collections) on WebKit need extra
                 // headroom for layout to settle after fonts/images decode.

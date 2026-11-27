@@ -87,12 +87,16 @@ to genuinely-changed surfaces. The trade-off is that a visual change under 0.1%
 of pixels won't be flagged — still pin every deterministic source below so real
 diffs stand out:
 
-The comparator also has a per-pixel `threshold` (pixelmatch default `0.1`)
-below which a colour change is not counted at all. Very low-contrast content —
-e.g. the dark-gray empty-state illustrations on the near-black background —
-falls entirely under it, so VRT does not guard that artwork, and `--update`
-will not rewrite a baseline whose only change is in such content. To refresh
-those baselines, delete the PNGs first so they are regenerated from scratch.
+The comparator also has a per-pixel `threshold`, set to `0.05` (the pixelmatch
+default is `0.1`). A pixel counts as mismatched only when its YIQ colour delta
+exceeds `35215 × threshold²` (about 88), and anti-aliased pixels are never
+counted. At `0.1` (about 352) a page background changing from `#eeeef6` to
+`#ffffff` (delta about 134) passed across 98% of the page; at `0.05` it fails,
+while a uniform grey shift of up to about 13 levels still passes. Content
+fainter than that — e.g. very low-contrast artwork on the near-black
+background — is still not guarded, and `--update` will not rewrite a baseline
+whose only change is in such content. To refresh those baselines, delete the
+PNGs first so they are regenerated from scratch.
 
 - **Async data** — mock the hook/controller to a fixed value. An unmocked fetch
   resolves differently per run/region. This is the #1 cause of flakiness.
@@ -231,6 +235,13 @@ click-outside would collapse QuickReply, and a focused composer would lose
 `:focus-within`. The baseline is always free of accidental `:hover`. If a test
 moves the cursor by clicking, use `matchVrtFrameScreenshot()` (or call the helper
 again) before the final screenshot.
+
+To capture a `:hover` state, pass the target to the capture instead of hovering
+first: `matchVrtElementScreenshot(crop, name, { hover: target })`. The capture
+scale moves the iframe, so a pointer placed before it no longer sits over the
+target and the next hit test drops `:hover` (Chromium always, WebKit sometimes).
+The helper hovers inside the scaled frame and waits for the target to match
+`:hover` before the screenshot.
 
 Expanded QuickReply tests click the textarea again after the expand motion so
 the field stays focused. Product CSS then hides the prompt
