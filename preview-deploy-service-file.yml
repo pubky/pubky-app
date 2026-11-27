@@ -80,6 +80,8 @@ spec:
             # Optional tier: unset disables the feature. Previews are HTTPS, so the hand-off works.
             - name: PUBKY_RUNTIME_PASSPORT_URL
               value: "https://passport.staging.pubky.app"
+            - name: PUBKY_RUNTIME_PASSPORT_APPLE
+              value: "true"
             # PUBKY_RUNTIME_MARKETPLACE_URL is deliberately unset: the staging marketplace service's CORS
             # allowlist does not include preview origins, so a sign-out revocation from a preview would be
             # blocked by the browser. Unset, sign-out only warns in the console and the Shop's marketplace
