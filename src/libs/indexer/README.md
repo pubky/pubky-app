@@ -353,7 +353,8 @@ writer rebases when it reads `hot` saying its latest generation is folded. A fol
 stops it, a lock, a lost lock, a shared file it cannot read or a failed request, writes the delta instead, never
 overwriting a file it cannot read. Index file calls are requests to the user's homeserver like the crawl's
 (`Crawler.indexFilesOf`): queued at its gate, a lock's calls ahead of crawls and the rest behind them, retried, paced
-after a 429, each try under `indexFileTimeoutMs`.
+after a 429, each try under `indexFileTimeoutMs`. A refusal no retry changes, such as a session not restored yet,
+comes through the transport as it is and fails the call at once, as any error that is not the library's does.
 Only the members' domain groups are written, so what the user opened on demand never is. Over `fileBudgetBytes`
 (200 MB) each pack is trimmed to its share, data first, then windowed history, each oldest first and farthest hop
 first; the graph is never trimmed.

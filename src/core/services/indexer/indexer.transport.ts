@@ -8,7 +8,7 @@ import {
 import { isAppError } from '@/libs/error/error';
 import { ClientErrorCode } from '@/libs/error/error.codes';
 import { ErrorCategory } from '@/libs/error/error.types';
-import { getRetryAfter, hasHttpStatus } from '@/libs/error/error.utils';
+import { getRetryAfter, hasHttpStatus, isRetryable } from '@/libs/error/error.utils';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import {
   HomeserverUnreachableError,
@@ -68,8 +68,9 @@ function accountLock(lock: IndexFileLock): AccountIndexLock {
 }
 
 /**
- * The index's own files in `owner`'s private tree, written with the session. A failure crosses as the library's error,
- * so the crawler's request path retries and paces these calls as it does its own.
+ * The index's own files in `owner`'s private tree, written with the session. A failure that may pass on its own
+ * crosses as the library's error, so the crawler's request path retries and paces these calls as it does its own; a
+ * refusal no retry changes, such as a session not restored yet, crosses as it is and fails the call at once.
  */
 function accountIndexFiles(owner: Pubky): IndexFiles {
   const files = sessionIndexFiles(owner);
@@ -77,7 +78,8 @@ function accountIndexFiles(owner: Pubky): IndexFiles {
     try {
       return await call();
     } catch (error) {
-      throw error instanceof IndexerError ? error : toIndexerError(owner, error);
+      if (error instanceof IndexerError || (isAppError(error) && !isRetryable(error))) throw error;
+      throw toIndexerError(owner, error);
     }
   };
   return {

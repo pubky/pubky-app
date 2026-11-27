@@ -1,7 +1,7 @@
 import type { StorageLock } from '@synonymdev/pubky';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { INDEXER_READ_TIMEOUT_MS, INDEXER_RECORD_MAX_BYTES } from '@/config/indexer';
-import { ClientErrorCode, RateLimitErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
+import { AuthErrorCode, ClientErrorCode, RateLimitErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
@@ -201,6 +201,13 @@ describe('createIndexerTransport', () => {
       expect(limited).toBeInstanceOf(RateLimitedError);
       expect(limited).toMatchObject({ homeserver: OWNER, retryAfterMs: 2000 });
       expect(failed).toBeInstanceOf(HomeserverUnreachableError);
+    });
+
+    it('lets a refusal no retry changes through as it is, such as a session not restored yet', async () => {
+      const refused = Err.auth(AuthErrorCode.UNAUTHORIZED, 'Reading owned storage requires a session.', params);
+      vi.mocked(HomeserverService.getBytesIfExists).mockRejectedValueOnce(refused);
+
+      await expect(transport.indexFiles.read(HOT)).rejects.toBe(refused);
     });
 
     it('writes unlocked under a lock of a homeserver without locks', async () => {
