@@ -1,4 +1,5 @@
 import type { MigrationReport } from 'pubky-social-migrator';
+import { listPrefix } from 'pubky-social-specs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthApplication } from '@/application/auth/auth';
 import { BootstrapApplication } from '@/application/bootstrap/bootstrap';
@@ -402,8 +403,9 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
         }),
       );
       vi.spyOn(AuthApplication, 'saveSession').mockResolvedValue(mockGrantReference('new-grant'));
-      // The account has not been updated yet: no done flag
+      // The account has not been updated yet: no done flag, and legacy data under the 0.x tree
       vi.spyOn(HomeserverService, 'getBytesIfExists').mockResolvedValue(null);
+      vi.spyOn(HomeserverService, 'list').mockResolvedValue([`${listPrefix(pubky, 'legacy')}profile.json`]);
     });
 
     it('runs the engine before the session enters the store and bootstraps after it passed', async () => {
@@ -473,6 +475,55 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
       expect(run).toHaveBeenCalledOnce();
       expect(useAuthStore.getState()).toMatchObject({ session, restoreStatus: 'ready' });
       expect(readSocialMigrationRecord(pubky)?.migratedRev).toBe(SOCIAL_MIGRATION_TRANSFORM_REV);
+    });
+
+    it('marks a new empty Pubky Passport account inline with no migration screen', async () => {
+      vi.mocked(HomeserverService.list).mockResolvedValue([]);
+      const run = vi.spyOn(HomeserverService, 'migrateToSocialV1').mockResolvedValue(done());
+      const { seen, unsubscribe } = trackStore();
+
+      const flow = await AuthController.getPassportAuthUrl({ xCallback: { xSource: 'Pubky' } });
+      const approved = await flow.awaitApproval;
+      await AuthController.initializeAuthenticatedSession({ session: approved });
+      unsubscribe();
+
+      expect(run).toHaveBeenCalledOnce();
+      expect(continues).toBe(0);
+      expect(seen).not.toContain('social-migration');
+      expect(seen).toEqual(['restoring', 'restoring+session', 'ready+session']);
+      expect(BootstrapApplication.initialize).toHaveBeenCalledOnce();
+      expect(useAuthStore.getState()).toMatchObject({ session, restoreStatus: 'ready' });
+      expect(readSocialMigrationRecord(pubky)?.migratedRev).toBe(SOCIAL_MIGRATION_TRANSFORM_REV);
+    });
+
+    it('marks an empty Ring account inline with no migration screen', async () => {
+      vi.mocked(HomeserverService.list).mockResolvedValue([]);
+      const run = vi.spyOn(HomeserverService, 'migrateToSocialV1').mockResolvedValue(done());
+      const { seen, unsubscribe } = trackStore();
+
+      expect(await signInWithRing()).toBe(session);
+      unsubscribe();
+
+      expect(run).toHaveBeenCalledOnce();
+      expect(continues).toBe(0);
+      expect(seen).not.toContain('social-migration');
+      expect(seen).toEqual(['restoring', 'restoring+session', 'ready+session']);
+      expect(useAuthStore.getState()).toMatchObject({ session, restoreStatus: 'ready' });
+      expect(readSocialMigrationRecord(pubky)?.migratedRev).toBe(SOCIAL_MIGRATION_TRANSFORM_REV);
+    });
+
+    it('falls back to the migration screen when the legacy-data check fails on sign-in', async () => {
+      vi.mocked(HomeserverService.list).mockRejectedValue(new Error('offline'));
+      const run = vi.spyOn(HomeserverService, 'migrateToSocialV1').mockResolvedValue(done());
+      const { seen, unsubscribe } = trackStore();
+
+      expect(await signInWithRing()).toBe(session);
+      unsubscribe();
+
+      expect(continues).toBe(1);
+      expect(seen).toEqual(['restoring', 'social-migration', 'restoring+session', 'ready+session']);
+      expect(run).toHaveBeenCalledOnce();
+      expect(useAuthStore.getState()).toMatchObject({ session, restoreStatus: 'ready' });
     });
 
     it('admits the fresh grant before the auth record publishes it, so no other tab can restore it unadmitted', async () => {
@@ -564,6 +615,7 @@ describe('AuthController and the social v1 migration gate (ADR-0026)', () => {
       vi.spyOn(AuthApplication, 'saveSession').mockResolvedValue(mockGrantReference('upgraded-grant'));
       // No done flag: an upgrade without a trusted record reads it like a sign-in
       vi.spyOn(HomeserverService, 'getBytesIfExists').mockResolvedValue(null);
+      vi.spyOn(HomeserverService, 'list').mockResolvedValue([`${listPrefix(pubky, 'legacy')}profile.json`]);
       // The replaced grant's retirement runs detached once the upgrade is adopted (asserted by each case)
       vi.spyOn(AuthApplication, 'logout').mockResolvedValue(undefined);
       vi.spyOn(AuthApplication, 'removeSessionRecord').mockResolvedValue(undefined);
