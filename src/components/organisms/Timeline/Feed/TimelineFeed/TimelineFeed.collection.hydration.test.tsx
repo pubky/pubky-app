@@ -26,6 +26,9 @@ vi.mock('next/navigation', () => ({
 
 const AUTHOR = 'pxnu33x7jtpx9ar1ytsi4yxbp6a5o36gwhffs8zoxmbuptici1jy' as Pubky;
 
+/** Longer than the 10 s the waits below allow, so a slow runner fails on a wait, never on the test's own timeout. */
+const WAITS = { timeout: 15_000 };
+
 describe('collection batch hydration', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -152,7 +155,7 @@ describe('collection batch hydration', () => {
     return { view, cards, originalResponses, originalPosts };
   }
 
-  it('mounts cold repost cards before their originals, each showing its original once it arrives', async () => {
+  it('mounts cold repost cards before their originals, each showing its original once it arrives', WAITS, async () => {
     const { view, cards, originalResponses, originalPosts } = await renderColdReposts();
     const mounted = cards();
 
@@ -171,7 +174,7 @@ describe('collection batch hydration', () => {
     view.unmount();
   });
 
-  it('ends a repost card on not found when the source has no original', async () => {
+  it('ends a repost card on not found when the source has no original', WAITS, async () => {
     const { view, cards, originalResponses } = await renderColdReposts();
 
     await act(async () => originalResponses.resolve([]));
