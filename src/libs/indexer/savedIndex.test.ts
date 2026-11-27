@@ -257,6 +257,11 @@ describe('saved index folder', () => {
       expect(run.tail <= before).toBe(true);
       expect(run.entries).toHaveLength(1);
     }
+
+    // A save after a commit that changed no member's heads leaves the delta as it is.
+    from = w.files.requests.length;
+    expect(await a.flush()).toBe('unchanged');
+    expect(w.files.requests.length).toBe(from);
   });
 
   it('rebases its delta once hot records its generation folded, and then carries only what came after', async () => {

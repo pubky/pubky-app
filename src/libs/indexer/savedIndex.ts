@@ -268,6 +268,11 @@ function higherHeads(a: Heads, b: Heads): Heads {
   return out;
 }
 
+function sameHeads(a: Heads, b: Heads): boolean {
+  const ids = Object.keys(a);
+  return ids.length === Object.keys(b).length && ids.every((id) => b[id]?.[0] === a[id][0] && b[id]?.[1] === a[id][1]);
+}
+
 export interface SavedIndexParams<D> {
   files: IndexFiles;
   store: IndexStore<D>;
@@ -870,13 +875,16 @@ export function createSavedIndex<D>(params: SavedIndexParams<D>): SavedIndex {
         }
       }
       if (bytes === null) return 'unchanged';
+      const sent = higherHeads(state.base, delta.heads);
+      // The delta on the homeserver already carries these heads: a commit of something else changed nothing here.
+      if (state.gen > 0 && sameHeads(sent, state.sent)) return 'unchanged';
       const path = deltaPath(await folderPath(), writer);
       await files.write(path, sealer === undefined ? bytes : await sealer.seal(bytes, path));
       await writeState({
         ...state,
         gen: state.gen + 1,
         since: state.since ?? now(),
-        sent: higherHeads(state.base, delta.heads),
+        sent,
       });
       return 'delta';
     },
