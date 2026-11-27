@@ -1,5 +1,6 @@
+import type { StorageLock } from '@synonymdev/pubky';
 import {
-  INDEXER_FILE_NAME_PATTERN,
+  INDEXER_FILE_SEGMENT_PATTERN,
   INDEXER_FILES_PATH,
   INDEXER_READ_TIMEOUT_MS,
   INDEXER_RECORD_MAX_BYTES,
@@ -12,10 +13,12 @@ import { HttpStatusCode } from '@/libs/http/http.types';
 import {
   HomeserverUnreachableError,
   type IndexerError,
+  IndexFileLockedError,
+  IndexFileLockLostError,
   InvalidIndexInputError,
   RateLimitedError,
 } from '@/libs/indexer/indexer.errors';
-import type { IndexerTransport } from '@/libs/indexer/transport.types';
+import type { IndexerTransport, IndexFileLock, IndexFiles } from '@/libs/indexer/transport.types';
 import type { Pubky } from '@/models/models.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 
@@ -33,31 +36,80 @@ function toIndexerError(homeserver: string, error: unknown): IndexerError {
   return new HomeserverUnreachableError(homeserver, { cause: error });
 }
 
-function indexFileUrl(owner: Pubky, name: string): string {
-  if (!INDEXER_FILE_NAME_PATTERN.test(name)) throw new InvalidIndexInputError(`invalid index file name: ${name}`);
-  return `pubky://${owner}${INDEXER_FILES_PATH}${name}`;
+/** A path of the index's own folder: segments a path carries unescaped, none of them a dot segment. */
+function isIndexFilePath(path: string, prefix: boolean): boolean {
+  const segments = path.split('/');
+  // A prefix names a folder: empty, or ending in `/`.
+  if (prefix && segments.pop() !== '') return false;
+  return segments.every((segment) => INDEXER_FILE_SEGMENT_PATTERN.test(segment) && segment !== '.' && segment !== '..');
 }
 
-type IndexFiles = Pick<IndexerTransport, 'listIndexFiles' | 'readIndexFile' | 'writeIndexFile' | 'deleteIndexFile'>;
+function indexFileUrl(owner: Pubky, path: string, prefix = false): string {
+  if (!isIndexFilePath(path, prefix)) throw new InvalidIndexInputError(`invalid index file path: ${path}`);
+  return `pubky://${owner}${INDEXER_FILES_PATH}${path}`;
+}
+
+/**
+ * The homeserver's lock on one index file. `storage` is `null` on a homeserver without locks, where the library's
+ * read, merge, write runs unlocked: two folds at once can then lose one, never write anything untrue.
+ */
+class AccountIndexLock implements IndexFileLock {
+  constructor(
+    readonly path: string,
+    readonly url: string,
+    readonly storage: StorageLock | null,
+  ) {}
+}
+
+/** The account lock behind a lock the library hands back: it only ever holds the ones this transport made. */
+function accountLock(lock: IndexFileLock): AccountIndexLock {
+  if (!(lock instanceof AccountIndexLock)) throw new InvalidIndexInputError(`not a lock of this account: ${lock.path}`);
+  return lock;
+}
 
 /** The index's own files in `owner`'s private tree, written with the session. */
 function accountIndexFiles(owner: Pubky): IndexFiles {
+  const root = `pubky://${owner}${INDEXER_FILES_PATH}`;
   return {
-    async listIndexFiles() {
-      const urls = await HomeserverService.listAll({ baseDirectory: `pubky://${owner}${INDEXER_FILES_PATH}` });
-      // A subdirectory ends in `/` and names nothing here.
-      const names = urls.map((url) => url.slice(url.lastIndexOf('/') + 1));
-      return names.filter((name) => INDEXER_FILE_NAME_PATTERN.test(name));
+    async list(prefix) {
+      const urls = await HomeserverService.listAll({ baseDirectory: indexFileUrl(owner, prefix, true) });
+      // Every file at any depth; a folder entry ends in `/` and names no file.
+      return urls
+        .filter((url) => url.startsWith(root) && !url.endsWith('/'))
+        .map((url) => url.slice(root.length))
+        .filter((path) => isIndexFilePath(path, false));
     },
-    async readIndexFile(name) {
-      const file = await HomeserverService.getBytesIfExists(indexFileUrl(owner, name));
+    async read(path) {
+      const file = await HomeserverService.getBytesIfExists(indexFileUrl(owner, path));
       return file?.bytes ?? null;
     },
-    async writeIndexFile(name, bytes) {
-      await HomeserverService.putBlob({ url: indexFileUrl(owner, name), blob: bytes });
+    async write(path, bytes, lock) {
+      const url = indexFileUrl(owner, path);
+      const held = lock === undefined ? null : accountLock(lock).storage;
+      if (held === null) await HomeserverService.putBlob({ url, blob: bytes });
+      else if (!(await HomeserverService.putBytesLocked(url, held, bytes))) throw new IndexFileLockLostError(path);
     },
-    async deleteIndexFile(name) {
-      await HomeserverService.deleteIdempotent(indexFileUrl(owner, name));
+    async delete(path, lock) {
+      const url = indexFileUrl(owner, path);
+      const held = lock === undefined ? null : accountLock(lock).storage;
+      if (held === null) await HomeserverService.deleteIdempotent(url);
+      else if (!(await HomeserverService.deleteLocked(url, held))) throw new IndexFileLockLostError(path);
+    },
+    async lock(path, seconds) {
+      const url = indexFileUrl(owner, path);
+      const granted = await HomeserverService.lockOwned(url, seconds);
+      if (granted === 'locked') throw new IndexFileLockedError(path);
+      return new AccountIndexLock(path, url, granted === 'unsupported' ? null : granted);
+    },
+    async refresh(lock, seconds) {
+      const { path, url, storage } = accountLock(lock);
+      if (storage !== null && !(await HomeserverService.refreshLock(url, storage, seconds))) {
+        throw new IndexFileLockLostError(path);
+      }
+    },
+    async unlock(lock) {
+      const { url, storage } = accountLock(lock);
+      if (storage !== null) await HomeserverService.unlockOwned(url, storage);
     },
   };
 }
@@ -68,10 +120,13 @@ const noStorage = (): never => {
 
 /** A visitor has no storage: nothing to list or read, and the indexer saves no index for one. */
 const VISITOR_INDEX_FILES: IndexFiles = {
-  listIndexFiles: async () => [],
-  readIndexFile: async () => null,
-  writeIndexFile: async () => noStorage(),
-  deleteIndexFile: async () => noStorage(),
+  list: async () => [],
+  read: async () => null,
+  write: async () => noStorage(),
+  delete: async () => noStorage(),
+  lock: async () => noStorage(),
+  refresh: async () => noStorage(),
+  unlock: async () => noStorage(),
 };
 
 /**
@@ -80,7 +135,7 @@ const VISITOR_INDEX_FILES: IndexFiles = {
  */
 export function createIndexerTransport(owner: Pubky | null): IndexerTransport {
   return {
-    ...(owner === null ? VISITOR_INDEX_FILES : accountIndexFiles(owner)),
+    indexFiles: owner === null ? VISITOR_INDEX_FILES : accountIndexFiles(owner),
     async resolveHomeserver(user) {
       try {
         return await HomeserverService.resolveIndexedUserHomeserver(user);

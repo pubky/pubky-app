@@ -1,4 +1,4 @@
-import { Address, Client, Pubky, PublicKey, resolvePubky, Session } from '@synonymdev/pubky';
+import { Address, Client, Pubky, PublicKey, resolvePubky, Session, type StorageLock } from '@synonymdev/pubky';
 import type { MigrationLock, MigrationReport, ProgressEvent } from 'pubky-social-migrator';
 import { getAuthClientId } from '@/config/auth';
 import { INDEXER_READ_TIMEOUT_MS } from '@/config/indexer';
@@ -787,6 +787,97 @@ export class HomeserverService {
       retryOptions,
     );
     await assertOk({ response, url, operation: 'putBlob' });
+  }
+
+  /** The session path of an owned `url`; anything else is refused before a request. */
+  private static ownedPathOf(url: string, operation: string): TOwnedSessionPath {
+    const owned = this.resolveOwnedSessionPath(url);
+    if (owned) return owned;
+    throw Err.auth(AuthErrorCode.UNAUTHORIZED, 'Locking storage requires a session for the resource owner.', {
+      service: ErrorService.Homeserver,
+      operation,
+      context: { url },
+    });
+  }
+
+  /**
+   * Takes the homeserver's exclusive write lock on an owned file (WebDAV `LOCK`): while it lives, only writes
+   * presenting it land on the path, and it ends on its own after the lifetime granted (at most 60 s). `locked` while
+   * another client holds the path (423), `unsupported` on a homeserver without locks (405). Expected outcomes, so
+   * neither is reported as an error.
+   */
+  static async lockOwned(url: string, seconds: number): Promise<StorageLock | 'locked' | 'unsupported'> {
+    const { session, path } = this.ownedPathOf(url, 'lockOwned');
+    try {
+      return await this.withActiveSession(session, () => session.storage.lock(path, seconds));
+    } catch (error) {
+      const status = extractStatusCode(error);
+      if (status === HttpStatusCode.LOCKED) return 'locked';
+      if (status === HttpStatusCode.METHOD_NOT_ALLOWED) return 'unsupported';
+      return handleError({ error, additionalContext: { url, operation: 'lockOwned' } });
+    }
+  }
+
+  /**
+   * Writes an owned file under a lock this client holds. `false` when the lock expired or was released (412): the
+   * homeserver refused the write and nothing landed.
+   */
+  static async putBytesLocked(url: string, lock: StorageLock, bytes: Uint8Array): Promise<boolean> {
+    const { session, path } = this.ownedPathOf(url, 'putBytesLocked');
+    try {
+      await retryHomeserverWrite(HttpMethod.PUT, () =>
+        this.withActiveSession(session, () => session.storage.putBytesLocked(lock, bytes.slice())),
+      );
+    } catch (error) {
+      if (extractStatusCode(error) === HttpStatusCode.PRECONDITION_FAILED) return false;
+      return handleError({ error, additionalContext: { url, method: HttpMethod.PUT, operation: 'putBytesLocked' } });
+    }
+    this.notifyOwnedWrite(path);
+    return true;
+  }
+
+  /**
+   * Deletes an owned file under a lock this client holds; a missing file counts as deleted. `false` when the lock is
+   * gone, as `putBytesLocked`.
+   */
+  static async deleteLocked(url: string, lock: StorageLock): Promise<boolean> {
+    const { session, path } = this.ownedPathOf(url, 'deleteLocked');
+    try {
+      await retryHomeserverWrite(HttpMethod.DELETE, () =>
+        this.withActiveSession(session, () => session.storage.deleteLocked(lock)),
+      );
+    } catch (error) {
+      const status = extractStatusCode(error);
+      if (status === HttpStatusCode.PRECONDITION_FAILED) return false;
+      if (status !== HttpStatusCode.NOT_FOUND) {
+        return handleError({ error, additionalContext: { url, method: HttpMethod.DELETE, operation: 'deleteLocked' } });
+      }
+    }
+    this.notifyOwnedWrite(path);
+    return true;
+  }
+
+  /** Restarts the lifetime of a lock this client holds. `false` once the lock is gone (412). */
+  static async refreshLock(url: string, lock: StorageLock, seconds: number): Promise<boolean> {
+    const { session } = this.ownedPathOf(url, 'refreshLock');
+    try {
+      await this.withActiveSession(session, () => session.storage.refreshLock(lock, seconds));
+      return true;
+    } catch (error) {
+      if (extractStatusCode(error) === HttpStatusCode.PRECONDITION_FAILED) return false;
+      return handleError({ error, additionalContext: { url, operation: 'refreshLock' } });
+    }
+  }
+
+  /** Releases a lock this client holds; one that is gone already (409) counts as released. */
+  static async unlockOwned(url: string, lock: StorageLock): Promise<void> {
+    const { session } = this.ownedPathOf(url, 'unlockOwned');
+    try {
+      await this.withActiveSession(session, () => session.storage.unlock(lock));
+    } catch (error) {
+      if (extractStatusCode(error) === HttpStatusCode.CONFLICT) return;
+      handleError({ error, additionalContext: { url, operation: 'unlockOwned' } });
+    }
   }
 
   /**

@@ -27,8 +27,10 @@ export const enum HttpStatusCode {
   REQUEST_TIMEOUT = 408,
   CONFLICT = 409,
   GONE = 410,
+  PRECONDITION_FAILED = 412,
   PAYLOAD_TOO_LARGE = 413,
   UNPROCESSABLE_ENTITY = 422,
+  LOCKED = 423,
   TOO_MANY_REQUESTS = 429,
 
   // Server errors

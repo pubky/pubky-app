@@ -8,8 +8,8 @@ import { APP_PRIVATE_PATH } from '@/config/app-files';
 /** The index's own files, in the app's private tree (covered by `SOCIAL_V1_APP_CAPABILITIES`). */
 export const INDEXER_FILES_PATH = `${APP_PRIVATE_PATH}index/`;
 
-/** Names the index gives its files: only characters a path segment carries unescaped. */
-export const INDEXER_FILE_NAME_PATTERN = /^[A-Za-z0-9._~-]+$/;
+/** Each segment of a path in the index's folder: only characters a path segment carries unescaped. */
+export const INDEXER_FILE_SEGMENT_PATTERN = /^[A-Za-z0-9._~-]+$/;
 
 /**
  * How long one anonymous read of the crawl (a page of events, one file) may take. A page is a bounded, non-live

@@ -1,10 +1,17 @@
+import type { StorageLock } from '@synonymdev/pubky';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { INDEXER_READ_TIMEOUT_MS, INDEXER_RECORD_MAX_BYTES } from '@/config/indexer';
 import { ClientErrorCode, RateLimitErrorCode, ValidationErrorCode } from '@/libs/error/error.codes';
 import { Err } from '@/libs/error/error.factories';
 import { ErrorService } from '@/libs/error/error.types';
 import { HttpStatusCode } from '@/libs/http/http.types';
-import { HomeserverUnreachableError, InvalidIndexInputError, RateLimitedError } from '@/libs/indexer/indexer.errors';
+import {
+  HomeserverUnreachableError,
+  IndexFileLockedError,
+  IndexFileLockLostError,
+  InvalidIndexInputError,
+  RateLimitedError,
+} from '@/libs/indexer/indexer.errors';
 import type { Pubky } from '@/models/models.types';
 import { HomeserverService } from '@/services/homeserver/homeserver';
 import { createIndexerTransport } from './indexer.transport';
@@ -18,6 +25,11 @@ vi.mock('@/services/homeserver/homeserver', () => ({
     getBytesIfExists: vi.fn(),
     putBlob: vi.fn(),
     deleteIdempotent: vi.fn(),
+    lockOwned: vi.fn(),
+    putBytesLocked: vi.fn(),
+    deleteLocked: vi.fn(),
+    refreshLock: vi.fn(),
+    unlockOwned: vi.fn(),
   },
 }));
 
@@ -130,38 +142,85 @@ describe('createIndexerTransport', () => {
   });
 
   describe('index files', () => {
-    it('keeps them in the app’s private index directory', async () => {
-      vi.mocked(HomeserverService.listAll).mockResolvedValue([`${FILES}a.bin`, `${FILES}nested/`, `${FILES}b.bin`]);
+    const HOT = '3/gbb13a/hot';
+
+    it('keeps them in the app’s private index directory, listing every file under a prefix', async () => {
+      vi.mocked(HomeserverService.listAll).mockResolvedValue([
+        `${FILES}3/gbb13a/d/w1`,
+        `${FILES}3/gbb13a/d/`,
+        `${FILES}3/gbb13a/hot`,
+        `${FILES}old.idx`,
+      ]);
       vi.mocked(HomeserverService.getBytesIfExists).mockResolvedValue(null);
 
-      await expect(transport.listIndexFiles()).resolves.toEqual(['a.bin', 'b.bin']);
-      await expect(transport.readIndexFile('a.bin')).resolves.toBeNull();
-      await transport.writeIndexFile('a.bin', new Uint8Array([2]));
-      await transport.deleteIndexFile('a.bin');
+      await expect(transport.indexFiles.list('')).resolves.toEqual(['3/gbb13a/d/w1', HOT, 'old.idx']);
+      await expect(transport.indexFiles.read(HOT)).resolves.toBeNull();
+      await transport.indexFiles.write('old.idx', new Uint8Array([2]));
+      await transport.indexFiles.delete('old.idx');
 
       expect(HomeserverService.listAll).toHaveBeenCalledWith({ baseDirectory: FILES });
-      expect(HomeserverService.getBytesIfExists).toHaveBeenCalledWith(`${FILES}a.bin`);
-      expect(HomeserverService.putBlob).toHaveBeenCalledWith({ url: `${FILES}a.bin`, blob: new Uint8Array([2]) });
-      expect(HomeserverService.deleteIdempotent).toHaveBeenCalledWith(`${FILES}a.bin`);
+      expect(HomeserverService.getBytesIfExists).toHaveBeenCalledWith(`${FILES}${HOT}`);
+      expect(HomeserverService.putBlob).toHaveBeenCalledWith({ url: `${FILES}old.idx`, blob: new Uint8Array([2]) });
+      expect(HomeserverService.deleteIdempotent).toHaveBeenCalledWith(`${FILES}old.idx`);
     });
 
-    it('refuses a name that is not a plain path segment', async () => {
-      await expect(transport.writeIndexFile('../settings.json', new Uint8Array())).rejects.toBeInstanceOf(
-        InvalidIndexInputError,
+    it('writes and deletes under the homeserver’s lock, and maps a held or lost lock to the library’s errors', async () => {
+      const storageLock = {} as StorageLock;
+      vi.mocked(HomeserverService.lockOwned).mockResolvedValueOnce(storageLock).mockResolvedValueOnce('locked');
+      vi.mocked(HomeserverService.putBytesLocked).mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+      vi.mocked(HomeserverService.deleteLocked).mockResolvedValueOnce(false);
+      vi.mocked(HomeserverService.refreshLock).mockResolvedValueOnce(false);
+
+      const lock = await transport.indexFiles.lock(HOT, 30);
+      await transport.indexFiles.write(HOT, new Uint8Array([1]), lock);
+      await expect(transport.indexFiles.write(HOT, new Uint8Array([1]), lock)).rejects.toBeInstanceOf(
+        IndexFileLockLostError,
       );
+      await expect(transport.indexFiles.delete(HOT, lock)).rejects.toBeInstanceOf(IndexFileLockLostError);
+      await expect(transport.indexFiles.refresh(lock, 30)).rejects.toBeInstanceOf(IndexFileLockLostError);
+      await transport.indexFiles.unlock(lock);
+      await expect(transport.indexFiles.lock(HOT, 30)).rejects.toBeInstanceOf(IndexFileLockedError);
+
+      expect(HomeserverService.lockOwned).toHaveBeenCalledWith(`${FILES}${HOT}`, 30);
+      expect(HomeserverService.putBytesLocked).toHaveBeenCalledWith(`${FILES}${HOT}`, storageLock, new Uint8Array([1]));
+      expect(HomeserverService.unlockOwned).toHaveBeenCalledWith(`${FILES}${HOT}`, storageLock);
       expect(HomeserverService.putBlob).not.toHaveBeenCalled();
+    });
+
+    it('writes unlocked under a lock of a homeserver without locks', async () => {
+      vi.mocked(HomeserverService.lockOwned).mockResolvedValueOnce('unsupported');
+
+      const lock = await transport.indexFiles.lock(HOT, 30);
+      await transport.indexFiles.write(HOT, new Uint8Array([1]), lock);
+      await transport.indexFiles.refresh(lock, 30);
+      await transport.indexFiles.unlock(lock);
+
+      expect(HomeserverService.putBlob).toHaveBeenCalledWith({ url: `${FILES}${HOT}`, blob: new Uint8Array([1]) });
+      expect(HomeserverService.putBytesLocked).not.toHaveBeenCalled();
+      expect(HomeserverService.refreshLock).not.toHaveBeenCalled();
+      expect(HomeserverService.unlockOwned).not.toHaveBeenCalled();
+    });
+
+    it('refuses a path that leaves the folder or is no plain path', async () => {
+      for (const path of ['../settings.json', '3/../../x', '3//hot', '3/hot/', 'a b']) {
+        await expect(transport.indexFiles.write(path, new Uint8Array())).rejects.toBeInstanceOf(InvalidIndexInputError);
+      }
+      await expect(transport.indexFiles.list('3/hot')).rejects.toBeInstanceOf(InvalidIndexInputError);
+      expect(HomeserverService.putBlob).not.toHaveBeenCalled();
+      expect(HomeserverService.listAll).not.toHaveBeenCalled();
     });
 
     it('has none for a visitor, who has no storage', async () => {
       const visitor = createIndexerTransport(null);
 
-      await expect(visitor.listIndexFiles()).resolves.toEqual([]);
-      await expect(visitor.readIndexFile('a.bin')).resolves.toBeNull();
-      await expect(visitor.writeIndexFile('a.bin', new Uint8Array([2]))).rejects.toBeInstanceOf(InvalidIndexInputError);
-      await expect(visitor.deleteIndexFile('a.bin')).rejects.toBeInstanceOf(InvalidIndexInputError);
+      await expect(visitor.indexFiles.list('')).resolves.toEqual([]);
+      await expect(visitor.indexFiles.read(HOT)).resolves.toBeNull();
+      await expect(visitor.indexFiles.write(HOT, new Uint8Array([2]))).rejects.toBeInstanceOf(InvalidIndexInputError);
+      await expect(visitor.indexFiles.delete(HOT)).rejects.toBeInstanceOf(InvalidIndexInputError);
+      await expect(visitor.indexFiles.lock(HOT, 30)).rejects.toBeInstanceOf(InvalidIndexInputError);
       expect(HomeserverService.listAll).not.toHaveBeenCalled();
       expect(HomeserverService.putBlob).not.toHaveBeenCalled();
-      expect(HomeserverService.deleteIdempotent).not.toHaveBeenCalled();
+      expect(HomeserverService.lockOwned).not.toHaveBeenCalled();
     });
   });
 });
