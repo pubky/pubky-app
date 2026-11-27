@@ -235,6 +235,40 @@ describe('queryNexus routing by indexer sources', () => {
       expect(indexer.request).toHaveBeenCalledTimes(2);
     });
 
+    // A card reads its post through by_ids: a settled answer without the post is its not-found state
+    it('keeps a by_ids read unsettled until the post it lacks is loaded', async () => {
+      const indexer = fakeIndexer(
+        answer([], [{ kind: 'post', author: 'olga', postId: '0034' }]),
+        answer([{ id: 'olga:0034' }]),
+      );
+      const load = Promise.withResolvers<void>();
+      indexer.ensurePost.mockReturnValueOnce(load.promise);
+      const body = JSON.stringify({ post_ids: ['olga:0034'] });
+      let settled = false;
+
+      const read = queryNexus({ url: uniqueUrl('stream/posts/by_ids'), method: HttpMethod.POST, body }).finally(() => {
+        settled = true;
+      });
+      await vi.waitFor(() => expect(indexer.ensurePost).toHaveBeenCalledOnce());
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(settled).toBe(false);
+
+      load.resolve();
+      await expect(read).resolves.toEqual([{ id: 'olga:0034' }]);
+    });
+
+    it('answers a by_ids read at once without a post the index proves absent', async () => {
+      const indexer = fakeIndexer(answer([]));
+      const body = JSON.stringify({ post_ids: ['olga:0035'] });
+
+      await expect(
+        queryNexus({ url: uniqueUrl('stream/posts/by_ids'), method: HttpMethod.POST, body }),
+      ).resolves.toEqual([]);
+
+      expect(indexer.ensurePost).not.toHaveBeenCalled();
+      expect(indexer.request).toHaveBeenCalledOnce();
+    });
+
     it('loads the author of a stream the index has not loaded, and asks once more', async () => {
       const indexer = fakeIndexer(
         answer({ post_keys: [] }, [{ kind: 'user', user: 'olga' }]),

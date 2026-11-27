@@ -1383,7 +1383,7 @@ describe('PostStreamApplication', () => {
       expectPostIds(result.nextPageIds.slice(3, 10), 4, 7);
     });
 
-    it('should fetch original posts for reposts when served from cache (full cache hit)', async () => {
+    it('starts loading the originals of reposts served from cache (full cache hit)', async () => {
       const repostAuthor = 'reposter-user';
       const originalAuthor = 'original-author';
       const originalPostId = 'original-post-123';
@@ -1440,12 +1440,14 @@ describe('PostStreamApplication', () => {
       // This is a full cache hit, so cacheMissPostIds should be empty for the stream posts
       expect(result.cacheMissPostIds).toEqual([]);
 
-      // Verify that the original post is fetched even though cacheMissPostIds is empty
-      // (the repost was served from cache, but its original post was missing)
-      expect(fetchByIdsSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          post_ids: expect.arrayContaining([originalPostCompositeId]),
-        }),
+      // The original is asked for even though cacheMissPostIds is empty (the repost was served
+      // from cache, its original was not), behind the page
+      await vi.waitFor(() =>
+        expect(fetchByIdsSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            post_ids: expect.arrayContaining([originalPostCompositeId]),
+          }),
+        ),
       );
     });
   });
@@ -2028,7 +2030,7 @@ describe('PostStreamApplication', () => {
       expect(UserDetailsModel.findByIdsPreserveOrder).toHaveBeenCalled();
     });
 
-    it('should fetch original posts for reposts', async () => {
+    it('reports the page hydrated before the originals of its reposts answer, and still asks for them', async () => {
       const repostAuthor = 'reposter-user';
       const originalAuthor = 'original-author';
       const originalPostUri = `pubky://${originalAuthor}/pub/pubky.app/posts/original-post`;
@@ -2049,28 +2051,39 @@ describe('PostStreamApplication', () => {
       const mocks = setupDefaultMocks();
       mocks.getUserDetails.mockResolvedValue([{ id: repostAuthor } as UserDetailsModelSchema]);
 
-      // Mock post fetching service
+      // The original answers only when the test says so
+      const originalResponse = Promise.withResolvers<NexusPost[]>();
       const fetchPostsByIdsSpy = vi
         .spyOn(NexusPostStreamService, 'fetchByIds')
         .mockResolvedValueOnce([repostNexusPost]) // fetchMissingPostsFromNexus: posts
-        .mockResolvedValueOnce([originalNexusPost]); // fetchOriginalPostsByUris: original posts
+        .mockReturnValueOnce(originalResponse.promise); // fetchOriginalPostsByUris: original posts
 
       // Mock user fetching service for original post's author
       vi.spyOn(NexusUserStreamService, 'fetchByIds').mockResolvedValue([createMockNexusUser(originalAuthor)]);
 
       // Mock that original post is NOT in cache (needs to be fetched)
       vi.spyOn(LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValueOnce([originalPostCompositeId]);
+      const persistSpy = mocks.persistPosts;
 
-      await PostStreamApplication.fetchMissingPostsFromNexus({
-        cacheMissPostIds: [`${repostAuthor}:repost-1`],
-        viewerId,
-      });
-
-      // Should have called fetchByIds to fetch original post
-      expect(fetchPostsByIdsSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          post_ids: expect.arrayContaining([originalPostCompositeId]),
+      await expect(
+        PostStreamApplication.fetchMissingPostsFromNexus({
+          cacheMissPostIds: [`${repostAuthor}:repost-1`],
+          viewerId,
         }),
+      ).resolves.toBe(true);
+
+      await vi.waitFor(() =>
+        expect(fetchPostsByIdsSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            post_ids: expect.arrayContaining([originalPostCompositeId]),
+          }),
+        ),
+      );
+      expect(persistSpy).toHaveBeenCalledTimes(1);
+
+      originalResponse.resolve([originalNexusPost]);
+      await vi.waitFor(() =>
+        expect(persistSpy).toHaveBeenLastCalledWith(expect.objectContaining({ posts: [originalNexusPost] })),
       );
     });
 
@@ -2141,19 +2154,21 @@ describe('PostStreamApplication', () => {
       const mocks = setupDefaultMocks();
       mocks.getUserDetails.mockResolvedValue([{ id: repostAuthor } as UserDetailsModelSchema]);
 
-      vi.spyOn(NexusPostStreamService, 'fetchByIds')
+      const fetchPostsByIdsSpy = vi
+        .spyOn(NexusPostStreamService, 'fetchByIds')
         .mockResolvedValueOnce([repostNexusPost]) // fetchMissingPostsFromNexus: posts
         .mockRejectedValueOnce(new Error('Failed to fetch original posts')); // fetchOriginalPostsByUris fails
 
       vi.spyOn(LocalStreamPostsService, 'getNotPersistedPostsInCache').mockResolvedValueOnce([originalPostCompositeId]);
 
-      // Should not throw - error should be handled gracefully
+      // The page's own hydration succeeds; the failed original is left to its card
       await expect(
         PostStreamApplication.fetchMissingPostsFromNexus({
           cacheMissPostIds: [`${repostAuthor}:repost-1`],
           viewerId,
         }),
-      ).resolves.not.toThrow();
+      ).resolves.toBe(true);
+      await vi.waitFor(() => expect(fetchPostsByIdsSpy).toHaveBeenCalledTimes(2));
     });
 
     it('should handle multiple reposts with different original posts', async () => {
@@ -2201,10 +2216,12 @@ describe('PostStreamApplication', () => {
       });
 
       // Should have fetched both original posts
-      expect(fetchPostsByIdsSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          post_ids: expect.arrayContaining([`${originalAuthor1}:original-1`, `${originalAuthor2}:original-2`]),
-        }),
+      await vi.waitFor(() =>
+        expect(fetchPostsByIdsSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            post_ids: expect.arrayContaining([`${originalAuthor1}:original-1`, `${originalAuthor2}:original-2`]),
+          }),
+        ),
       );
     });
   });
