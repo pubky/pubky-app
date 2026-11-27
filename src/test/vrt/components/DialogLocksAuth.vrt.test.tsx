@@ -38,6 +38,7 @@ vi.mock('@/hooks/usePaykitSetupFlow/usePaykitSetupFlow', () => ({
     error: paykit.error,
     iframeRef: { current: null },
     check: vi.fn(),
+    checkHeld: vi.fn(),
     start: vi.fn(),
     reconnect: vi.fn(),
     reset: vi.fn(),
@@ -111,6 +112,26 @@ describe('DialogLocksAuth footer on the narrowest phone', () => {
     expect(card.scrollWidth).toBeLessThanOrEqual(card.clientWidth);
     const cardBox = card.getBoundingClientRect();
     for (const name of ['Cancel', action]) {
+      const box = page.getByRole('button', { name }).element().getBoundingClientRect();
+      expect(box.left).toBeGreaterThanOrEqual(cardBox.left);
+      expect(box.right).toBeLessThanOrEqual(cardBox.right);
+    }
+  });
+
+  // The Lock Server answered `unavailable` (no error): Cancel, Reconnect Bitkit and Try again (#2984).
+  it('keeps all three footer buttons inside a 320px dialog when payments are unavailable', async () => {
+    paykit.status = 'unavailable';
+    await renderForVRT(<DialogLocksAuth open onOpenChange={vi.fn()} onSuccess={vi.fn()} />, {
+      viewport: VRT_VIEWPORT_NARROW,
+    });
+    const dialog = page.getByRole('dialog');
+    await expect.element(dialog).toBeVisible();
+    await expect.element(page.getByRole('button', { name: 'Reconnect Bitkit' })).toBeVisible();
+
+    const card = dialog.element();
+    expect(card.scrollWidth).toBeLessThanOrEqual(card.clientWidth);
+    const cardBox = card.getBoundingClientRect();
+    for (const name of ['Cancel', 'Reconnect Bitkit', 'Try again']) {
       const box = page.getByRole('button', { name }).element().getBoundingClientRect();
       expect(box.left).toBeGreaterThanOrEqual(cardBox.left);
       expect(box.right).toBeLessThanOrEqual(cardBox.right);

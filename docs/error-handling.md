@@ -281,10 +281,10 @@ toast also falls back to "Authorization failed. Try again." instead of asking fo
 that copy because `useAuthUrl` shows it for every upgrade. Replace the message check with a structured
 discriminator when the SDK provides one.
 
-### Locks SDK 0.1.0 region classification exception
+### Locks SDK 0.1.1-rc5 region classification exception
 
 `isLockServerRegionBlocked` in `src/core/services/locks/locks.utils.ts` is a second narrow exception to message-free
-classification. The pinned `@synonymdev/locks-sdk` 0.1.0 browser/WASM binding exposes HTTP viewer failures as an
+classification. The pinned `@synonymdev/locks-sdk` 0.1.1-rc5 browser/WASM binding exposes HTTP viewer failures as an
 `Error` named `InvalidInput`, with no structured status field. Only the exact message
 `Lock Server viewer request failed with HTTP 451` identifies the region restriction on proof submission.
 `LocksService.submitProof` converts that raw SDK error to `{ regionBlocked: true }` before constructing any

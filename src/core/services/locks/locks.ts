@@ -470,6 +470,23 @@ export class LocksService {
   }
 
   /**
+   * Whether the Lock Server still holds the creator's grant (`GET /creator/authority-status`). The Lock Server
+   * checks the grant against the homeserver on every call (pubky/locks#136), so a revoke in Pubky Ring shows here.
+   */
+  static async lookupCreatorAuthorized(): Promise<boolean> {
+    const session = getLockSession();
+    try {
+      const status = await withLocksTimeout(
+        session.creator.creatorAuthorityStatus(),
+        'LocksService.lookupCreatorAuthorized',
+      );
+      return status.authorized;
+    } catch (error) {
+      throw toLocksError(error, 'LocksService.lookupCreatorAuthorized');
+    }
+  }
+
+  /**
    * Uploads one file's raw bytes under `/priv/app.locks/content/<path>` and returns its descriptor
    * ({ path, hash, content_type, size }) plus the owner pubky — the Lock-Server-authenticated account
    * the bytes landed on, which the post needs to reference its attachments by the right host.

@@ -34,6 +34,14 @@ export {
 };
 
 /**
+ * True when Locks is configured: it needs both the Lock Server and the Paykit Server
+ * (`PUBKY_RUNTIME_LOCK_SERVER`, `PUBKY_RUNTIME_PAYKIT_SERVER_URL`). Pure and server-safe.
+ */
+export function isLocksConfigured(): boolean {
+  return Boolean(getLockServer() && getPaykitServerUrl());
+}
+
+/**
  * True when a Pubky Passport origin is configured (`PUBKY_RUNTIME_PASSPORT_URL`).
  *
  * Pure and server-safe: this only says the deploy points at a Passport. Whether the current

@@ -150,6 +150,11 @@ export class LocksApplication {
     return LocksService.lookupPaykitSetupStatus(asset);
   }
 
+  /** Whether the Lock Server still holds the current Locks session's creator grant. */
+  static fetchCreatorAuthorized(): Promise<boolean> {
+    return LocksService.lookupCreatorAuthorized();
+  }
+
   /** Whether the Lock Server at `origin` is ready to serve — gates the auth flow before the iframe. */
   static isServerReady(origin: string): Promise<boolean> {
     return LocksService.isServerReady(origin);

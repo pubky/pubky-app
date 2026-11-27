@@ -24,6 +24,7 @@ Paykit Server's optional USDT configuration is absent.
   - [Reading a lock post](#reading-a-lock-post)
   - [The Unlocked screen](#the-unlocked-screen)
   - [Marker tracking](#marker-tracking)
+  - [Locks settings page](#locks-settings-page)
   - [Sessions from before locks](#sessions-from-before-locks)
   - [Testing & local demo](#testing--local-demo)
   - [References](#references)
@@ -693,6 +694,19 @@ unavailable. Only `setup_required` goes on to the presence read:
 - Paykit cannot say: the dialog says payments are unavailable and offers **Try again**, both before setup
   and after a failed setup. Neither setup nor reconnect opens until a later check answers held or not held.
 
+When the Lock Server itself answers `unavailable` (no request error), the dialog also offers **Reconnect Bitkit**
+(#2984). A Paykit Server that restarted after the creator revoked its grant in Pubky Ring answers that on every
+check, so **Try again** never helps. The button does not reconnect: it asks Paykit directly whether it holds the
+creator (`checkHeld`). Held opens the reconnect confirmation above, with its new-account warning; not held opens
+`/setup`; no answer stays unavailable, now with an error, so the button goes away. A failed request or a failed
+presence read never shows it, because neither says anything about the grant, and a reconnect there could rotate a
+ready creator's receiving account. `startAtHeldCheck` opens the Bitkit step at this presence read instead of the
+setup-status check, for a caller that already got `unavailable`. It applies once, and only to the session that got
+that answer; any later check in the dialog asks the Lock Server again. It also clears `paykitConnected` when the
+dialog opens: an earlier `ready` may have set it, and the dialog would then open on "done" and skip the presence
+read. `markPaykitConnected` supersedes any setup-status check still in flight, so an older `setup_required` cannot
+clear a newer success; the presence-read path asks no setup-status question that would supersede it otherwise.
+
 `/setup/creator-held` starts no setup flow and spends neither Paykit's setup-start budget nor its pending-flow
 capacity. It has its own per-client-IP read limit (600 a minute by default). A refused read is `429`
 (`Retry-After: 60`) and storage trouble is `503` (`Retry-After: 1`), so neither is read as "not held"; a `400`
@@ -718,6 +732,36 @@ Creator-configurable credential TTLs still come later. The descriptor and readab
 Every dev / temporary shortcut carries the ticket number that owns it —
 `grep -rn "TODO:\[Locks\]" src/` lists them, and each number is the issue to read.
 Use `grep -rniE "TODO.*lock" src/` to catch one that lost its tag.
+
+## Locks settings page
+
+`/settings/locks` (#2984) shows the creator's setup with the same steps as `DialogLocksAuth`, and only where
+Locks is configured (`isLocksConfigured()` in `@/config/network`: both the Lock Server and the Paykit Server).
+Elsewhere the menu hides it and the route redirects to Account. `useLocksSettingsStatus` derives the state:
+
+- Loading until the store hydrates and a persisted Locks session is restored, then while the checks run.
+  The page never shows **Enable Locks** to a creator it has not checked.
+- Not set up without a Locks session, on a session that cannot reach `/priv`, when the Lock Server answers
+  `setup_required`, or when it no longer holds the creator's grant (revoked in Pubky Ring). **Enable Locks** opens
+  `DialogLocksAuth`; it is disabled, with `LocksRegionNotice`, where paid unlocks are held.
+- Set up once Paykit is connected. The latest answer wins, so a later `unavailable` replaces it, but a check
+  sent before a setup dialog opened or finished is dropped, and changes neither the page nor `paykitConnected`.
+  A dialog that closes with Paykit connected shows set up, also through **Cancel** or Esc on "Locks Enabled". Neither **Revoke access** nor **Disconnect Bitkit** calls an
+  API: pubky.app cannot remove a grant without a root session, so each opens a dialog that says where to do it,
+  and **OK** checks again.
+- Unavailable (the Lock Server answered `unavailable`) offers **Try again** and **Reconnect Bitkit**, which opens
+  `DialogLocksAuth` with `startAtHeldCheck`. A failed request offers **Try again** only.
+
+The Paykit answer is in memory only (#2627), so the page asks on every visit, on **OK**, and quietly when the tab
+is shown again (not while a setup dialog is open).
+
+Each check first asks the Lock Server whether it still holds the creator's grant (`creatorAuthorityStatus`,
+pubky/locks#136); the Lock Server checks the grant against the homeserver on every call. The Paykit check runs
+only after `authorized: true`. On `authorized: false`, `LocksController.fetchCreatorAuthorized` clears the Locks
+session and signs it out, so **Enable Locks** starts again at the Lock Server step. Tabs do not share the in-memory
+store, so every clear of a dead Locks session (`LocksController.clearSession`) keeps a secret that another tab saved
+in the meantime and clears only this tab. When the Lock Server cannot check the grant (HTTP 503), the check fails and the page offers
+**Try again**; it never reads that as a revoke.
 
 ## Sessions from before locks
 
@@ -789,7 +833,8 @@ Never commit either.
   and homeserver, with the Lock Server / Paykit / Bitkit boundary stubbed. `PUBKY_RUNTIME_E2E_LOCKS_STUB_URL`
   (the Locks CI job only, never a deploy) makes `initLockClient()` and `getLocksReads()` return
   `locks.e2eStub.ts`: it sends each Lock Server call as `POST <stub>/e2e/<operation>`, which the spec
-  answers with `cy.intercept`. The stub never writes to the homeserver: as the real Lock Server does,
+  answers with `cy.intercept`. The creator authority check is the exception: the stub answers it as authorized
+  without a request. The stub never writes to the homeserver: as the real Lock Server does,
   the intercept makes the guarded-bytes and `lock.json` writes before it answers, through
   `cypress/plugins/lock-server.ts` and the `seedLockServerWrite` task in Cypress's Node process, with a
   session the creator's key granted for `/priv/app.locks/:rw,/pub/app.locks/:rw`. A non-2xx answer rejects with the pinned SDK's own error (`InvalidInput`, with the viewer,
@@ -814,9 +859,14 @@ Never commit either.
 
 ## SDK and server integration
 
-This branch pins the built Locks SDK to [Git commit `245253a6d7c9`](https://github.com/pubky/locks/commit/245253a6d7c9559fbcbdffc33250dacf28108d69), generated from [Locks source `c692fb70522c`](https://github.com/pubky/locks/commit/c692fb70522cf75025b86ad72a3b98fa7ef84e72). A normal `npm ci` installs the JS/WASM files; no SDK release or local build overlay is required. The artifact README records its source and checksums.
+The app pins `@synonymdev/locks-sdk` `0.1.1-rc5` from npm; a normal `npm ci` installs the JS/WASM files. That npm
+build comes from [pubky/locks commit `bdc10a52`](https://github.com/pubky/locks/commit/bdc10a52a3670ad66444b093d5d1032e4643b17f)
+(the merge of pubky/locks#136), not from the `v0.1.1-rc5` tag (`34c308d6`), so read the SDK source at `bdc10a52` or
+at the `v0.1.1-rc6` tag, which contains it.
 
-Deploy with [Locks #75](https://github.com/pubky/locks/pull/75) and Paykit Server's merged [#47](https://github.com/pubky/paykit-server/pull/47). The SDK's denomination-aware setup check requires the matching Locks server. Keep Paykit Server's `[usdt]` section absent for Bitcoin-only Bitkit clients, including [iOS #887](https://github.com/synonymdev/bitkit-ios/pull/887) and [Android #1437](https://github.com/synonymdev/bitkit-android/pull/1437).
+The settings page sees a revoke in Pubky Ring only with Locks `v0.1.1-rc6` or later. It asks
+`GET /creator/authority-status`, and only a Lock Server with pubky/locks#136 checks the grant against the homeserver;
+an older one keeps answering `authorized: true` after a revoke. Staging runs it since pubky/pubky-stack#408. Keep Paykit Server's `[usdt]` section absent for Bitcoin-only Bitkit clients, including [iOS #887](https://github.com/synonymdev/bitkit-ios/pull/887) and [Android #1437](https://github.com/synonymdev/bitkit-android/pull/1437).
 
 The creator dialog relies on one more Lock Server contract: the `/connect` shell posts `{ type: 'locks-auth-resize', height }` to the app as the first thing its script does. `useLocksAuthFlow` keeps the iframe invisible behind the spinner until that report arrives (same origin and iframe-source checks as the callback), and moves to the error step with Try again when it does not come within 5 s of the iframe's `load` event or 20 s of its mount (`IFRAME_READY_AFTER_LOAD_MS`, `IFRAME_MOUNT_TIMEOUT_MS` in `useIframeReady`, which the Paykit `/setup` iframe shares). A page that failed to render, such as a JSON error body, is never shown (#3027).
 

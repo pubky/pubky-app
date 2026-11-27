@@ -2,24 +2,32 @@
 // Vitest `__vi_import_N__` aliases; reordering causes a TDZ crash in
 // @vitest/browser. Do not let `eslint --fix` reorder these imports.
 /* eslint-disable simple-import-sort/imports */
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { matchVrtFrameScreenshot, preloadImages, renderForVRT, type VrtTheme } from '@/test-utils/vrt';
 import { VRT_VIEWPORT_DESKTOP, VRT_VIEWPORT_MOBILE } from '@/test-utils/vrt.viewports';
 import { createZustandLikeHook, mockSettingsStore } from '@/test-utils/stores';
 import { SETTINGS_ROUTES } from '@/app/routes';
 import { SocialMigrationController } from '@/controllers/social-migration/social-migration';
+import type { LocksSettingsStatus } from '@/hooks/useLocksSettingsStatus/useLocksSettingsStatus.types';
 import { Header } from '@/organisms/Header/Header';
 import { Settings as SettingsLayout } from '@/templates/Settings/Settings';
 import { Account } from '@/templates/Settings/Account/Account';
 import { EditProfile } from '@/templates/Settings/EditProfile/EditProfile';
 import { Help } from '@/templates/Settings/Help/Help';
+import { Locks } from '@/templates/Settings/Locks/Locks';
 import { MutedUsers } from '@/templates/Settings/MutedUsers/MutedUsers';
 import { Notifications } from '@/templates/Settings/Notifications/Notifications';
 import { Privacy } from '@/templates/Settings/Privacy/Privacy';
 
-// Covers tabs: account, edit profile (also with the migration note and a long link label), notifications, privacy & safety, muted users, help.
+// Covers tabs: account, edit profile (also with the migration note and a long link label), notifications, locks, privacy & safety, muted users, help.
 const routeState = vi.hoisted(() => ({
   pathname: '/settings/account',
+}));
+
+// Locks is off unless a deployment sets both servers, so the other tabs keep their menu without "Locks".
+const locksState = vi.hoisted(() => ({
+  available: false,
+  status: 'set-up' as LocksSettingsStatus,
 }));
 
 // #3205: a 100-character alphanumeric link label has nowhere to break.
@@ -291,6 +299,24 @@ vi.mock('@/hooks/useMuteUser/useMuteUser', () => {
   return { useMuteUser: () => result };
 });
 
+vi.mock('@/config/network', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/config/network')>()),
+  isLocksConfigured: () => locksState.available,
+}));
+
+vi.mock('@/hooks/useLocksSettingsStatus/useLocksSettingsStatus', () => ({
+  useLocksSettingsStatus: () => ({ status: locksState.status, recheck: () => {}, markSetUp: () => {} }),
+}));
+
+vi.mock('@/hooks/usePaidUnlockAvailability/usePaidUnlockAvailability', () => ({
+  usePaidUnlockAvailability: () => ({ status: 'available' }),
+}));
+
+// Closed in every capture; the real one would start the Lock Server and Paykit flows.
+vi.mock('@/organisms/DialogLocksAuth/DialogLocksAuth', () => ({
+  DialogLocksAuth: () => null,
+}));
+
 vi.mock('@/controllers/file/file', () => ({
   FileController: {
     getAvatarUrl: () => null,
@@ -411,6 +437,37 @@ describe('Settings — notifications — visual regression', () => {
     const screen = await renderSettingsTab(SETTINGS_ROUTES.NOTIFICATIONS, <Notifications />, VRT_VIEWPORT_MOBILE);
     await expect.element(screen.getByText('Platform notifications')).toBeVisible();
     await matchVrtFrameScreenshot('settings-notifications-mobile');
+  });
+});
+
+describe('Settings — locks — visual regression', () => {
+  beforeEach(() => {
+    locksState.available = true;
+  });
+
+  afterEach(() => {
+    locksState.available = false;
+  });
+
+  it('renders locks set up at desktop viewport', async () => {
+    locksState.status = 'set-up';
+    const screen = await renderSettingsTab(SETTINGS_ROUTES.LOCKS, <Locks />, VRT_VIEWPORT_DESKTOP);
+    await expect.element(screen.getByText('Locks enabled')).toBeVisible();
+    await matchVrtFrameScreenshot('settings-locks-desktop');
+  });
+
+  it('renders locks set up at mobile viewport', async () => {
+    locksState.status = 'set-up';
+    const screen = await renderSettingsTab(SETTINGS_ROUTES.LOCKS, <Locks />, VRT_VIEWPORT_MOBILE);
+    await expect.element(screen.getByText('Locks enabled')).toBeVisible();
+    await matchVrtFrameScreenshot('settings-locks-mobile');
+  });
+
+  it('renders locks not set up at desktop viewport', async () => {
+    locksState.status = 'not-set-up';
+    const screen = await renderSettingsTab(SETTINGS_ROUTES.LOCKS, <Locks />, VRT_VIEWPORT_DESKTOP);
+    await expect.element(screen.getByText('Enable Locks to earn money from your content.')).toBeVisible();
+    await matchVrtFrameScreenshot('settings-locks-not-set-up-desktop');
   });
 });
 

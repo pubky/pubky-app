@@ -169,6 +169,15 @@ describe('locks.e2eStub', () => {
     expect(status).toEqual({ status: 'ready' });
   });
 
+  it('answers the authority check as authorized without a request', async () => {
+    const session = await signIn();
+
+    const status = await session.creator.creatorAuthorityStatus();
+
+    expect(status.authorized).toBe(true);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('routes every viewer call to the stub and decodes the guarded bytes', async () => {
     const { viewer } = createE2eLocksClient(STUB_URL);
     const handle = asOpaque<VerificationTaskHandleOptions>({ creator: `pubky${OWNER}`, bundleId: 'BUNDLE' });

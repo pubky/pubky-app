@@ -23,7 +23,7 @@ export const LOCKS_TRANSFER_TIMEOUT_MS = 360_000;
 export const READYZ_TIMEOUT_MS = 10_000;
 
 /**
- * The pinned SDK 0.1.0 takes no `AbortSignal`, so a request the server accepts and never answers
+ * The pinned SDK 0.1.1-rc5 takes no `AbortSignal`, so a request the server accepts and never answers
  * stays pending forever. This stops waiting with a retryable `Err.timeout`, but the request keeps
  * running and a write may still land: never retry a write automatically after it, and pass
  * `undoLateWrite` for a write that would leave something behind once nobody uses its result.
@@ -91,7 +91,7 @@ export function toLocksError(error: unknown, operation: string) {
  * The Lock Server answers a proof submission with HTTP 451 (Unavailable For Legal Reasons) from a
  * region where paid unlocks are not offered. That is an expected, permanent answer, not a failure:
  * callers turn it into a state of its own before any `Err.*` is built, because the factories log and
- * report to Sentry on construction. The pinned SDK 0.1.0 exposes no status field: its browser binding
+ * report to Sentry on construction. The pinned SDK 0.1.1-rc5 exposes no status field: its browser binding
  * emits an `InvalidInput` Error with this exact message. Match only that contract, covered by
  * locks.region.contract.test.ts; an `AppError` was already reported and must be preserved.
  */

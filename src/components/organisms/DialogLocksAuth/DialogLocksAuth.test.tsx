@@ -1,5 +1,5 @@
 import type { Session as LocksSdkSession } from '@synonymdev/locks-sdk';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BITKIT_APP_STORE_URL, BITKIT_PLAY_STORE_URL, BITKIT_WEBSITE_URL } from '@/config/externalLinks';
 import { LocksAuthFlowStatus } from '@/hooks/useLocksAuthFlow/useLocksAuthFlow.types';
@@ -22,6 +22,7 @@ const mocks = vi.hoisted(() => ({
   checkPaykit: vi.fn(),
   startPaykit: vi.fn(),
   reconnectPaykit: vi.fn(),
+  checkPaykitHeld: vi.fn(),
   resetPaykit: vi.fn(),
   onConnectLoad: vi.fn(),
   flow: {
@@ -76,6 +77,7 @@ vi.mock('@/hooks/usePaykitSetupFlow/usePaykitSetupFlow', () => ({
     iframeRef: { current: null },
     onSetupLoad: mocks.onSetupLoad,
     check: mocks.checkPaykit,
+    checkHeld: mocks.checkPaykitHeld,
     start: mocks.startPaykit,
     reconnect: mocks.reconnectPaykit,
     reset: mocks.resetPaykit,
@@ -519,6 +521,94 @@ describe('DialogLocksAuth', () => {
 
     expect(mocks.checkPaykit).toHaveBeenCalledTimes(1);
     expect(mocks.startPaykit).not.toHaveBeenCalled();
+  });
+
+  // A Paykit Server that restarted after its grant was revoked answers `unavailable` on every check (#2984).
+  it('asks Paykit whether it holds the creator, and never reconnects directly, when payments are unavailable', () => {
+    signIn();
+    mocks.paykitFlow = { status: PaykitSetupFlowStatus.UNAVAILABLE, mode: 'setup', setupUrl: null, error: null };
+    renderDialog();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reconnect Bitkit' }));
+
+    expect(mocks.checkPaykitHeld).toHaveBeenCalledTimes(1);
+    expect(mocks.reconnectPaykit).not.toHaveBeenCalled();
+    expect(mocks.checkPaykit).not.toHaveBeenCalled();
+  });
+
+  it('does not offer Reconnect Bitkit when the check failed instead of answering unavailable', () => {
+    signIn();
+    mocks.paykitFlow = {
+      status: PaykitSetupFlowStatus.UNAVAILABLE,
+      mode: 'setup',
+      setupUrl: null,
+      error: { message: 'Lock Server request failed' },
+    };
+    renderDialog();
+
+    expect(screen.getByText('Payments are unavailable right now. Please try again later.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reconnect Bitkit' })).not.toBeInTheDocument();
+  });
+
+  it('starts the Bitkit step at Paykit, not the Lock Server, when opened for a reconnect', () => {
+    signIn();
+    render(<DialogLocksAuth open onOpenChange={vi.fn()} onSuccess={vi.fn()} startAtHeldCheck />);
+
+    expect(mocks.checkPaykitHeld).toHaveBeenCalledTimes(1);
+    expect(mocks.checkPaykit).not.toHaveBeenCalled();
+  });
+
+  it('asks Paykit for a reconnect even when an earlier `ready` left Paykit marked connected', () => {
+    signIn({ paykitConnected: true });
+    render(<DialogLocksAuth open onOpenChange={vi.fn()} onSuccess={vi.fn()} startAtHeldCheck />);
+
+    expect(useLocksAuthStore.getState().paykitConnected).toBe(false);
+    expect(mocks.checkPaykitHeld).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('button', { name: 'Continue' })).not.toBeInTheDocument();
+  });
+
+  it('keeps Paykit marked connected when opened for a setup, not a reconnect', () => {
+    signIn({ paykitConnected: true });
+    render(<DialogLocksAuth open onOpenChange={vi.fn()} onSuccess={vi.fn()} />);
+
+    expect(useLocksAuthStore.getState().paykitConnected).toBe(true);
+    expect(mocks.checkPaykitHeld).not.toHaveBeenCalled();
+    expect(mocks.checkPaykit).not.toHaveBeenCalled();
+  });
+
+  it('uses the Paykit-first check only once: a later check asks the Lock Server again', () => {
+    signIn();
+    // A new element each time: React skips a rerender with the same element.
+    const dialog = () => <DialogLocksAuth open onOpenChange={vi.fn()} onSuccess={vi.fn()} startAtHeldCheck />;
+    const { rerender } = render(dialog());
+    expect(mocks.checkPaykitHeld).toHaveBeenCalledTimes(1);
+
+    // The flow went back to idle, as after a session change inside the dialog.
+    mocks.paykitFlow = { status: PaykitSetupFlowStatus.CHECKING, mode: 'setup', setupUrl: null, error: null };
+    rerender(dialog());
+    mocks.paykitFlow = { status: PaykitSetupFlowStatus.IDLE, mode: 'setup', setupUrl: null, error: null };
+    rerender(dialog());
+
+    expect(mocks.checkPaykitHeld).toHaveBeenCalledTimes(1);
+    expect(mocks.checkPaykit).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks the Lock Server when the session changed since the caller got `unavailable`', () => {
+    useLocksAuthStore.setState({ session: null, locksSessionSecret: 'old-secret', paykitConnected: false });
+    render(<DialogLocksAuth open onOpenChange={vi.fn()} onSuccess={vi.fn()} startAtHeldCheck />);
+
+    act(() => signIn());
+
+    expect(mocks.checkPaykitHeld).not.toHaveBeenCalled();
+    expect(mocks.checkPaykit).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not offer Reconnect Bitkit after a failed setup', () => {
+    signIn();
+    mocks.paykitFlow = { status: PaykitSetupFlowStatus.ERROR, mode: 'setup', setupUrl: null, error: null };
+    renderDialog();
+
+    expect(screen.queryByRole('button', { name: 'Reconnect Bitkit' })).not.toBeInTheDocument();
   });
 
   it('calls onSuccess then closes on the Success step', () => {

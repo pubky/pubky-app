@@ -5,6 +5,10 @@ Paykit Server, a Pubky homeserver testnet and a regtest Bitcoin chain. There is 
 act as Bitkit from the terminal: you approve the creator's Paykit setup, you receive the reader's payment request, and
 you pay it with `bitcoin-cli`.
 
+**Not re-checked since the app moved to Locks SDK `0.1.1-rc5` (2026-11-26, #3251).** The version check in
+section 14 stops on purpose until someone re-checks this runbook against Lock Server `v0.1.1-rc6` or later, the first
+release with pubky/locks#136, which the settings page needs to see a revoke in Pubky Ring.
+
 **Version contract checked on 2026-10-28.** The app at `8f802fa01` installs Locks SDK `0.1.0` from
 npm (Locks tag `v0.1.0`, commit `ac8e893b`) and sends `payment_in` with every paid lock (#2853). Lock
 Server builds older than `v0.1.0` reject that field or the SDK's setup-status request, and so does a

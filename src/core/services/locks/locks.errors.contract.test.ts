@@ -242,6 +242,10 @@ describe('Lock Server viewer errors through the pinned SDK and LocksService', ()
 
 describe('Lock Server creator errors through the pinned SDK and LocksService', () => {
   const creatorCalls = {
+    lookupCreatorAuthorized: {
+      route: 'GET /creator/authority-status',
+      call: () => LocksService.lookupCreatorAuthorized(),
+    },
     lookupPaykitSetupStatus: {
       route: 'GET /creator/paykit/setup-status?asset=BTC',
       call: () => LocksService.lookupPaykitSetupStatus('BTC'),
@@ -314,6 +318,7 @@ describe('Lock Server creator errors through the pinned SDK and LocksService', (
     ['setLockServiceConfig', 503, 'creator_authority_unavailable'],
     ['deleteContentLock', 404, 'content_lock_not_found'],
     ['lookupPaykitSetupStatus', 500, 'internal_error'],
+    ['lookupCreatorAuthorized', 503, 'creator_authority_unavailable'],
   ] as const)('%s HTTP %i %s stays a reported server error with the session kept', async (name, status, code) => {
     stubLockServer({ status, body: envelope(code) });
 
@@ -351,6 +356,43 @@ describe('Lock Server creator errors through the pinned SDK and LocksService', (
     expect(isAppError(error) && requiresLogin(error)).toBe(true);
   });
 
+  it('returns a grant the Lock Server no longer holds as false, not an error', async () => {
+    stubLockServer({
+      status: 200,
+      body: JSON.stringify({
+        creator: CREATOR,
+        authorized: false,
+        auth_kind: null,
+        granted_scopes: [],
+        session_expires_at: null,
+      }),
+    });
+
+    await expect(LocksService.lookupCreatorAuthorized()).resolves.toBe(false);
+    expectNothingReported();
+  });
+
+  // A malformed body must never read as a revoke: `false` clears the Locks session and signs it out.
+  it.each([
+    ['without authorized', { creator: CREATOR, auth_kind: null, granted_scopes: [], session_expires_at: null }],
+    [
+      'with a string authorized',
+      { creator: CREATOR, authorized: 'false', auth_kind: null, granted_scopes: [], session_expires_at: null },
+    ],
+  ])('rejects an authority status %s in the SDK as one reported server error, not false', async (_, body) => {
+    stubLockServer({ status: 200, body: JSON.stringify(body) });
+
+    const error = await rejection(LocksService.lookupCreatorAuthorized());
+
+    expect(error).toMatchObject({
+      category: ErrorCategory.Server,
+      operation: 'LocksService.lookupCreatorAuthorized',
+      cause: { name: 'InvalidInput' },
+    });
+    expect(isAppError(error) && requiresLogin(error)).toBe(false);
+    expectReportedOnce(error);
+  });
+
   it('returns a masked Paykit failure (setup status unavailable) as a status, not an error', async () => {
     stubLockServer({ status: 200, body: JSON.stringify({ status: 'unavailable' }) });
 
@@ -358,7 +400,7 @@ describe('Lock Server creator errors through the pinned SDK and LocksService', (
     expectNothingReported();
   });
 
-  // SDK 0.1.0 validates the setup-status enum itself, so its InvalidInput reaches toLocksError before our
+  // SDK 0.1.1-rc5 validates the setup-status enum itself, so its InvalidInput reaches toLocksError before our
   // schema runs. The schema's Validation INVALID_INPUT fallback is covered with a mocked SDK in locks.test.ts.
   it('rejects an unknown setup status in the SDK as one reported server error, not a sign-in prompt', async () => {
     stubLockServer({ status: 200, body: JSON.stringify({ status: 'pending_review' }) });

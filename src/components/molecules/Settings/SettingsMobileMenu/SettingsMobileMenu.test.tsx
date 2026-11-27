@@ -1,8 +1,14 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SETTINGS_ROUTES } from '@/app/routes';
 import { SettingsMobileMenu } from './SettingsMobileMenu';
+
+const { isLocksConfigured } = vi.hoisted(() => ({ isLocksConfigured: vi.fn(() => true) }));
+vi.mock('@/config/network', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/config/network')>()),
+  isLocksConfigured,
+}));
 
 // Mock next/navigation
 vi.mock('next/navigation', () => ({
@@ -13,14 +19,26 @@ vi.mock('next/navigation', () => ({
 }));
 
 describe('SettingsMobileMenu', () => {
+  beforeEach(() => {
+    isLocksConfigured.mockReturnValue(true);
+  });
+
   it('renders all menu buttons', () => {
     render(<SettingsMobileMenu />);
     expect(screen.getByLabelText('Account')).toBeInTheDocument();
     expect(screen.getByLabelText('Notifications')).toBeInTheDocument();
+    expect(screen.getByLabelText('Locks')).toBeInTheDocument();
     expect(screen.getByLabelText('Appearance')).toBeInTheDocument();
     expect(screen.getByLabelText('Privacy & Safety')).toBeInTheDocument();
     expect(screen.getByLabelText('Muted Users')).toBeInTheDocument();
     expect(screen.getByLabelText('Help')).toBeInTheDocument();
+  });
+
+  it('hides Locks when Locks is not available', () => {
+    isLocksConfigured.mockReturnValue(false);
+    render(<SettingsMobileMenu />);
+
+    expect(screen.queryByLabelText('Locks')).not.toBeInTheDocument();
   });
 
   it('includes lg:hidden class by default', () => {

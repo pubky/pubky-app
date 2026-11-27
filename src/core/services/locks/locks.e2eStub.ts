@@ -43,7 +43,7 @@ const toBase64 = (bytes: Uint8Array) => btoa(Array.from(bytes, (byte) => String.
 const fromBase64 = (value: string) => Uint8Array.from(atob(value), (char) => char.charCodeAt(0));
 
 /**
- * The pinned SDK 0.1.0 rejects with a plain, unreported `Error` named after its error kind, and
+ * The pinned SDK 0.1.1-rc5 rejects with a plain, unreported `Error` named after its error kind, and
  * `LocksService` maps that itself (`toLocksError`, `isLockServerRegionBlocked`, the lookup 404). An
  * `Err.*` here would be reported twice and would never match the region-refusal contract. This raw
  * `Error` is a documented exception to the `Err.*` rule (`docs/error-handling.md`).
@@ -77,12 +77,21 @@ const handle = (options: VerificationTaskHandleOptions) => ({
 function createCreator(stubUrl: string, owner: string): Creator {
   const creator: Pick<
     Creator,
+    | 'creatorAuthorityStatus'
     | 'setLockServicePointer'
     | 'paykitSetupStatus'
     | 'registerGuardedResource'
     | 'createContentLock'
     | 'deleteContentLock'
   > = {
+    // Answered without a request: the Cypress stub has no grant to revoke.
+    creatorAuthorityStatus: async () => ({
+      creator: withPubkyPrefix(owner),
+      authorized: true,
+      auth_kind: 'grant',
+      granted_scopes: [],
+      session_expires_at: null,
+    }),
     setLockServicePointer: async (options) => {
       await post(stubUrl, 'creator/lock-service-pointer', { owner, default_lock_server: options.defaultLockServer });
     },
