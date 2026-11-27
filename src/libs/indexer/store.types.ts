@@ -1,3 +1,4 @@
+import { type Epoch, NO_EPOCH } from './epoch';
 import type { Coverage, Cursor, MergedRuns, Run, RunMeta } from './indexer.types';
 import type { TimeSample } from './timeTable';
 
@@ -28,8 +29,11 @@ export interface FailureState {
 export interface HomeserverState {
   /** Only ever rises within an epoch. */
   highWater: HighWater | null;
-  /** Counts the homeserver's deletions: what was read before one is not read under the epoch after it. */
-  epoch: number;
+  /**
+   * Names the homeserver's log (`epoch.ts`): what was read before a deletion is not read under the epoch after it.
+   * `NO_EPOCH` until a batch names one.
+   */
+  epoch: Epoch;
   failure: FailureState | null;
   /** The homeserver's clock: its dated writes read so far, as `mergeClock` keeps them. A deletion empties it. */
   clock: TimeSample[];
@@ -37,17 +41,19 @@ export interface HomeserverState {
 
 export const EMPTY_HOMESERVER_STATE: Readonly<HomeserverState> = Object.freeze({
   highWater: null,
-  epoch: 0,
+  epoch: NO_EPOCH,
   failure: null,
   clock: [],
 });
 
 /**
  * A high-water mark older than the stored one keeps the stored, and `clock` samples merge into the stored clock.
- * Fields left out keep their stored value.
+ * `epoch` names the log of a homeserver whose epoch is `NO_EPOCH` and changes nothing once one is named. Fields left
+ * out keep their stored value.
  */
 export interface HomeserverPatch {
   highWater?: HighWater;
+  epoch?: Epoch;
   failure?: FailureState | null;
   clock?: TimeSample[];
 }
@@ -55,7 +61,7 @@ export interface HomeserverPatch {
 /** The homeserver epoch a batch's reads of it were made under. */
 export interface ReadAt {
   homeserver: string;
-  epoch: number;
+  epoch: Epoch;
 }
 
 /** The data of the record a scope stores for `path` at `cursor`. */
@@ -77,10 +83,9 @@ export interface StoreBatch<D> {
    */
   readAt?: ReadAt[];
   /**
-   * Drops every scope stored under these homeservers and starts a new epoch for each, without a high-water mark or a
-   * clock.
+   * Drops every scope stored under each homeserver and makes `epoch` its epoch, without a high-water mark or a clock.
    */
-  deleteHomeservers?: string[];
+  deleteHomeservers?: Array<{ homeserver: string; epoch: Epoch }>;
   /** Forgets each scope's entries and coverage at or below the cutoff. */
   evictions?: Array<{ scope: ScopeKey; cutoff: Cursor }>;
   /** Merged into their scopes, in order. */
@@ -94,6 +99,19 @@ export interface StoreBatch<D> {
   homeserverStates?: Array<{ homeserver: string; patch: HomeserverPatch }>;
   /** Replaces the users in scope of a seed, each with its hop distance. */
   scopeMembers?: Array<{ seed: string; members: ReadonlyMap<string, number> }>;
+}
+
+/**
+ * Scopes read in one read together with the state of their homeservers, so each run belongs to the log of the epoch
+ * given with it: a commit between the reads of a run and of its epoch cannot pair them.
+ */
+export interface ScopesExport<D> {
+  /** The state of each homeserver the asked scopes name. */
+  homeservers: Map<string, HomeserverState>;
+  /** By `scopeId`, the coverage of each asked scope that has any. */
+  coverage: Map<string, Coverage>;
+  /** With `runs`, by `scopeId`, each asked scope with coverage as `exportRuns` gives it; empty otherwise. */
+  runs: Map<string, Run<D>[]>;
 }
 
 /**
@@ -112,12 +130,14 @@ export interface IndexStore<D> {
   readCoverage(scope: ScopeKey): Promise<Coverage>;
   /** The scope as one run per contiguous range of its coverage. */
   exportRuns(scope: ScopeKey): Promise<Run<D>[]>;
+  /** The scopes' coverage, with `runs` their runs too, and their homeservers' states, all in one read. */
+  exportScopes(scopes: readonly ScopeKey[], options: { runs: boolean }): Promise<ScopesExport<D>>;
   /** What the pure `evictBelow` makes of the scope's exported runs. */
   evictBelow(scope: ScopeKey, cutoff: Cursor): Promise<void>;
   /** Every scope with coverage. */
   listScopes(): Promise<ScopeKey[]>;
-  /** The same as committing `deleteHomeservers: [homeserver]`. */
-  deleteHomeserver(homeserver: string): Promise<void>;
+  /** The same as committing `deleteHomeservers: [{ homeserver, epoch }]`. */
+  deleteHomeserver(homeserver: string, epoch: Epoch): Promise<void>;
   /** `null` when the user was never resolved. */
   readUserHomeserver(user: string): Promise<UserHomeserver | null>;
   writeUserHomeserver(user: string, value: UserHomeserver): Promise<void>;

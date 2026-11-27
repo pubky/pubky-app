@@ -94,7 +94,7 @@ describe('operations racing over one homeserver', () => {
     const leaf = crawler.syncLeaf({ author: 'bob', group: 'leaf:bob', paths: [FOLLOWS] });
     await until(() => asked.length > 0, 'the leaf read');
     await crawler.syncScope('alice');
-    const mark = (await store.readHomeserverState('hs1')).highWater;
+    const { highWater: mark, epoch } = await store.readHomeserverState('hs1');
     expect(mark).not.toBeNull();
     release();
     await leaf;
@@ -138,7 +138,7 @@ describe('operations racing over one homeserver', () => {
     await backfill;
 
     expect(await everything(store)).toEqual(after);
-    expect((await store.readHomeserverState('hs1')).epoch).toBe(1);
+    expect((await store.readHomeserverState('hs1')).epoch).toMatch(/^r/);
   });
 
   it("keeps nothing of a scope sync's read in flight when another operation finds the homeserver restored", async () => {
@@ -182,7 +182,7 @@ describe('operations racing over one homeserver', () => {
 
     await Promise.all([crawler.syncUsers(['u1']), crawler.syncUsers(['u1', 'alice'])]);
 
-    expect((await store.readHomeserverState('hs1')).epoch).toBe(1);
+    expect((await store.readHomeserverState('hs1')).epoch).toMatch(/^r/);
     expect([...(await served(store, 'u1', 'hs1', ACTIVITY)).keys()]).toEqual([fresh]);
     expect(await served(store, 'alice', 'hs1', GRAPH)).toEqual(network.liveOf('alice', [FOLLOWS]));
   });
@@ -191,7 +191,7 @@ describe('operations racing over one homeserver', () => {
     const { network, store, crawler } = shrinking();
     await crawler.syncScope('alice');
     const before = await everything(store);
-    const mark = (await store.readHomeserverState('hs1')).highWater;
+    const { highWater: mark, epoch } = await store.readHomeserverState('hs1');
     // Written by a device reading another tree: its groups and its mark's author are none of this domain's.
     const file = await encodeIndexFile({
       part: { kind: 'hot', shards: 0, folded: [], packs: [], cut: [] },
@@ -201,7 +201,10 @@ describe('operations racing over one homeserver', () => {
       hops: 2,
       windowDays: 30,
       members: [{ user: 'alice', hop: 0, homeserver: { homeserver: 'hs1', resolvedAt: NOW } }],
-      homeservers: [{ homeserver: 'hs1', epoch: 0, highWater: { cursor: BigInt(1000), author: 'bob' } }],
+      // A restore's epoch, newer than any the store has, which would drop what it holds.
+      homeservers: [
+        { homeserver: 'hs1', epoch: 'r9999999999999.z', highWater: { cursor: BigInt(1000), author: 'bob' } },
+      ],
       runs: [
         { author: 'alice', homeserver: 'hs1', group: `${GRAPH}+legacy`, tail: BigInt(0), head: BigInt(5), entries: [] },
       ],
@@ -224,7 +227,7 @@ describe('operations racing over one homeserver', () => {
 
     expect(outcome).toMatchObject({ loaded: 0, ignored: 1 });
     expect((await store.readHomeserverState('hs1')).highWater).toEqual(mark);
-    expect((await store.readHomeserverState('hs1')).epoch).toBe(0);
+    expect((await store.readHomeserverState('hs1')).epoch).toBe(epoch);
     expect(await everything(store)).toEqual(before);
   });
 });

@@ -17,6 +17,7 @@ import {
   testDomain,
 } from './crawler.fixtures';
 import type { Domain } from './domain.types';
+import { restoreEpoch } from './epoch';
 import { FakeIndexFiles, FakeNetwork } from './fakeNetwork';
 import { createIndexerRuntime } from './indexer';
 import type { Cursor, Entry, Run } from './indexer.types';
@@ -556,19 +557,19 @@ describe('saved index folder', () => {
     w.network.put('bob', `${TAGS}t1`, new TextEncoder().encode(JSON.stringify({ text: 'tag' })));
     const a = device(w, 'wa', { domain: taggedDomain });
     // A restore this device saw earlier.
-    await a.store.commit({ deleteHomeservers: ['hs1'] });
+    await a.store.commit({ deleteHomeservers: [{ homeserver: 'hs1', epoch: 'r5.a' }] });
     await a.sync();
     expect(await a.flush()).toBe('folded');
 
     const hot = await decoded(w.files, hotPath(FOLDER));
-    expect(hot.homeservers).toMatchObject([{ homeserver: 'hs1', epoch: 1 }]);
+    expect(hot.homeservers).toMatchObject([{ homeserver: 'hs1', epoch: 'r5.a' }]);
     const tag = hot.runs.flatMap(({ entries }) => entries).find(({ path }) => path === `${TAGS}t1`);
     expect(tag).toMatchObject({ kind: 'record' });
     expect(tag?.kind === 'record' ? tag.data : null).toBeUndefined();
 
     const b = device(w, 'wb', { domain: taggedDomain });
     await b.load();
-    expect((await b.store.readHomeserverState('hs1')).epoch).toBe(1);
+    expect((await b.store.readHomeserverState('hs1')).epoch).toBe('r5.a');
     expect(await everything(b.store)).toEqual(await everything(a.store));
     // Rebuilt from the dated records it loaded.
     expect((await b.store.readHomeserverState('hs1')).clock.length).toBeGreaterThan(0);
@@ -591,21 +592,121 @@ describe('saved index folder', () => {
 
     w.network.restore('hs1');
     await a.sync();
-    expect((await a.store.readHomeserverState('hs1')).epoch).toBe(1);
+    const { epoch } = await a.store.readHomeserverState('hs1');
+    expect(epoch).toMatch(/^r/);
     expect(await a.flush()).toBe('folded');
 
     const hot = await decoded(w.files, hotPath(FOLDER));
-    expect(hot.homeservers).toMatchObject([{ homeserver: 'hs1', epoch: 1 }]);
+    expect(hot.homeservers).toMatchObject([{ homeserver: 'hs1', epoch }]);
     const head = w.network.headOf('hs1');
     expect(hot.runs.every((run) => run.head <= head)).toBe(true);
     c.restart();
     await c.load();
-    expect((await c.store.readHomeserverState('hs1')).epoch).toBe(1);
+    expect((await c.store.readHomeserverState('hs1')).epoch).toBe(epoch);
     await expectTruthful(c.store, w.network, 'the stale device');
     const fresh = device(w, 'wf');
     await fresh.load();
     await expectTruthful(fresh.store, w.network, 'a new device');
     expect(await servedAll(fresh.store, USERS)).toEqual(truthOf(w.network, USERS));
+  });
+
+  it('never pairs runs read before a restore with the epoch after it, wherever the restore lands in a save', async () => {
+    for (const mayFold of [false, true]) {
+      for (let at = 1; ; at += 1) {
+        const w = world();
+        w.network.putJson('carol', postPath(HOUR_MS), { text: 'edited' });
+        w.network.del('bob', postPath(HOUR_MS));
+        const inner = createMemoryStore<Post>();
+        let calls = 0;
+        let armed = false;
+        let fired = false;
+        /** What a concurrent operation's restore check commits, at the `at`-th store read of the save. */
+        const read =
+          <A extends unknown[], R>(call: (...args: A) => Promise<R>) =>
+          async (...args: A): Promise<R> => {
+            if (armed && ++calls === at) {
+              fired = true;
+              const { epoch } = await inner.readHomeserverState('hs1');
+              await inner.commit({
+                readAt: [{ homeserver: 'hs1', epoch }],
+                deleteHomeservers: [{ homeserver: 'hs1', epoch: restoreEpoch(epoch, w.clock.now) }],
+              });
+            }
+            return call(...args);
+          };
+        const store: IndexStore<Post> = {
+          ...inner,
+          exportScopes: read(inner.exportScopes),
+          readCoverage: read(inner.readCoverage),
+          readHomeserverState: read(inner.readHomeserverState),
+          readScopeMembers: read(inner.readScopeMembers),
+          readUserHomeserver: read(inner.readUserHomeserver),
+        };
+        const a = device(w, 'wa', { store, limits: { deltaFoldBytes: mayFold ? 0 : 48 * 1024 } });
+        await a.sync();
+        expect(await a.flush()).toBe('folded');
+        w.network.putJson('bob', postPath(HOUR_MS / 2), { text: 'bob new' });
+        w.network.putJson('carol', postPath(HOUR_MS / 3), { text: 'carol new' });
+        await a.sync();
+        w.network.restore('hs1');
+        armed = true;
+        await a.flush(mayFold);
+        armed = false;
+        if (!fired) break;
+
+        // A device loading what the save wrote, then syncing: a run kept under its old log's mark is caught.
+        const b = device(w, 'wb');
+        await b.load();
+        await b.sync();
+        await expectTruthful(b.store, w.network, `${mayFold ? 'fold' : 'delta'}, restore at read ${at}`);
+      }
+    }
+  });
+
+  it('keeps apart runs of two restores another writer and this one each saw first', async () => {
+    const w = world();
+    const a = device(w, 'wa');
+    await a.sync();
+    w.network.putJson('carol', postPath(HOUR_MS), { text: 'edited' });
+    w.network.del('bob', postPath(HOUR_MS));
+    w.network.restore('hs1');
+    w.clock.now += HOUR_MS;
+    await a.sync();
+    // Started after that restore, without the folder: it never saw it.
+    const b = device(w, 'wb');
+    w.network.putJson('bob', postPath(HOUR_MS / 2), { text: 'bob new' });
+    w.network.putJson('carol', postPath(HOUR_MS / 3), { text: 'carol new' });
+    await b.sync();
+    await a.sync();
+    expect(await a.flush(false)).toBe('delta');
+
+    w.network.del('carol', postPath(HOUR_MS / 3));
+    w.network.restore('hs1');
+    w.clock.now += HOUR_MS;
+    await b.sync();
+    expect((await b.store.readHomeserverState('hs1')).epoch).toMatch(/^r/);
+    await b.load();
+
+    // Each writer saw one restore; their runs come from different logs and never merge.
+    await expectTruthful(b.store, w.network, 'after loading the other restore');
+    expect(await servedAll(b.store, USERS)).toEqual(truthOf(w.network, USERS));
+  });
+
+  it('settles a device that read the homeserver before loading on the epoch of the device that read it first', async () => {
+    const w = world();
+    const a = device(w, 'wa');
+    await a.sync();
+    expect(await a.flush()).toBe('folded');
+    w.clock.now += HOUR_MS;
+    const b = device(w, 'wb');
+    await b.sync();
+
+    await b.load();
+
+    expect((await b.store.readHomeserverState('hs1')).epoch).toBe((await a.store.readHomeserverState('hs1')).epoch);
+    expect(await servedAll(b.store, USERS)).toEqual(truthOf(w.network, USERS));
+    await b.sync();
+    expect(await servedAll(b.store, USERS)).toEqual(truthOf(w.network, USERS));
   });
 
   it('seals every file under its own path, and a device without the key neither reads nor overwrites it', async () => {

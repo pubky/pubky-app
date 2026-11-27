@@ -3,6 +3,7 @@ import {
   applyRun,
   assertValidBatch,
   deletedState,
+  emptyExport,
   evictCoverage,
   homeserverStateOf,
   patchedState,
@@ -67,7 +68,7 @@ export function createMemoryStore<D>(): IndexStore<D> {
     // Only a run that disagrees with a stored entry can still throw; the journal undoes what came before it.
     const writes = journal();
     try {
-      for (const homeserver of copy.deleteHomeservers ?? []) {
+      for (const { homeserver } of copy.deleteHomeservers ?? []) {
         for (const [id, row] of coverage) {
           if (row.scope.homeserver !== homeserver) continue;
           writes.set(coverage, id, undefined);
@@ -105,8 +106,8 @@ export function createMemoryStore<D>(): IndexStore<D> {
       throw error;
     }
 
-    for (const homeserver of copy.deleteHomeservers ?? []) {
-      homeserverStates.set(homeserver, deletedState(stateOfHomeserver(homeserver)));
+    for (const { homeserver, epoch } of copy.deleteHomeservers ?? []) {
+      homeserverStates.set(homeserver, deletedState(stateOfHomeserver(homeserver), epoch));
     }
     for (const { user, value } of copy.userHomeservers ?? []) userHomeservers.set(user, value);
     for (const { homeserver, patch } of copy.homeserverStates ?? []) {
@@ -126,9 +127,24 @@ export function createMemoryStore<D>(): IndexStore<D> {
     readScope: async (scope) => structuredClone(stateOf(scope)),
     readCoverage: async (scope) => structuredClone(coverage.get(scopeId(scope))?.coverage ?? []),
     exportRuns: async (scope) => structuredClone(runsOfScope(scope, stateOf(scope))),
+    // Nothing awaited in between: one read.
+    exportScopes: async (asked, { runs }) => {
+      const out = emptyExport<D>();
+      for (const scope of asked) {
+        if (!out.homeservers.has(scope.homeserver)) {
+          out.homeservers.set(scope.homeserver, homeserverStateOf(homeserverStates.get(scope.homeserver)));
+        }
+        const id = scopeId(scope);
+        const row = coverage.get(id);
+        if (row === undefined) continue;
+        out.coverage.set(id, row.coverage);
+        if (runs) out.runs.set(id, runsOfScope(scope, stateOf(scope)));
+      }
+      return structuredClone(out);
+    },
     evictBelow: (scope, cutoff) => commit({ evictions: [{ scope, cutoff }] }),
     listScopes: async () => [...coverage.values()].map(({ scope }) => scopeOf(scope)),
-    deleteHomeserver: (homeserver) => commit({ deleteHomeservers: [homeserver] }),
+    deleteHomeserver: (homeserver, epoch) => commit({ deleteHomeservers: [{ homeserver, epoch }] }),
     readUserHomeserver: async (user) => structuredClone(userHomeservers.get(user) ?? null),
     writeUserHomeserver: (user, value) => commit({ userHomeservers: [{ user, value }] }),
     readHomeserverState: async (homeserver) => structuredClone(homeserverStateOf(homeserverStates.get(homeserver))),

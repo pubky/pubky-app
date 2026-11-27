@@ -30,7 +30,7 @@ const FIXED: IndexFileModel<Body> = {
     { user: 'alice', hop: 0, homeserver: { homeserver: 'hs1', resolvedAt: 1699999999000 } },
     { user: 'bob', hop: 1, homeserver: null },
   ],
-  homeservers: [{ homeserver: 'hs1', epoch: 1, highWater: { cursor: BigInt(9), author: 'bob' } }],
+  homeservers: [{ homeserver: 'hs1', epoch: 'r1700000000000.k3', highWater: { cursor: BigInt(9), author: 'bob' } }],
   runs: [
     {
       author: 'alice',
@@ -54,13 +54,16 @@ const FIXED: IndexFileModel<Body> = {
   ],
 };
 
+/** A never read, a counted, a first contact's and a restore's epoch. */
+const EPOCHS = ['', '2', 'c1700000000000.a1', 'r1700000000000.b2'];
+
 const RUNS_JSON =
   '[[0,1,"graph","0","4","/follows/",[["bob","2",0],["carol","4",1]]],' +
   '[2,1,"activity","5","9","",[["/posts/1","9",0,"AQIDBAUGBwgJCgsMDQ4PEBESExQVFhcYGRobHB0eHyA=",{"text":"hi"}]]]]';
 
 // The reference vector of format version 3, for a reader in any language: FIXED gunzipped.
 const FIXED_JSON =
-  '[3,"hot","w1",1700000000000,0,2,30,["alice","hs1","bob"],[[0,0,1,1699999999000],[2,1]],[[1,1,"9",2]],' +
+  '[3,"hot","w1",1700000000000,0,2,30,["alice","hs1","bob"],[[0,0,1,1699999999000],[2,1]],[[1,"r1700000000000.k3","9",2]],' +
   `${RUNS_JSON},[4,[["w2",3]],[[1,2048,2,1699999990000]],[[1,"5"]]]]`;
 
 // Version 2, one file per writer, which earlier releases wrote: no kind, no extra, marks without an epoch.
@@ -71,7 +74,7 @@ const VERSION_2_JSON =
 const FIXED_V2: IndexFileModel<Body> = {
   ...FIXED,
   part: { kind: 'single' },
-  homeservers: [{ homeserver: 'hs1', epoch: 0, highWater: { cursor: BigInt(9), author: 'bob' } }],
+  homeservers: [{ homeserver: 'hs1', epoch: '0', highWater: { cursor: BigInt(9), author: 'bob' } }],
 };
 
 // Version 1, which the format still reads: records without data, hashes cut to 16 bytes.
@@ -158,8 +161,12 @@ function randomModel(rng: Rng): IndexFileModel<Body> {
       homeserver: rng() < 0.3 ? null : { homeserver: rng() < 0.2 ? null : 'hs1', resolvedAt: int(rng, 0, 2 ** 40) },
     })),
     homeservers: [
-      { homeserver: 'hs2', epoch: int(rng, 0, 3), highWater: { cursor: BigInt(int(rng, 0, 1000)), author: 'carol' } },
-      { homeserver: 'hs1', epoch: int(rng, 0, 3), highWater: null },
+      {
+        homeserver: 'hs2',
+        epoch: EPOCHS[int(rng, 0, 3)],
+        highWater: { cursor: BigInt(int(rng, 0, 1000)), author: 'carol' },
+      },
+      { homeserver: 'hs1', epoch: EPOCHS[int(rng, 0, 3)], highWater: null },
     ],
     runs,
   };
@@ -186,8 +193,15 @@ describe('index file codec', () => {
     expect(await decodeIndexFile(gzipJson(fixedValue()))).toEqual(stripped(FIXED));
   });
 
-  it('still reads version 2, each mark at epoch 0', async () => {
+  it('still reads version 2, each mark at counted epoch 0', async () => {
     expect(await decodeIndexFile(gzipJson(JSON.parse(VERSION_2_JSON)), revive)).toEqual(FIXED_V2);
+  });
+
+  it('reads the count an earlier file of this version wrote as the counted epoch', async () => {
+    const value = fixedValue();
+    (value[9] as unknown[][])[0][1] = 2;
+
+    expect((await decodeIndexFile(gzipJson(value), revive)).homeservers[0].epoch).toBe('2');
   });
 
   it('refuses to write a version 2 file', async () => {
@@ -228,6 +242,7 @@ describe('index file codec', () => {
     ['a repeated key', (value) => ((value[7] as unknown[])[2] = 'alice')],
     ['a high water author outside the key table', (value) => ((value[9] as unknown[][])[0][3] = -1)],
     ['an epoch that is no count', (value) => ((value[9] as unknown[][])[0][1] = -1)],
+    ['an epoch that is no name', (value) => ((value[9] as unknown[][])[0][1] = 'r1.')],
     ['a cursor with a leading zero', (value) => ((value[10] as unknown[][])[0][4] = '04')],
     ['a cursor above 64 bits', (value) => ((value[10] as unknown[][])[0][4] = '18446744073709551616')],
     ['an entry outside its run', (value) => ((value[10] as unknown[][][])[0][6] = [['bob', '5', 0]])],

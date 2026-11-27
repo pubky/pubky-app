@@ -223,7 +223,7 @@ describe('createIdbStore', () => {
     expect(await store.readScope(META)).toEqual(mergeRuns([runOf(2, 4)]));
   });
 
-  it('reads rows earlier window rules wrote, ignoring their window fields, and grows a clock on them', async () => {
+  it('reads rows earlier rules wrote, ignoring their window fields, an epoch count as its name, and grows a clock', async () => {
     const name = nextName();
     const first = open(name);
     await first.applyRuns([runOf(0, 2)]);
@@ -248,6 +248,7 @@ describe('createIdbStore', () => {
     expect(await store.readHomeserverState('hs1')).toEqual({
       ...EMPTY_HOMESERVER_STATE,
       highWater: { cursor: c(2), author: 'alice' },
+      epoch: '0',
       clock: [{ cursor: c(3), ms: 30, writer: 'alice' }],
     });
   });

@@ -1,6 +1,7 @@
 import type { StoreChange } from './crawler.types';
 import { compareCursors } from './cursor';
 import type { Domain } from './domain.types';
+import { compareEpochs, type Epoch, newestEpoch, NO_EPOCH } from './epoch';
 import { IndexerError, IndexFileLockedError, IndexFileLockLostError, InvalidIndexInputError } from './indexer.errors';
 import type { Cursor, Entry, Run } from './indexer.types';
 import {
@@ -17,7 +18,15 @@ import {
 import { evictBelow } from './merge';
 import type { IndexSealer } from './runtime.types';
 import { scopeId, scopeOf } from './store.helpers';
-import type { IndexStore, ReadAt, ScopeKey, StoreBatch, UserHomeserver } from './store.types';
+import type {
+  HomeserverState,
+  IndexStore,
+  ReadAt,
+  ScopeKey,
+  ScopesExport,
+  StoreBatch,
+  UserHomeserver,
+} from './store.types';
 import { buildTimeTable, cursorAt, type TimeSample } from './timeTable';
 import type { IndexFileLock, IndexFiles } from './transport.types';
 
@@ -220,7 +229,7 @@ export async function fitToBudget<D>(
 }
 
 /** A scope's head, as a decimal cursor, with the epoch of its homeserver when it was taken. */
-type Heads = Record<string, [string, number]>;
+type Heads = Record<string, [string, Epoch]>;
 
 /** What this writer keeps in its store about the folder, in one meta value so it changes atomically. */
 interface SavedState {
@@ -251,7 +260,7 @@ function parseState(value: string | null): SavedState {
   }
 }
 
-const headOf = (heads: Heads, id: string, epoch: number): Cursor | undefined => {
+const headOf = (heads: Heads, id: string, epoch: Epoch): Cursor | undefined => {
   const known = heads[id];
   return known !== undefined && known[1] === epoch ? BigInt(known[0]) : undefined;
 };
@@ -261,7 +270,8 @@ function higherHeads(a: Heads, b: Heads): Heads {
   const out: Heads = { ...a };
   for (const [id, [head, epoch]] of Object.entries(b)) {
     const known = out[id];
-    if (known === undefined || epoch > known[1] || (epoch === known[1] && BigInt(head) > BigInt(known[0]))) {
+    const order = known === undefined ? 1 : compareEpochs(epoch, known[1]);
+    if (known === undefined || order > 0 || (order === 0 && BigInt(head) > BigInt(known[0]))) {
       out[id] = [head, epoch];
     }
   }
@@ -329,6 +339,15 @@ interface MemberScopes {
   scopes: ScopeKey[];
 }
 
+/** Runs with the state of their homeservers read together with them, the only runs a file is made of. */
+interface Exported<D> {
+  homeservers: ReadonlyMap<string, HomeserverState>;
+  runs: Run<D>[];
+}
+
+/** The runs of every exported scope, oldest range first. */
+const allRuns = <D>(read: ScopesExport<D>): Run<D>[] => [...read.runs.values()].flat();
+
 export function createSavedIndex<D>(params: SavedIndexParams<D>): SavedIndex {
   const { files, store, domain, seed, writer, now, sealer } = params;
   const limits = { ...DEFAULT_SAVED_INDEX_LIMITS, ...params.limits };
@@ -380,25 +399,21 @@ export function createSavedIndex<D>(params: SavedIndexParams<D>): SavedIndex {
   }
 
   async function headsOf(scopes: readonly ScopeKey[]): Promise<Heads> {
-    const epochs = new Map<string, number>();
+    const read = await store.exportScopes(scopes, { runs: false });
     const heads: Heads = {};
     for (const scope of scopes) {
-      const coverage = await store.readCoverage(scope);
-      if (coverage.length === 0) continue;
-      let epoch = epochs.get(scope.homeserver);
-      if (epoch === undefined) {
-        epoch = (await store.readHomeserverState(scope.homeserver)).epoch;
-        epochs.set(scope.homeserver, epoch);
-      }
+      const coverage = read.coverage.get(scopeId(scope));
+      if (coverage === undefined || coverage.length === 0) continue;
+      const epoch = read.homeservers.get(scope.homeserver)?.epoch ?? NO_EPOCH;
       heads[scopeId(scope)] = [coverage[coverage.length - 1].head.toString(), epoch];
     }
     return heads;
   }
 
   /**
-   * Merges files into the store in one commit. Per homeserver the newest epoch any of them or the store has wins: runs
-   * written under an older one predate a restore and are left out, and the store itself drops what it holds of a
-   * homeserver a file saw restored. Each dated record is a sample of its homeserver's clock, so the clock is rebuilt
+   * Merges files into the store in one commit. Per homeserver the newest epoch any of them or the store has wins
+   * (`epoch.ts`): runs read from another log are left out, and a store that read another log drops what it holds of
+   * the homeserver and takes the newest. Each dated record is a sample of its homeserver's clock, so the clock is rebuilt
    * from what is applied. Files that contradict each other or the store are tried one by one, the refused ones
    * ignored. With `base`, a scope that held nothing this writer had not shared takes the head the files bring.
    */
@@ -414,16 +429,17 @@ export function createSavedIndex<D>(params: SavedIndexParams<D>): SavedIndex {
         ...runs.map(({ homeserver }) => homeserver),
       ]),
     );
-    const local = new Map<string, number>();
+    const local = new Map<string, Epoch>();
     for (const homeserver of homeservers) local.set(homeserver, (await store.readHomeserverState(homeserver)).epoch);
     const epochIn = (model: IndexFileModel<D>, homeserver: string) =>
-      model.homeservers.find((row) => row.homeserver === homeserver)?.epoch ?? 0;
+      model.homeservers.find((row) => row.homeserver === homeserver)?.epoch ?? NO_EPOCH;
     const target = new Map(
-      [...homeservers].map((homeserver): [string, number] => [
+      [...homeservers].map((homeserver): [string, Epoch] => [
         homeserver,
-        Math.max(local.get(homeserver) ?? 0, ...models.map((model) => epochIn(model, homeserver))),
+        newestEpoch([local.get(homeserver) ?? NO_EPOCH, ...models.map((model) => epochIn(model, homeserver))]),
       ]),
     );
+    const moved = [...target].filter(([homeserver, epoch]) => epoch !== local.get(homeserver));
     const kept = models.map((model) => ({
       ...model,
       homeservers: model.homeservers.filter((row) => row.epoch === target.get(row.homeserver)),
@@ -460,9 +476,9 @@ export function createSavedIndex<D>(params: SavedIndexParams<D>): SavedIndex {
     const batch: StoreBatch<D> = {
       // A restore found meanwhile voids what these files hold of that homeserver.
       readAt: [...local].map(([homeserver, epoch]): ReadAt => ({ homeserver, epoch })),
-      // One deletion per restore a writer saw and this store did not, so the epochs agree afterwards.
-      deleteHomeservers: [...target].flatMap(([homeserver, epoch]) =>
-        Array.from({ length: epoch - (local.get(homeserver) ?? 0) }, () => homeserver),
+      // A homeserver never read takes the files' log; one read from another log drops what it read.
+      deleteHomeservers: moved.flatMap(([homeserver, epoch]) =>
+        local.get(homeserver) === NO_EPOCH ? [] : [{ homeserver, epoch }],
       ),
       applyRuns: kept.flatMap(({ runs }) => runs),
       userHomeservers,
@@ -473,6 +489,9 @@ export function createSavedIndex<D>(params: SavedIndexParams<D>): SavedIndex {
           ),
         ),
         ...[...clocks].map(([homeserver, clock]) => ({ homeserver, patch: { clock } })),
+        ...moved.flatMap(([homeserver, epoch]) =>
+          local.get(homeserver) === NO_EPOCH ? [{ homeserver, patch: { epoch } }] : [],
+        ),
       ],
       ...(seeds.length > 0 ? { scopeMembers: [{ seed, members: fileMembers }] } : {}),
     };
@@ -522,23 +541,25 @@ export function createSavedIndex<D>(params: SavedIndexParams<D>): SavedIndex {
     return { members, homeserverOf, scopes };
   }
 
-  /** A file of `runs`, with the member rows of `users` and the epoch and mark of every homeserver its runs name. */
-  async function modelOf(
+  /**
+   * A file of the exported runs, with the member rows of `users` and the epoch and mark of every homeserver its runs
+   * name, as read with them.
+   */
+  function modelOf(
     part: IndexFilePart,
     ms: MemberScopes,
     users: readonly string[],
-    runs: Run<D>[],
-  ): Promise<IndexFileModel<D>> {
+    { homeservers: states, runs }: Exported<D>,
+  ): IndexFileModel<D> {
     const members: IndexFileMember[] = users.map((user) => ({
       user,
       hop: ms.members.get(user) ?? 0,
       homeserver: ms.homeserverOf.get(user) ?? null,
     }));
-    const homeservers: IndexFileHomeserver[] = [];
-    for (const homeserver of new Set(runs.map((run) => run.homeserver))) {
-      const state = await store.readHomeserverState(homeserver);
-      homeservers.push({ homeserver, epoch: state.epoch, highWater: state.highWater });
-    }
+    const homeservers: IndexFileHomeserver[] = [...new Set(runs.map((run) => run.homeserver))].map((homeserver) => {
+      const state = states.get(homeserver);
+      return { homeserver, epoch: state?.epoch ?? NO_EPOCH, highWater: state?.highWater ?? null };
+    });
     return {
       part,
       writer,
@@ -552,40 +573,46 @@ export function createSavedIndex<D>(params: SavedIndexParams<D>): SavedIndex {
     };
   }
 
-  /** Every run the store holds of `users`' scopes, oldest range first. */
-  async function runsOf(ms: MemberScopes, users: ReadonlySet<string>): Promise<Run<D>[]> {
-    const runs: Run<D>[] = [];
-    for (const scope of ms.scopes) if (users.has(scope.author)) runs.push(...(await store.exportRuns(scope)));
-    return runs;
+  /** Every run the store holds of `users`' scopes, oldest range first, with their homeservers' states. */
+  async function runsOf(ms: MemberScopes, users: ReadonlySet<string>): Promise<Exported<D>> {
+    const read = await store.exportScopes(
+      ms.scopes.filter(({ author }) => users.has(author)),
+      { runs: true },
+    );
+    return { homeservers: read.homeservers, runs: allRuns(read) };
   }
 
   /** This writer's delta: per scope what lies above its base, the whole scope where the base is unknown or gapped. */
   async function deltaOf(state: SavedState, ms: MemberScopes) {
+    const above = (read: ScopesExport<D>, scope: ScopeKey, head: Cursor) => {
+      const base = headOf(state.base, scopeId(scope), read.homeservers.get(scope.homeserver)?.epoch ?? NO_EPOCH);
+      return base === undefined || base < head;
+    };
+    const glance = await store.exportScopes(ms.scopes, { runs: false });
+    const moved = ms.scopes.filter((scope) => {
+      const coverage = glance.coverage.get(scopeId(scope));
+      return coverage !== undefined && coverage.length > 0 && above(glance, scope, coverage[coverage.length - 1].head);
+    });
+    // Read again with the runs, and judged by what this read says: a restore since the glance moved the epoch.
+    const read = await store.exportScopes(moved, { runs: true });
     const runs: Run<D>[] = [];
     const users = new Set<string>();
     const heads: Heads = {};
-    const epochs = new Map<string, number>();
-    for (const scope of ms.scopes) {
-      const coverage = await store.readCoverage(scope);
-      if (coverage.length === 0) continue;
-      const head = coverage[coverage.length - 1].head;
-      let epoch = epochs.get(scope.homeserver);
-      if (epoch === undefined) {
-        epoch = (await store.readHomeserverState(scope.homeserver)).epoch;
-        epochs.set(scope.homeserver, epoch);
-      }
-      const base = headOf(state.base, scopeId(scope), epoch);
-      if (base !== undefined && base >= head) continue;
-      const exported = await store.exportRuns(scope);
+    for (const scope of moved) {
+      const exported = read.runs.get(scopeId(scope)) ?? [];
+      if (exported.length === 0) continue;
       const top = exported[exported.length - 1];
+      if (!above(read, scope, top.head)) continue;
+      const epoch = read.homeservers.get(scope.homeserver)?.epoch ?? NO_EPOCH;
+      const base = headOf(state.base, scopeId(scope), epoch);
       users.add(scope.author);
       heads[scopeId(scope)] = [top.head.toString(), epoch];
       if (base !== undefined && base >= top.tail) {
         runs.push({ ...top, tail: base, entries: top.entries.filter(({ cursor }) => cursor > base) });
       } else runs.push(...exported);
     }
-    const model = await modelOf({ kind: 'delta', gen: state.gen + 1, base: state.baseGen }, ms, [...users], runs);
-    return { model, heads };
+    const part: IndexFilePart = { kind: 'delta', gen: state.gen + 1, base: state.baseGen };
+    return { model: modelOf(part, ms, [...users], { homeservers: read.homeservers, runs }), heads };
   }
 
   /**
@@ -593,22 +620,20 @@ export function createSavedIndex<D>(params: SavedIndexParams<D>): SavedIndex {
    * `hotDatedRecords` dated records, placed per homeserver by its clock: a feed stops above the latest start of its
    * authors' histories, so a cut per author would end it at the busiest one's. `null` per homeserver keeps it whole.
    */
-  async function cutOf(ms: MemberScopes, near: ReadonlySet<string>): Promise<Map<string, Cursor>> {
+  function cutOf(near: Exported<D>): Map<string, Cursor> {
     const times: number[] = [];
-    for (const scope of ms.scopes) {
-      if (!near.has(scope.author) || !windowGroups.has(scope.group)) continue;
-      for (const run of await store.exportRuns(scope)) {
-        for (const entry of run.entries) {
-          const time = entry.kind === 'record' ? domain.timeOfPath(entry.path) : null;
-          if (time !== null) times.push(Number(time / MICROS_PER_MS));
-        }
+    for (const run of near.runs) {
+      if (!windowGroups.has(run.group)) continue;
+      for (const entry of run.entries) {
+        const time = entry.kind === 'record' ? domain.timeOfPath(entry.path) : null;
+        if (time !== null) times.push(Number(time / MICROS_PER_MS));
       }
     }
     const cut = new Map<string, Cursor>();
     if (times.length < limits.hotDatedRecords) return cut;
     const at = times.sort((a, b) => b - a)[limits.hotDatedRecords - 1];
-    for (const homeserver of new Set(ms.scopes.filter(({ author }) => near.has(author)).map((s) => s.homeserver))) {
-      const placed = cursorAt(buildTimeTable((await store.readHomeserverState(homeserver)).clock), at);
+    for (const [homeserver, state] of near.homeservers) {
+      const placed = cursorAt(buildTimeTable(state.clock), at);
       if (placed !== null) cut.set(homeserver, placed);
     }
     return cut;
@@ -617,16 +642,17 @@ export function createSavedIndex<D>(params: SavedIndexParams<D>): SavedIndex {
   async function hotOf(ms: MemberScopes, part: Extract<IndexFilePart, { kind: 'hot' }>): Promise<IndexFileModel<D>> {
     const users = [...ms.members.keys()];
     if (part.shards === 0) return modelOf(part, ms, users, await runsOf(ms, new Set(users)));
-    const near = new Set(users.filter((user) => (ms.members.get(user) ?? 0) <= 1));
-    const cut = await cutOf(ms, near);
-    const runs: Run<D>[] = [];
-    for (const scope of ms.scopes) {
-      if (!near.has(scope.author)) continue;
-      const exported = await store.exportRuns(scope);
-      const cutoff = windowGroups.has(scope.group) ? cut.get(scope.homeserver) : undefined;
-      runs.push(...(cutoff === undefined || exported.length === 0 ? exported : evictBelow(exported, cutoff)));
-    }
-    return modelOf({ ...part, cut: [...cut].map(([homeserver, cursor]) => ({ homeserver, cursor })) }, ms, users, runs);
+    const near = await runsOf(ms, new Set(users.filter((user) => (ms.members.get(user) ?? 0) <= 1)));
+    const cut = cutOf(near);
+    const byScope = new Map<string, Run<D>[]>();
+    for (const run of near.runs) byScope.set(scopeId(run), [...(byScope.get(scopeId(run)) ?? []), run]);
+    const runs = [...byScope.values()].flatMap((exported) => {
+      const { group, homeserver } = exported[0];
+      const cutoff = windowGroups.has(group) ? cut.get(homeserver) : undefined;
+      return cutoff === undefined ? exported : evictBelow(exported, cutoff);
+    });
+    const cutPart = { ...part, cut: [...cut].map(([homeserver, cursor]) => ({ homeserver, cursor })) };
+    return modelOf(cutPart, ms, users, { homeservers: near.homeservers, runs });
   }
 
   /** Locks the pack, takes in what it holds, writes back the store's runs of its authors trimmed to `share`. */
@@ -637,7 +663,7 @@ export function createSavedIndex<D>(params: SavedIndexParams<D>): SavedIndex {
       if (current === 'bad' || current === 'unsupported') throw new FoldRefused(path);
       if (current !== 'missing') await applyFiles([current.model]);
       const users = [...ms.members.keys()].filter((user) => bucketOf(user, shards) === bucket);
-      const model = await modelOf({ kind: 'pack', shards, bucket }, ms, users, await runsOf(ms, new Set(users)));
+      const model = modelOf({ kind: 'pack', shards, bucket }, ms, users, await runsOf(ms, new Set(users)));
       const bytes = await writeFile(path, model, share, lock);
       return { bucket, bytes, authors: users.length, writtenAt: model.writtenAt };
     } finally {

@@ -3,6 +3,7 @@ import { contextOf, type OperationContext } from './crawler.context';
 import type { Requests } from './crawler.request';
 import type { CrawlerOptions, HydrateResult, StoreChange } from './crawler.types';
 import type { Domain } from './domain.types';
+import { type Epoch, NO_EPOCH } from './epoch';
 import { createHeap, type Heap } from './heap';
 import type { Entry, RecordEntry } from './indexer.types';
 import { scopeId, scopeOf } from './store.helpers';
@@ -12,7 +13,7 @@ import type { IndexStore, ScopeKey, StoreBatch } from './store.types';
 interface Unfilled<D> {
   scope: ScopeKey;
   record: RecordEntry<D>;
-  epoch: number;
+  epoch: Epoch;
 }
 
 export interface FillDeps<D> {
@@ -49,7 +50,7 @@ export function createFill<D>(deps: FillDeps<D>): Fill<D> {
   /** The fills running, each told of every record a commit leaves without its file. */
   const fills = new Set<(item: Unfilled<D>) => void>();
   /** Keeps the newest event of each path: a record without data to fetch, or nothing once data or a delete won. */
-  const noteEntry = (scope: ScopeKey, entry: Entry<D>, epoch: number, fetch: boolean) => {
+  const noteEntry = (scope: ScopeKey, entry: Entry<D>, epoch: Epoch, fetch: boolean) => {
     const id = scopeId(scope);
     const paths = unfilled.get(id) ?? new Map<string, Unfilled<D>>();
     const known = paths.get(entry.path);
@@ -85,7 +86,7 @@ export function createFill<D>(deps: FillDeps<D>): Fill<D> {
   /** Takes in what a commit of fresh runs left without its files. */
   function noteRuns(batch: StoreBatch<D>): void {
     for (const run of batch.applyRuns ?? []) {
-      const epoch = batch.readAt?.find(({ homeserver }) => homeserver === run.homeserver)?.epoch ?? 0;
+      const epoch = batch.readAt?.find(({ homeserver }) => homeserver === run.homeserver)?.epoch ?? NO_EPOCH;
       for (const entry of run.entries) {
         const needs = domain.needsBody(entry.path);
         if (needs !== null) noteEntry(run, entry, epoch, needs === 'later');

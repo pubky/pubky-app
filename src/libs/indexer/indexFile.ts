@@ -1,4 +1,5 @@
 import { formatCursor, parseCursor } from './cursor';
+import { countedEpoch, type Epoch, isEpoch } from './epoch';
 import { shortHash } from './hash';
 import { IndexerError, InvalidIndexInputError } from './indexer.errors';
 import type { Cursor, Entry, RecordEntry, Run } from './indexer.types';
@@ -19,10 +20,10 @@ import type { HighWater, UserHomeserver } from './store.types';
 //                pack  [shards, bucket]
 //                delta [gen, base]
 // Cursors are decimal strings. A record without data keeps the first 16 bytes of its hash, one with data the whole
-// hash, which ties the data to its event. An epoch counts the restores of its homeserver the writer had seen: runs
-// written under an older epoch than the reader's predate a restore. Version 2 is one file per writer, written by
-// earlier releases: [2, writer, writtenAt, seed, hops, windowDays, keys, members, highWater, runs] with highWater rows
-// [homeserver, cursor, author], read as epoch 0. Version 1 is version 2 without data. Both are still read.
+// hash, which ties the data to its event. An epoch names the homeserver's log the runs were read from (`epoch.ts`);
+// earlier files of this version wrote a count, read as the counted epoch. Version 2 is one file per writer, written
+// by earlier releases: [2, writer, writtenAt, seed, hops, windowDays, keys, members, highWater, runs] with highWater
+// rows [homeserver, cursor, author], read as counted epoch 0. Version 1 is version 2 without data. Both are still read.
 
 export const INDEX_FILE_VERSION = 3;
 const SINGLE_FILE_VERSION = 2;
@@ -51,10 +52,10 @@ export interface IndexFileMember {
   homeserver: UserHomeserver | null;
 }
 
-/** A homeserver the file's runs were read from: the restores of it the writer had seen, and its high-water mark. */
+/** A homeserver the file's runs were read from: the log they were read from, and its high-water mark. */
 export interface IndexFileHomeserver {
   homeserver: string;
-  epoch: number;
+  epoch: Epoch;
   highWater: HighWater | null;
 }
 
@@ -320,12 +321,14 @@ function parseModel<D>(top: unknown, revive: ReviveData<D> | undefined): IndexFi
     let row: unknown[];
     if (single) {
       const [rawHomeserver, rawCursor, rawAuthor] = tuple(value, [3], what);
-      row = [rawHomeserver, 0, rawCursor, rawAuthor];
+      row = [rawHomeserver, countedEpoch(0), rawCursor, rawAuthor];
     } else row = tuple(value, [2, 4], what);
     const homeserver = key(row[0], `${what} key`);
     if (seen.has(homeserver)) fail(`homeserver ${homeserver} repeats`);
     seen.add(homeserver);
-    const epoch = count(row[1], `${what} epoch`);
+    const epoch =
+      typeof row[1] === 'number' ? countedEpoch(count(row[1], `${what} epoch`)) : string(row[1], `${what} epoch`);
+    if (!isEpoch(epoch)) fail(`${what} epoch is not one`);
     if (row.length === 2) return { homeserver, epoch, highWater: null };
     return {
       homeserver,

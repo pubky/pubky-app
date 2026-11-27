@@ -66,6 +66,10 @@ export function describeIndexStoreContract<S extends IndexStore<Payload>>(
       expect(await store.readScope(scope), label).toEqual(mergeRuns(runs));
       expect(await store.readCoverage(scope), label).toEqual(mergeRuns(runs).coverage);
       expect(await store.exportRuns(scope), label).toEqual(compactRuns(runs));
+      const exported = await store.exportScopes([scope], { runs: true });
+      const id = scopeId(scope);
+      expect(exported.runs.get(id) ?? [], label).toEqual(compactRuns(runs));
+      expect(exported.coverage.get(id) ?? [], label).toEqual(mergeRuns(runs).coverage);
     }
 
     it('reads nothing from an empty store', async () => {
@@ -176,7 +180,7 @@ export function describeIndexStoreContract<S extends IndexStore<Payload>>(
       const elsewhere: RunMeta = { ...META, homeserver: 'hs2' };
       await store.applyRuns([runOf(0, 2), runOf(0, 2, { ...META, author: 'bob' }), runOf(0, 3, elsewhere)]);
 
-      await store.deleteHomeserver('hs1');
+      await store.deleteHomeserver('hs1', 'r5.a');
 
       expect(await store.listScopes()).toEqual([elsewhere]);
       await expectScopeOf(store, META, []);
@@ -212,7 +216,7 @@ export function describeIndexStoreContract<S extends IndexStore<Payload>>(
 
       await expectScopeOf(store, META, [runs[0], runWith(3, 4, [rec('a', 4)])]);
       expect(sortedScopes(await store.listScopes())).toEqual(sortedScopes([META, elsewhere]));
-      await store.deleteHomeserver('hs2');
+      await store.deleteHomeserver('hs2', 'r5.a');
       await store.commit({ recordData: [fill(elsewhere, 'a', 3)] });
       expect(await store.listScopes()).toEqual([META]);
       await expect(store.commit({ recordData: [fill(META, 'a', -1)] })).rejects.toThrow(InvalidIndexInputError);
@@ -312,7 +316,7 @@ export function describeIndexStoreContract<S extends IndexStore<Payload>>(
       const store = fresh();
       await store.applyRuns([runOf(0, 2)]);
       const batch: StoreBatch<Payload> = {
-        deleteHomeservers: ['hs1'],
+        deleteHomeservers: [{ homeserver: 'hs1', epoch: 'r5.a' }],
         userHomeservers: [{ user: 'alice', value: { homeserver: 'hs1', resolvedAt: 5 } }],
         homeserverStates: [{ homeserver: 'hs1', patch: { failure: { failures: 1, retryAt: 60 } } }],
         scopeMembers: [{ seed: 'alice', members: new Map([['alice', 0]]) }],
@@ -338,7 +342,7 @@ export function describeIndexStoreContract<S extends IndexStore<Payload>>(
       await store.applyRuns([runOf(0, 2)]);
 
       await store.commit({
-        deleteHomeservers: ['hs1'],
+        deleteHomeservers: [{ homeserver: 'hs1', epoch: 'r5.a' }],
         evictions: [{ scope: META, cutoff: c(3) }],
         applyRuns: [runOf(2, 5)],
       });
@@ -380,7 +384,7 @@ export function describeIndexStoreContract<S extends IndexStore<Payload>>(
       expect((await store.readHomeserverState('hs1')).highWater).toEqual({ cursor: c(12), author: 'bob' });
     });
 
-    it('starts a new epoch without a mark when it deletes a homeserver, keeping its failures', async () => {
+    it('starts the epoch it names without a mark when it deletes a homeserver, keeping its failures', async () => {
       const store = fresh();
       await store.applyRuns([runOf(0, 2), runOf(0, 3, { ...META, homeserver: 'hs2' })]);
       await store.patchHomeserverState('hs1', {
@@ -388,16 +392,16 @@ export function describeIndexStoreContract<S extends IndexStore<Payload>>(
         failure: { failures: 1, retryAt: 60 },
       });
 
-      await store.deleteHomeserver('hs1');
+      await store.deleteHomeserver('hs1', 'r5.a');
       await store.commit({
-        deleteHomeservers: ['hs1'],
+        deleteHomeservers: [{ homeserver: 'hs1', epoch: 'r6.b' }],
         homeserverStates: [{ homeserver: 'hs1', patch: { highWater: { cursor: c(2), author: 'bob' } } }],
       });
 
       expect(await store.readHomeserverState('hs1')).toEqual({
         ...EMPTY_HOMESERVER_STATE,
         highWater: { cursor: c(2), author: 'bob' },
-        epoch: 2,
+        epoch: 'r6.b',
         failure: { failures: 1, retryAt: 60 },
       });
       expect(await store.readHomeserverState('hs2')).toEqual(EMPTY_HOMESERVER_STATE);
@@ -408,13 +412,13 @@ export function describeIndexStoreContract<S extends IndexStore<Payload>>(
       const store = fresh();
       const hs2: RunMeta = { ...META, homeserver: 'hs2' };
       await store.applyRuns([runOf(0, 2), runOf(0, 2, hs2)]);
-      await store.deleteHomeserver('hs1');
+      await store.deleteHomeserver('hs1', 'r5.a');
       const stale: StoreBatch<Payload> = {
         readAt: [
-          { homeserver: 'hs1', epoch: 0 },
-          { homeserver: 'hs2', epoch: 0 },
+          { homeserver: 'hs1', epoch: '' },
+          { homeserver: 'hs2', epoch: '' },
         ],
-        deleteHomeservers: ['hs2'],
+        deleteHomeservers: [{ homeserver: 'hs2', epoch: 'r5.b' }],
         applyRuns: [runOf(2, 4), runOf(2, 4, hs2)],
         recordData: [{ scope: hs2, path: 'a', cursor: c(2), data: { n: 7 } }],
         userHomeservers: [{ user: 'alice', value: { homeserver: 'hs1', resolvedAt: 5 } }],
@@ -430,11 +434,11 @@ export function describeIndexStoreContract<S extends IndexStore<Payload>>(
       await expectScopeOf(store, META, []);
       await expectScopeOf(store, hs2, [runOf(0, 2, hs2)]);
       expect(await store.readUserHomeserver('alice')).toBeNull();
-      expect(await store.readHomeserverState('hs1')).toEqual({ ...EMPTY_HOMESERVER_STATE, epoch: 1 });
+      expect(await store.readHomeserverState('hs1')).toEqual({ ...EMPTY_HOMESERVER_STATE, epoch: 'r5.a' });
       expect(await store.readHomeserverState('hs2')).toEqual(EMPTY_HOMESERVER_STATE);
       expect(await store.readScopeMembers('alice')).toEqual(new Map());
 
-      await store.commit({ ...stale, readAt: [{ homeserver: 'hs1', epoch: 1 }], deleteHomeservers: [] });
+      await store.commit({ ...stale, readAt: [{ homeserver: 'hs1', epoch: 'r5.a' }], deleteHomeservers: [] });
       await expectScopeOf(store, META, [runOf(2, 4)]);
       expect((await store.readHomeserverState('hs1')).highWater).toEqual({ cursor: c(4), author: 'alice' });
     });
@@ -464,8 +468,62 @@ export function describeIndexStoreContract<S extends IndexStore<Payload>>(
         // The backdated sample breaks the order of the three others.
         clock: [sample(10, 1, 'alice'), sample(20, 2, 'carol'), sample(30, 3, 'bob')],
       });
-      await store.deleteHomeserver('hs1');
+      await store.deleteHomeserver('hs1', 'r5.a');
       expect((await store.readHomeserverState('hs1')).clock).toEqual([]);
+    });
+
+    it('names a homeserver never read once, and only a deletion names it again', async () => {
+      const store = fresh();
+      await store.applyRuns([runOf(0, 2)]);
+
+      await store.patchHomeserverState('hs1', { epoch: 'c5.a' });
+      await store.patchHomeserverState('hs1', { epoch: 'c4.b' });
+
+      expect((await store.readHomeserverState('hs1')).epoch).toBe('c5.a');
+      await expectScopeOf(store, META, [runOf(0, 2)]);
+      await store.deleteHomeserver('hs1', 'r6.c');
+      await store.patchHomeserverState('hs1', { epoch: 'c4.b' });
+      expect((await store.readHomeserverState('hs1')).epoch).toBe('r6.c');
+      await expect(store.patchHomeserverState('hs1', { epoch: 'not one' })).rejects.toThrow(InvalidIndexInputError);
+      await expect(store.deleteHomeserver('hs1', '-1')).rejects.toThrow(InvalidIndexInputError);
+    });
+
+    it('exports scopes with the state of their homeservers, read together', async () => {
+      const store = fresh();
+      const hs2: RunMeta = { ...META, homeserver: 'hs2' };
+      const missing: RunMeta = { ...META, author: 'bob' };
+      const runs = [runWith(0, 10, [rec('a', 4), tomb('b', 7)]), runWith(20, 30, [rec('c', 25)])];
+      await store.applyRuns([...runs, runOf(0, 3, hs2)]);
+      await store.patchHomeserverState('hs1', { epoch: 'c5.a', highWater: { cursor: c(30), author: 'alice' } });
+
+      const coverage = await store.exportScopes([META, hs2, missing], { runs: false });
+      expect(coverage.homeservers).toEqual(
+        new Map([
+          ['hs1', await store.readHomeserverState('hs1')],
+          ['hs2', EMPTY_HOMESERVER_STATE],
+        ]),
+      );
+      expect(coverage.coverage).toEqual(
+        new Map([
+          [scopeId(META), mergeRuns(runs).coverage],
+          [scopeId(hs2), [{ tail: c(0), head: c(3) }]],
+        ]),
+      );
+      expect(coverage.runs).toEqual(new Map());
+
+      // A deletion committed while the export reads: the runs and the epoch come from the same side of it.
+      const [exported] = await Promise.all([
+        store.exportScopes([META, hs2], { runs: true }),
+        store.commit({
+          readAt: [{ homeserver: 'hs1', epoch: 'c5.a' }],
+          deleteHomeservers: [{ homeserver: 'hs1', epoch: 'r6.b' }],
+        }),
+      ]);
+      const epoch = exported.homeservers.get('hs1')?.epoch;
+      expect(exported.runs.get(scopeId(META)) ?? []).toEqual(epoch === 'c5.a' ? compactRuns(runs) : []);
+      expect(exported.runs.get(scopeId(hs2))).toEqual([runOf(0, 3, hs2)]);
+      const after = await store.exportScopes([META], { runs: true });
+      expect([after.homeservers.get('hs1')?.epoch, after.runs.size]).toEqual(['r6.b', 0]);
     });
 
     it('stores user homeservers and scope members per key, the last write winning', async () => {

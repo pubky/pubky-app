@@ -34,6 +34,7 @@ import {
 import { createWindowReads } from './crawler.window';
 import { CURSOR_ZERO } from './cursor';
 import type { PathGroup } from './domain.types';
+import { contactEpoch, type Epoch, NO_EPOCH, restoreEpoch } from './epoch';
 import { IndexerError, InvalidIndexInputError } from './indexer.errors';
 import type { Cursor, Run } from './indexer.types';
 import { readForward } from './paging';
@@ -72,7 +73,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
   /** Lookups in flight by user, so operations running together resolve a user once. */
   const lookups = new Map<string, Promise<string | null>>();
   /** Per homeserver, the epoch and time of the last restore check a `backfill` made, which the next steps share. */
-  const backfillChecks = new Map<string, { epoch: number; at: number }>();
+  const backfillChecks = new Map<string, { epoch: Epoch; at: number }>();
   const listeners = new Set<(stats: CrawlerStats) => void>();
   const commitListeners = new Set<(change: StoreChange) => void>();
 
@@ -141,7 +142,8 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     const newest = await reader(ctx, homeserver, allPaths, 1)([{ user: highWater.author, cursor: null }], true);
     if (newest.length > 0 && newest[0].cursor >= highWater.cursor) return;
     const scopes = (await store.listScopes()).filter((scope) => scope.homeserver === homeserver);
-    await commit({ ...readAtOf(ctx, homeserver), deleteHomeservers: [homeserver] }, { scopes, seeds: [] });
+    const epoch = restoreEpoch(ctx.epochs.get(homeserver) ?? NO_EPOCH, now());
+    await commit({ ...readAtOf(ctx, homeserver), deleteHomeservers: [{ homeserver, epoch }] }, { scopes, seeds: [] });
     fill.dropUnfilled((scope) => scope.homeserver !== homeserver);
     // Read again: the deletion that started it may be another operation's, which found the restore first.
     ctx.epochs.set(homeserver, (await store.readHomeserverState(homeserver)).epoch);
@@ -153,7 +155,15 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
   /** Whether the homeserver may be crawled now: not failed, not backing off, checked for a restore. */
   async function ready(ctx: OperationContext, homeserver: string): Promise<boolean> {
     if (ctx.failed.has(homeserver)) return false;
-    const state = await store.readHomeserverState(homeserver);
+    let state = await store.readHomeserverState(homeserver);
+    if (state.epoch === NO_EPOCH) {
+      // The first read of the homeserver names its log; an operation that named it first keeps its name.
+      await store.commit({
+        readAt: [{ homeserver, epoch: NO_EPOCH }],
+        homeserverStates: [{ homeserver, patch: { epoch: contactEpoch(now()) } }],
+      });
+      state = await store.readHomeserverState(homeserver);
+    }
     if (state.failure !== null && state.failure.retryAt > now()) {
       markFailed(ctx, homeserver);
       return false;

@@ -1,15 +1,18 @@
 import Dexie from 'dexie';
+import { type Epoch, NO_EPOCH } from './epoch';
 import type { Coverage, Cursor, Entry, MergedRuns, RecordEntry } from './indexer.types';
 import type { BulkScopeReader } from './readScopes';
 import {
   applyRun,
   assertValidBatch,
   deletedState,
+  emptyExport,
   evictCoverage,
   homeserverStateOf,
   patchedState,
   readsCurrent,
   runsOfScope,
+  scopeId,
   scopeOf,
   scopeState,
   withData,
@@ -155,15 +158,15 @@ export function createIdbStore<D>(databaseName: string): IdbIndexStore<D> {
     await db.transaction('rw', tables, async () => {
       const stateOfHomeserver = async (homeserver: string) =>
         homeserverStateOf((await homeserverStates.get(homeserver))?.state);
-      const epochs = new Map<string, number>();
+      const epochs = new Map<string, Epoch>();
       for (const { homeserver } of copy.readAt ?? [])
         epochs.set(homeserver, (await stateOfHomeserver(homeserver)).epoch);
-      if (!readsCurrent(copy.readAt, (homeserver) => epochs.get(homeserver) ?? 0)) return;
-      for (const homeserver of copy.deleteHomeservers ?? []) {
+      if (!readsCurrent(copy.readAt, (homeserver) => epochs.get(homeserver) ?? NO_EPOCH)) return;
+      for (const { homeserver, epoch } of copy.deleteHomeservers ?? []) {
         const ids = await scopes.where('homeserver').equals(homeserver).primaryKeys();
         for (const id of ids) await pathsOf(id).delete();
         await scopes.bulkDelete(ids);
-        await homeserverStates.put({ homeserver, state: deletedState(await stateOfHomeserver(homeserver)) });
+        await homeserverStates.put({ homeserver, state: deletedState(await stateOfHomeserver(homeserver), epoch) });
       }
       for (const { scope, cutoff } of copy.evictions ?? []) {
         const row = await scopeRow(scope);
@@ -217,6 +220,23 @@ export function createIdbStore<D>(databaseName: string): IdbIndexStore<D> {
   const readScopes = (asked: readonly ScopeKey[]) =>
     db.transaction('r', [scopes, paths], () => Promise.all(asked.map(async (scope) => stateOf(await scopeRow(scope)))));
 
+  // One transaction, so a run and the epoch given with it come from the same state.
+  const exportScopes = (asked: readonly ScopeKey[], { runs }: { runs: boolean }) =>
+    db.transaction('r', [scopes, paths, homeserverStates], async () => {
+      const out = emptyExport<D>();
+      for (const scope of asked) {
+        if (!out.homeservers.has(scope.homeserver)) {
+          const stored = await homeserverStates.get(scope.homeserver);
+          out.homeservers.set(scope.homeserver, homeserverStateOf(stored?.state));
+        }
+        const row = await scopeRow(scope);
+        if (row === undefined) continue;
+        out.coverage.set(scopeId(scope), row.coverage);
+        if (runs) out.runs.set(scopeId(scope), runsOfScope(scope, await stateOf(row)));
+      }
+      return out;
+    });
+
   // Reads need no copy: IndexedDB hands out a fresh structured clone on every read.
   return {
     commit,
@@ -225,9 +245,10 @@ export function createIdbStore<D>(databaseName: string): IdbIndexStore<D> {
     readScopes,
     readCoverage: async (scope) => (await scopeRow(scope))?.coverage ?? [],
     exportRuns: async (scope) => runsOfScope(scope, await readScope(scope)),
+    exportScopes,
     evictBelow: (scope, cutoff) => commit({ evictions: [{ scope, cutoff }] }),
     listScopes: async () => (await scopes.toArray()).map(scopeOf),
-    deleteHomeserver: (homeserver) => commit({ deleteHomeservers: [homeserver] }),
+    deleteHomeserver: (homeserver, epoch) => commit({ deleteHomeservers: [{ homeserver, epoch }] }),
     readUserHomeserver: async (user) => (await userHomeservers.get(user))?.value ?? null,
     writeUserHomeserver: (user, value) => commit({ userHomeservers: [{ user, value }] }),
     readHomeserverState: async (homeserver) => homeserverStateOf((await homeserverStates.get(homeserver))?.state),

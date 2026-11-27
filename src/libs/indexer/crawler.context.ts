@@ -1,5 +1,6 @@
 import type { Priority } from './concurrency';
 import { CURSOR_ZERO } from './cursor';
+import type { Epoch } from './epoch';
 import type { Coverage, Cursor } from './indexer.types';
 import type { HighWater, ReadAt } from './store.types';
 import type { TimeSample } from './timeTable';
@@ -17,7 +18,7 @@ export interface OperationContext {
   /** Each homeserver's restore check, shared by the reads of the operation that run together. */
   checked: Map<string, Promise<boolean>>;
   /** The epoch of each homeserver its reads are made under, stated by every commit of what they read. */
-  epochs: Map<string, number>;
+  epochs: Map<string, Epoch>;
   /** The newest event read from each homeserver. */
   highWater: Map<string, HighWater>;
   /** Each homeserver's stored clock with every dated write read since, the clock its window reads go by. */

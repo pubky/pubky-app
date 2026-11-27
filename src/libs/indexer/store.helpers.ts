@@ -1,5 +1,6 @@
 import { addRange } from './coverage';
 import { isValidCursor } from './cursor';
+import { countedEpoch, type Epoch, isEpoch } from './epoch';
 import { InvalidIndexInputError } from './indexer.errors';
 import type { Coverage, Cursor, Entry, MergedRuns, Range, RecordEntry, Run } from './indexer.types';
 import { replaces, sameEvent } from './merge';
@@ -26,6 +27,11 @@ export function assertValidBatch<D>(batch: StoreBatch<D>): void {
     if (!isValidCursor(cutoff)) throw new InvalidIndexInputError(`cutoff ${cutoff} is out of range`);
   }
   for (const run of batch.applyRuns ?? []) assertValidRun(run);
+  const epochs = [
+    ...(batch.deleteHomeservers ?? []).map(({ epoch }) => epoch),
+    ...(batch.homeserverStates ?? []).flatMap(({ patch }) => (patch.epoch === undefined ? [] : [patch.epoch])),
+  ];
+  for (const epoch of epochs) if (!isEpoch(epoch)) throw new InvalidIndexInputError(`epoch ${epoch} is not one`);
   for (const { cursor } of batch.recordData ?? []) {
     if (!isValidCursor(cursor)) throw new InvalidIndexInputError(`record cursor ${cursor} is out of range`);
   }
@@ -93,11 +99,19 @@ export function evictCoverage(coverage: readonly Range[], cutoff: Cursor): Cover
     .map(({ tail, head }) => ({ tail: tail >= cutoff ? tail : cutoff, head }));
 }
 
+/** A stored epoch in the current shape: an earlier release stored a count. */
+const epochOf = (stored: unknown): Epoch =>
+  typeof stored === 'number'
+    ? countedEpoch(stored)
+    : typeof stored === 'string'
+      ? stored
+      : EMPTY_HOMESERVER_STATE.epoch;
+
 /** A stored homeserver state in the current shape, `EMPTY_HOMESERVER_STATE` for none. */
 export function homeserverStateOf(stored: Partial<HomeserverState> | undefined): HomeserverState {
   return {
     highWater: stored?.highWater ?? null,
-    epoch: stored?.epoch ?? EMPTY_HOMESERVER_STATE.epoch,
+    epoch: epochOf(stored?.epoch),
     failure: stored?.failure ?? null,
     clock: stored?.clock ?? [],
   };
@@ -112,21 +126,24 @@ export function patchedState(current: Readonly<HomeserverState>, patch: Homeserv
   const rises = highWater !== undefined && (current.highWater === null || highWater.cursor > current.highWater.cursor);
   return {
     highWater: rises ? highWater : current.highWater,
-    epoch: current.epoch,
+    epoch: current.epoch === EMPTY_HOMESERVER_STATE.epoch && patch.epoch !== undefined ? patch.epoch : current.epoch,
     failure: patch.failure !== undefined ? patch.failure : current.failure,
     clock:
       patch.clock === undefined || patch.clock.length === 0 ? current.clock : mergeClock(current.clock, patch.clock),
   };
 }
 
-/** The state a deletion leaves: the next epoch, no mark, no clock. */
-export const deletedState = (current: Readonly<HomeserverState>): HomeserverState => ({
+/** The state a deletion that starts `epoch` leaves: no mark, no clock. */
+export const deletedState = (current: Readonly<HomeserverState>, epoch: Epoch): HomeserverState => ({
   highWater: null,
-  epoch: current.epoch + 1,
+  epoch,
   failure: current.failure,
   clock: [],
 });
 
 /** Whether every epoch the batch read under is still current. */
-export const readsCurrent = (readAt: readonly ReadAt[] | undefined, epochOf: (homeserver: string) => number) =>
-  (readAt ?? []).every(({ homeserver, epoch }) => epochOf(homeserver) === epoch);
+export const readsCurrent = (readAt: readonly ReadAt[] | undefined, current: (homeserver: string) => Epoch) =>
+  (readAt ?? []).every(({ homeserver, epoch }) => current(homeserver) === epoch);
+
+/** An empty export, to fill. */
+export const emptyExport = <D>(): ScopesExport<D> => ({ homeservers: new Map(), coverage: new Map(), runs: new Map() });

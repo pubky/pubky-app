@@ -48,9 +48,11 @@ heads and tails alone. `store.contract.ts` checks this equivalence after every s
 The store also keeps each user's resolved homeserver, per-homeserver crawl state (high-water mark, epoch, failures
 and clock) and the members of each scope. `commit` applies a whole batch atomically, and values
 are copied in and out, so callers never share objects with the store. A homeserver's high-water mark only
-rises, and deleting a homeserver starts a new epoch for it: a batch names the epochs it read under, and
-changes nothing once one of them is over, so what an operation read before another one dropped the
-homeserver never comes back. `createMemoryStore` keeps it in memory, for tests and short-lived
+rises. Its epoch names the log a device read from it (`epoch.ts`): the crawler names it at its first read of the
+homeserver and names it anew when it finds a restore, deleting everything stored for it. A batch names the epochs it
+read under, and changes nothing once one of them is over, so what an operation read before another one dropped the
+homeserver never comes back. `exportScopes` reads scopes together with their homeservers' states in one read, so a
+run leaves the store only with the epoch of the log it was read from. `createMemoryStore` keeps it in memory, for tests and short-lived
 use. `createIdbStore` keeps it in IndexedDB through Dexie, each `commit` in one read-write transaction.
 Entries are keyed by scope then path, so a scope is one range of the primary key, and a run reads and
 writes only the rows of its own paths. Payloads and cursors are stored by structured clone, so `D` must
@@ -340,9 +342,13 @@ new layout, whose names they do not read. Runs merge with what the store has, a 
 stored body at the same cursor, and each dated record goes into its homeserver's clock as if it had been read, so the
 window of the next sync is placed from the start.
 
-Each file carries every homeserver's epoch as its writer knew it: the restores of that homeserver it had seen. Loading
-or folding, per homeserver the newest epoch wins: runs written under an older one predate a restore and are left out,
-and a store behind a file's epoch drops what it holds of that homeserver first, so a fold after a restore purges the
+Each file carries every homeserver's epoch and mark exactly as read with its runs, one read of the store, so a restore
+committed while a save runs leaves the old runs under the old epoch and mark. An epoch names a log, so equal epochs on
+two devices mean the same log, whoever counted how many restores. One log can get two names, as when two devices find
+the same restore or read a homeserver first apart, and every device orders names alike (`epoch.ts`): any restore
+after any first read, a later restore after an earlier one, an earlier first read after a later one, since that
+device holds the most. Loading or folding, per homeserver the newest wins: runs read from another log are left out,
+and a store that read another log drops what it holds of that homeserver first, so a fold after a restore purges the
 old log from the shared files. The high-water marks still let the next sync catch a restore nobody saw yet. Files
 that could not be read, such as an account's before its session is restored, are read again after the next scope
 sync.
