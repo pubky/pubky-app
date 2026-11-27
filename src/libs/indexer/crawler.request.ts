@@ -45,7 +45,7 @@ export interface Requests<D> {
   guard(ctx: OperationContext, homeserver: string, work: () => Promise<void>): Promise<boolean>;
   bodyOf(ctx: OperationContext, homeserver: string, author: string, record: RecordEntry<D>): Promise<D | null>;
   attachBodies(ctx: OperationContext, runs: readonly Run<D>[]): Promise<void>;
-  /** One request to the homeserver on the route, retried, under `timeoutMs`. */
+  /** One request to the homeserver on the route, tried once under `timeoutMs`: for work its caller does again later. */
   send<T>(
     ctx: OperationContext,
     homeserver: string,
@@ -200,7 +200,7 @@ export function createRequests<D>(deps: RequestDeps<D>): Requests<D> {
     route: Route,
     timeoutMs: number,
     request: (signal: AbortSignal) => Promise<T>,
-  ) => attempt(ctx, homeserver, () => call(ctx, homeserver, route, request, timeoutMs));
+  ) => call(ctx, homeserver, route, request, timeoutMs);
 
   return { reader, guard, bodyOf, attachBodies, send };
 }

@@ -63,7 +63,7 @@ be structured-cloneable; cursors stay `bigint` and are never part of a key.
 ## Crawler
 
 The crawler is five files. `crawler.ts` composes the operations: the scope sync, the user and leaf syncs, `backfill`
-and the restore check. `crawler.request.ts` makes every request to a homeserver, retried, through the gate in
+and the restore check. `crawler.request.ts` makes every request to a homeserver through the gate in
 `concurrency.ts`, and keeps a failure to its homeserver. `crawler.window.ts` reads the windowed groups newest first off
 the homeserver's clock (`timeTable.ts`) and commits them in slices. `crawler.fill.ts` keeps the records stored without
 their files and fetches them (`hydrate`). `crawler.context.ts` holds what one operation knows of each homeserver, which
@@ -136,7 +136,7 @@ like any failed lookup, and an index file call past `indexFileTimeoutMs` (2 min)
 such as a `stop`, settles the operation at once, even while a call hangs. A call that settles after
 its deadline or abort is ignored.
 
-A request answered 429, or failed or past its deadline, is retried up to three times. A failure waits 1 s before
+A crawl request answered 429, or failed or past its deadline, is retried up to three times. A failure waits 1 s before
 its first retry, doubling per retry of that request up to 8 s, so requests failing together never push each other's
 waits. A 429 is the homeserver's limiter speaking: it keys a quota by route (a path pattern and a method) and by IP
 or user, refills one token per period, and names no wait, so the SDK passes none on. The gate closes that route of
@@ -352,18 +352,23 @@ nothing. Its new base is what the files it wrote hold, as read for them, and wha
 writer rebases when it reads `hot` saying its latest generation is folded. A fold that cannot finish, whatever
 stops it, a lock, a lost lock, a shared file it cannot read or a failed request, writes the delta instead, never
 overwriting a file it cannot read. Index file calls are requests to the user's homeserver like the crawl's
-(`Crawler.indexFilesOf`): queued at its gate, a lock's calls ahead of crawls and the rest behind them, retried, paced
-after a 429, each try under `indexFileTimeoutMs`. A refusal no retry changes, such as a session not restored yet,
-comes through the transport as it is and fails the call at once, as any error that is not the library's does.
+(`Crawler.indexFilesOf`): queued at its gate, a lock's calls ahead of crawls and the rest behind them, paced after a
+429, under `indexFileTimeoutMs`. Unlike a crawl request each is tried once: the files only speed things up, and a load
+or save that fails runs again later, a load after the next scope sync, a save at the next one.
 Only the members' domain groups are written, so what the user opened on demand never is. Over `fileBudgetBytes`
 (200 MB) each pack is trimmed to its share, data first, then windowed history, each oldest first and farthest hop
 first; the graph is never trimmed.
 
 At start the crawling tab reads `hot` and lists `d/` at once, then fetches the deltas: three requests for a feed at
-any size with one other device. It applies them in one commit and reports it, so the view rebuilds from `hot`, and the
-first scope sync starts. Beside it the packs arrive, four at a time, each reported as it lands: those whose version the
-directory names, its writer's clock reading, is not the one this store applied, so a writer whose clock runs ahead
-never hides a later pack. A sync that reads an author before their pack lands reads what the pack holds too; runs
+any size with one other device. It applies them in one commit and reports it, so the view rebuilds from `hot`. The
+crawls wait for that load until it lands or `loadWaitMs` (3 s, a few healthy reads) passes, whichever comes first:
+with healthy files the first page needs no crawl, and a folder that hangs or fails delays the first sync by no more.
+A load that lands later merges with what the crawl wrote, and a load that applied anything starts a scope sync, which
+reads on from where the files leave the store. Where the crawl first read a homeserver meanwhile, it named that log
+itself, so the file's older name wins and what the crawl stored of that homeserver goes once, read again by that sync.
+Beside the crawls the packs arrive, four at a time, each reported as it lands: those whose version the directory
+names, its writer's clock reading, is not the one this store applied, so a writer whose clock runs ahead never hides a
+later pack. A sync that reads an author before their pack lands reads what the pack holds too; runs
 merge in any order, and a save waits for the packs. Without `hot` it reads the version 2 files,
 one per writer at the folder's root, which earlier releases wrote and still write while they run; those never see the
 new layout, whose names they do not read. Runs merge with what the store has, a record without data never erases a

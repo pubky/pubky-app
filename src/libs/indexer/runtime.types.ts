@@ -39,6 +39,11 @@ export interface RuntimeOptions {
   backfillMinIntervalMs: number;
   /** Deadline of one index file call: a file may be as large as `fileBudgetBytes`, so it gets longer than a read. */
   indexFileTimeoutMs: number;
+  /**
+   * Longest the crawls wait at start for the saved index's first files, `hot` and the deltas: a few times what a
+   * healthy read takes, about a second, so a folder that hangs or fails delays the first sync by no more.
+   */
+  loadWaitMs: number;
   crawler: Partial<CrawlerOptions>;
 }
 
@@ -52,6 +57,7 @@ export const DEFAULT_RUNTIME_OPTIONS: Readonly<RuntimeOptions> = Object.freeze({
   fileBudgetBytes: 200 * 1024 * 1024,
   backfillMinIntervalMs: 30 * 1000,
   indexFileTimeoutMs: 2 * 60 * 1000,
+  loadWaitMs: 3 * 1000,
   crawler: {},
 });
 

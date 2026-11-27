@@ -91,11 +91,13 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
   /** Whether this runtime may crawl: always while running alone, only while holding the lock otherwise. */
   let leading = false;
   let controller = new AbortController();
-  /** The request running, or the saved index being read; one at a time. */
+  /** The request running; one at a time. */
   let running: Promise<void> | null = null;
   /** The scope sync running beside the requests, its requests behind theirs at every homeserver. */
   let scoping: Promise<void> | null = null;
-  /** Whether the running work reads the saved index, which a scope sync and a fill wait for. */
+  /** The saved index being read, beside the crawls; a save waits for it. */
+  let loadingIndex: Promise<void> | null = null;
+  /** Whether the crawls still wait for that read: until it lands or `loadWaitMs` passes. */
   let loading = false;
   /** The packs a load left to fetch beside the crawls, which a save waits for. */
   let packing: Promise<void> | null = null;
@@ -122,7 +124,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
   let lastError: Error | null = null;
   let firstSyncPending = false;
   let asOf: number | null = null;
-  /** The saved index is read before the first crawl after a start. */
+  /** The saved index is read when crawling starts. */
   let loadDue = false;
   /** A saved index that could not be read is read again after the next scope sync. */
   let loadAgain = false;
@@ -171,7 +173,11 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     return {
       state: !started
         ? 'stopped'
-        : running !== null || scoping !== null || filling !== null || (canCrawl() && fillAhead())
+        : running !== null ||
+            scoping !== null ||
+            filling !== null ||
+            loadingIndex !== null ||
+            (canCrawl() && fillAhead())
           ? 'syncing'
           : lastError !== null
             ? 'error'
@@ -244,7 +250,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
       writer === null
         ? null
         : createSavedIndex({
-            // Requests to the user's homeserver like any other: queued with the crawl's, retried, paced after a 429.
+            // Requests to the user's homeserver like any other: queued with the crawl's, paced after a 429.
             files: crawler.indexFilesOf(current, inner.indexFiles, options.indexFileTimeoutMs),
             store,
             domain,
@@ -261,12 +267,12 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     return savedIndex;
   }
 
-  /** Never rejects: a failure goes to the status. */
-  async function loadIndex(current: string): Promise<void> {
+  /** Whether it applied a file. Never rejects: a failure goes to the status. */
+  async function loadIndex(current: string): Promise<boolean> {
     try {
       const index = await savedIndexOf(current);
-      if (index === null) return;
-      // The first sync waits for `hot` and the deltas only: the packs arrive beside it, each reported as it lands.
+      if (index === null) return false;
+      // The crawls wait for `hot` and the deltas at most: the packs arrive beside them, each reported as it lands.
       const outcome = await index.load(announce);
       saved = { ...saved, loadedFiles: outcome.loaded, ignoredFiles: outcome.ignored, error: null };
       if (outcome.writtenAt !== null) noteAsOf(outcome.writtenAt);
@@ -277,9 +283,11 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
       packing = loadPacks(index).finally(() => {
         packing = null;
       });
+      return outcome.loaded > 0;
     } catch (error) {
       saved = { ...saved, error: asError(error) };
       loadAgain = true;
+      return false;
     }
   }
 
@@ -312,7 +320,8 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     if (!options.savedIndex || current === null || saving !== null) return;
     if (!force && lastSaveAt !== null && now() - lastSaveAt < options.saveMinIntervalMs) return;
     saving = (after ?? Promise.resolve())
-      // A save reads and writes what the writer knows of the folder, which the packs still landing change.
+      // A save reads and writes what the writer knows of the folder, which a load and the packs still landing change.
+      .then(() => loadingIndex)
       .then(() => packing)
       .then(async () => {
         if (!dirty) return;
@@ -477,7 +486,9 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
 
   /** What runs now, settled once all of it is; `null` when nothing does. */
   function busy(): Promise<void> | null {
-    const work = [running, scoping, filling, saving].filter((item): item is Promise<void> => item !== null);
+    const work = [running, scoping, filling, loadingIndex, saving].filter(
+      (item): item is Promise<void> => item !== null,
+    );
     return work.length === 0 ? null : Promise.all(work).then(() => undefined);
   }
 
@@ -489,13 +500,35 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     emitStatus();
   }
 
-  /** The next request, after a start the saved index first; `null` when none waits. */
-  function nextRequest(current: string | null): Promise<void> | null {
-    if (loadDue && current !== null) {
-      loadDue = false;
-      loading = true;
-      return loadIndex(current);
-    }
+  /**
+   * Reads the saved index beside the crawls, which wait for it until it lands or `loadWaitMs` passes: a healthy folder
+   * answers well within it, so a new device's first page comes from the files without a crawl, and a folder that hangs
+   * or fails holds nothing up past it. The files only speed things up: a load that lands after a crawl merges with it.
+   */
+  function startLoad(current: string): void {
+    loadDue = false;
+    loading = true;
+    const load: Promise<void> = loadIndex(current).then((applied) => {
+      cancelWait();
+      if (loadingIndex !== load) return;
+      loadingIndex = null;
+      loading = false;
+      // The files moved heads a crawl may have read already, or dropped what it stored of a log they name otherwise:
+      // a sync reads on from where they leave the store. Before the first sync starts, that is the first sync.
+      if (applied) periodicDue = true;
+      afterCrawl();
+    });
+    loadingIndex = load;
+    const cancelWait = schedule(() => {
+      if (loadingIndex !== load || !loading) return;
+      loading = false;
+      pump();
+      emitStatus();
+    }, options.loadWaitMs);
+  }
+
+  /** The next request; `null` when none waits. */
+  function nextRequest(): Promise<void> | null {
     const task = queue.shift();
     if (task === undefined) return null;
     // Leaves are small and independent: the ones waiting run together, so a page's post and profiles load at once.
@@ -504,21 +537,24 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
   }
 
   /**
-   * Starts the next request, one at a time, and the scope sync beside it once the saved index is read: at every
-   * homeserver the request's calls go first, so neither waits for the other to end and nothing is aborted. With no
-   * crawl running, a fill.
+   * After a start the saved index load first, then the next request, one at a time, and the scope sync beside it: at
+   * every homeserver the request's calls go first, so neither waits for the other to end and nothing is aborted. With
+   * no crawl running, a fill.
    */
   function pump() {
     const current = seed;
     if (!canCrawl()) return;
     let began = false;
-    if (running === null) {
-      const work = nextRequest(current);
+    if (loadDue && current !== null && loadingIndex === null) {
+      began = true;
+      startLoad(current);
+    }
+    if (running === null && !loading) {
+      const work = nextRequest();
       if (work !== null) {
         began = true;
         running = work.then(() => {
           running = null;
-          loading = false;
           afterCrawl();
         });
       }
@@ -785,6 +821,8 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
       heardBodies = NO_BODIES;
       fillFailing = [];
       loadDue = options.savedIndex && next !== null;
+      loadingIndex = null;
+      loading = false;
       loadAgain = false;
       scanDue = true;
       fillDue = false;

@@ -206,8 +206,9 @@ export interface Crawler {
   /** Replaces the `excluded` option from the next `syncScope` on. */
   setExcluded(users: Iterable<string>): void;
   /**
-   * The user's own index files, each call made to their homeserver the way every request of the crawler is: queued at
-   * its gate, retried, paced after a 429, under `timeoutMs`. A lock's calls go ahead of crawls, others behind.
+   * The user's own index files, each call made to their homeserver like a request of the crawler: queued at its gate,
+   * paced after a 429, under `timeoutMs`; a lock's calls ahead of crawls, others behind. Each is tried once: the
+   * files only speed things up, and a load or save that fails runs again later.
    */
   indexFilesOf(user: string, files: IndexFiles, timeoutMs: number): IndexFiles;
   stats(): CrawlerStats;

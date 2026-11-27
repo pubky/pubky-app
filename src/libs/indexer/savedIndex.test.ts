@@ -21,13 +21,13 @@ import type { Domain } from './domain.types';
 import { restoreEpoch } from './epoch';
 import { FakeIndexFiles, FakeNetwork } from './fakeNetwork';
 import { createIndexerRuntime } from './indexer';
-import { RateLimitedError } from './indexer.errors';
+import { HomeserverUnreachableError, RateLimitedError } from './indexer.errors';
 import type { Cursor, Entry, Run } from './indexer.types';
 import { decodeIndexFile, encodeIndexFile, type IndexFileModel, type ReviveData } from './indexFile';
 import { createIndexSealer } from './indexSealer';
 import { createMemoryStore } from './memoryStore';
 import { fakeTime } from './runtime.fixtures';
-import type { IndexSealer, RuntimeOptions } from './runtime.types';
+import { DEFAULT_RUNTIME_OPTIONS, type IndexerRuntime, type IndexSealer, type RuntimeOptions } from './runtime.types';
 import {
   bucketOf,
   createSavedIndex,
@@ -1058,8 +1058,16 @@ describe('saved index folder', () => {
   });
 });
 
-/** One device through the runtime, with a transport that counts what it asks and a gate that can hold stream reads. */
-function runtimeDevice(w: World, options: Partial<RuntimeOptions> = {}, store = createMemoryStore<Post>()) {
+/**
+ * One device through the runtime, with a transport that counts what it asks and a gate that can hold stream reads;
+ * `files` replaces calls of its folder.
+ */
+function runtimeDevice(
+  w: World,
+  options: Partial<RuntimeOptions> = {},
+  store = createMemoryStore<Post>(),
+  files: Partial<IndexFiles> = {},
+) {
   const time = fakeTime(NOW);
   w.files.now = () => time.clock.now;
   const counts = { lookups: 0, bodies: 0, writes: 0, reads: [] as ReadEventsRequest[] };
@@ -1093,6 +1101,7 @@ function runtimeDevice(w: World, options: Partial<RuntimeOptions> = {}, store = 
         counts.writes += 1;
         return w.files.write(path, bytes, lock);
       },
+      ...files,
     }),
   };
   const runtime = createIndexerRuntime({
@@ -1105,6 +1114,57 @@ function runtimeDevice(w: World, options: Partial<RuntimeOptions> = {}, store = 
   });
   const synced = () => until(() => runtime.status().lastSyncAt !== null && runtime.status().state === 'idle', 'a sync');
   return { store, counts, runtime, hold, gate, synced, time };
+}
+
+const LOAD_WAIT_MS = DEFAULT_RUNTIME_OPTIONS.loadWaitMs;
+
+/**
+ * Calls of the folder whose `hot` read by a load waits for `release`, then reads it, or fails with the error given. A
+ * fold reads it under its lock, unheld.
+ */
+function heldHot(w: World) {
+  const held = { reads: 0 };
+  let release: (failure?: Error) => void = () => undefined;
+  const gate = new Promise<void>((resolve, reject) => {
+    release = (failure) => (failure === undefined ? resolve() : reject(failure));
+  });
+  const files: Partial<IndexFiles> = {
+    read: async (path) => {
+      if (!path.endsWith('/hot') || w.files.locked(path)) return w.files.read(path);
+      held.reads += 1;
+      await gate;
+      return w.files.read(path);
+    },
+  };
+  return { held, files, release: (failure?: Error) => release(failure) };
+}
+
+/** What every user's scopes hold live on the network, as `servedAll` reads a store. */
+function liveAll(w: World) {
+  const out: Record<string, Array<[string, Cursor]>> = {};
+  for (const user of USERS) {
+    for (const group of [GRAPH, ACTIVITY]) out[`${user} ${group}`] = [...w.network.liveOf(user, PATHS[group])];
+  }
+  return out;
+}
+
+/** Every distinct saved index error the runtime reports, in order. */
+function savedErrorsOf(runtime: IndexerRuntime): Error[] {
+  const errors: Error[] = [];
+  runtime.onStatus(({ savedIndex }) => {
+    const error = savedIndex?.error ?? null;
+    if (error !== null && errors[errors.length - 1] !== error) errors.push(error);
+  });
+  return errors;
+}
+
+/** A device that synced and saved its first fold. */
+async function savedDevice(w: World, options: Partial<RuntimeOptions> = {}) {
+  const a = runtimeDevice(w, options);
+  a.runtime.start('alice');
+  await a.synced();
+  await until(() => a.counts.writes === 1, 'the first save');
+  return a;
 }
 
 const headOf = async (store: IndexStore<Post>, scope: ScopeKey): Promise<Cursor | null> => {
@@ -1158,32 +1218,170 @@ describe('saved index in the runtime', () => {
     expect(b.runtime.status().savedIndex).toMatchObject({ loadedFiles: 1, ignoredFiles: 0, error: null });
   });
 
-  it('asks the homeserver for its index files the way it asks for anything, retrying a 429 once the route opens', async () => {
+  it('asks for each index file once: a 429 fails the load, which reads again after the next scope sync', async () => {
     const w = world();
-    const a = runtimeDevice(w);
-    a.runtime.start('alice');
-    await a.synced();
-    await until(() => a.counts.writes === 1, 'the first save');
+    const a = await savedDevice(w);
     let refused = 0;
     w.files.fault = ({ op, path }) => {
-      if (op === 'read' && path.endsWith('/hot') && refused < 2) {
+      if (op === 'read' && path.endsWith('/hot') && refused < 1) {
         refused += 1;
         throw new RateLimitedError('hs1');
       }
     };
 
     const b = runtimeDevice(w);
+    const errors = savedErrorsOf(b.runtime);
     b.runtime.start('alice');
-    // The gate holds the route closed for a second, then two.
+    await until(() => b.runtime.status().lastSyncAt !== null, 'the first sync');
+    expect(b.runtime.status().lastSyncAt).toBe(NOW);
+    expect(refused).toBe(1);
+    expect(errors[0]).toBeInstanceOf(RateLimitedError);
+
     await until(async () => {
       await b.time.advance(500);
-      return b.runtime.status().lastSyncAt !== null && b.runtime.status().state === 'idle';
-    }, 'a sync');
-
-    expect(refused).toBe(2);
-    expect(b.runtime.status().savedIndex).toMatchObject({ loadedFiles: 1, error: null });
-    expect(await everything(b.store)).toEqual(await everything(a.store));
+      return b.runtime.status().savedIndex?.loadedFiles === 1 && b.runtime.status().state === 'idle';
+    }, 'the second load');
+    expect(refused).toBe(1);
+    expect(b.runtime.status().savedIndex?.error).toBeNull();
+    expect(await servedAll(b.store, USERS)).toEqual(await servedAll(a.store, USERS));
     w.files.fault = null;
+  });
+
+  it('waits for a hanging `hot` no longer than `loadWaitMs`, syncs beside it and tries it once', async () => {
+    const w = world();
+    const a = await savedDevice(w);
+    const { held, files } = heldHot(w);
+
+    const b = runtimeDevice(w, {}, createMemoryStore<Post>(), files);
+    b.runtime.start('alice');
+    await b.time.advance(LOAD_WAIT_MS - 1);
+    expect(held.reads).toBe(1);
+    expect(b.counts.reads).toHaveLength(0);
+
+    await b.time.advance(1);
+    await until(() => b.runtime.status().lastSyncAt !== null, 'the first sync');
+    expect(b.runtime.status().lastSyncAt).toBe(NOW + LOAD_WAIT_MS);
+    expect(await servedAll(b.store, USERS)).toEqual(await servedAll(a.store, USERS));
+    expect(b.runtime.status()).toMatchObject({ state: 'syncing', savedIndex: { loadedFiles: 0, error: null } });
+
+    // Past its deadline the read fails, never tried again before the next scope sync reads the folder anew; the save
+    // that waited for it runs.
+    expect(b.counts.writes).toBe(0);
+    const timeout = DEFAULT_RUNTIME_OPTIONS.indexFileTimeoutMs;
+    await b.time.advance(timeout - LOAD_WAIT_MS + 2000);
+    await until(() => b.counts.writes === 1, 'the save');
+    expect(held.reads).toBe(1);
+    await b.time.advance(DEFAULT_RUNTIME_OPTIONS.syncIntervalMs);
+    expect(held.reads).toBe(2);
+  });
+
+  it('starts the first sync at once when `hot` fails', async () => {
+    const w = world();
+    await savedDevice(w);
+    let reads = 0;
+    w.files.fault = ({ op, path }) => {
+      // A fold reads it under its lock.
+      if (op !== 'read' || !path.endsWith('/hot') || w.files.locked(path)) return;
+      reads += 1;
+      throw new HomeserverUnreachableError('hs1');
+    };
+
+    const b = runtimeDevice(w);
+    const errors = savedErrorsOf(b.runtime);
+    b.runtime.start('alice');
+    await until(() => b.runtime.status().lastSyncAt !== null, 'the first sync');
+
+    // Read once at start, never again before the sync, then once more after it.
+    expect(b.runtime.status().lastSyncAt).toBe(NOW);
+    expect(reads).toBe(2);
+    expect(errors[0]).toBeInstanceOf(HomeserverUnreachableError);
+    expect(await servedAll(b.store, USERS)).toEqual(liveAll(w));
+    w.files.fault = null;
+  });
+
+  it('merges a load landing after the first sync without losing either side or fetching a file again', async () => {
+    const w = world();
+    const a = await savedDevice(w, { saveMinIntervalMs: 0 });
+    const earlier = runtimeDevice(w);
+    earlier.runtime.start('alice');
+    await earlier.synced();
+    earlier.runtime.stop();
+    const { epoch } = await earlier.store.readHomeserverState('hs1');
+    // The files hold bob's new post; a crawl reads its deletion and carol's new post after.
+    w.network.putJson('bob', postPath(10 * HOUR_MS), { text: 'saved' });
+    await a.runtime.refresh();
+    await until(() => a.counts.writes === 2, 'the second save');
+    w.network.del('bob', postPath(10 * HOUR_MS));
+    w.network.putJson('carol', postPath(10 * HOUR_MS), { text: 'crawled' });
+    const deltasBefore = [...w.files.files.keys()].filter((path) => path.startsWith(`${FOLDER}d/`));
+
+    const { files, release } = heldHot(w);
+    const b = runtimeDevice(w, {}, earlier.store, files);
+    b.runtime.start('alice');
+    await b.time.advance(LOAD_WAIT_MS);
+    await until(() => b.runtime.status().lastSyncAt !== null, 'the first sync');
+    expect(await servedAll(b.store, USERS)).toEqual(liveAll(w));
+    const bodies = b.counts.bodies;
+    expect(bodies).toBeGreaterThan(0);
+
+    release();
+    await until(() => b.runtime.status().savedIndex?.loadedFiles === 2 && b.runtime.status().state === 'idle', 'load');
+    expect(await servedAll(b.store, USERS)).toEqual(liveAll(w));
+    expect((await b.store.readHomeserverState('hs1')).epoch).toBe(epoch);
+    expect(b.counts.bodies).toBe(bodies);
+
+    // Its save, which waited for the load, carries what the crawl brought and the files lack.
+    await until(() => b.counts.writes === 1, 'the save');
+    const mine = [...w.files.files.keys()].filter(
+      (path) => path.startsWith(`${FOLDER}d/`) && !deltasBefore.includes(path),
+    );
+    expect(mine).toHaveLength(1);
+    const delta = await decoded(w.files, mine[0]);
+    const entriesOf = (author: string) =>
+      delta.runs.filter((run) => run.author === author).flatMap((run) => run.entries);
+    expect(entriesOf('carol').some(({ path, kind }) => kind === 'record' && path === postPath(10 * HOUR_MS))).toBe(
+      true,
+    );
+    expect(entriesOf('bob').some(({ path, kind }) => kind === 'tombstone' && path === postPath(10 * HOUR_MS))).toBe(
+      true,
+    );
+
+    const c = runtimeDevice(w);
+    c.hold();
+    c.runtime.start('alice');
+    await until(() => c.counts.reads.length > 0, 'the first stream read');
+    expect(await servedAll(c.store, USERS)).toEqual(liveAll(w));
+    c.gate.open();
+  });
+
+  it('takes the log a late file names, and still finds the restore it hides', async () => {
+    const w = world();
+    w.network.putJson('carol', postPath(HOUR_MS), { text: 'edited' });
+    w.network.del('bob', postPath(HOUR_MS));
+    const a = await savedDevice(w);
+    const { epoch } = await a.store.readHomeserverState('hs1');
+    w.network.restore('hs1');
+    const { files, release } = heldHot(w);
+
+    const b = runtimeDevice(w, {}, createMemoryStore<Post>(), files);
+    b.runtime.start('alice');
+    await b.time.advance(LOAD_WAIT_MS);
+    await until(() => b.runtime.status().lastSyncAt === NOW + LOAD_WAIT_MS, 'the first sync');
+    expect(await servedAll(b.store, USERS)).toEqual(liveAll(w));
+    expect((await b.store.readHomeserverState('hs1')).epoch).not.toBe(epoch);
+
+    release();
+    // The file's name for the log is the older first read, so its runs and mark replace the crawl's, and the sync the
+    // load starts finds the log below that mark: a restore, everything read again.
+    await until(() => b.runtime.status().savedIndex?.loadedFiles === 1 && b.runtime.status().state === 'idle', 'load');
+    const after = (await b.store.readHomeserverState('hs1')).epoch;
+    expect(after.startsWith('r')).toBe(true);
+    expect(await servedAll(b.store, USERS)).toEqual(liveAll(w));
+    for (const scope of await b.store.listScopes()) {
+      expect((await headOf(b.store, scope)) ?? CURSOR_ZERO, scopeId(scope)).toBeLessThanOrEqual(
+        w.network.headOf('hs1'),
+      );
+    }
   });
 
   it('never erases data the device already has', async () => {
