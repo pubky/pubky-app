@@ -37,6 +37,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // RootContainer serializes the runtime config into the HTML, so a server renders every request
   // (PUBKY_RUNTIME_* is read at request time). The static export bakes the build's config instead.
   if (!Env.NEXT_PUBLIC_STATIC_EXPORT) await connection();
+  const appShell = <AppShell>{children}</AppShell>;
 
   return (
     <RootContainer>
@@ -66,11 +67,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               {/*
                 useSearchParams() (RouteGuardProvider and others) has to sit under a Suspense boundary
                 when a page is prerendered, as every page of the static export is. A server render
-                never suspends here.
+                gets none: there it would stream the app as a late hidden segment, swapped in after
+                the first paint, instead of in the first flush.
               */}
-              <Suspense>
-                <AppShell>{children}</AppShell>
-              </Suspense>
+              {Env.NEXT_PUBLIC_STATIC_EXPORT ? <Suspense>{appShell}</Suspense> : appShell}
             </ErrorBoundaryProvider>
           </GlobalErrorHandlerProvider>
         </ServiceWorkerRegistrationProvider>
