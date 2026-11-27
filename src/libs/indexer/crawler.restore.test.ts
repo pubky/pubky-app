@@ -15,7 +15,7 @@ import {
 } from './crawler.fixtures';
 import type { FakeNetwork } from './fakeNetwork';
 import { encodeIndexFile } from './indexFile';
-import { indexFileName, loadSavedIndex } from './savedIndex';
+import { createSavedIndex, folderOf, hotPath } from './savedIndex';
 import { scopeId } from './store.helpers';
 import type { IndexStore } from './store.types';
 import type { IndexerTransport, ReadEventsRequest } from './transport.types';
@@ -43,10 +43,7 @@ function holding(network: FakeNetwork, held: (request: ReadEventsRequest) => boo
       return events;
     },
     getPublic: (request) => network.getPublic(request),
-    listIndexFiles: () => network.listIndexFiles(),
-    readIndexFile: (name) => network.readIndexFile(name),
-    writeIndexFile: (name, bytes) => network.writeIndexFile(name, bytes),
-    deleteIndexFile: (name) => network.deleteIndexFile(name),
+    indexFiles: network.indexFiles,
   };
   return { transport, asked, release: () => release() };
 }
@@ -197,28 +194,32 @@ describe('operations racing over one homeserver', () => {
     const mark = (await store.readHomeserverState('hs1')).highWater;
     // Written by a device reading another tree: its groups and its mark's author are none of this domain's.
     const file = await encodeIndexFile({
+      part: { kind: 'hot', shards: 0, folded: [], packs: [], cut: [] },
       writer: 'w1',
       writtenAt: NOW,
       seed: 'alice',
       hops: 2,
       windowDays: 30,
       members: [{ user: 'alice', hop: 0, homeserver: { homeserver: 'hs1', resolvedAt: NOW } }],
-      highWater: [{ homeserver: 'hs1', highWater: { cursor: BigInt(1000), author: 'bob' } }],
+      homeservers: [{ homeserver: 'hs1', epoch: 0, highWater: { cursor: BigInt(1000), author: 'bob' } }],
       runs: [
         { author: 'alice', homeserver: 'hs1', group: `${GRAPH}+legacy`, tail: BigInt(0), head: BigInt(5), entries: [] },
       ],
     });
-    await network.writeIndexFile(indexFileName('w1'), file);
+    await network.indexFiles.write(hotPath(await folderOf(testDomain.groups.map(({ id }) => id))), file);
 
-    const outcome = await loadSavedIndex({
-      transport: network,
+    const outcome = await createSavedIndex({
+      files: network.indexFiles,
       store,
+      domain: testDomain,
       seed: 'alice',
       writer: 'w2',
-      now: NOW,
+      now: () => NOW,
+      hops: 2,
+      windowDays: 30,
+      budget: Infinity,
       expiryMs: DAY_MS,
-      groups: testDomain.groups.map(({ id }) => id),
-    });
+    }).load(() => undefined);
     await crawler.syncScope('alice');
 
     expect(outcome).toMatchObject({ loaded: 0, ignored: 1 });

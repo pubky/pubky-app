@@ -1,8 +1,21 @@
 import { CURSOR_ZERO } from './cursor';
-import { HomeserverUnreachableError, InvalidIndexInputError, RateLimitedError } from './indexer.errors';
+import {
+  HomeserverUnreachableError,
+  IndexFileLockedError,
+  IndexFileLockLostError,
+  InvalidIndexInputError,
+  RateLimitedError,
+} from './indexer.errors';
 import type { Cursor, StreamEvent } from './indexer.types';
 import { comparePaths } from './run';
-import type { AuthoredStreamEvent, GetPublicRequest, IndexerTransport, ReadEventsRequest } from './transport.types';
+import type {
+  AuthoredStreamEvent,
+  GetPublicRequest,
+  IndexerTransport,
+  IndexFileLock,
+  IndexFiles,
+  ReadEventsRequest,
+} from './transport.types';
 
 // Test-only: a scripted set of homeservers with the event stream semantics the crawler relies on.
 
@@ -37,13 +50,150 @@ export interface ReadLogEntry {
 }
 
 const fileKey = (author: string, path: string) => `${author}\u0000${path}`;
+
+/** Longest lock the homeserver grants, whatever is asked. */
+const MAX_LOCK_SECONDS = 60;
+
+class FakeLock implements IndexFileLock {
+  constructor(
+    readonly path: string,
+    readonly token: number,
+  ) {}
+}
+
+/** One request to the index folder as the fake saw it. */
+export interface IndexFileRequest {
+  op: 'list' | 'read' | 'write' | 'delete' | 'lock' | 'refresh' | 'unlock';
+  path: string;
+  /** Bytes sent or received. */
+  bytes: number;
+}
+
+/**
+ * Test-only: one user's index folder with the homeserver's semantics: a PUT replaces a file whole, and an exclusive
+ * lock that expires on `now` refuses every write that does not present it (423) and every write presenting it once
+ * it is gone (412). `fault`, when set, runs before each request and fails it by throwing, as a crash or a network
+ * error does.
+ */
+export class FakeIndexFiles implements IndexFiles {
+  readonly files = new Map<string, Uint8Array>();
+  readonly requests: IndexFileRequest[] = [];
+  now: () => number = () => 0;
+  fault: ((request: Omit<IndexFileRequest, 'bytes'>) => void) | null = null;
+  /** Off, as on a homeserver without locks: every lock is granted and no write is refused. */
+  locking = true;
+  private readonly locks = new Map<string, { token: number; expiresAt: number }>();
+  private nextToken = 1;
+
+  /** This folder with some calls replaced, for a transport that wraps them. */
+  with(overrides: Partial<IndexFiles>): IndexFiles {
+    return {
+      list: (prefix) => this.list(prefix),
+      read: (path) => this.read(path),
+      write: (path, bytes, lock) => this.write(path, bytes, lock),
+      delete: (path, lock) => this.delete(path, lock),
+      lock: (path, seconds) => this.lock(path, seconds),
+      refresh: (lock, seconds) => this.refresh(lock, seconds),
+      unlock: (lock) => this.unlock(lock),
+      ...overrides,
+    };
+  }
+
+  /** Expires the lock on `path` at once, as a holder that paused past its lifetime finds it. */
+  expire(path: string): void {
+    this.locks.delete(path);
+  }
+
+  locked(path: string): boolean {
+    return this.live(path) !== undefined;
+  }
+
+  async list(prefix: string): Promise<string[]> {
+    this.enter('list', prefix);
+    const paths = [...this.files.keys()].filter((path) => path.startsWith(prefix)).sort();
+    this.requests.push({ op: 'list', path: prefix, bytes: 0 });
+    return paths;
+  }
+
+  async read(path: string): Promise<Uint8Array | null> {
+    this.enter('read', path);
+    const bytes = this.files.get(path);
+    this.requests.push({ op: 'read', path, bytes: bytes?.length ?? 0 });
+    return bytes?.slice() ?? null;
+  }
+
+  async write(path: string, bytes: Uint8Array, lock?: IndexFileLock): Promise<void> {
+    this.enter('write', path);
+    this.admit(path, lock);
+    this.files.set(path, bytes.slice());
+    this.requests.push({ op: 'write', path, bytes: bytes.length });
+  }
+
+  async delete(path: string, lock?: IndexFileLock): Promise<void> {
+    this.enter('delete', path);
+    this.admit(path, lock);
+    this.files.delete(path);
+    this.requests.push({ op: 'delete', path, bytes: 0 });
+  }
+
+  async lock(path: string, seconds: number): Promise<IndexFileLock> {
+    this.enter('lock', path);
+    if (this.live(path) !== undefined) throw new IndexFileLockedError(path);
+    const token = this.nextToken;
+    this.nextToken += 1;
+    this.locks.set(path, { token, expiresAt: this.now() + Math.min(seconds, MAX_LOCK_SECONDS) * 1000 });
+    this.requests.push({ op: 'lock', path, bytes: 0 });
+    return new FakeLock(path, token);
+  }
+
+  async refresh(lock: IndexFileLock, seconds: number): Promise<void> {
+    this.enter('refresh', lock.path);
+    if (!this.locking) return;
+    const held = this.live(lock.path);
+    if (held === undefined || !(lock instanceof FakeLock) || held.token !== lock.token) {
+      throw new IndexFileLockLostError(lock.path);
+    }
+    held.expiresAt = this.now() + Math.min(seconds, MAX_LOCK_SECONDS) * 1000;
+    this.requests.push({ op: 'refresh', path: lock.path, bytes: 0 });
+  }
+
+  async unlock(lock: IndexFileLock): Promise<void> {
+    this.enter('unlock', lock.path);
+    const held = this.live(lock.path);
+    if (held !== undefined && lock instanceof FakeLock && held.token === lock.token) this.locks.delete(lock.path);
+    this.requests.push({ op: 'unlock', path: lock.path, bytes: 0 });
+  }
+
+  private enter(op: IndexFileRequest['op'], path: string): void {
+    this.fault?.({ op, path });
+  }
+
+  private live(path: string) {
+    if (!this.locking) return undefined;
+    const held = this.locks.get(path);
+    if (held !== undefined && held.expiresAt <= this.now()) this.locks.delete(path);
+    return this.locks.get(path);
+  }
+
+  private admit(path: string, lock: IndexFileLock | undefined): void {
+    if (!this.locking) return;
+    const held = this.live(path);
+    if (lock === undefined) {
+      if (held !== undefined) throw new IndexFileLockedError(path);
+      return;
+    }
+    if (held === undefined || !(lock instanceof FakeLock) || held.token !== lock.token) {
+      throw new IndexFileLockLostError(path);
+    }
+  }
+}
 const copyEvent = (event: AuthoredStreamEvent): AuthoredStreamEvent => ({ ...event });
 
 export class FakeNetwork implements IndexerTransport {
   readonly reads: ReadLogEntry[] = [];
   private readonly homeservers = new Map<string, FakeHomeserver>();
   private readonly homeserverOf = new Map<string, string>();
-  private readonly indexFiles = new Map<string, Uint8Array>();
+  readonly indexFiles = new FakeIndexFiles();
 
   addHomeserver(homeserver: string): this {
     this.homeservers.set(homeserver, { log: [], next: 1, files: new Map(), down: false, rateLimits: 0 });
@@ -113,11 +263,16 @@ export class FakeNetwork implements IndexerTransport {
     return log.length === 0 ? CURSOR_ZERO : log[log.length - 1].cursor;
   }
 
-  /** The last event of each of the user's paths under `prefixes` with a cursor above `after`. */
-  lastEvents(user: string, prefixes: readonly string[], after: Cursor = CURSOR_ZERO): Map<string, StreamEvent> {
+  /** The last event of each of the user's paths under `prefixes` with a cursor above `after`, and up to `upTo`. */
+  lastEvents(
+    user: string,
+    prefixes: readonly string[],
+    after: Cursor = CURSOR_ZERO,
+    upTo: Cursor | null = null,
+  ): Map<string, StreamEvent> {
     const last = new Map<string, StreamEvent>();
     for (const event of this.server(this.homeserverOfUser(user)).log) {
-      if (event.author !== user || event.cursor <= after) continue;
+      if (event.author !== user || event.cursor <= after || (upTo !== null && event.cursor > upTo)) continue;
       if (!prefixes.some((prefix) => event.path.startsWith(prefix))) continue;
       const { author: _author, ...plain } = event;
       last.set(event.path, plain);
@@ -169,22 +324,6 @@ export class FakeNetwork implements IndexerTransport {
     const server = this.reachable(this.homeserverOfUser(author));
     const bytes = server.files.get(fileKey(author, path));
     return bytes === undefined ? null : bytes.slice();
-  }
-
-  async listIndexFiles(): Promise<string[]> {
-    return [...this.indexFiles.keys()];
-  }
-
-  async readIndexFile(name: string): Promise<Uint8Array | null> {
-    return this.indexFiles.get(name)?.slice() ?? null;
-  }
-
-  async writeIndexFile(name: string, bytes: Uint8Array): Promise<void> {
-    this.indexFiles.set(name, bytes.slice());
-  }
-
-  async deleteIndexFile(name: string): Promise<void> {
-    this.indexFiles.delete(name);
   }
 
   private append(server: FakeHomeserver, event: Omit<AuthoredStreamEvent, 'cursor'>): Cursor {

@@ -76,10 +76,7 @@ function recorded(network: FakeNetwork, options: Partial<CrawlerOptions>, fails 
       if (fails(request.path)) throw new HomeserverUnreachableError(request.author);
       return network.getPublic(request);
     },
-    listIndexFiles: () => network.listIndexFiles(),
-    readIndexFile: (name) => network.readIndexFile(name),
-    writeIndexFile: (name, bytes) => network.writeIndexFile(name, bytes),
-    deleteIndexFile: (name) => network.deleteIndexFile(name),
+    indexFiles: network.indexFiles,
   };
   const clock = { now: NOW };
   const crawler = createCrawler<Post>({

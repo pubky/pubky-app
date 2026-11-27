@@ -13,10 +13,10 @@ import {
   type RuntimeStatus,
   type SavedIndexStatus,
 } from './runtime.types';
-import { fitToBudget, indexFileName, loadSavedIndex, snapshotIndex, writerIdOf } from './savedIndex';
+import { createSavedIndex, type SavedIndex, writerIdOf } from './savedIndex';
 import { scopeId } from './store.helpers';
 import type { ScopeKey } from './store.types';
-import type { IndexerTransport } from './transport.types';
+import type { IndexFiles } from './transport.types';
 
 const LOCK_PREFIX = 'pubky-indexer:';
 
@@ -82,18 +82,17 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
   const inner = params.transport;
   const crawler = createCrawler({ transport: inner, store, domain, now, schedule, options: options.crawler });
   const timed = <T>(call: () => Promise<T>) => withDeadline(call, options.indexFileTimeoutMs, schedule);
-  /** The transport the saved index uses, each index file call under its deadline. */
-  const transport: IndexerTransport = {
-    resolveHomeserver: (user) => inner.resolveHomeserver(user),
-    readEvents: (request) => inner.readEvents(request),
-    getPublic: (request) => inner.getPublic(request),
-    listIndexFiles: () => timed(() => inner.listIndexFiles()),
-    readIndexFile: (name) => timed(() => inner.readIndexFile(name)),
-    writeIndexFile: (name, bytes) => timed(() => inner.writeIndexFile(name, bytes)),
-    deleteIndexFile: (name) => timed(() => inner.deleteIndexFile(name)),
+  /** The index files the saved index uses, each call under its deadline. */
+  const files: IndexFiles = {
+    list: (prefix) => timed(() => inner.indexFiles.list(prefix)),
+    read: (path) => timed(() => inner.indexFiles.read(path)),
+    write: (path, bytes, lock) => timed(() => inner.indexFiles.write(path, bytes, lock)),
+    delete: (path, lock) => timed(() => inner.indexFiles.delete(path, lock)),
+    lock: (path, seconds) => timed(() => inner.indexFiles.lock(path, seconds)),
+    refresh: (lock, seconds) => timed(() => inner.indexFiles.refresh(lock, seconds)),
+    unlock: (lock) => timed(() => inner.indexFiles.unlock(lock)),
   };
   const crawlerOptions = { ...DEFAULT_CRAWLER_OPTIONS, ...options.crawler };
-  const windowGroups = new Set(domain.groups.filter(({ history }) => history === 'window').map(({ id }) => id));
   const tab = Math.random().toString(36).slice(2);
 
   let seed: string | null = null;
@@ -145,6 +144,8 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
   let dirty = false;
   let lastSaveAt: number | null = null;
   let saving: Promise<void> | null = null;
+  /** The saved index of the current seed, made on first use; `null` for a store that keeps no meta values. */
+  let savedIndex: Promise<SavedIndex | null> | null = null;
   let saved: SavedIndexStatus = { loadedFiles: 0, ignoredFiles: 0, lastSavedAt: null, error: null };
   let nextId = 0;
   const waitingFor = new Set<string>();
@@ -248,58 +249,52 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     }
   });
 
+  function savedIndexOf(current: string): Promise<SavedIndex | null> {
+    savedIndex ??= writerIdOf(store).then((writer) =>
+      writer === null
+        ? null
+        : createSavedIndex({
+            files,
+            store,
+            domain,
+            seed: current,
+            writer,
+            now,
+            hops: crawlerOptions.hops,
+            windowDays: crawlerOptions.windowDays,
+            budget: options.fileBudgetBytes,
+            expiryMs: options.writerExpiryMs,
+            sealer: options.sealer,
+          }),
+    );
+    return savedIndex;
+  }
+
   /** Never rejects: a failure goes to the status. */
   async function loadIndex(current: string): Promise<void> {
     try {
-      const writer = await writerIdOf(store);
-      if (writer === null) return;
-      const { sealer } = options;
-      const outcome = await loadSavedIndex({
-        transport,
-        store,
-        seed: current,
-        writer,
-        now: now(),
-        expiryMs: options.writerExpiryMs,
-        groups: domain.groups.map(({ id }) => id),
-        reviveData: domain.reviveData?.bind(domain),
-        open: sealer === undefined ? undefined : (bytes, name) => sealer.open(bytes, name),
-      });
+      const index = await savedIndexOf(current);
+      if (index === null) return;
+      // Each part is reported as it lands: the feed renders from `hot` while the packs still arrive.
+      const outcome = await index.load(announce);
       saved = { ...saved, loadedFiles: outcome.loaded, ignoredFiles: outcome.ignored, error: null };
       if (outcome.writtenAt !== null) noteAsOf(outcome.writtenAt);
       if (outcome.loaded > 0) {
         dirty = true;
         scanDue = true;
       }
-      if (outcome.change.scopes.length > 0 || outcome.change.seeds.length > 0) announce(outcome.change);
     } catch (error) {
       saved = { ...saved, error: asError(error) };
       loadAgain = true;
     }
   }
 
-  async function writeIndex(current: string): Promise<void> {
-    const writer = await writerIdOf(store);
-    if (writer === null) return;
-    const model = await snapshotIndex({
-      store,
-      domain,
-      seed: current,
-      writer,
-      writtenAt: now(),
-      hops: crawlerOptions.hops,
-      windowDays: crawlerOptions.windowDays,
-    });
-    const name = indexFileName(writer);
-    const bytes = await fitToBudget(model, options.fileBudgetBytes, windowGroups);
-    await transport.writeIndexFile(name, options.sealer === undefined ? bytes : await options.sealer.seal(bytes, name));
-  }
-
   /**
-   * Writes this tab's file after `after` settles, when anything changed since the last save and, unless `force`, the
-   * last save is old enough. Never rejects, and never waits for a save already running.
+   * Writes this tab's changes after `after` settles, when anything changed since the last save and, unless `force`,
+   * the last save is old enough. Only right after a scope sync, whose members are whole, may it fold. Never rejects,
+   * and never waits for a save already running.
    */
-  function save(force: boolean, after: Promise<void> | null = null): void {
+  function save(force: boolean, after: Promise<void> | null = null, mayFold = false): void {
     const current = seed;
     if (!options.savedIndex || current === null || saving !== null) return;
     if (!force && lastSaveAt !== null && now() - lastSaveAt < options.saveMinIntervalMs) return;
@@ -308,7 +303,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
         if (!dirty) return;
         dirty = false;
         try {
-          await writeIndex(current);
+          await (await savedIndexOf(current))?.flush(mayFold);
           lastSaveAt = now();
           saved = { ...saved, lastSavedAt: lastSaveAt, error: null };
         } catch (error) {
@@ -416,7 +411,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
     void store.writeMeta?.(syncedKey(current), String(lastSyncAt)).catch(() => undefined);
     for (const task of waiters) task.resolve();
     scheduleSync(options.syncIntervalMs);
-    save(false);
+    save(false, null, true);
   }
 
   /**
@@ -780,6 +775,7 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
       fillDue = false;
       dirty = false;
       lastSaveAt = null;
+      savedIndex = null;
       saved = { loadedFiles: 0, ignoredFiles: 0, lastSavedAt: null, error: null };
       shared = next === null ? null : coordination;
       if (shared !== null) unsubscribe = shared.subscribe(onMessage);

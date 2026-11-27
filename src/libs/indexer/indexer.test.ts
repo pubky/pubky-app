@@ -288,10 +288,7 @@ describe('createIndexerRuntime requests that never settle', () => {
         return new Promise(() => undefined);
       },
       getPublic: (request) => w.network.getPublic(request),
-      listIndexFiles: () => new Promise(() => undefined),
-      readIndexFile: (name) => w.network.readIndexFile(name),
-      writeIndexFile: (name, bytes) => w.network.writeIndexFile(name, bytes),
-      deleteIndexFile: (name) => w.network.deleteIndexFile(name),
+      indexFiles: w.network.indexFiles.with({ list: () => new Promise(() => undefined) }),
     };
     return { transport, hung };
   }

@@ -40,10 +40,7 @@ function hanging(network: FakeNetwork, hangs: Hangs) {
     readEvents: (request) =>
       hangs.read?.(request.homeserver) ? hang([], request.signal) : network.readEvents(request),
     getPublic: (request) => (hangs.get?.(request.author) ? hang(null, request.signal) : network.getPublic(request)),
-    listIndexFiles: () => network.listIndexFiles(),
-    readIndexFile: (name) => network.readIndexFile(name),
-    writeIndexFile: (name, bytes) => network.writeIndexFile(name, bytes),
-    deleteIndexFile: (name) => network.deleteIndexFile(name),
+    indexFiles: network.indexFiles,
   };
   const settleLate = () => late.forEach((settleOne, index) => settleOne(index));
   return { transport, signals, settleLate, hung: () => late.length };

@@ -90,10 +90,7 @@ describe('syncScope failures', () => {
         return network.readEvents(request);
       },
       getPublic: (request) => network.getPublic(request),
-      listIndexFiles: () => network.listIndexFiles(),
-      readIndexFile: (name) => network.readIndexFile(name),
-      writeIndexFile: (name, bytes) => network.writeIndexFile(name, bytes),
-      deleteIndexFile: (name) => network.deleteIndexFile(name),
+      indexFiles: network.indexFiles,
     });
     network.rateLimit('hs3', 8);
     await crawler.syncScope('alice');
@@ -120,10 +117,7 @@ describe('syncScope failures', () => {
         return network.readEvents(request);
       },
       getPublic: (request) => network.getPublic(request),
-      listIndexFiles: () => network.listIndexFiles(),
-      readIndexFile: (name) => network.readIndexFile(name),
-      writeIndexFile: (name, bytes) => network.writeIndexFile(name, bytes),
-      deleteIndexFile: (name) => network.deleteIndexFile(name),
+      indexFiles: network.indexFiles,
     };
 
     network.put('carol', `${FOLLOWS}alice`);
@@ -182,10 +176,7 @@ function failingGets(network: FakeNetwork, fails: (request: GetPublicRequest) =>
       if (fails(request)) throw new HomeserverUnreachableError(request.author);
       return network.getPublic(request);
     },
-    listIndexFiles: () => network.listIndexFiles(),
-    readIndexFile: (name) => network.readIndexFile(name),
-    writeIndexFile: (name, bytes) => network.writeIndexFile(name, bytes),
-    deleteIndexFile: (name) => network.deleteIndexFile(name),
+    indexFiles: network.indexFiles,
   };
   return { transport, gets };
 }
@@ -398,10 +389,7 @@ describe('backfill', () => {
         log.push('get');
         return network.getPublic(request);
       },
-      listIndexFiles: () => network.listIndexFiles(),
-      readIndexFile: (name) => network.readIndexFile(name),
-      writeIndexFile: (name, bytes) => network.writeIndexFile(name, bytes),
-      deleteIndexFile: (name) => network.deleteIndexFile(name),
+      indexFiles: network.indexFiles,
     };
     const backfiller = crawlerOf(counting);
     backfiller.onCommit(() => log.push('commit'));
@@ -454,10 +442,7 @@ describe('abort', () => {
         return network.readEvents(request);
       },
       getPublic: (request) => network.getPublic(request),
-      listIndexFiles: () => network.listIndexFiles(),
-      readIndexFile: (name) => network.readIndexFile(name),
-      writeIndexFile: (name, bytes) => network.writeIndexFile(name, bytes),
-      deleteIndexFile: (name) => network.deleteIndexFile(name),
+      indexFiles: network.indexFiles,
     };
 
     await expect(crawlerOf(aborting).syncScope('alice', controller.signal)).rejects.toThrow(IndexerAbortedError);

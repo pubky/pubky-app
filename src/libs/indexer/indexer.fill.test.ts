@@ -67,10 +67,7 @@ function world(coordination?: Coordination) {
       }
       return network.getPublic(request);
     },
-    listIndexFiles: () => network.listIndexFiles(),
-    readIndexFile: (name) => network.readIndexFile(name),
-    writeIndexFile: (name, bytes) => network.writeIndexFile(name, bytes),
-    deleteIndexFile: (name) => network.deleteIndexFile(name),
+    indexFiles: network.indexFiles,
   };
   const open = () => {
     tags.hold = false;
@@ -312,10 +309,7 @@ describe('createIndexerRuntime fill', () => {
         return network.readEvents(request);
       },
       getPublic: (request) => network.getPublic(request),
-      listIndexFiles: () => network.listIndexFiles(),
-      readIndexFile: (name) => network.readIndexFile(name),
-      writeIndexFile: (name, bytes) => network.writeIndexFile(name, bytes),
-      deleteIndexFile: (name) => network.deleteIndexFile(name),
+      indexFiles: network.indexFiles,
     };
     const store = createMemoryStore<Post>();
     const time = fakeTime(NOW);

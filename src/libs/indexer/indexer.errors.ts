@@ -64,3 +64,25 @@ export class IndexerNotStartedError extends IndexerError {
     this.name = 'IndexerNotStartedError';
   }
 }
+
+/** Another holder has the index file locked (423): a fold that meets it leaves the file to that holder. */
+export class IndexFileLockedError extends IndexerError {
+  readonly path: string;
+
+  constructor(path: string, options?: ErrorOptions) {
+    super(`index file ${path} is locked by another writer`, options);
+    this.name = 'IndexFileLockedError';
+    this.path = path;
+  }
+}
+
+/** A write or refresh presented a lock that expired or was released (412): the homeserver refused the write. */
+export class IndexFileLockLostError extends IndexerError {
+  readonly path: string;
+
+  constructor(path: string, options?: ErrorOptions) {
+    super(`the lock on index file ${path} was lost`, options);
+    this.name = 'IndexFileLockLostError';
+    this.path = path;
+  }
+}

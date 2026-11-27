@@ -97,10 +97,7 @@ describe('syncScope scope', () => {
         return network.readEvents(request);
       },
       getPublic: (request) => network.getPublic(request),
-      listIndexFiles: () => network.listIndexFiles(),
-      readIndexFile: (name) => network.readIndexFile(name),
-      writeIndexFile: (name, bytes) => network.writeIndexFile(name, bytes),
-      deleteIndexFile: (name) => network.deleteIndexFile(name),
+      indexFiles: network.indexFiles,
     };
 
     const { members } = await crawlerOf(watching).syncScope('alice');
@@ -166,10 +163,7 @@ describe('syncScope scope', () => {
         return network.readEvents(request);
       },
       getPublic: (request) => network.getPublic(request),
-      listIndexFiles: () => network.listIndexFiles(),
-      readIndexFile: (name) => network.readIndexFile(name),
-      writeIndexFile: (name, bytes) => network.writeIndexFile(name, bytes),
-      deleteIndexFile: (name) => network.deleteIndexFile(name),
+      indexFiles: network.indexFiles,
     };
     const crawler = crawlerOf(transport);
 
@@ -201,10 +195,7 @@ describe('syncScope scope', () => {
         return network.readEvents(request);
       },
       getPublic: (request) => network.getPublic(request),
-      listIndexFiles: () => network.listIndexFiles(),
-      readIndexFile: (name) => network.readIndexFile(name),
-      writeIndexFile: (name, bytes) => network.writeIndexFile(name, bytes),
-      deleteIndexFile: (name) => network.deleteIndexFile(name),
+      indexFiles: network.indexFiles,
     };
 
     const sync = crawlerOf(transport).syncScope('alice');
@@ -549,10 +540,7 @@ describe('syncScope window', () => {
         return network.readEvents(request);
       },
       getPublic: (request) => network.getPublic(request),
-      listIndexFiles: () => network.listIndexFiles(),
-      readIndexFile: (name) => network.readIndexFile(name),
-      writeIndexFile: (name, bytes) => network.writeIndexFile(name, bytes),
-      deleteIndexFile: (name) => network.deleteIndexFile(name),
+      indexFiles: network.indexFiles,
     };
     const scope = { author: 'alice', homeserver: 'hs1', group: ACTIVITY };
 

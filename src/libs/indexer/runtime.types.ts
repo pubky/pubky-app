@@ -5,12 +5,12 @@ import type { IndexStore } from './store.types';
 import type { IndexerTransport } from './transport.types';
 
 /**
- * Seals the saved index after it is compressed and before it is written, and opens it after it is read, for example
- * with a key only the user holds. `name` is the file's name.
+ * Seals each saved index file after it is compressed and before it is written, and opens it after it is read, for
+ * example with a key only the user holds (`createIndexSealer`). `path` is the file's path in the index folder.
  */
 export interface IndexSealer {
-  seal(bytes: Uint8Array, name: string): Promise<Uint8Array>;
-  open(bytes: Uint8Array, name: string): Promise<Uint8Array>;
+  seal(bytes: Uint8Array, path: string): Promise<Uint8Array>;
+  open(bytes: Uint8Array, path: string): Promise<Uint8Array>;
 }
 
 export type { Schedule } from './concurrency';
@@ -23,17 +23,17 @@ export interface RuntimeOptions {
   /** Changes are reported at most once per this period, merged. */
   changeDebounceMs: number;
   /**
-   * Keeps this device's index in a file of the user's storage and starts from the files of other devices, or from its
-   * own after losing the local store. Needs a store with meta values.
+   * Keeps the index in a folder of the user's storage that every device of theirs shares (`savedIndex.ts`), and
+   * starts from it: a new device, or one that lost its local store, starts warm. Needs a store with meta values.
    */
   savedIndex: boolean;
   /** Least time between two saves after scope syncs; the save when pausing waits for none. */
   saveMinIntervalMs: number;
-  /** Other devices' files not written for this long are deleted at start. */
+  /** A fold deletes another device's delta it folded once that device has not written it for this long. */
   writerExpiryMs: number;
-  /** Largest file the save aims for before sealing, trimming data first and then windowed history, oldest first. */
+  /** Largest the saved index folder aims for, sealed: packs past their share lose data first, then windowed history. */
   fileBudgetBytes: number;
-  /** Seals the saved index; a file that does not open is ignored. */
+  /** Seals the saved index files; a file that does not open is ignored, and never overwritten. */
   sealer?: IndexSealer;
   /** Least time between two backfills of one author's group, unless forced. */
   backfillMinIntervalMs: number;
@@ -90,9 +90,9 @@ export type RuntimeState = 'idle' | 'syncing' | 'stopped' | 'error';
 export interface SavedIndexStatus {
   /** Files applied at start. */
   loadedFiles: number;
-  /** Files that did not decode, had an unknown version or another seed. */
+  /** Files that did not open or decode, had an unknown version or another seed. */
   ignoredFiles: number;
-  /** When this tab last wrote its file (ms). */
+  /** When this tab last saved (ms): wrote its delta, or folded, or found nothing to write. */
   lastSavedAt: number | null;
   /** The last failed load or save, cleared by the next save that succeeds. */
   error: Error | null;
@@ -163,7 +163,7 @@ export interface IndexerRuntime {
   stop(): void;
   /**
    * Lets the running crawl finish and starts nothing else; with coordination it hands crawling to another tab. The
-   * crawling tab saves its index file first when anything changed.
+   * crawling tab writes its delta first when anything changed.
    */
   pause(): void;
   resume(): void;

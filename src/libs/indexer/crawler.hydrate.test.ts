@@ -47,10 +47,7 @@ async function setup() {
         fetched.push(request.path);
         return network.getPublic(request);
       },
-      listIndexFiles: () => network.listIndexFiles(),
-      readIndexFile: (name) => network.readIndexFile(name),
-      writeIndexFile: (name, bytes) => network.writeIndexFile(name, bytes),
-      deleteIndexFile: (name) => network.deleteIndexFile(name),
+      indexFiles: network.indexFiles,
     },
     store,
     domain: testDomain,
@@ -120,10 +117,7 @@ describe('createCrawler hydrate', () => {
           work.gets += 1;
           return network.getPublic(request);
         },
-        listIndexFiles: () => network.listIndexFiles(),
-        readIndexFile: (name) => network.readIndexFile(name),
-        writeIndexFile: (name, bytes) => network.writeIndexFile(name, bytes),
-        deleteIndexFile: (name) => network.deleteIndexFile(name),
+        indexFiles: network.indexFiles,
       },
       store,
       domain: taggedDomain,

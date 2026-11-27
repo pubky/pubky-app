@@ -16,7 +16,7 @@ import type { StoreChange } from './crawler.types';
 import { FakeNetwork } from './fakeNetwork';
 import { HomeserverUnreachableError } from './indexer.errors';
 import { createMemoryStore } from './memoryStore';
-import { fitToBudget, indexFileName, loadSavedIndex, snapshotIndex } from './savedIndex';
+import { createSavedIndex } from './savedIndex';
 import { scopeId } from './store.helpers';
 import type { IndexStore } from './store.types';
 import type { GetPublicRequest, IndexerTransport } from './transport.types';
@@ -44,10 +44,7 @@ function world() {
       if (state.failTags && isTag(request)) throw new HomeserverUnreachableError(request.author);
       return network.getPublic(request);
     },
-    listIndexFiles: () => network.listIndexFiles(),
-    readIndexFile: (name) => network.readIndexFile(name),
-    writeIndexFile: (name, bytes) => network.writeIndexFile(name, bytes),
-    deleteIndexFile: (name) => network.deleteIndexFile(name),
+    indexFiles: network.indexFiles,
   };
   const clock = { now: NOW };
   const crawlerOf = (store: IndexStore<Post>) =>
@@ -142,28 +139,23 @@ describe('crawler files fetched after the commit', () => {
   it('saves pending tags without data, and a device that loads them fetches only the tags', async () => {
     const { network, paths, state, store, crawler, crawlerOf } = world();
     await crawler.syncScope('alice');
-    const model = await snapshotIndex({
-      store,
-      domain: taggedDomain,
-      seed: 'alice',
-      writer: 'w1',
-      writtenAt: NOW,
-      hops: 2,
-      windowDays: 30,
-    });
-    await network.writeIndexFile(indexFileName('w1'), await fitToBudget(model, Infinity, new Set([ACTIVITY])));
+    const savedOf = (writer: string, into: IndexStore<Post>) =>
+      createSavedIndex({
+        files: network.indexFiles,
+        store: into,
+        domain: taggedDomain,
+        seed: 'alice',
+        writer,
+        now: () => NOW,
+        hops: 2,
+        windowDays: 30,
+        budget: Infinity,
+        expiryMs: DAY_MS,
+      });
+    expect(await savedOf('w1', store).flush(true)).toBe('folded');
 
     const other = createMemoryStore<Post>();
-    const outcome = await loadSavedIndex({
-      transport: network,
-      store: other,
-      seed: 'alice',
-      writer: 'w2',
-      now: NOW,
-      expiryMs: DAY_MS,
-      groups: taggedDomain.groups.map(({ id }) => id),
-      reviveData: (author, path, value) => taggedDomain.reviveData?.(author, path, value) ?? null,
-    });
+    const outcome = await savedOf('w2', other).load(() => undefined);
     expect(outcome.loaded).toBe(1);
     expect(await servedData(other, 'bob', 'hs1', ACTIVITY)).toEqual(await servedData(store, 'bob', 'hs1', ACTIVITY));
 

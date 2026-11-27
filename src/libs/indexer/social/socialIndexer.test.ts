@@ -40,15 +40,22 @@ function countingWrites(network: FakeNetwork) {
     resolveHomeserver: (user) => network.resolveHomeserver(user),
     readEvents: (request) => network.readEvents(request),
     getPublic: (request) => network.getPublic(request),
-    listIndexFiles: () => network.listIndexFiles(),
-    readIndexFile: (name) => network.readIndexFile(name),
-    writeIndexFile: (name, bytes) => {
-      state.writes += 1;
-      return network.writeIndexFile(name, bytes);
-    },
-    deleteIndexFile: (name) => network.deleteIndexFile(name),
+    indexFiles: network.indexFiles.with({
+      write: (path, bytes, lock) => {
+        state.writes += 1;
+        return network.indexFiles.write(path, bytes, lock);
+      },
+    }),
   };
   return { transport, state };
+}
+
+/** Every saved index file in the network, decoded. */
+async function savedFiles(network: FakeNetwork) {
+  const paths = await network.indexFiles.list('');
+  return Promise.all(
+    paths.map(async (path) => decodeIndexFile((await network.indexFiles.read(path)) ?? new Uint8Array())),
+  );
 }
 
 /** The network as a transport that holds every stream read naming one of `users` until `release` runs. */
@@ -70,10 +77,7 @@ function holding(network: FakeNetwork, users: readonly string[]) {
       return network.readEvents(request);
     },
     getPublic: (request) => network.getPublic(request),
-    listIndexFiles: () => network.listIndexFiles(),
-    readIndexFile: (name) => network.readIndexFile(name),
-    writeIndexFile: (name, bytes) => network.writeIndexFile(name, bytes),
-    deleteIndexFile: (name) => network.deleteIndexFile(name),
+    indexFiles: network.indexFiles,
   };
   return { transport, state };
 }
@@ -94,10 +98,7 @@ function holdingTags(network: FakeNetwork) {
       }
       return network.getPublic(request);
     },
-    listIndexFiles: () => network.listIndexFiles(),
-    readIndexFile: (name) => network.readIndexFile(name),
-    writeIndexFile: (name, bytes) => network.writeIndexFile(name, bytes),
-    deleteIndexFile: (name) => network.deleteIndexFile(name),
+    indexFiles: network.indexFiles,
   };
   return { transport, state };
 }
@@ -202,10 +203,7 @@ describe('createSocialIndexer', () => {
         if (tags.hold && request.path.includes('/tags/')) await new Promise<void>((go) => tags.waiting.push(go));
         return network.getPublic(request);
       },
-      listIndexFiles: () => network.listIndexFiles(),
-      readIndexFile: (name) => network.readIndexFile(name),
-      writeIndexFile: (name, bytes) => network.writeIndexFile(name, bytes),
-      deleteIndexFile: (name) => network.deleteIndexFile(name),
+      indexFiles: network.indexFiles,
     };
     const indexer = indexerOf(transport);
     indexer.start(ALICE);
@@ -383,10 +381,15 @@ describe('createSocialIndexer', () => {
       resolveHomeserver: () => silent(),
       readEvents: () => silent(),
       getPublic: () => silent(),
-      listIndexFiles: () => silent(),
-      readIndexFile: () => silent(),
-      writeIndexFile: () => silent(),
-      deleteIndexFile: () => silent(),
+      indexFiles: {
+        list: () => silent(),
+        read: () => silent(),
+        write: () => silent(),
+        delete: () => silent(),
+        lock: () => silent(),
+        refresh: () => silent(),
+        unlock: () => silent(),
+      },
     };
     const indexer = indexerOf(offline);
 
@@ -408,7 +411,7 @@ describe('createSocialIndexer', () => {
     const first = indexerOf();
     first.start(ALICE);
     await first.whenSynced();
-    await until(async () => (await network.listIndexFiles()).length === 1, 'the first save');
+    await until(async () => (await network.indexFiles.list('')).length === 1, 'the first save');
 
     const second = indexerOf(network, createMemoryStore<SocialData>());
     second.start(ALICE);
@@ -430,10 +433,11 @@ describe('createSocialIndexer', () => {
     await indexer.ensureUser(DION);
     await indexer.ensurePost(ALICE, fixture.posts.gone.id);
     indexer.pause();
-    await until(() => state.writes === 2, 'the save on pause');
+    await settle();
 
-    const [name] = await network.listIndexFiles();
-    const file = await decodeIndexFile((await network.readIndexFile(name)) ?? new Uint8Array());
+    // The save on pause found no member's scope changed: nothing more is written.
+    expect(state.writes).toBe(1);
+    const [file] = await savedFiles(network);
     expect(file.members.map(({ user }) => user).sort()).toEqual([ALICE, BRAN, CLEO].sort());
     expect(file.runs.length).toBeGreaterThan(0);
     expect(file.runs.map(({ author }) => author)).not.toContain(DION);
@@ -476,10 +480,7 @@ describe('createSocialIndexer', () => {
       resolveHomeserver: async (user) => (user === ALICE ? null : network.resolveHomeserver(user)),
       readEvents: (request) => network.readEvents(request),
       getPublic: (request) => network.getPublic(request),
-      listIndexFiles: () => network.listIndexFiles(),
-      readIndexFile: (name) => network.readIndexFile(name),
-      writeIndexFile: (name, bytes) => network.writeIndexFile(name, bytes),
-      deleteIndexFile: (name) => network.deleteIndexFile(name),
+      indexFiles: network.indexFiles,
     };
     const indexer = indexerOf(unresolved);
 
@@ -512,22 +513,28 @@ describe('createSocialIndexer', () => {
         resolveHomeserver: (user) => network.resolveHomeserver(user),
         readEvents: (request) => network.readEvents(request),
         getPublic: (request) => network.getPublic(request),
-        listIndexFiles: () => {
-          touched.files += 1;
-          return network.listIndexFiles();
-        },
-        readIndexFile: (name) => {
-          touched.files += 1;
-          return network.readIndexFile(name);
-        },
-        writeIndexFile: (name, bytes) => {
-          touched.files += 1;
-          return network.writeIndexFile(name, bytes);
-        },
-        deleteIndexFile: (name) => {
-          touched.files += 1;
-          return network.deleteIndexFile(name);
-        },
+        indexFiles: network.indexFiles.with({
+          list: (prefix) => {
+            touched.files += 1;
+            return network.indexFiles.list(prefix);
+          },
+          read: (path) => {
+            touched.files += 1;
+            return network.indexFiles.read(path);
+          },
+          write: (path, bytes, lock) => {
+            touched.files += 1;
+            return network.indexFiles.write(path, bytes, lock);
+          },
+          delete: (path, lock) => {
+            touched.files += 1;
+            return network.indexFiles.delete(path, lock);
+          },
+          lock: (path, seconds) => {
+            touched.files += 1;
+            return network.indexFiles.lock(path, seconds);
+          },
+        }),
       };
       const indexer = world.indexerOf(transport);
       indexer.start(null);
@@ -728,9 +735,8 @@ describe('createSocialIndexer', () => {
     const first = indexerOf();
     first.start(ALICE);
     await first.whenSynced();
-    await until(async () => (await network.listIndexFiles()).length === 1, 'the first save');
-    const [name] = await network.listIndexFiles();
-    const file = await decodeIndexFile((await network.readIndexFile(name)) ?? new Uint8Array());
+    await until(async () => (await network.indexFiles.list('')).length === 1, 'the first save');
+    const [file] = await savedFiles(network);
     first.stop();
 
     // Nothing from a homeserver ever answers.
@@ -738,10 +744,7 @@ describe('createSocialIndexer', () => {
       resolveHomeserver: () => new Promise<string | null>(() => undefined),
       readEvents: () => new Promise(() => undefined),
       getPublic: () => new Promise(() => undefined),
-      listIndexFiles: () => network.listIndexFiles(),
-      readIndexFile: (fileName) => network.readIndexFile(fileName),
-      writeIndexFile: (fileName, bytes) => network.writeIndexFile(fileName, bytes),
-      deleteIndexFile: (fileName) => network.deleteIndexFile(fileName),
+      indexFiles: network.indexFiles,
     };
     const second = indexerOf(offline, createMemoryStore<SocialData>());
     second.start(ALICE);

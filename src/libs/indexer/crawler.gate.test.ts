@@ -51,10 +51,7 @@ function world() {
         gets.inFlight -= 1;
       }
     },
-    listIndexFiles: () => network.listIndexFiles(),
-    readIndexFile: (name) => network.readIndexFile(name),
-    writeIndexFile: (name, bytes) => network.writeIndexFile(name, bytes),
-    deleteIndexFile: (name) => network.deleteIndexFile(name),
+    indexFiles: network.indexFiles,
   };
   const releaseOldest = () => gets.held.shift()?.();
   const store = createMemoryStore<Post>();
