@@ -88,7 +88,7 @@ export function InputField({
         aria-disabled={loading}
         onClick={loading ? undefined : onClickIcon}
         className={cn(
-          'flex w-auto cursor-pointer items-center justify-center outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-disabled:cursor-default aria-disabled:opacity-50',
+          'flex w-auto cursor-pointer items-center justify-center outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-disabled:cursor-default aria-disabled:opacity-50 forced-colors:focus-visible:outline-2 forced-colors:focus-visible:outline-solid',
           iconPosition === 'right' && 'mr-5',
           iconClassName,
         )}

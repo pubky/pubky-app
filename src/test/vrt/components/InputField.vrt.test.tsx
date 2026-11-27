@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-import { userEvent } from 'vitest/browser';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { cdp, server, userEvent } from 'vitest/browser';
 import { InputField } from '@/molecules/InputField/InputField';
 import { TextareaField } from '@/molecules/TextareaField/TextareaField';
 import { contrastRatio, paintedHex } from '@/test-utils/color-contrast';
@@ -83,10 +83,70 @@ for (const width of [390, 1440]) {
   });
 }
 
-for (const [name, Field] of [
+const fields = [
   ['Name', InputField],
   ['Bio', TextareaField],
-] as const) {
+] as const;
+
+describe.skipIf(server.browser !== 'chromium')('field focus in forced colors', () => {
+  beforeEach(async () => {
+    await cdp().send('Emulation.setEmulatedMedia', { features: [{ name: 'forced-colors', value: 'active' }] });
+    expect(window.matchMedia('(forced-colors: active)').matches).toBe(true);
+  });
+
+  afterEach(async () => {
+    await cdp().send('Emulation.setEmulatedMedia', { features: [] });
+  });
+
+  for (const [name, Field] of fields) {
+    it.each(['default', 'error', 'success'] as const)(
+      `outlines ${name} when tabbing into the %s field`,
+      async (status) => {
+        const screen = await renderForVRT(
+          <main>
+            <button type="button">Previous field</button>
+            <Field value="Example" readOnly status={status} />
+          </main>,
+          { viewport: { width: 390, height: 844 } },
+        );
+        const wrapper = screen.getByTestId('container').element();
+        await screen.getByRole('button', { name: 'Previous field' }).click();
+        expect(getComputedStyle(wrapper).outlineStyle).toBe('none');
+        await userEvent.tab();
+        await expect.element(screen.getByRole('textbox')).toHaveFocus();
+        const style = getComputedStyle(wrapper);
+        expect(style.outlineStyle).toBe('solid');
+        expect(parseFloat(style.outlineWidth)).toBeGreaterThanOrEqual(2);
+      },
+    );
+  }
+
+  it('distinguishes the focused icon action from the focused field', async () => {
+    const screen = await renderForVRT(
+      <InputField
+        value="Link"
+        readOnly
+        icon={<span>Paste</span>}
+        iconPosition="right"
+        iconAriaLabel="Paste"
+        onClickIcon={vi.fn()}
+      />,
+      { viewport: { width: 390, height: 844 } },
+    );
+    const input = screen.getByRole('textbox');
+    const action = screen.getByRole('button', { name: 'Paste' });
+    await input.click();
+    await expect.element(input).toHaveFocus();
+    expect(getComputedStyle(action.element()).outlineStyle).toBe('none');
+    await userEvent.tab();
+    await expect.element(action).toHaveFocus();
+    const style = getComputedStyle(action.element());
+    expect(style.outlineStyle).toBe('solid');
+    expect(parseFloat(style.outlineWidth)).toBeGreaterThanOrEqual(2);
+  });
+});
+
+for (const [name, Field] of fields) {
   describe.each(['dark', 'light'] as const)(`${name} in %s mode`, (theme) => {
     describe.each(['bg-background', 'bg-card'])('on %s', (surface) => {
       it.each(['default', 'error', 'success'] as const)('shows keyboard focus for the %s state', async (status) => {
@@ -128,6 +188,7 @@ for (const [name, Field] of [
           expect(paintedRing).toBe(paintedHex(background, `color-mix(in oklab, ${ringToken} 50%, transparent)`));
         } else {
           expect(style.borderColor).toBe(idleBorder);
+          expect(paintedRing).toBe(paintedHex(background, style.getPropertyValue('--ring')));
           expect(contrastRatio(paintedRing, surfaceColor)).toBeGreaterThanOrEqual(3);
         }
         if (status !== 'success') {
