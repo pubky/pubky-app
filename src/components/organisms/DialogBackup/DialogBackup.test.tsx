@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { BROWSER_KEY_DELETION_DATE } from '@/config/auth';
 import { DialogBackup } from './DialogBackup';
 
 vi.mock('@/atoms/Dialog/Dialog', () => {
@@ -199,5 +200,17 @@ describe('DialogBackup', () => {
     expect(screen.getByTestId('dialog-backup-phrase')).toBeInTheDocument();
     expect(screen.getByTestId('dialog-backup-encrypted')).toBeInTheDocument();
     expect(screen.getByTestId('dialog-export')).toBeInTheDocument();
+  });
+
+  it('puts the Pubky Ring export first and names the day the browser seed is deleted', () => {
+    render(<DialogBackup />);
+
+    const cards = screen.getAllByTestId('card');
+    expect(cards[0]).toHaveTextContent('Export to Pubky Ring');
+    expect(cards[1]).toHaveTextContent('Recovery phrase');
+    expect(cards[2]).toHaveTextContent('Download encrypted file');
+    expect(
+      screen.getByText(new RegExp(`deletes the secret seed stored in this browser on ${BROWSER_KEY_DELETION_DATE}`)),
+    ).toBeInTheDocument();
   });
 });

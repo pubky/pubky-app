@@ -47,3 +47,9 @@ export const SHOP_CAPABILITIES = [
   '/pub/chat/v0/:rw',
   '/priv/chat/v0/:rw',
 ] as const satisfies readonly Capabilities[];
+
+/**
+ * The day Pubky App stops keeping a key it created in the browser before #3142. The backup prompts show it, and the
+ * follow-up cleanup that ships on this day deletes any such key still stored. One month after the production release.
+ */
+export const BROWSER_KEY_DELETION_DATE = 'December 18, 2026';

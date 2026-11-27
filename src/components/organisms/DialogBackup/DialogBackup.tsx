@@ -14,6 +14,7 @@ import {
   DialogTrigger,
 } from '@/atoms/Dialog/Dialog';
 import { Typography } from '@/atoms/Typography/Typography';
+import { BROWSER_KEY_DELETION_DATE } from '@/config/auth';
 import { useOnboardingStore } from '@/stores/onboarding/onboarding.store';
 import { DialogBackupEncrypted } from '../DialogBackupEncrypted/DialogBackupEncrypted';
 import { DialogBackupExport } from '../DialogBackupExport/DialogBackupExport';
@@ -75,12 +76,16 @@ export function DialogBackup({ open, onOpenChange }: DialogBackupProps = {}) {
             {'Back up your pubky'}
           </DialogTitle>
           <DialogDescription id="backup-dialog-description">
-            {
-              'Pubky App now signs in with Pubky Ring. Export your secret seed to Pubky Ring to keep your account, or save a recovery phrase or encrypted file you can import into Pubky Ring later. You can choose more than one.'
-            }
+            {`Pubky App now signs in with Pubky Ring, and deletes the secret seed stored in this browser on ${BROWSER_KEY_DELETION_DATE}. Export it to Pubky Ring to keep your account, or save a recovery phrase or encrypted file you can import into Pubky Ring later. You can choose more than one.`}
           </DialogDescription>
         </DialogHeader>
         <Container className="flex-col gap-3 md:flex-row">
+          <BackupMethodCard
+            title={'Export to Pubky Ring'}
+            imageSrc="/images/keyring.webp"
+            imageAlt={'Keys'}
+            dialog={<DialogBackupExport mnemonic={mnemonic} />}
+          />
           <BackupMethodCard
             title={'Recovery phrase'}
             imageSrc="/images/note.webp"
@@ -92,12 +97,6 @@ export function DialogBackup({ open, onOpenChange }: DialogBackupProps = {}) {
             imageSrc="/images/folder.webp"
             imageAlt={'Folder'}
             dialog={<DialogBackupEncrypted />}
-          />
-          <BackupMethodCard
-            title={'Export to Pubky Ring'}
-            imageSrc="/images/keyring.webp"
-            imageAlt={'Keys'}
-            dialog={<DialogBackupExport mnemonic={mnemonic} />}
           />
         </Container>
       </DialogContent>
