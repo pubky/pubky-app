@@ -10,6 +10,8 @@ Updated — 2026-11-13 (the worker no longer reloads the new build's own pages, 
 Updated — 2026-11-17 (every adopted grant is admitted before its session reference is published; the gate's automatic sign-out runs once per auth generation; third human review)  
 Updated — 2026-11-17 (the gate asks before the first run: the `confirm` stage, and the flag read on sign-in, see _Amendment — the gate asks before the first run_)
 
+Updated — 2026-11-25 (accounts with no 0.x data under `/pub/pubky.app/` and no current flag are marked inline with no screen, including newly created Pubky Passport accounts; see _Amendment — empty accounts are marked silently_)
+
 ## Context
 
 `pubky-social-migrator` copies a user's 0.x tree (`/pub/pubky.app/`) to the 1.x layout and writes the done flag
@@ -36,7 +38,8 @@ persisted record is committed, before account preparation), the controller calls
 generation, so logout and the route guard see the right account) and `session: null`, so nothing can act as the
 account: `resolveOwnedSessionPath`, `canActAsAccount`, `waitForSession`, `withActiveSession` and the coordinators keyed
 on the session all see "not ready" without a new guard each. The service and the application therefore take the
-session explicitly (`HomeserverService.migrateToSocialV1({ session, … })`, `getBytesIfExists(url, session)`), an
+session explicitly (`HomeserverService.migrateToSocialV1({ session, … })`, `getBytesIfExists(url, session)`,
+`list({ baseDirectory, limit, session })`), an
 extension of the ADR-0004/0024 session-store read exception rather than a use of it.
 
 **One restore status, one auth status, one route.** `SessionRestoreStatus` gains `'social-migration'`;
@@ -128,6 +131,52 @@ for the GET, which the SDK cannot cancel, then rejects with `Err.timeout(REQUEST
 instead of failing (see the amendment below), its capture unchanged; the engine run, its Web Lock wait and the flag
 write are not bounded.
 
+## Amendment — empty accounts are marked silently (2026-11-25)
+
+The 2026-11-17 amendment accepted that an account with no 0.x data and no done flag is still shown the `confirm`
+screen ("Your account needs an update"), assuming only keys that never used the 1.x app reached it. Pubky Passport
+(Google/Apple) creates new accounts on first sign-in and always enters `AuthController` as a `signin` flow
+(`getPassportAuthUrl`), never an invite-code `signup`: Passport creates the identity on the homeserver and writes no
+app data, so every new Passport user arrived with no `/priv/social/v1/_migrated.json` and an empty `/pub/pubky.app/`
+and was immediately shown the migration prompt before onboarding.
+
+**Decision.** When `SocialMigrationApplication.readFlag` succeeds without finding a current flag (absent or at an
+older revision) — on `signin`, a gated `upgrade`, or a `restore` that already passed the `pre-migration-grant` check
+— and the latest local record neither trusts the current revision nor holds an already-confirmed `lastRun`, the gate
+runs one bounded `LIST` of `/pub/pubky.app/` with `limit: 1` (`SocialMigrationApplication.hasLegacyData`, through
+`HomeserverService.list` with the explicit session, bounded by `HOMESERVER_SYNC_READ_TIMEOUT_MS` like `readFlag`).
+After each homeserver read, the gate re-reads the local record and passes at once if another tab finished the migration
+meanwhile. When the listing is empty (empty response or 404) and no confirmed run started in another tab, the gate runs
+the engine inline (`inline: true`) on the same path as an invite-code signup, so the engine checks and writes
+`/priv/social/v1/_migrated.json` silently and the screen is never shown unless the run blocks, waits on another tab's
+lock, or finds legacy files. The inline path passes `onLegacyDataFound` through `HomeserverService.migrateToSocialV1`:
+if an existing 0.x client writes under `/pub/pubky.app/` after `hasLegacyData` returned empty and the engine's own
+listing finds any file, the run aborts before copying anything and transitions to the `confirm` screen. `lastRun`
+records `confirmed: true` after Continue and `false` for an automatic attempt. Older builds recorded progress
+for automatic signups and manual runs without distinguishing them. If one of those runs was interrupted, the next
+visit checks the legacy tree. An empty tree finishes silently. When files are present, the user confirms once before
+copying resumes. Runs with a saved confirmation resume immediately.
+
+The fallback paths when a check does not confirm an empty tree depend on the entry and local state:
+
+- **Failed `readFlag` on `restore`:** propagates to `AuthController` and enters `temporary-error` (no `LIST` and no
+  `confirm` screen; Retry and the focus/reconnect retries apply as before).
+- **Failed `readFlag` on `signin` or a gated `upgrade`:** skips `hasLegacyData`; if another tab completed the migration
+  meanwhile (trusted local record) it passes, if this browser holds a confirmed `lastRun` it resumes without `confirm`,
+  and otherwise (no confirmed run) it shows `confirm` so the engine's own check settles it after Continue.
+- **Non-empty or failed `hasLegacyData` (network failure, 401, 403 or timeout):** does not run inline; if another tab
+  completed the migration during the wait it passes, if a confirmed `lastRun` appeared meanwhile it resumes without
+  `confirm`, and otherwise it shows `confirm` so an account with real 0.x data never skips migration.
+
+The rule applies to all sign-in methods (Passport, Ring, etc.) alike.
+
+**Consequences.** A sign-in of an account without a current flag or a confirmed `lastRun` costs one extra bounded
+`LIST` (`limit: 1`) when `readFlag` succeeds; accounts with a trusted local record, a current flag, or a confirmed
+`lastRun` make no extra `LIST`, and a failed `readFlag` skips the listing (entering `temporary-error` on `restore`, and
+resuming a confirmed `lastRun` or asking on `confirm` on `signin` and gated `upgrade`). New Passport accounts and fresh
+Ring keys no longer see the update prompt on first sign-in, while accounts with any 0.x data — even written concurrently
+— keep the `confirm` gate before the first copy.
+
 ## Amendment — the gate asks before the first run (2026-11-17)
 
 A fresh sign-in used to drop the user straight into the progress screen; the user may be travelling or on a bad
@@ -151,7 +200,8 @@ user the gate signed out sees the explanation, signs in, then this screen: two s
 
 **Consequences.** A sign-in of an account without the flag costs one bounded flag read before the screen; a sign-in
 on a trusted record now passes without the engine's check. An account that has no 0.x data and no flag (a key that
-never used the 1.x app) is asked too, and its run then only checks and writes the flag. Two residuals are accepted:
+never used the 1.x app) was asked too (superseded on 2026-11-25 by _Amendment — empty accounts are marked silently_).
+Two residuals are accepted:
 another tab that finishes the update during this tab's one flag read leaves this tab
 asking once for an account already updated, and Continue then passes at the engine's first check; and a second tab
 waiting at Continue is not woken when the first tab's run finishes, and its Continue passes at once.
@@ -267,8 +317,8 @@ thousands of times. `useSignInStore` and `useMigrationStore` are the precedent f
 ## Implementation Notes
 
 - `src/core/controllers/social-migration/social-migration.ts` (state machine, store, record, telemetry),
-  `src/core/application/social-migration/social-migration.ts` (leaf: `readFlag`, `run`),
-  `HomeserverService.migrateToSocialV1` and `getBytesIfExists(url, session)`,
+  `src/core/application/social-migration/social-migration.ts` (leaf: `readFlag`, `hasLegacyData`, `run`),
+  `HomeserverService.migrateToSocialV1`, `getBytesIfExists(url, session)` and `list({ …, session })`,
   `src/libs/social-migration/{record,signed-out-notice,report-telemetry,summary}.ts`,
   `src/core/stores/socialMigration/*`, `src/config/social-migration.ts`.
 - `src/app/(auth)/migration/page.tsx`, `templates/Auth/SocialMigration`, `organisms/SocialMigrationProgress`,

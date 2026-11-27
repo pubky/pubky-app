@@ -99,6 +99,11 @@ export type THomeserverListParams = {
   cursor?: string;
   reverse?: boolean;
   limit?: number;
+  /**
+   * List through a session that is not (yet) in the auth store, e.g. the social migration gate
+   * (ADR-0026). Without it, the active session resolves owned paths and other URLs use public storage.
+   */
+  session?: Session;
 };
 
 export type THomeserverListAllParams = Pick<THomeserverListParams, 'baseDirectory'>;
