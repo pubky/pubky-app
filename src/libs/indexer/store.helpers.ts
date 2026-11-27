@@ -11,6 +11,7 @@ import {
   type HomeserverState,
   type ReadAt,
   type ScopeKey,
+  type ScopesExport,
   type StoreBatch,
 } from './store.types';
 import { mergeClock } from './timeTable';
@@ -146,4 +147,13 @@ export const readsCurrent = (readAt: readonly ReadAt[] | undefined, current: (ho
   (readAt ?? []).every(({ homeserver, epoch }) => current(homeserver) === epoch);
 
 /** An empty export, to fill. */
-export const emptyExport = <D>(): ScopesExport<D> => ({ homeservers: new Map(), coverage: new Map(), runs: new Map() });
+export const emptyExport = <D>(): ScopesExport<D> => ({
+  homeservers: new Map(),
+  coverage: new Map(),
+  stamps: new Map(),
+  runs: new Map(),
+  written: new Map(),
+});
+
+export const sameCoverage = (a: Coverage, b: Coverage) =>
+  a.length === b.length && a.every((range, i) => range.tail === b[i].tail && range.head === b[i].head);

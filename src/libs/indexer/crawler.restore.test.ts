@@ -94,7 +94,7 @@ describe('operations racing over one homeserver', () => {
     const leaf = crawler.syncLeaf({ author: 'bob', group: 'leaf:bob', paths: [FOLLOWS] });
     await until(() => asked.length > 0, 'the leaf read');
     await crawler.syncScope('alice');
-    const { highWater: mark, epoch } = await store.readHomeserverState('hs1');
+    const mark = (await store.readHomeserverState('hs1')).highWater;
     expect(mark).not.toBeNull();
     release();
     await leaf;
