@@ -130,7 +130,7 @@ together, even over the same scopes: each commits whole runs, which merge in any
 Every transport call runs under a deadline of the library's own, timed by the injected `schedule`, so a transport
 whose request never settles cannot stall a crawl: a stream read or file fetch past `requestTimeoutMs` (30 s) has
 its signal aborted and fails like a request to an unreachable homeserver, a lookup past `lookupTimeoutMs` (10 s) fails
-like any failed lookup, and an index file call past `indexFileTimeoutMs` (2 min) fails the load or save. An abort,
+like any failed lookup, and an index file call past `indexFileTimeoutMs` (2 min) fails like a stream read. An abort,
 such as a `stop`, settles the operation at once, even while a call hangs. A call that settles after
 its deadline or abort is ignored.
 
@@ -333,8 +333,11 @@ oldest change is a day old, the folder has no `hot` yet, or a version 2 file was
 writer's delta and the version 2 files, writes each pack their changed authors fall in, then `hot`, then deletes what
 nothing needs any more (packs of another `S`, the version 2 files it folded, another writer's delta it folded once
 that writer has not written it for `writerExpiryMs`). Its new base is the store's heads once all of it was taken in;
-another writer rebases when it reads `hot` saying its latest generation is folded. A fold that meets a lock, loses
-its lock, or finds a shared file it cannot read writes the delta instead, never overwriting a file it cannot read.
+another writer rebases when it reads `hot` saying its latest generation is folded. A fold that cannot finish, whatever
+stops it, a lock, a lost lock, a shared file it cannot read or a failed request, writes the delta instead, never
+overwriting a file it cannot read. Index file calls are requests to the user's homeserver like the crawl's
+(`Crawler.indexFilesOf`): queued at its gate, a lock's calls ahead of crawls and the rest behind them, retried, paced
+after a 429, each try under `indexFileTimeoutMs`.
 Only the members' domain groups are written, so what the user opened on demand never is. Over `fileBudgetBytes`
 (200 MB) each pack is trimmed to its share, data first, then windowed history, each oldest first and farthest hop
 first; the graph is never trimmed.

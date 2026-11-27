@@ -12,7 +12,7 @@ import { getRetryAfter, hasHttpStatus } from '@/libs/error/error.utils';
 import { HttpStatusCode } from '@/libs/http/http.types';
 import {
   HomeserverUnreachableError,
-  type IndexerError,
+  IndexerError,
   IndexFileLockedError,
   IndexFileLockLostError,
   InvalidIndexInputError,
@@ -67,8 +67,31 @@ function accountLock(lock: IndexFileLock): AccountIndexLock {
   return lock;
 }
 
-/** The index's own files in `owner`'s private tree, written with the session. */
+/**
+ * The index's own files in `owner`'s private tree, written with the session. A failure crosses as the library's error,
+ * so the crawler's request path retries and paces these calls as it does its own.
+ */
 function accountIndexFiles(owner: Pubky): IndexFiles {
+  const files = sessionIndexFiles(owner);
+  const crossing = async <T>(call: () => Promise<T>): Promise<T> => {
+    try {
+      return await call();
+    } catch (error) {
+      throw error instanceof IndexerError ? error : toIndexerError(owner, error);
+    }
+  };
+  return {
+    list: (prefix) => crossing(() => files.list(prefix)),
+    read: (path) => crossing(() => files.read(path)),
+    write: (path, bytes, lock) => crossing(() => files.write(path, bytes, lock)),
+    delete: (path, lock) => crossing(() => files.delete(path, lock)),
+    lock: (path, seconds) => crossing(() => files.lock(path, seconds)),
+    refresh: (lock, seconds) => crossing(() => files.refresh(lock, seconds)),
+    unlock: (lock) => crossing(() => files.unlock(lock)),
+  };
+}
+
+function sessionIndexFiles(owner: Pubky): IndexFiles {
   const root = `pubky://${owner}${INDEXER_FILES_PATH}`;
   return {
     async list(prefix) {

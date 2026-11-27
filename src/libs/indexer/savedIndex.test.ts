@@ -20,6 +20,7 @@ import type { Domain } from './domain.types';
 import { restoreEpoch } from './epoch';
 import { FakeIndexFiles, FakeNetwork } from './fakeNetwork';
 import { createIndexerRuntime } from './indexer';
+import { RateLimitedError } from './indexer.errors';
 import type { Cursor, Entry, Run } from './indexer.types';
 import { decodeIndexFile, encodeIndexFile, type IndexFileModel, type ReviveData } from './indexFile';
 import { createIndexSealer } from './indexSealer';
@@ -610,6 +611,32 @@ describe('saved index folder', () => {
     expect(await servedAll(fresh.store, USERS)).toEqual(truthOf(w.network, USERS));
   });
 
+  it('writes its delta when a fold fails on any request, whichever it is', async () => {
+    const failing: Array<[string, (request: { op: string; path: string }) => boolean]> = [
+      ['the lock on hot', ({ op, path }) => op === 'lock' && path.endsWith('/hot')],
+      ['the read of hot', ({ op, path }) => op === 'read' && path.endsWith('/hot')],
+      ['the listing', ({ op }) => op === 'list'],
+      ['the write of hot', ({ op, path }) => op === 'write' && path.endsWith('/hot')],
+    ];
+    for (const [what, fails] of failing) {
+      const w = world();
+      const a = device(w, 'wa', { limits: { deltaFoldBytes: 0 } });
+      await a.sync();
+      expect(await a.flush()).toBe('folded');
+      w.network.putJson('bob', postPath(HOUR_MS / 2), { text: 'bob new' });
+      await a.sync();
+      w.files.fault = (request) => {
+        if (fails(request)) throw new Error('503');
+      };
+
+      expect(await a.flush(), what).toBe('delta');
+      w.files.fault = null;
+      const b = device(w, 'wb');
+      await b.load();
+      expect(await servedAll(b.store, USERS), what).toEqual(truthOf(w.network, USERS));
+    }
+  });
+
   it('never pairs runs read before a restore with the epoch after it, wherever the restore lands in a save', async () => {
     for (const mayFold of [false, true]) {
       for (let at = 1; ; at += 1) {
@@ -804,7 +831,7 @@ function runtimeDevice(w: World, options: Partial<RuntimeOptions> = {}, store = 
     options: { savedIndex: true, ...options },
   });
   const synced = () => until(() => runtime.status().lastSyncAt !== null && runtime.status().state === 'idle', 'a sync');
-  return { store, counts, runtime, hold, gate, synced };
+  return { store, counts, runtime, hold, gate, synced, time };
 }
 
 const headOf = async (store: IndexStore<Post>, scope: ScopeKey): Promise<Cursor | null> => {
@@ -856,6 +883,34 @@ describe('saved index in the runtime', () => {
       }
     }
     expect(b.runtime.status().savedIndex).toMatchObject({ loadedFiles: 1, ignoredFiles: 0, error: null });
+  });
+
+  it('asks the homeserver for its index files the way it asks for anything, retrying a 429 once the route opens', async () => {
+    const w = world();
+    const a = runtimeDevice(w);
+    a.runtime.start('alice');
+    await a.synced();
+    await until(() => a.counts.writes === 1, 'the first save');
+    let refused = 0;
+    w.files.fault = ({ op, path }) => {
+      if (op === 'read' && path.endsWith('/hot') && refused < 2) {
+        refused += 1;
+        throw new RateLimitedError('hs1');
+      }
+    };
+
+    const b = runtimeDevice(w);
+    b.runtime.start('alice');
+    // The gate holds the route closed for a second, then two.
+    await until(async () => {
+      await b.time.advance(500);
+      return b.runtime.status().lastSyncAt !== null && b.runtime.status().state === 'idle';
+    }, 'a sync');
+
+    expect(refused).toBe(2);
+    expect(b.runtime.status().savedIndex).toMatchObject({ loadedFiles: 1, error: null });
+    expect(await everything(b.store)).toEqual(await everything(a.store));
+    w.files.fault = null;
   });
 
   it('never erases data the device already has', async () => {

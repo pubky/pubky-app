@@ -2,7 +2,7 @@ import type { StoreChange } from './crawler.types';
 import { compareCursors } from './cursor';
 import type { Domain } from './domain.types';
 import { compareEpochs, type Epoch, newestEpoch, NO_EPOCH } from './epoch';
-import { IndexerError, IndexFileLockedError, IndexFileLockLostError, InvalidIndexInputError } from './indexer.errors';
+import { IndexerAbortedError, IndexerError, IndexFileLockedError, InvalidIndexInputError } from './indexer.errors';
 import type { Cursor, Entry, Run } from './indexer.types';
 import {
   decodeIndexFile,
@@ -890,9 +890,8 @@ export function createSavedIndex<D>(params: SavedIndexParams<D>): SavedIndex {
         try {
           folded = await fold(state);
         } catch (error) {
-          // Another writer's lock, a lost one, or a file this device cannot read: the delta keeps the changes.
-          const refused = error instanceof FoldRefused || error instanceof IndexFileLockedError;
-          if (!refused && !(error instanceof IndexFileLockLostError)) throw error;
+          // Whatever stopped it, a lock, a file this device cannot read, a failed request: the delta keeps the changes.
+          if (error instanceof IndexerAbortedError) throw error;
         }
         if (folded !== null) {
           await writeState(folded);

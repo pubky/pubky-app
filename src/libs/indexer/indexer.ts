@@ -1,4 +1,4 @@
-import { timerSchedule, withDeadline } from './concurrency';
+import { timerSchedule } from './concurrency';
 import { createCrawler } from './crawler';
 import { type BackfillResult, DEFAULT_CRAWLER_OPTIONS, type LeafRequest, type StoreChange } from './crawler.types';
 import { MAX_CURSOR } from './cursor';
@@ -16,7 +16,6 @@ import {
 import { createSavedIndex, type SavedIndex, writerIdOf } from './savedIndex';
 import { scopeId } from './store.helpers';
 import type { ScopeKey } from './store.types';
-import type { IndexFiles } from './transport.types';
 
 const LOCK_PREFIX = 'pubky-indexer:';
 
@@ -81,17 +80,6 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
   const options = { ...DEFAULT_RUNTIME_OPTIONS, ...params.options };
   const inner = params.transport;
   const crawler = createCrawler({ transport: inner, store, domain, now, schedule, options: options.crawler });
-  const timed = <T>(call: () => Promise<T>) => withDeadline(call, options.indexFileTimeoutMs, schedule);
-  /** The index files the saved index uses, each call under its deadline. */
-  const files: IndexFiles = {
-    list: (prefix) => timed(() => inner.indexFiles.list(prefix)),
-    read: (path) => timed(() => inner.indexFiles.read(path)),
-    write: (path, bytes, lock) => timed(() => inner.indexFiles.write(path, bytes, lock)),
-    delete: (path, lock) => timed(() => inner.indexFiles.delete(path, lock)),
-    lock: (path, seconds) => timed(() => inner.indexFiles.lock(path, seconds)),
-    refresh: (lock, seconds) => timed(() => inner.indexFiles.refresh(lock, seconds)),
-    unlock: (lock) => timed(() => inner.indexFiles.unlock(lock)),
-  };
   const crawlerOptions = { ...DEFAULT_CRAWLER_OPTIONS, ...options.crawler };
   const tab = Math.random().toString(36).slice(2);
 
@@ -254,7 +242,8 @@ export function createIndexerRuntime<D>(params: RuntimeParams<D>): IndexerRuntim
       writer === null
         ? null
         : createSavedIndex({
-            files,
+            // Requests to the user's homeserver like any other: queued with the crawl's, retried, paced after a 429.
+            files: crawler.indexFilesOf(current, inner.indexFiles, options.indexFileTimeoutMs),
             store,
             domain,
             seed: current,

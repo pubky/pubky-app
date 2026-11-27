@@ -187,6 +187,22 @@ describe('createIndexerTransport', () => {
       expect(HomeserverService.putBlob).not.toHaveBeenCalled();
     });
 
+    it('maps a failed call to the library’s errors, a 429 to a rate limit, so the crawl retries and paces it', async () => {
+      const throttled = Err.rateLimit(RateLimitErrorCode.RATE_LIMITED, 'Too Many Requests', {
+        ...params,
+        context: { statusCode: HttpStatusCode.TOO_MANY_REQUESTS, retryAfter: 2 },
+      });
+      vi.mocked(HomeserverService.getBytesIfExists).mockRejectedValueOnce(throttled);
+      vi.mocked(HomeserverService.putBlob).mockRejectedValueOnce(new Error('503'));
+
+      const limited = await transport.indexFiles.read(HOT).catch((caught: unknown) => caught);
+      const failed = await transport.indexFiles.write(HOT, new Uint8Array([1])).catch((caught: unknown) => caught);
+
+      expect(limited).toBeInstanceOf(RateLimitedError);
+      expect(limited).toMatchObject({ homeserver: OWNER, retryAfterMs: 2000 });
+      expect(failed).toBeInstanceOf(HomeserverUnreachableError);
+    });
+
     it('writes unlocked under a lock of a homeserver without locks', async () => {
       vi.mocked(HomeserverService.lockOwned).mockResolvedValueOnce('unsupported');
 

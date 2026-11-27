@@ -41,6 +41,7 @@ import { readForward } from './paging';
 import { foldEvents } from './run';
 import { scopeOf } from './store.helpers';
 import type { HighWater, StoreBatch } from './store.types';
+import type { IndexFiles } from './transport.types';
 
 /** A run changes what is served when it brings entries or does not extend the stored top range. */
 const changesServed = (run: Run<unknown>, storedHead: Cursor | null): boolean =>
@@ -119,7 +120,7 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     count,
     markFailed,
   });
-  const { reader, guard, attachBodies } = requests;
+  const { reader, guard, attachBodies, send } = requests;
   const fill = createFill<D>({ store, domain, now, options, requests, markFailed, commit });
   const { syncWindow, syncNewest, readSlice } = createWindowReads<D>({
     store,
@@ -467,7 +468,31 @@ export function createCrawler<D>(params: CrawlerParams<D>): Crawler {
     return { tail: topTailOf(await store.readCoverage(scope)), pages: done, events };
   }
 
+  function indexFilesOf(user: string, files: IndexFiles, timeoutMs: number): IndexFiles {
+    const via =
+      (priority: 'foreground' | 'background') =>
+      async <T>(request: () => Promise<T>): Promise<T> => {
+        // Queued with the crawl's requests to the homeserver stored for the owner; before one is, as on a new device
+        // whose first requests these are, apart, since nothing else asks it yet.
+        const homeserver = (await store.readUserHomeserver(user))?.homeserver ?? user;
+        return send(contextOf(undefined, priority), homeserver, 'index', timeoutMs, request);
+      };
+    // A lock lives 30 s: refreshing and releasing it never waits behind a crawl.
+    const behind = via('background');
+    const ahead = via('foreground');
+    return {
+      list: (prefix) => behind(() => files.list(prefix)),
+      read: (path) => behind(() => files.read(path)),
+      write: (path, bytes, lock) => behind(() => files.write(path, bytes, lock)),
+      delete: (path, lock) => behind(() => files.delete(path, lock)),
+      lock: (path, seconds) => ahead(() => files.lock(path, seconds)),
+      refresh: (lock, seconds) => ahead(() => files.refresh(lock, seconds)),
+      unlock: (lock) => ahead(() => files.unlock(lock)),
+    };
+  }
+
   return {
+    indexFilesOf,
     syncScope,
     backfill,
     syncUsers,

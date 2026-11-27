@@ -5,7 +5,7 @@ import type { StoreChange } from './crawler.types';
 import { CURSOR_ZERO } from './cursor';
 import { FakeNetwork } from './fakeNetwork';
 import { createIndexerRuntime } from './indexer';
-import { RequestTimeoutError } from './indexer.errors';
+import { HomeserverUnreachableError } from './indexer.errors';
 import { createMemoryStore } from './memoryStore';
 import { createTabs, fakeTime, settle, tracked, type TrackedRead } from './runtime.fixtures';
 import type { Coordination } from './runtime.types';
@@ -343,7 +343,7 @@ describe('createIndexerRuntime requests that never settle', () => {
     runtime.stop();
   });
 
-  it('gives up on an index file call at its deadline and crawls anyway', async () => {
+  it('gives up on an index file call past its deadline at each of its tries, and crawls anyway', async () => {
     const w = world();
     const { transport } = deafTo(w, 'nobody');
     const runtime = runtimeWith(w, transport, true);
@@ -355,9 +355,10 @@ describe('createIndexerRuntime requests that never settle', () => {
     runtime.start('alice');
     await settle();
     expect(runtime.status().lastSyncAt).toBeNull();
-    await w.time.advance(2 * 60 * 1000);
+    // Retried as every request to a homeserver is: four tries of 2 min, 1, 2 and 4 s apart.
+    await w.time.advance(4 * 2 * 60 * 1000 + 7 * 1000);
 
-    expect(errors[0]).toBeInstanceOf(RequestTimeoutError);
+    expect(errors[0]).toBeInstanceOf(HomeserverUnreachableError);
     expect(runtime.status().lastSyncAt).not.toBeNull();
     runtime.stop();
   });

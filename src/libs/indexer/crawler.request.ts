@@ -23,8 +23,8 @@ const RETRY_MAX_WAIT_MS = 8 * 1000;
 const RETRIES = 3;
 const MICROS_PER_MS = BigInt(1000);
 
-/** The homeserver routes the crawler calls: the event stream and public files. */
-export type Route = 'stream' | 'file';
+/** The homeserver routes the crawler calls: the event stream, public files and the user's own index files. */
+export type Route = 'stream' | 'file' | 'index';
 
 export interface RequestDeps<D> {
   transport: IndexerTransport;
@@ -45,6 +45,14 @@ export interface Requests<D> {
   guard(ctx: OperationContext, homeserver: string, work: () => Promise<void>): Promise<boolean>;
   bodyOf(ctx: OperationContext, homeserver: string, author: string, record: RecordEntry<D>): Promise<D | null>;
   attachBodies(ctx: OperationContext, runs: readonly Run<D>[]): Promise<void>;
+  /** One request to the homeserver on the route, retried, under `timeoutMs`. */
+  send<T>(
+    ctx: OperationContext,
+    homeserver: string,
+    route: Route,
+    timeoutMs: number,
+    request: (signal: AbortSignal) => Promise<T>,
+  ): Promise<T>;
 }
 
 export function createRequests<D>(deps: RequestDeps<D>): Requests<D> {
@@ -83,12 +91,13 @@ export function createRequests<D>(deps: RequestDeps<D>): Requests<D> {
     homeserver: string,
     route: Route,
     request: (signal: AbortSignal) => Promise<T>,
+    timeoutMs = options.requestTimeoutMs,
   ) {
     try {
       return await gate.run(
         homeserver,
         ctx.priority,
-        () => withDeadline(request, options.requestTimeoutMs, schedule, ctx.signal),
+        () => withDeadline(request, timeoutMs, schedule, ctx.signal),
         ctx.signal,
         route,
       );
@@ -185,5 +194,13 @@ export function createRequests<D>(deps: RequestDeps<D>): Requests<D> {
     });
   }
 
-  return { reader, guard, bodyOf, attachBodies };
+  const send = <T>(
+    ctx: OperationContext,
+    homeserver: string,
+    route: Route,
+    timeoutMs: number,
+    request: (signal: AbortSignal) => Promise<T>,
+  ) => attempt(ctx, homeserver, () => call(ctx, homeserver, route, request, timeoutMs));
+
+  return { reader, guard, bodyOf, attachBodies, send };
 }

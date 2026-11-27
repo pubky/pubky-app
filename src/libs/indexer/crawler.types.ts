@@ -2,7 +2,7 @@ import type { Schedule } from './concurrency';
 import type { Domain } from './domain.types';
 import type { Cursor } from './indexer.types';
 import type { IndexStore, ScopeKey } from './store.types';
-import type { IndexerTransport } from './transport.types';
+import type { IndexerTransport, IndexFiles } from './transport.types';
 
 export interface CrawlerOptions {
   /** Link distance from the seed still in scope. */
@@ -205,6 +205,11 @@ export interface Crawler {
   forgetUnfilled(scopes: readonly ScopeKey[]): void;
   /** Replaces the `excluded` option from the next `syncScope` on. */
   setExcluded(users: Iterable<string>): void;
+  /**
+   * The user's own index files, each call made to their homeserver the way every request of the crawler is: queued at
+   * its gate, retried, paced after a 429, under `timeoutMs`. A lock's calls go ahead of crawls, others behind.
+   */
+  indexFilesOf(user: string, files: IndexFiles, timeoutMs: number): IndexFiles;
   stats(): CrawlerStats;
   /** Calls `listener` with fresh stats after every change. Returns the unsubscribe function. */
   subscribe(listener: (stats: CrawlerStats) => void): () => void;
