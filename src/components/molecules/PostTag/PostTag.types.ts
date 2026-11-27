@@ -9,7 +9,7 @@ export interface PostTagProps extends Omit<ButtonHTMLAttributes<HTMLButtonElemen
   total?: number;
   /**
    * `secondary`: a faint tint of the tag colour and a dashed edge (`SECONDARY_TAG_STYLE`), for a tag not here yet;
-   * `suggested`: a dashed edge and no fill (`SUGGESTED_TAG_STYLE`), for a label offered to add
+   * `suggested`: the secondary look with a small "+" where the count would be, for a label offered to add
    */
   variant?: 'default' | 'secondary' | 'suggested';
   /** Show the close/remove button */

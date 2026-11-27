@@ -1,7 +1,7 @@
 'use client';
 
 import { X } from 'lucide-react';
-import { SECONDARY_TAG_STYLE, SUGGESTED_TAG_STYLE, Tag } from '@/atoms/Tag/Tag';
+import { SECONDARY_TAG_STYLE, Tag } from '@/atoms/Tag/Tag';
 import { Toggle } from '@/atoms/Toggle/Toggle';
 import { useTagDayPalette } from '@/hooks/useTagDayPalette/useTagDayPalette';
 import { getTagPaletteStyle } from '@/libs/utils/tagPalette';
@@ -14,12 +14,6 @@ import type { PostTagProps } from './PostTag.types';
  * Day mode uses a solid chip from `useTagDayPalette` instead.
  */
 const TAG_OVERLAY = 'var(--tag-overlay)';
-
-/** The style a variant lays over the chip while it is not selected. */
-const VARIANT_STYLE: Partial<Record<NonNullable<PostTagProps['variant']>, React.CSSProperties>> = {
-  secondary: SECONDARY_TAG_STYLE,
-  suggested: SUGGESTED_TAG_STYLE,
-};
 
 export function PostTag({
   label,
@@ -79,7 +73,8 @@ export function PostTag({
         ...paletteStyle,
         backgroundImage: 'var(--tag-fill)',
         boxShadow: selected ? 'inset 0 0 0 1px var(--tag-edge)' : undefined,
-        ...(!selected ? VARIANT_STYLE[variant] : undefined),
+        // Not on this link yet, both alike: a tag on other services only and a suggested one.
+        ...(variant !== 'default' && !selected ? SECONDARY_TAG_STYLE : undefined),
       }}
       aria-label={ariaLabel ?? (count !== undefined ? `${label} tag (${count} posts)` : `${label} tag`)}
     >
@@ -87,6 +82,7 @@ export function PostTag({
         name={label}
         count={count}
         total={total}
+        suggested={variant === 'suggested'}
         countDataCy="post-tag-count"
         className="px-0"
         style={{ backgroundColor: 'transparent', border: 'none', boxShadow: 'none' }}

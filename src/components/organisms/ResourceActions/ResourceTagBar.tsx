@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { type MouseEvent, type ReactNode, useRef } from 'react';
 import { Container } from '@/atoms/Container/Container';
 import { POST_TAGS_MAX_LENGTH, POST_TAGS_MAX_TOTAL_CHARS, TAG_INPUT_WIDTH_DEFAULT } from '@/config/tags';
 import { useEnrichedTags } from '@/hooks/useEnrichedTags/useEnrichedTags';
@@ -64,8 +64,9 @@ interface ResourceTagBarProps {
   control?: ReactNode;
   /**
    * The labels the card's catalogue gives it (Pinakes `labels`): offered after the people's tags as
-   * suggested tags (dashed, no count), without the labels a chip of the bar shows (its own tags, and the
-   * other services' it lists). A press adds the viewer's tag here as adding one does; it then shows as theirs.
+   * suggested tags ("tag +": the look of a tag not here yet, a "+" for its count), without the labels a
+   * chip of the bar shows (its own tags, and the other services' it lists). A press adds the viewer's tag
+   * here as adding one does; it then shows as theirs.
    */
   suggestedLabels?: readonly string[] | null;
   /**
@@ -77,6 +78,16 @@ interface ResourceTagBarProps {
 
 /** Where a merged tag is besides the link: on the scope's links only, on them too, or not on them. */
 type TScopeHit = 'only' | 'also' | null;
+
+/**
+ * How long after a suggestion's press the bar ignores presses: the added tag moves to the front as the
+ * viewer's (or adds a row once expanded), so a quick second tap would land on whatever moved under the
+ * pointer (a chip, a row's taggers or search button).
+ */
+export const SUGGESTION_PRESS_GUARD_MS = 300;
+
+/** Whether a press at `pressedAt` (ms, `Date.now()`) is less than `SUGGESTION_PRESS_GUARD_MS` ago. */
+const isWithinPressGuard = (pressedAt: number) => Date.now() - pressedAt < SUGGESTION_PRESS_GUARD_MS;
 
 /**
  * The tags people put on an external resource, like a post's tag list: the app's tag chips (label
@@ -119,6 +130,13 @@ export function ResourceTagBar({
   // As on the post: expanding must not pop the phone's keyboard, only "+" focuses the input there.
   const isMobile = useIsMobile();
   const { tags, addTag, toggleTag } = resourceTags;
+  const suggestionPressedAt = useRef(Number.NEGATIVE_INFINITY);
+  // Every press inside the bar, caught before it reaches a chip, a row's buttons or a link.
+  const ignorePressAfterSuggestion = (event: MouseEvent) => {
+    if (!isWithinPressGuard(suggestionPressedAt.current)) return;
+    event.preventDefault();
+    event.stopPropagation();
+  };
   const elsewhere = new Map(otherTags.map((tag) => [tag.label, tag]));
   const ownLabels = new Set(tags.map((tag) => canonicalizeTagLabel(tag.label)));
   const peopleOf = (tag: Pick<TagWithAvatars, 'label' | 'isSecondary'>): TTagPeople | undefined => {
@@ -194,7 +212,12 @@ export function ResourceTagBar({
       color={generateRandomColor(suggestion)}
       aria-label={`${suggestion}, suggested tag, add it here`}
       data-testid="resource-suggested-tag"
-      onClick={() => requireAuth(() => void addTag(suggestion))}
+      onClick={() =>
+        requireAuth(() => {
+          suggestionPressedAt.current = Date.now();
+          void addTag(suggestion);
+        })
+      }
     />
   );
   const renderPeople = (tag: TagWithAvatars) => {
@@ -211,6 +234,7 @@ export function ResourceTagBar({
         aria-label={label}
         data-testid="resource-tag-bar"
         className="min-w-0 flex-1 gap-2"
+        onClickCapture={ignorePressAfterSuggestion}
       >
         <Container overrideDefaults className="flex w-fit max-w-full flex-col gap-2">
           {control}
@@ -262,6 +286,7 @@ export function ResourceTagBar({
       aria-label={label}
       data-testid="resource-tag-bar"
       className={cn('flex min-w-0 flex-wrap items-center gap-2', inline && 'sm:justify-end')}
+      onClickCapture={ignorePressAfterSuggestion}
     >
       {control}
       {visibleTags.map((tag) => {

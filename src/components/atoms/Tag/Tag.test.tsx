@@ -24,6 +24,24 @@ describe('Tag', () => {
     expect(screen.getByText('16')).toHaveAttribute('data-cy', 'post-tag-count');
   });
 
+  it('shows a small "+" where the count would be for a suggested tag, in the count’s slot and look', () => {
+    render(<Tag name="bitcoin" suggested />);
+
+    const mark = screen.getByTestId('tag-suggested-mark');
+    expect(mark).toHaveTextContent('+');
+    expect(mark).toHaveAttribute('aria-hidden', 'true');
+    expect(mark).toHaveClass('ml-1.5', 'shrink-0', 'font-medium', 'text-(--tag-count)');
+    expect(screen.queryByTestId('tag-count')).not.toBeInTheDocument();
+  });
+
+  it('shows no "+" without `suggested`, nor next to a count', () => {
+    const { unmount } = render(<Tag name="bitcoin" />);
+    expect(screen.queryByTestId('tag-suggested-mark')).not.toBeInTheDocument();
+    unmount();
+    render(<Tag name="bitcoin" count={2} suggested />);
+    expect(screen.queryByTestId('tag-suggested-mark')).not.toBeInTheDocument();
+  });
+
   it('does not render count when not provided', () => {
     render(<Tag name="bitcoin" />);
 

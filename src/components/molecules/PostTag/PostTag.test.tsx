@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
+import { SECONDARY_TAG_STYLE } from '@/atoms/Tag/Tag';
 import { getTagDayPalette } from '@/libs/utils/tagPalette';
 import { PostTag } from './PostTag';
 
@@ -142,17 +143,31 @@ describe('PostTag', () => {
     expect(screen.getByTestId('tag-total')).toHaveTextContent('(10)');
   });
 
-  it('draws the suggested variant dashed with no fill and no count, still a button', () => {
+  it('draws the suggested variant as a tag not here yet (the secondary look) with "+" for its count', () => {
     const onClick = vi.fn();
     render(<PostTag label="writer" variant="suggested" onClick={onClick} />);
     const tag = screen.getByRole('button');
     expect(tag).toHaveAttribute('data-variant', 'suggested');
-    expect(tag.style.backgroundImage).toBe('none');
-    expect(tag.style.backgroundColor).toBe('transparent');
-    expect(tag.style.border).toBe('1px dashed var(--tag-edge)');
-    expect(tag.textContent).toBe('writer');
+    expect(tag.style.backgroundImage).toBe(SECONDARY_TAG_STYLE.backgroundImage);
+    expect(tag.style.backgroundColor).toBe(SECONDARY_TAG_STYLE.backgroundColor);
+    expect(tag.style.border).toBe(SECONDARY_TAG_STYLE.border);
+    expect(screen.queryByTestId('tag-count')).not.toBeInTheDocument();
+    expect(screen.getByTestId('tag-suggested-mark')).toHaveTextContent('+');
+    expect(screen.getByTestId('tag-suggested-mark')).toHaveAttribute('aria-hidden', 'true');
+    expect(tag.textContent).toBe('writer+');
     fireEvent.click(tag);
     expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('draws a suggested chip and a secondary one alike, only the "+" in place of the count tells them apart', () => {
+    render(
+      <>
+        <PostTag label="writer" variant="suggested" />
+        <PostTag label="writer" count={0} total={4} variant="secondary" />
+      </>,
+    );
+    const [suggested, secondary] = screen.getAllByRole('button');
+    expect(suggested.getAttribute('style')).toBe(secondary.getAttribute('style'));
   });
 
   it('draws the secondary variant without the fill, still a toggle', () => {
