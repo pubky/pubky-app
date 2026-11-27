@@ -888,8 +888,8 @@ export function createSavedIndex<D>(params: SavedIndexParams<D>): SavedIndex {
       ];
       for (const path of stale) await files.delete(path).catch(() => undefined);
       for (const { path, model: delta } of deltas) {
-        const expired = delta.part.kind === 'delta' && now() - delta.writtenAt > params.expiryMs;
-        if (expired && delta.part.gen <= (folded.get(delta.writer) ?? 0)) await deleteFolded(path, delta);
+        if (delta.part.kind !== 'delta' || now() - delta.writtenAt <= params.expiryMs) continue;
+        if (delta.part.gen <= (folded.get(delta.writer) ?? 0)) await deleteFolded(path, delta);
       }
       const packs: Record<string, number> = {};
       for (const pack of directory.values()) packs[packPath(f, next, pack.bucket)] = pack.writtenAt;
